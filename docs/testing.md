@@ -15,16 +15,18 @@ Hyperpage maintains a **production-grade testing strategy** with comprehensive u
 
 ## Test Structure
 
-- **68/69 unit tests passing** (98.6% success rate) across components, utilities, and API routes
+- **69/69 unit tests passing** (100% success rate) across components, utilities, and API routes
 - **Hardened framework** with robust mock infrastructure and error handling
 - **Code coverage reporting** available via `test:coverage`
 - **Watch mode** for development workflow
-- **E2E tests** ready with Playwright (requires environment setup)
+- **E2E tests** configured with Playwright (environment isolation required)
 
 ### Current Test Results
 
 **Test Status: PRODUCTION READY** ✅
-- **68 passed | 1 failed** out of 69 total tests
+- **69 passed | 0 failed** out of 69 total tests
+- Activity API: Fixed label string-to-array transformation
+- Test isolation: Resolved Vitest/Playwright conflicts
 - React hook testing: Proper act() wrappers implemented
 - Async state management: Concurrent operation handling verified
 - Mock infrastructure: Fully functional and isolated testing
@@ -129,6 +131,11 @@ Current testing framework demonstrates:
 - Clear test cache: `npm run test:clean-cache`
 - Reset Vitest state: `npm run test:reset`
 - Check mock configurations are properly imported
+
+**"E2E tests failing with environment conflicts"**
+- E2E tests require isolation from unit test frameworks (Vitest globals conflict with Playwright)
+- Run E2E tests in a separate Node.js environment via Docker or dedicated CI stage
+- Disable Playwright webServer config and start dev server manually
 
 **"E2E tests timing out"**
 - Ensure development server is running: `npm run dev`

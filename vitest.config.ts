@@ -9,6 +9,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    exclude: [
+      'e2e/**', // Exclude E2E tests from Vitest
+      'node_modules/**'
+    ],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [
@@ -20,6 +24,7 @@ export default defineConfig({
         'vitest.setup.ts',
         '**/*.config.js',
         '**/*.config.mjs',
+        'e2e/', // Exclude e2e from coverage
       ],
       thresholds: {
         global: {

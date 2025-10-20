@@ -84,6 +84,8 @@ export async function GET() {
                   : undefined,
                 labels: Array.isArray(activity.labels)
                   ? activity.labels.map(String)
+                  : typeof activity.labels === 'string'
+                  ? activity.labels.split(',').map(label => label.trim())
                   : undefined,
               };
               return validActivity;
