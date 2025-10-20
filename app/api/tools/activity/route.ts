@@ -87,6 +87,8 @@ export async function GET() {
                   : typeof activity.labels === 'string'
                   ? activity.labels.split(',').map(label => label.trim())
                   : undefined,
+                // Rich content fields (NEW - this was missing!)
+                content: Array.isArray(activity.content) ? activity.content : undefined,
               };
               return validActivity;
             },

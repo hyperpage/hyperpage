@@ -135,6 +135,14 @@ interface ActivityEvent {
   status?: string;         // Optional status indicator
   assignee?: string;       // Optional assignee information
   labels?: string[];       // Optional labels/tags
+
+  // Enhanced Rich Content Fields (New)
+  content?: Array<{        // Rich content items (commits, descriptions, comments)
+    type: 'commit' | 'description' | 'comment' | 'change';
+    text: string;          // Content text (truncated to ~150 chars)
+    author?: string;       // Who authored the content
+    timestamp?: string;    // When content was created/modified
+  }>;
 }
 ```
 

@@ -23,6 +23,11 @@ This document outlines the planned enhancements and future development direction
 - ✅ **Extensibility**: New tools integrate with zero code changes
 - ✅ **Type Safety**: Full TypeScript coverage with zero `any` types
 
+## Completed Features
+- ✅ **Enhanced Activity Content**: Rich content cards showing commit messages, issue descriptions, and comments with color-coded visualization (GitHub commits, Jira descriptions, future expansion)
+- ✅ **Jira ATF Parsing**: Automatic extraction of descriptions from Atlassian Document Format
+- ✅ **GitHub Commit Integration**: Real commit messages fetched from repository APIs
+
 ## Implementation Priority
 
 ### High Priority

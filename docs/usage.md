@@ -53,20 +53,36 @@ The main dashboard view displaying real-time data from all enabled tools.
 
 ### Livefeed Tab
 
-Real-time activity aggregation from all connected platforms.
+Real-time activity aggregation from all connected platforms featuring rich content cards.
 
 #### Activity Features
 - **1-Minute Auto-Refresh**: Activity updates automatically every minute
 - **Cross-Platform Events**: Combines GitHub, GitLab, Jira, and future tools
-- **Rich Context**: Shows repository, branch, assignees, labels, and status
+- **Rich Content Cards**: Enhanced activity items showing actual content
+- **Contextual Metadata**: Repository, branch, assignees, labels, and status
 - **Navigation Links**: Click to open items in their original platforms
 - **Status Indicators**: Color-coded badges for issue/MR states
 
+#### Rich Content Enhancement
+The livefeed now displays meaningful content instead of just basic action descriptions:
+
+**Content Types:**
+- **GitHub Commits** 🔵: Shows actual commit messages (e.g., "Fix authentication bug in user registration")
+- **Jira Descriptions** 🟢: Displays issue descriptions extracted from Atlassian Document Format
+- **Git Comments** 🟣: Future support for code review and issue comments
+- **Change Details** 🟡: Future support for field change summaries
+
+**Visual Design:**
+- **Color-Coded Cards**: Different border colors and icons for each content type
+- **Content Truncation**: Smart 150-character limits with ellipsis for readability
+- **Author Attribution**: Shows who made commits or comments when available
+- **Progressive Disclosure**: Up to 3 content items per activity with expansion option
+
 #### Activity Types
-- **Code Events**: Commits, PRs/MRs opened/closed/merged
-- **Issue Updates**: New issues, status changes, assignments
-- **CI/CD Events**: Pipeline starts, completions, failures
-- **Team Activity**: Member assignments, reviews, comments
+- **Code Events**: Commits with message details, PRs/MRs with rich descriptions
+- **Issue Updates**: Status changes with full issue context and descriptions
+- **CI/CD Events**: Pipeline results with commit information linkage
+- **Team Activity**: Member assignments with enhanced issue details
 
 #### Filter & Search
 - **Real-Time Search**: Filter activities by content, author, or tool

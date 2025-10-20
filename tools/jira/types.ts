@@ -21,5 +21,6 @@ export interface JiraApiIssue {
     issuetype?: { name: string };
     labels?: string[];
     project?: { name: string; key: string };
+    description?: string | any; // Can be string or Atlassian Document Format object
   };
 }

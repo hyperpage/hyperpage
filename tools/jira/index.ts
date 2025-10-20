@@ -129,6 +129,7 @@ export const jiraTool: Tool = {
             "issuetype",
             "labels",
             "project",
+            "description",
           ],
         }),
       });
@@ -158,7 +159,65 @@ export const jiraTool: Tool = {
           // Get labels if available
           const labels = issue.fields.labels || [];
 
-          return {
+          // Add issue description preview
+          const content: Array<{ type: 'description'; text: string }> = [];
+
+          // Handle Jira's Atlassian Document Format (ADF) or plain text descriptions
+          if (issue.fields.description) {
+            let descriptionText = '';
+
+            if (typeof issue.fields.description === 'string') {
+              // Plain text description
+              if (issue.fields.description.trim()) {
+                descriptionText = issue.fields.description.length > 150
+                  ? issue.fields.description.substring(0, 150) + "..."
+                  : issue.fields.description;
+              }
+            } else if (typeof issue.fields.description === 'object' && issue.fields.description?.content) {
+              // Atlassian Document Format - extract basic text content
+              try {
+                const adfContent = issue.fields.description.content;
+                if (Array.isArray(adfContent) && adfContent.length > 0) {
+                  // Simple ADF text extraction - just get the first few text nodes
+                  const extractText = (nodes: any[]): string => {
+                    let text = '';
+                    for (const node of nodes) {
+                      if (node.type === 'paragraph' && node.content) {
+                        for (const contentNode of node.content) {
+                          if (contentNode.type === 'text' && contentNode.text) {
+                            text += contentNode.text + ' ';
+                          }
+                        }
+                      }
+                      if (text.length > 150) break; // Stop at reasonable length
+                    }
+                    return text.trim();
+                  };
+
+                  const extractedText = extractText(adfContent);
+                  if (extractedText) {
+                    descriptionText = extractedText.length > 150
+                      ? extractedText.substring(0, 150) + "..."
+                      : extractedText;
+                  }
+                }
+              } catch (error) {
+                console.warn(`Failed to parse Jira ADF for ${issue.key}:`, error);
+                descriptionText = '[Description available in Jira]'; // Fallback for complex ADF
+              }
+            }
+
+            if (descriptionText) {
+              content.push({
+                type: 'description',
+                text: descriptionText
+              });
+            }
+          }
+
+
+
+          const result = {
             id: `jira_${issue.id}_${index}`,
             tool: "Jira",
             toolIcon: "jira",
@@ -177,7 +236,12 @@ export const jiraTool: Tool = {
             status: issue.fields.status?.name || "Unknown",
             assignee,
             labels,
+            content: content.length > 0 ? content : undefined,
           };
+
+
+
+          return result;
         });
 
       return { activity: activityEvents };

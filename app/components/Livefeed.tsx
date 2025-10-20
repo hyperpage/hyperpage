@@ -35,6 +35,19 @@ interface ActivityItem {
   status?: string;
   assignee?: string;
   labels?: string[];
+  // New rich content fields
+  content?: Array<{
+    type: 'commit' | 'comment' | 'description' | 'change';
+    text: string;
+    author?: string;
+    timestamp?: string;
+  }>;
+  description?: string;
+  changes?: Array<{
+    field: string;
+    from: string;
+    to: string;
+  }>;
 }
 
 // Extended activity response from API
@@ -57,6 +70,19 @@ interface ApiActivityItem {
   status?: string;
   assignee?: string;
   labels?: string[];
+  // New rich content fields
+  content?: Array<{
+    type: 'commit' | 'comment' | 'description' | 'change';
+    text: string;
+    author?: string;
+    timestamp?: string;
+  }>;
+  itemDescription?: string;
+  changes?: Array<{
+    field: string;
+    from: string;
+    to: string;
+  }>;
 }
 
 interface LivefeedProps {
@@ -109,8 +135,14 @@ export default function Livefeed({
           status: item.status,
           assignee: item.assignee,
           labels: item.labels,
+          // New rich content fields
+          content: item.content,
+          description: item.itemDescription,
+          changes: item.changes,
         }),
       );
+
+
 
       setActivities(transformedActivities);
     } catch (err) {
@@ -159,6 +191,10 @@ export default function Livefeed({
           status: item.status,
           assignee: item.assignee,
           labels: item.labels,
+          // New rich content fields
+          content: item.content,
+          description: item.itemDescription,
+          changes: item.changes,
         }),
       );
 
@@ -302,6 +338,11 @@ export default function Livefeed({
 
   return (
     <div className="max-w-4xl mx-auto relative">
+      {/* Quick status indicator */}
+      <div className="mb-4 text-xs text-muted-foreground text-center">
+        {activities.length} activities loaded • {activities.filter(a => a.content && a.content.length > 0).length} with enhanced content
+      </div>
+
       {/* Refresh button */}
       {onRefresh && (
         <div className="flex justify-end mb-6">
@@ -511,6 +552,66 @@ export default function Livefeed({
                                 )}
                               </div>
                             </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Rich content (commits, descriptions, comments) */}
+                      {activity.content && activity.content.length > 0 && (
+                        <div className="space-y-3 mt-4">
+                          {activity.content.slice(0, 3).map((contentItem, contentIndex) => (
+                            <div key={contentIndex} className="space-y-2">
+                              {contentItem.type === 'commit' && (
+                                <div className="bg-muted/30 rounded-lg p-3 border-l-2 border-blue-200 dark:border-blue-800">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                                      <span className="text-xs">📝</span>
+                                    </div>
+                                    {contentItem.author && contentItem.author !== activity.author && (
+                                      <span>{contentItem.author}</span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-foreground font-mono leading-relaxed">
+                                    {contentItem.text}
+                                  </p>
+                                </div>
+                              )}
+
+                              {contentItem.type === 'description' && (
+                                <div className="bg-muted/20 rounded-lg p-3 border-l-2 border-green-200 dark:border-green-800">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-50 text-green-700 border border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                                      <span className="text-xs">📄</span>
+                                    </div>
+                                    <span>Description</span>
+                                  </div>
+                                  <div className="text-sm text-foreground leading-relaxed max-w-none break-words">
+                                    {contentItem.text}
+                                  </div>
+                                </div>
+                              )}
+
+                              {contentItem.type === 'comment' && (
+                                <div className="bg-muted/25 rounded-lg p-3 border-l-2 border-purple-200 dark:border-purple-800">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">
+                                      <span className="text-xs">💬</span>
+                                    </div>
+                                    {contentItem.author && (
+                                      <span>{contentItem.author}</span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-foreground leading-relaxed max-w-none break-words">
+                                    {contentItem.text}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {activity.content.length > 3 && (
+                            <div className="text-xs text-muted-foreground text-center bg-muted/10 rounded-lg py-2">
+                              +{activity.content.length - 3} more items
+                            </div>
                           )}
                         </div>
                       )}
