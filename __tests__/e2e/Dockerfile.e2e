@@ -7,7 +7,8 @@ WORKDIR /app
 # Install system dependencies needed for both stages
 RUN apk add --no-cache \
     curl \
-    git
+    git \
+    bash
 
 # Copy package files
 COPY package*.json ./
@@ -41,7 +42,7 @@ FROM base AS playwright
 RUN npm ci
 
     # Install Playwright browsers without system dependencies (using pre-built binaries)
-    RUN npx playwright install chromium
+    RUN npx playwright install chromium firefox webkit
 
 # Copy source code for tests
 COPY . .
