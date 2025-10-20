@@ -82,7 +82,7 @@ The dashboard recently underwent a comprehensive code cleanup and refactoring in
 
 2. **Installation**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/hyperpage/hyperpage.git
    cd hyperpage
    npm install
    ```
