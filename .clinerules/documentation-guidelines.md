@@ -11,6 +11,7 @@ The `.clinerules/` directory contains focused rule files organized by domain for
 - **[`.clinerules/security-practices.md`](.clinerules/security-practices.md)** - Security standards, API token management, and validation requirements
 - **[`.clinerules/configuration-guidelines.md`](.clinerules/configuration-guidelines.md)** - Configuration management, environment setup, and tool addition workflow
 - **[`.clinerules/documentation-guidelines.md`](.clinerules/documentation-guidelines.md)** - Documentation maintenance and this file
+- **[`.clinerules/workflows/`](./workflows/)** - Executable Cline workflows for common development tasks
 
 ## Rule File Maintenance Guidelines
 

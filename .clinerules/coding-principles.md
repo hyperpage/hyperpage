@@ -123,3 +123,19 @@ This document outlines the core architectural principles and development pattern
 - ✅ Test API endpoints work at `/api/tools/[tool]/[endpoint]`
 - ✅ Verify widgets appear in dashboard automatically
 - ✅ Confirm sidebar fetches enabled tools from `/api/tools/enabled` endpoint
+
+## Workflow Automation
+
+To streamline development processes and ensure consistent implementation of these principles, executable Cline workflows are available in the `.clinerules/workflows/` directory:
+
+- **`add-new-tool.md`**: Automates the complete tool integration process with proper registry-driven architecture, TypeScript interfaces, and security practices
+- **`tool-review.md`**: Comprehensive validation checklist for newly added tools against all architectural requirements
+- **`component-creation.md`**: Component development workflow following hook-first pattern, size limits, and responsive design standards
+
+These workflows operationalize the above principles by:
+- Enforcing proper PLAN/ACT mode transitions
+- Implementing step-by-step tool usage with user confirmation
+- Following the hook-first pattern for state management
+- Applying the 100-line component size limit with decomposition strategies
+- Ensuring proper Next.js patterns for hydration and routing
+- Maintaining security practices throughout development

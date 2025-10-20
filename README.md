@@ -416,6 +416,7 @@ This project is developed using Cline AI Assistant. See the `.clinerules/` direc
 - **[`.clinerules/security-practices.md`](.clinerules/security-practices.md)** - Security standards and best practices
 - **[`.clinerules/configuration-guidelines.md`](.clinerules/configuration-guidelines.md)** - Configuration management and environment setup
 - **[`.clinerules/documentation-guidelines.md`](.clinerules/documentation-guidelines.md)** - Documentation maintenance rules
+- **[`.clinerules/workflows/`](./.clinerules/workflows/)** - Executable Cline workflows for common development tasks
 
 ## Deployment
 
