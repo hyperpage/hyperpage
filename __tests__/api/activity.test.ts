@@ -1,14 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getActivityData } from '../../app/api/tools/activity/route';
+import * as toolsModule from '../../tools';
 
 // Mock the tools registry - using the correct import path from the activity route
-const mockGetEnabledToolsByCapability = vi.fn();
-const mockGetToolByName = vi.fn();
-
-vi.mock('../../../../tools', () => ({
-  getEnabledToolsByCapability: (...args: any) => mockGetEnabledToolsByCapability(...args),
-  getToolByName: (...args: any) => mockGetToolByName(...args),
+vi.mock('../../tools', () => ({
+  getEnabledToolsByCapability: vi.fn(),
+  getToolByName: vi.fn(),
 }));
+
+const mockGetEnabledToolsByCapability = vi.mocked(toolsModule.getEnabledToolsByCapability);
+const mockGetToolByName = vi.mocked(toolsModule.getToolByName);
+
+// Helper function to create minimal valid mock tools
+const createMockTool = (overrides: Partial<Record<string, unknown>>) => ({
+  name: 'TestTool',
+  slug: 'test',
+  enabled: true,
+  ui: { color: 'bg-blue-500', icon: vi.fn(() => null) },
+  widgets: [],
+  apis: {},
+  handlers: {},
+  capabilities: ['activity'],
+  config: {
+    formatApiUrl: () => 'https://test.com/api',
+  },
+  ...overrides,
+} as any);
 
 describe('GET /api/tools/activity', () => {
   beforeEach(() => {
@@ -17,13 +34,9 @@ describe('GET /api/tools/activity', () => {
 
   describe('successful aggregation', () => {
     it('aggregates and sorts activity from multiple tools', async () => {
-      const mockGithubTool = {
+      const mockGithubTool = createMockTool({
         name: 'GitHub',
         slug: 'github',
-        enabled: true,
-        config: {
-          formatApiUrl: () => 'https://api.github.com',
-        },
         handlers: {
           activity: async (_request: any, _config: any) => ({
             activity: [
@@ -60,15 +73,11 @@ describe('GET /api/tools/activity', () => {
             ],
           }),
         },
-      };
+      });
 
-      const mockJiraTool = {
+      const mockJiraTool = createMockTool({
         name: 'Jira',
         slug: 'jira',
-        enabled: true,
-        config: {
-          formatApiUrl: () => 'https://company.atlassian.net/rest/api/3',
-        },
         handlers: {
           activity: vi.fn((request, config) => Promise.resolve({
             activity: [
@@ -91,7 +100,7 @@ describe('GET /api/tools/activity', () => {
             ],
           })),
         },
-      };
+      });
 
       mockGetEnabledToolsByCapability.mockReturnValue([mockGithubTool, mockJiraTool]);
 
@@ -336,7 +345,7 @@ describe('GET /api/tools/activity', () => {
       expect(data.activity[0]).toEqual({
         id: '',
         tool: 'TestTool', // Gets default from tool.name
-        toolIcon: 'TestTool', // Gets default from tool.name.toLowerCase()
+        toolIcon: 'testtool', // Gets default from tool.name.toLowerCase()
         action: '',
         description: '',
         author: '',
@@ -347,7 +356,7 @@ describe('GET /api/tools/activity', () => {
         displayId: '',
         repository: 'test-repo',
         branch: 'main',
-        commitCount: 0, // Failed to parse as number
+        commitCount: 5, // String '5' successfully parsed to number 5
         status: 'in-progress',
         assignee: 'user@example.com',
         labels: expect.any(Array), // Should be converted to array

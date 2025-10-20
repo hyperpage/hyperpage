@@ -163,7 +163,9 @@ describe('useToolData', () => {
         useToolData({ enabledTools: [mockTool] })
       );
 
-      await result.current.refreshToolData(mockTool);
+      await act(async () => {
+        await result.current.refreshToolData(mockTool);
+      });
 
       expect(mockFetch).toHaveBeenCalledWith('/api/tools/github/pulls');
       expect(result.current.dynamicData.GitHub).toBeUndefined();
@@ -199,7 +201,9 @@ describe('useToolData', () => {
         useToolData({ enabledTools: [] })
       );
 
-      await result.current.refreshActivityData();
+      await act(async () => {
+        await result.current.refreshActivityData();
+      });
 
       expect(mockFetch).toHaveBeenCalledWith('/api/tools/activity');
     });
@@ -214,7 +218,9 @@ describe('useToolData', () => {
         useToolData({ enabledTools: [] })
       );
 
-      await result.current.refreshActivityData();
+      await act(async () => {
+        await result.current.refreshActivityData();
+      });
 
       expect(mockFetch).toHaveBeenCalledWith('/api/tools/activity');
     });
@@ -229,7 +235,9 @@ describe('useToolData', () => {
         useToolData({ enabledTools: [] })
       );
 
-      const refreshPromise = result.current.refreshActivityData();
+      const refreshPromise = await act(async () => {
+        return result.current.refreshActivityData();
+      });
 
       // Activity refresh should complete without errors
       await refreshPromise;
@@ -258,7 +266,9 @@ describe('useToolData', () => {
         useToolData({ enabledTools: [tool1, tool2, disabledTool] })
       );
 
-      await result.current.refreshAllData();
+      await act(async () => {
+        await result.current.refreshAllData();
+      });
 
       expect(mockFetch).toHaveBeenCalledWith('/api/tools/github/pulls');
       expect(mockFetch).toHaveBeenCalledWith('/api/tools/gitlab/pulls');
@@ -275,7 +285,9 @@ describe('useToolData', () => {
         useToolData({ enabledTools: [] })
       );
 
-      await result.current.refreshAllData();
+      await act(async () => {
+        await result.current.refreshAllData();
+      });
 
       expect(mockFetch).toHaveBeenCalledWith('/api/tools/activity');
     });

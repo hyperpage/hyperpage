@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useActivityData } from '../../../app/components/hooks/useActivityData';
 
@@ -24,6 +24,7 @@ describe('useActivityData', () => {
       expect(result.current.isRefreshing).toBe(false);
       expect(result.current.error).toBeNull();
     });
+  });
 
   describe('fetchActivities', () => {
     it('successfully fetches and transforms activity data on mount', async () => {
@@ -402,8 +403,11 @@ describe('useActivityData', () => {
 
       await firstRefreshPromise;
 
-      // Now isRefreshing should be false
-      expect(result.current.isRefreshing).toBe(false);
+      // Wait for the isRefreshing state to be cleared
+      await waitFor(() => {
+        expect(result.current.isRefreshing).toBe(false);
+      });
+
       expect(refreshesCompleted).toBe(1);
     });
 
@@ -452,7 +456,6 @@ describe('useActivityData', () => {
       expect(result.current.isRefreshing).toBe(false);
     });
   });
-});
 
   describe('data transformation', () => {
     it('correctly transforms optional fields', async () => {

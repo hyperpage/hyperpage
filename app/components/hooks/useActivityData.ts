@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface ActivityItem {
   id: string;
@@ -53,6 +53,7 @@ export function useActivityData(): UseActivityDataReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isRefreshingRef = useRef(false);
 
   // Transform API response to component format
   const transformActivity = (item: ApiActivityItem): ActivityItem => ({
@@ -99,7 +100,10 @@ export function useActivityData(): UseActivityDataReturn {
 
   // Refresh activities function that keeps old data visible during loading
   const refreshActivities = useCallback(async () => {
-    if (isRefreshing) return; // Prevent multiple concurrent refreshes
+    // Prevent multiple concurrent refreshes using ref
+    if (isRefreshingRef.current) return;
+
+    isRefreshingRef.current = true;
 
     try {
       setIsRefreshing(true);
@@ -121,8 +125,9 @@ export function useActivityData(): UseActivityDataReturn {
       // Don't clear activities on refresh error - keep old data visible
     } finally {
       setIsRefreshing(false);
+      isRefreshingRef.current = false;
     }
-  }, [isRefreshing]);
+  }, []);
 
   useEffect(() => {
     void fetchActivities();
