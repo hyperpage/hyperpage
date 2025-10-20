@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server.js";
 import { getToolByName, getAllTools } from "../../../../tools";
 import { ToolWidget, ToolApi } from "../../../../tools/tool-types";
 
@@ -33,12 +33,14 @@ export async function GET(
     const toolData = {
       name: tool.name,
       enabled: tool.enabled,
-      widgets: tool.widgets.map((widget: ToolWidget) => ({
-        title: widget.title,
-        type: widget.type,
-        headers: widget.headers,
-        dynamic: widget.dynamic,
-      })),
+      widgets: Array.isArray(tool.widgets)
+        ? tool.widgets.map((widget: ToolWidget) => ({
+            title: widget.title,
+            type: widget.type,
+            headers: widget.headers,
+            dynamic: widget.dynamic,
+          }))
+        : [],
       apis: tool.apis
         ? Object.entries(tool.apis).map(
             ([endpoint, api]: [string, ToolApi]) => ({

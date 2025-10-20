@@ -12,7 +12,7 @@ interface UseToolDataReturn {
   refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
   refreshActivityData: () => Promise<void>;
   refreshAllData: () => void;
-  initializePolling: () => void;
+  initializePolling: () => () => void;
 }
 
 export function useToolData({

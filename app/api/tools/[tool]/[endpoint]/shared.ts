@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server.js";
 import { getToolByName, Tool } from "../../../../../tools";
 import { ToolApi } from "../../../../../tools/tool-types";
 
