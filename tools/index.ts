@@ -113,9 +113,7 @@ export const getToolIntegrations = (): ToolIntegration[] => {
 // This excludes handler functions and config objects that can't be serialized in client components
 export const getClientTools = (): Omit<Tool, "handlers" | "config">[] => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  return getAllTools().map(
-    ({ handlers: _handlers, config: _config, ...clientTool }) => clientTool,
-  );
+  return getAllTools().map(({ handlers: _, config: __, ...clientTool }) => clientTool);
 };
 
 // Helper function to get client-safe enabled tools
