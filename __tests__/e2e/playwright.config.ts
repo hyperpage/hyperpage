@@ -4,7 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './',
+  testMatch: '**/*.spec.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -18,7 +19,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -43,10 +44,10 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  // Temporarily disabled to avoid environment conflicts with Vitest
-  // webServer: {
-  //   command: 'npm run dev',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
+  webServer: process.env.E2E_TEST ? {
+    command: 'npm run dev',
+    url: process.env.BASE_URL || 'http://localhost:3000',
+    reuseExistingServer: true,
+    timeout: 120 * 1000, // 2 minutes
+  } : undefined,
 });

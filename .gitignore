@@ -33,9 +33,17 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.local.sample
+!__tests__/e2e/.env.e2e
 
 # vercel
 .vercel
+
+# e2e test reports
+__tests__/e2e/playwright-report
+__tests__/e2e/test-results
+
+# docker
+docker-compose.e2e.override.yml
 
 # typescript
 *.tsbuildinfo

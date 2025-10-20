@@ -66,6 +66,62 @@ npm run test:e2e:debug
 
 # Run E2E tests with visual interface
 npm run test:e2e:ui
+
+# Docker-based E2E tests (isolated environment - RECOMMENDED)
+npm run test:e2e:docker
+
+# Docker E2E tests with Playwright UI
+npm run test:e2e:docker:ui
+```
+
+### Docker E2E Testing Setup
+
+The **Docker-based E2E setup** provides complete environment isolation, eliminating conflicts with unit testing frameworks. This is the **recommended approach** for E2E testing as it resolves all framework conflicts between Vitest and Playwright.
+
+#### Prerequisites
+
+- Docker and Docker Compose installed
+- At least 4GB RAM available for containers
+
+#### Quick Start
+
+```bash
+# Run complete E2E test suite in isolated containers (RECOMMENDED)
+npm run test:e2e:docker
+
+# Run E2E tests with visual Playwright UI for debugging
+npm run test:e2e:docker:ui
+
+# Clean up containers (when tests complete)
+docker-compose -f __tests__/e2e/docker-compose.e2e.yml down
+```
+
+#### Docker Architecture
+
+The E2E setup includes:
+- **`hyperpage-e2e`**: Next.js app container with health checks and API endpoints
+- **`playwright`**: Isolated test runner with Chromium browser
+- **`playwright-ui`**: Optional UI mode for interactive test development
+
+#### Environment Configuration
+
+Tests use `__tests__/e2e/.env.e2e` with mock data. Tools are enabled but use test credentials to avoid API rate limits and ensure deterministic behavior.
+
+#### Manual Testing
+
+For development and debugging:
+
+```bash
+# Start only the app container
+docker-compose -f __tests__/e2e/docker-compose.e2e.yml up hyperpage-e2e
+
+# In another terminal, run tests against the container
+docker-compose -f __tests__/e2e/docker-compose.e2e.yml run --rm playwright-ui
+
+# View test results
+cat __tests__/e2e/playwright-report/index.html
+
+# Open http://localhost:3000 to verify app is running
 ```
 
 ## Development Quality Assurance

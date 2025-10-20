@@ -1,0 +1,53 @@
+# Multi-stage Dockerfile for E2E testing
+# Stage 1: Base dependencies
+FROM node:18-alpine AS base
+
+WORKDIR /app
+
+# Install system dependencies needed for both stages
+RUN apk add --no-cache \
+    curl \
+    git
+
+# Copy package files
+COPY package*.json ./
+
+# Stage 2: App runtime
+FROM base AS app
+
+# Install all dependencies (including dev dependencies for building)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the Next.js application
+RUN npm run build
+
+# Expose port
+EXPOSE 3000
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Start the application
+CMD ["npm", "start"]
+
+# Stage 3: Playwright test runner
+FROM base AS playwright
+
+# Install all dependencies (including dev dependencies for testing)
+RUN npm ci
+
+    # Install Playwright browsers without system dependencies (using pre-built binaries)
+    RUN npx playwright install chromium
+
+# Copy source code for tests
+COPY . .
+
+# Copy built application from app stage for any static assets if needed
+COPY --from=app /app/.next /app/.next
+
+# Default command will be overridden by docker-compose
+CMD ["npx", "playwright", "test"]

@@ -1,0 +1,58 @@
+services:
+  hyperpage-e2e:
+    build:
+      context: ../../.
+      dockerfile: ./__tests__/e2e/Dockerfile.e2e
+      target: app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=test
+      - ENABLE_GITHUB=true
+      - ENABLE_JIRA=true
+      - ENABLE_GITLAB=true
+      - NEXT_PUBLIC_NODE_ENV=test
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  playwright:
+    build:
+      context: ../../.
+      dockerfile: ./__tests__/e2e/Dockerfile.e2e
+      target: playwright
+    depends_on:
+      hyperpage-e2e:
+        condition: service_healthy
+    volumes:
+      - ./playwright-report:/app/playwright-report
+      - ./test-results:/app/test-results
+    environment:
+      - BASE_URL=http://hyperpage-e2e:3000
+      - E2E_TEST=true
+    command: npx playwright test --config=./__tests__/e2e/playwright.config.ts
+    profiles:
+      - e2e
+
+  # Optional: Keep container running for manual testing
+  playwright-ui:
+    build:
+      context: ../../.
+      dockerfile: ./__tests__/e2e/Dockerfile.e2e
+      target: playwright
+    depends_on:
+      hyperpage-e2e:
+        condition: service_healthy
+    volumes:
+      - ./__tests__/e2e/playwright-report:/app/playwright-report
+      - ./__tests__/e2e/test-results:/app/test-results
+    environment:
+      - BASE_URL=http://hyperpage-e2e:3000
+      - E2E_TEST=true
+    command: npx playwright test --config=./__tests__/e2e/playwright.config.ts --ui
+    profiles:
+      - e2e-ui
