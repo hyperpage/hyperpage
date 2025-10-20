@@ -149,4 +149,8 @@ Only web URLs need to be configured in environment variables.
 
 ## Next Steps
 
-Once installed and configured, see [`docs/usage.md`](usage.md) for information on using the dashboard and [`docs/api.md`](api.md) for technical integration details.
+Once installed and configured:
+- See [`docs/usage.md`](usage.md) for comprehensive dashboard features and navigation
+- Read [`docs/testing.md`](testing.md) for testing strategy and quality assurance
+- Check [`docs/api.md`](api.md) for technical integration details
+- Review [`docs/architecture.md`](architecture.md) for system design patterns
