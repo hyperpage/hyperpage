@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32" role="img" aria-labelledby="titleDesc">
+  <title id="titleDesc">Hyperpage favicon</title>
+
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="black"/>
+
+  <!-- Connections -->
+  <g stroke="white" stroke-width="5" stroke-linecap="round" fill="none">
+    <!-- Left vertical -->
+    <path d="M30 25 L30 40 Q30 45 33 50 Q30 55 30 65 L30 75" />
+
+    <!-- Right vertical -->
+    <path d="M70 30 L70 45 Q70 50 67 55 Q70 60 70 70 L70 75" />
+
+    <!-- Middle connector -->
+    <path d="M33 50 Q50 42 67 55" />
+  </g>
+
+  <!-- Nodes -->
+  <g fill="white">
+    <circle cx="30" cy="25" r="3.5"/>
+    <circle cx="30" cy="40" r="3.5"/>
+    <circle cx="30" cy="65" r="3.5"/>
+    <circle cx="30" cy="75" r="3.5"/>
+    <circle cx="70" cy="30" r="3.5"/>
+    <circle cx="70" cy="45" r="3.5"/>
+    <circle cx="70" cy="60" r="3.5"/>
+    <circle cx="70" cy="75" r="3.5"/>
+  </g>
+</svg>
