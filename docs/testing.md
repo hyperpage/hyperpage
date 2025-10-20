@@ -24,13 +24,16 @@ Hyperpage maintains a **production-grade testing strategy** with comprehensive u
 ### Current Test Results
 
 **Test Status: PRODUCTION READY** ✅
-- **69 passed | 0 failed** out of 69 total tests
+- **69 unit tests passed | 0 failed** out of 69 total tests
+- **36 E2E tests passed | 18 failed** across 3 browsers (54 total test executions)
+- E2E Results: Chromium ✅ (18/18) | Firefox ✅ (18/18) | WebKit ❌ (0/18 - architecture incompatibility)
 - Activity API: Fixed label string-to-array transformation
 - Test isolation: Resolved Vitest/Playwright conflicts
 - React hook testing: Proper act() wrappers implemented
 - Async state management: Concurrent operation handling verified
 - Mock infrastructure: Fully functional and isolated testing
 - Build integration: Zero compiler errors, clean production builds
+- Docker E2E fixes: Browser installation and bash dependency resolved
 
 ## Running Tests
 
