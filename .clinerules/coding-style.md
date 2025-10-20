@@ -1,6 +1,6 @@
-# Coding Style - Hyperpage Dashboard
+# Coding Style - Hyperpage
 
-This document outlines the coding standards and style guidelines for the Hyperpage Dashboard project.
+This document outlines the coding standards and style guidelines for the Hyperpage project.
 
 ## Code Standards
 

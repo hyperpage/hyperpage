@@ -1,6 +1,6 @@
-# Configuration Guidelines - Hyperpage Dashboard
+# Configuration Guidelines - Hyperpage
 
-This document outlines the standards and best practices for configuration management in the Hyperpage Dashboard project.
+This document outlines the standards and best practices for configuration management in the Hyperpage project.
 
 ## Environment Variable Management
 

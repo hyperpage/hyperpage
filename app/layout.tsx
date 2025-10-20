@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hyperpage Dashboard",
+  title: "Hyperpage",
   description: "Comprehensive data aggregation dashboard",
 };
 

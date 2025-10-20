@@ -1,6 +1,6 @@
-# Coding Principles - Hyperpage Dashboard
+# Coding Principles - Hyperpage
 
-This document outlines the core architectural principles and development patterns for the Hyperpage Dashboard project.
+This document outlines the core architectural principles and development patterns for the Hyperpage project.
 
 ## Core Principles
 

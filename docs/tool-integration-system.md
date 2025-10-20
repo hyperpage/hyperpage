@@ -1,6 +1,6 @@
 # Registry-Driven Tool Integration System
 
-This directory contains the **100% registry-driven tool integration system** for the Hyperpage Dashboard. Tools own their complete integration including API handlers and **capability declarations**, eliminating any manual routing or hardcoded logic.
+This directory contains the **100% registry-driven tool integration system** for Hyperpage. Tools own their complete integration including API handlers and **capability declarations**, eliminating any manual routing or hardcoded logic.
 
 ## How It Works
 
