@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server.js";
+import { NextRequest, NextResponse } from "next/server";
 import { getEnabledToolsByCapability, Tool } from "../../../../tools";
 
 // Unified activity API endpoint

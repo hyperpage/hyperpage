@@ -6,8 +6,8 @@ const mockGetEnabledToolsByCapability = vi.fn();
 const mockGetToolByName = vi.fn();
 
 vi.mock('../../../../tools', () => ({
-  getEnabledToolsByCapability: (...args: any[]) => mockGetEnabledToolsByCapability(...args),
-  getToolByName: (...args: any[]) => mockGetToolByName(...args),
+  getEnabledToolsByCapability: (...args: any) => mockGetEnabledToolsByCapability(...args),
+  getToolByName: (...args: any) => mockGetToolByName(...args),
 }));
 
 describe('GET /api/tools/activity', () => {
@@ -25,7 +25,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://api.github.com',
         },
         handlers: {
-          activity: async (request, config) => ({
+          activity: async (_request: any, _config: any) => ({
             activity: [
               {
                 id: 'gh1',

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getEnabledTools } from '../../app/api/tools/enabled/route';
 import * as toolsModule from '../../tools';
 

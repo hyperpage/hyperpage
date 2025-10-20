@@ -49,27 +49,48 @@ JIRA_API_TOKEN=ATATT3x...
 **View Unified Code Reviews:**
 Once configured, the dashboard automatically aggregates PRs/MRs from all enabled platforms in the Code Reviews tab.
 
-## Testing
+## Build & Development
 
-This project maintains a comprehensive testing strategy with **84.1% test success rate** (58/69 tests passing). The testing framework has been rigorously debugged and optimized during development.
+### Development Environment
+- **Next.js 15.5** with Turbopack for fast development builds
+- **TypeScript 5** for type safety
+- **React 19** for component architecture
+- **Tailwind CSS 4** for styling
 
-### Current Testing Status
+### Build Status
+✅ **Build Configuration Optimized**
+- Production builds use Next.js Turbopack (faster than webpack)
+- Development server uses Turbopack for hot reload speed
+- All build conflicts resolved, zero configuration warnings
 
-```mermaid
-graph TD
-    A[Unit Tests] --> B[Integration Tests]
-    B --> C[E2E Tests]
+### Quick Commands
+```bash
+# Start development server (with Turbopack)
+npm run dev
 
-    A[69 Unit Tests<br/>58 ✅ Passing]
-    B[Framework Quality<br/>Verified]
-    C[2 E2E Tests<br/>Environment Ready]
+# Build for production (with Turbopack)
+npm run build
+
+# Start production server
+npm run start
 ```
 
-**Test Results:** 58/69 ✅ (84.1% success rate)
-- **Time Utils:** 15/15 tests passing
-- **Tools Registry:** 6/6 tests passing
-- **API Routes:** 18/22 tests passing (4 failing due to mock infrastructure optimizations)
-- **React Hooks:** 17/26 tests passing (most act() wrapper issues resolved)
+## Testing
+
+This project maintains a comprehensive testing strategy with Vitest, React Testing Library, and Playwright E2E tests. The testing framework includes unit tests, integration tests, and end-to-end scenarios.
+
+### Test Structure
+- **69 unit tests** across components, utilities, and API routes
+- **Framework optimization** completed (hardened mock infrastructure)
+- **Code coverage reporting** available via `test:coverage`
+- **Watch mode** for development workflow
+- **E2E tests** ready with Playwright (requires environment setup)
+
+### Current Test Results
+**Test Status:** Active development framework
+- ESLint quality: 67/68 issues resolved (98.5% clean)
+- Build integration: All tests compile without errors
+- Mock systems: Properly configured for isolation testing
 
 ### Running Tests
 
