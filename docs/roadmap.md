@@ -1,4 +1,4 @@
-# Hyperpage Dashboard Roadmap
+# Hyperpage Roadmap
 
 This document outlines the most important tasks for enhancing the Hyperpage Dashboard, a data aggregation platform that consolidates information from multiple external tools (GitHub, Jira, GitLab, etc.) into a unified interface.
 

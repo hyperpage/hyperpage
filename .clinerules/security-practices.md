@@ -1,6 +1,6 @@
-# Security Practices - Hyperpage Dashboard
+# Security Practices - Hyperpage
 
-This document outlines the security standards and best practices for the Hyperpage Dashboard project.
+This document outlines the security standards and best practices for the Hyperpage project.
 
 ## Security Standards
 

@@ -1,6 +1,6 @@
-# Documentation Guidelines - Hyperpage Dashboard
+# Documentation Guidelines - Hyperpage
 
-This document outlines the documentation maintenance standards and practices for the Hyperpage Dashboard project.
+This document outlines the documentation maintenance standards and practices for the Hyperpage project.
 
 ## .clinerules Organization
 

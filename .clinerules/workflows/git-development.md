@@ -1,6 +1,6 @@
 # Git Development Workflow
 
-This workflow outlines best practices for git development, branching strategies, commit conventions, and pull request management in the Hyperpage Dashboard project.
+This workflow outlines best practices for git development, branching strategies, commit conventions, and pull request management in the Hyperpage project.
 
 ## Prerequisites
 - Git repository initialized and connected to GitHub
@@ -394,4 +394,4 @@ type(scope): description
 - **Balance Perfection vs Progress**: Accept reasonable solutions
 - **Test Changes**: Reviewers should test functionality locally
 
-This workflow ensures consistent, high-quality development practices across the Hyperpage Dashboard project.
+This workflow ensures consistent, high-quality development practices across the Hyperpage project.

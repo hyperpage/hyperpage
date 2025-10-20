@@ -1,4 +1,4 @@
-# Hyperpage Dashboard
+# Hyperpage
 
 A comprehensive data aggregation dashboard that consolidates information from multiple external tools into a unified, interactive interface. Built with Next.js, TypeScript, and Tailwind CSS.
 

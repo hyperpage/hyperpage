@@ -1,6 +1,6 @@
 # Add New Tool Workflow
 
-This workflow automates the 3-step process for adding new tools to the Hyperpage Dashboard, implementing the registry-driven architecture and coding principles.
+This workflow automates the 3-step process for adding new tools to Hyperpage, implementing the registry-driven architecture and coding principles.
 
 ## Prerequisites
 - Tool has been analyzed and approved per coding-principles.md
