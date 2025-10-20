@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Tool, ToolData } from "../../../tools/tool-types";
 import { getToolDataKey } from "../../../tools";
 
@@ -12,6 +12,7 @@ interface UseToolDataReturn {
   refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
   refreshActivityData: () => Promise<void>;
   refreshAllData: () => void;
+  initializePolling: () => void;
 }
 
 export function useToolData({
@@ -93,8 +94,8 @@ export function useToolData({
     [enabledTools, refreshToolData, refreshActivityData],
   );
 
-  // Initial data loading and polling setup
-  useEffect(() => {
+  // Initialize polling and setup function
+  const initializePolling = useCallback(() => {
     const intervalIds: NodeJS.Timeout[] = [];
 
     const setupPolling = async () => {
@@ -144,8 +145,8 @@ export function useToolData({
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
+    // Return cleanup function
     return () => {
-      // Cleanup intervals and listeners
       intervalIds.forEach((id) => clearInterval(id));
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
@@ -157,5 +158,6 @@ export function useToolData({
     refreshToolData,
     refreshActivityData,
     refreshAllData,
+    initializePolling,
   };
 }
