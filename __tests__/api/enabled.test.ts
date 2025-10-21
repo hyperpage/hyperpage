@@ -135,8 +135,8 @@ describe('GET /api/tools/enabled', () => {
             dynamic: true,
           },
             {
+              title: 'Issues',
               type: 'metric',
-              data: [],
               dynamic: false,
             },
         ],
@@ -167,7 +167,7 @@ describe('GET /api/tools/enabled', () => {
         endpoint: 'pulls',
         method: 'GET',
         description: 'Get pull requests',
-        parameters: [],
+        parameters: {},
         url: '/api/tools/github/pulls',
       });
     });
