@@ -16,7 +16,7 @@ export const ticketingTool: Tool = {
   },
   widgets: [
     {
-      title: "Recent Tickets",
+      title: "Tickets",
       type: "table",
       headers: ["ID", "Title", "Status", "Assignee", "Tool"],
       data: [], // Data will be loaded asynchronously
