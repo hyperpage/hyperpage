@@ -415,7 +415,7 @@ export const gitlabTool: Tool = {
           tool: "GitLab",
           toolIcon: "🦊",
           action: "Code pushed",
-          description: `Pushed to ${branchName} (${commitCount} commits)`,
+          description: `Pushed to ${branchName}`,
           author: event.author?.name || event.author_username || "Unknown",
           time: timeAgo,
           color: "orange",

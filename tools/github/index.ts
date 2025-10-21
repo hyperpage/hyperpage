@@ -397,7 +397,7 @@ export const githubTool: Tool = {
               tool: "GitHub",
               toolIcon: "github",
               action: "Code pushed",
-              description: `Pushed to ${branch} (${commitCount} commits)`,
+              description: `Pushed to ${branch}`,
               author: event.actor.login,
               time: timeAgo,
               color: "purple",
