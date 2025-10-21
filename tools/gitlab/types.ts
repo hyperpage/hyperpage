@@ -39,6 +39,8 @@ export interface GitLabEvent {
   push_data?: {
     ref?: string;
     commit_count?: number;
+    commit_from?: string;
+    commit_to?: string;
   };
   author?: { name: string };
   author_username?: string;

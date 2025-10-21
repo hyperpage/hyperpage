@@ -335,7 +335,7 @@ export const gitlabTool: Tool = {
         timeAgo: string,
       ) => {
         const branchName = event.push_data?.ref?.split("/").pop() || "unknown";
-        const commitCount = event.push_data?.commit_count || 0;
+        const pushData = event.push_data;
 
         // Get project name from the event data
         let project = event.project_path;
@@ -343,6 +343,72 @@ export const gitlabTool: Tool = {
           project = await fetchProjectPath(event.project_id);
         }
         project = project || "unknown";
+
+        // Collect commit messages for rich content from GitLab Compare API
+        const commitMessages: Array<{ type: 'commit'; text: string; author?: string; timestamp?: string }> = [];
+
+        // Use GitLab Compare API to get exact commits in this push
+        if (pushData?.commit_from && pushData?.commit_to && event.project_id) {
+          try {
+            const compareUrl = `${apiUrl}/projects/${event.project_id}/repository/compare?from=${pushData.commit_from}&to=${pushData.commit_to}`;
+            const compareResponse = await fetch(compareUrl, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (compareResponse.ok) {
+              const compareData = await compareResponse.json();
+              const commits = compareData.commits || [];
+
+              // Show up to 3 commits from this specific push
+              commits.slice(0, 3).forEach((commit: any) => {
+                const shortSha = commit.id?.substring(0, 8) || 'unknown';
+                const message = commit.message || `Commit ${shortSha}`;
+                // Remove any trailing newlines and limit length
+                const cleanMessage = message.split('\n')[0]?.substring(0, 150) || `Commit ${shortSha}`;
+                const truncatedMessage = cleanMessage.length < message.split('\n')[0]?.length ?
+                  cleanMessage + '...' : cleanMessage;
+
+                commitMessages.push({
+                  type: 'commit',
+                  text: truncatedMessage,
+                  author: commit.author_name || commit.committer_name || event.author?.name || event.author_username || "Unknown",
+                  timestamp: commit.committed_date || eventTime.toISOString()
+                });
+              });
+            } else {
+              console.warn(`Failed to fetch GitLab compare data for project ${event.project_id}:`, compareResponse.status);
+              // Single fallback message
+              commitMessages.push({
+                type: 'commit',
+                text: `Code push to ${project}/${branchName}`,
+                author: event.author?.name || event.author_username || "Unknown",
+                timestamp: eventTime.toISOString()
+              });
+            }
+          } catch (error) {
+            console.warn(`Error fetching GitLab commits for push ${event.id}:`, error);
+            commitMessages.push({
+              type: 'commit',
+              text: `GitLab push to ${branchName}`,
+              author: event.author?.name || event.author_username || "Unknown",
+              timestamp: eventTime.toISOString()
+            });
+          }
+        } else {
+          // No commit SHAs available, fallback to single message
+          commitMessages.push({
+            type: 'commit',
+            text: `Code push to ${project}/${branchName}`,
+            author: event.author?.name || event.author_username || "Unknown",
+            timestamp: eventTime.toISOString()
+          });
+        }
+
+        const commitCount = commitMessages.length;
 
         return {
           id: `${event.id}_${index}`,
@@ -357,6 +423,7 @@ export const gitlabTool: Tool = {
           repository: project,
           branch: branchName,
           commitCount,
+          content: commitMessages.length > 0 ? commitMessages : undefined,
         };
       };
 
