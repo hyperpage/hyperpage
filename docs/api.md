@@ -73,7 +73,7 @@ Aggregates recent activities from all enabled tools.
 #### GitHub Tool
 - **`GET /api/tools/github/repos`**: List user repositories
 - **`GET /api/tools/github/workflows`**: List recent workflow runs
-- **`GET /api/tools/github/activity`**: Get user activity events
+- **`GET /api/tools/github/activity`**: Get user activity events with unique commit content (prevents duplicate commits across push events)
 
 #### GitLab Tool
 - **`GET /api/tools/gitlab/merge-requests`**: List merge requests
