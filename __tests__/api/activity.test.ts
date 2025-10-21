@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getActivityData } from '../../app/api/tools/activity/route';
 import * as toolsModule from '../../tools';
+import { Tool, ToolConfig } from '../../tools/tool-types';
 
 // Mock the tools registry - using the correct import path from the activity route
 vi.mock('../../tools', () => ({
@@ -11,8 +12,41 @@ vi.mock('../../tools', () => ({
 const mockGetEnabledToolsByCapability = vi.mocked(toolsModule.getEnabledToolsByCapability);
 const mockGetToolByName = vi.mocked(toolsModule.getToolByName);
 
+// Activity item structure used in tests
+interface MockActivityItem {
+  id: string;
+  tool: string;
+  toolIcon: string;
+  action: string;
+  description: string;
+  author: string;
+  time: string;
+  color: string;
+  timestamp: string;
+  url?: string;
+  displayId?: string;
+  repository?: string;
+  branch?: string;
+  status?: string;
+  assignee?: string;
+  labels?: string[] | string;
+  commitCount?: number;
+}
+
+// Mock activity response structure
+interface MockActivityResponse {
+  activity: MockActivityItem[];
+}
+
+
+// Mock tool configuration for tests - use flexible typing for test mocks
+interface MockTool extends Omit<Tool, 'handlers' | 'ui'> {
+  handlers: Record<string, any>; // Allow any for test flexibility
+  ui: { color: string; icon: any }; // Allow any for mocking purposes
+}
+
 // Helper function to create minimal valid mock tools
-const createMockTool = (overrides: Partial<Record<string, unknown>>) => ({
+const createMockTool = (overrides: Partial<MockTool>): MockTool => ({
   name: 'TestTool',
   slug: 'test',
   enabled: true,
@@ -25,7 +59,7 @@ const createMockTool = (overrides: Partial<Record<string, unknown>>) => ({
     formatApiUrl: () => 'https://test.com/api',
   },
   ...overrides,
-} as any);
+});
 
 describe('GET /api/tools/activity', () => {
   beforeEach(() => {

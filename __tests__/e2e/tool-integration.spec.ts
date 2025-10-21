@@ -60,9 +60,6 @@ test.describe('Tool Integration E2E Tests', () => {
 
       await page.getByRole('tab', { name: 'Livefeed' }).click();
 
-      // Store initial content
-      const initialContent = await page.textContent(':visible');
-
       // Simulate switching tabs (bringing page back into focus)
       await page.evaluate(() => {
         // Trigger visibilitychange event
@@ -85,9 +82,6 @@ test.describe('Tool Integration E2E Tests', () => {
 
       // Wait for initial load
       await page.waitForTimeout(1000);
-
-      // Store initial state
-      const initialContent = await page.textContent('body');
 
       // Wait for potential auto-refresh (if implemented)
       await page.waitForTimeout(5000);
@@ -150,7 +144,7 @@ test.describe('Tool Integration E2E Tests', () => {
       // (implementation-specific behavior)
     });
 
-    test('should handle browser back/forward', async ({ page, context }) => {
+    test('should handle browser back/forward', async ({ page }) => {
       await page.goto('/');
 
       // Click on a different tab
