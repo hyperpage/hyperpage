@@ -10,7 +10,7 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     exclude: [
-      'e2e/**', // Exclude E2E tests from Vitest
+      '__tests__/e2e/**', // Exclude E2E tests from Vitest
       'node_modules/**'
     ],
     coverage: {
