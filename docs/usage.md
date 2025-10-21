@@ -67,8 +67,8 @@ Real-time activity aggregation from all connected platforms featuring rich conte
 The livefeed now displays meaningful content instead of just basic action descriptions:
 
 **Content Types:**
-- **GitHub Commits** 🔵: Shows actual commit messages for each push event using GitHub Compare API (e.g., "Fix authentication bug in user registration")
-- **GitLab Commits** 🟠: Displays commit messages using GitLab Compare API for push events
+- **GitHub Commits** 🔵: Clean push descriptions with individual commit messages below using GitHub Compare API
+- **GitLab Commits** 🟠: Clean push descriptions with individual commit messages below using GitLab Compare API
 - **Jira Descriptions** 🟢: Displays issue descriptions extracted from Atlassian Document Format
 - **Git Comments** 🟣: Future support for code review and issue comments
 - **Change Details** 🟡: Future support for field change summaries
