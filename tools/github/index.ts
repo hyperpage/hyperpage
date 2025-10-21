@@ -315,74 +315,82 @@ export const githubTool: Tool = {
               typeof pushPayload.ref === "string"
                 ? pushPayload.ref.split("/").pop()
                 : "unknown";
-            const commitCount = pushPayload.size || 0;
 
-
-
-            // Collect commit messages for rich content by fetching from repository API
-            // Always try to fetch recent commits, even if push event shows 0 commits
+            const pushCommits = Array.isArray(pushPayload.commits) ? pushPayload.commits : [];
             const commitMessages: Array<{ type: 'commit'; text: string; author?: string; timestamp?: string }> = [];
 
-            // Always try to get recent commits from the repository
-            try {
-              // Try to get recent commits from the repository to show real commit messages
-              const repoName = event.repo.name;
-              const [owner, repo] = repoName.split('/');
-              const commitsUrl = `${apiUrl}/repos/${owner}/${repo}/commits?per_page=3&sha=${branch}`;
+            if (pushCommits.length > 0) {
+              // Use the actual commits from the push event (limit to first 3)
+              pushCommits.slice(0, 3).forEach((pushCommit: any) => {
+                const shortSha = pushCommit.sha?.substring(0, 7) || 'unknown';
+                const message = pushCommit.message || `Commit ${shortSha}`;
+                const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
 
-              const commitsResponse = await fetch(commitsUrl, {
-                method: "GET",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  Accept: "application/vnd.github.v3+json",
-                },
-              });
-
-              if (commitsResponse.ok) {
-                const commitsData = await commitsResponse.json();
-                commitsData.slice(0, 3).forEach((commit: any) => {
-                  const shortSha = commit.sha?.substring(0, 7) || 'unknown';
-                  const message = commit.commit?.message || `Commit ${shortSha}`;
-                  const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
-
-                  commitMessages.push({
-                    type: 'commit',
-                    text: truncatedMessage,
-                    author: commit.commit?.author?.name || commit.commit?.committer?.name || event.actor.login,
-                    timestamp: commit.commit?.committer?.date || eventTime.toISOString()
-                  });
+                commitMessages.push({
+                  type: 'commit',
+                  text: truncatedMessage,
+                  author: pushCommit.author?.name || event.actor.login,
+                  timestamp: eventTime.toISOString()
                 });
-              } else {
-                // Fallback to placeholder content when API fails
-                if (commitCount > 0) {
-                  for (let i = 0; i < Math.min(commitCount, 3); i++) {
-                    commitMessages.push({
-                      type: 'commit',
-                      text: `Recent commit #${i + 1}`,
-                      author: event.actor.login,
-                      timestamp: eventTime.toISOString()
+              });
+            } else {
+              try {
+                const repoName = event.repo.name;
+                const [owner, repo] = repoName.split('/');
+                const before = (pushPayload as any).before;
+                const head = (pushPayload as any).head;
+
+                if (before && head) {
+                  const compareUrl = `${apiUrl}/repos/${owner}/${repo}/compare/${before}...${head}`;
+
+                  const compareResponse = await fetch(compareUrl, {
+                    method: "GET",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      Accept: "application/vnd.github.v3+json",
+                    },
+                  });
+
+                  if (compareResponse.ok) {
+                    const compareData = await compareResponse.json();
+                    const commits = compareData.commits || [];
+
+                    commits.slice(0, 3).forEach((commit: any) => {
+                      const shortSha = commit.sha?.substring(0, 7) || 'unknown';
+                      const message = commit.commit?.message || `Commit ${shortSha}`;
+                      const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
+
+                      commitMessages.push({
+                        type: 'commit',
+                        text: truncatedMessage,
+                        author: commit.commit?.author?.name || commit.commit?.committer?.name || commit.author?.login || event.actor.login,
+                        timestamp: commit.commit?.committer?.date || eventTime.toISOString()
+                      });
                     });
                   }
-                } else {
-                  // If no commits in event, still show one recent commit from repo
+                }
+
+                if (commitMessages.length === 0) {
                   commitMessages.push({
                     type: 'commit',
-                    text: 'Recent commit',
+                    text: `Code push to ${repository}/${branch}`,
                     author: event.actor.login,
                     timestamp: eventTime.toISOString()
                   });
                 }
+              } catch (error) {
+                console.warn(`Failed to fetch push comparison for ${repository}:`, error);
+                commitMessages.push({
+                  type: 'commit',
+                  text: `GitHub push to ${branch}`,
+                  author: event.actor.login,
+                  timestamp: eventTime.toISOString()
+                });
               }
-            } catch (error) {
-              console.warn(`Failed to fetch commit details for ${repository}:`, error);
-              // Final fallback
-              commitMessages.push({
-                type: 'commit',
-                text: 'Code changes',
-                author: event.actor.login,
-                timestamp: eventTime.toISOString()
-              });
             }
+
+            // Use actual fetched commit count instead of unreliable pushPayload.size
+            const commitCount = commitMessages.length;
 
             activityEvents.push({
               id: event.id,
