@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getEnabledTools } from '../../app/api/tools/enabled/route';
 import * as toolsModule from '../../tools';
+import { Tool, ToolData } from '../../tools/tool-types';
 
 // Mock the entire tools module to intercept getEnabledTools
 vi.mock('../../tools', () => ({
@@ -8,6 +9,36 @@ vi.mock('../../tools', () => ({
 }));
 
 const mockGetEnabledTools = vi.mocked(toolsModule.getEnabledTools);
+
+// Test interfaces for mock objects
+interface MockApiDefinition {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  description: string;
+  parameters?: Record<string, {
+    type: string;
+    required: boolean;
+    description: string;
+  }>;
+}
+
+interface MockWidget {
+  title: string;
+  type: 'metric' | 'chart' | 'table' | 'feed';
+  data: ToolData[];
+  headers?: string[];
+  dynamic?: boolean;
+}
+
+interface MockToolUI {
+  color: string;
+  icon: any; // Allow any for vitest mock
+}
+
+interface MockTool extends Omit<Tool, 'ui' | 'widgets' | 'apis'> {
+  ui: MockToolUI;
+  widgets: MockWidget[];
+  apis?: Record<string, MockApiDefinition>;
+}
 
 describe('GET /api/tools/enabled', () => {
   beforeEach(() => {
@@ -17,69 +48,73 @@ describe('GET /api/tools/enabled', () => {
   describe('successful responses', () => {
     it('returns enabled tools with correct transformation', async () => {
       // Create simplified mock tools with minimum required properties
-      const mockTools = [
+      const mockTools: MockTool[] = [
         {
           name: 'GitHub',
           slug: 'github',
           enabled: true,
-          ui: { color: 'bg-blue-500', icon: null as any } as any,
+          ui: { color: 'bg-blue-500', icon: null },
           widgets: [
             {
               title: 'Pull Requests',
-              type: 'table' as const,
+              type: 'table',
               data: [],
               headers: ['Title', 'Status'],
               dynamic: true,
-            } as any,
+            },
             {
               title: 'Issues',
-              type: 'card' as const,
+              type: 'metric',
               data: [],
               dynamic: false,
-            } as any,
+            },
           ],
           apis: {
             pulls: {
-              method: 'GET' as const,
+              method: 'GET',
               description: 'Get pull requests',
-              parameters: [],
+              parameters: {},
             },
             issues: {
-              method: 'POST' as const,
+              method: 'POST',
               description: 'Update issue status',
-              parameters: [{ name: 'status', type: 'string' }],
+              parameters: {
+                status: { type: 'string', required: true, description: 'Status to set' },
+              },
             },
           },
           handlers: {},
           capabilities: ['pull-requests'],
-        } as any,
+        },
         {
           name: 'Jira',
           slug: 'jira',
           enabled: true,
-          ui: { color: 'bg-green-500', icon: null as any } as any,
+          ui: { color: 'bg-green-500', icon: null },
           widgets: [
             {
               title: 'Tickets',
-              type: 'table' as const,
+              type: 'table',
               data: [],
               headers: undefined,
               dynamic: true,
-            } as any,
+            },
           ],
           apis: {
             issues: {
-              method: 'GET' as const,
+              method: 'GET',
               description: 'Get issues',
-              parameters: [{ name: 'assignee', type: 'string' }],
+              parameters: {
+                assignee: { type: 'string', required: false, description: 'Assignee filter' },
+              },
             },
           },
           handlers: {},
           capabilities: ['issues'],
-        } as any,
+        },
       ];
 
-      mockGetEnabledTools.mockReturnValue(mockTools);
+      mockGetEnabledTools.mockReturnValue(mockTools as Tool[]);
 
       const response = await getEnabledTools();
       const data = await response.json();
@@ -99,25 +134,27 @@ describe('GET /api/tools/enabled', () => {
             headers: ['Title', 'Status'],
             dynamic: true,
           },
-          {
-            title: 'Issues',
-            type: 'card',
-            dynamic: false,
-          },
+            {
+              type: 'metric',
+              data: [],
+              dynamic: false,
+            },
         ],
         apis: [
           {
             endpoint: 'pulls',
             method: 'GET',
             description: 'Get pull requests',
-            parameters: [],
+            parameters: {},
             url: '/api/tools/github/pulls',
           },
           {
             endpoint: 'issues',
             method: 'POST',
             description: 'Update issue status',
-            parameters: [{ name: 'status', type: 'string' }],
+            parameters: {
+              status: { type: 'string', required: true, description: 'Status to set' },
+            },
             url: '/api/tools/github/issues',
           },
         ],

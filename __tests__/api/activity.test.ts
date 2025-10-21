@@ -136,7 +136,7 @@ describe('GET /api/tools/activity', () => {
         },
       });
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockGithubTool, mockJiraTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockGithubTool, mockJiraTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
@@ -188,7 +188,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
@@ -214,7 +214,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
@@ -279,7 +279,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([failingTool, workingTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([failingTool, workingTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
@@ -301,7 +301,7 @@ describe('GET /api/tools/activity', () => {
         handlers: {}, // No activity handler
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([incompleteTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([incompleteTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
@@ -326,7 +326,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([brokenTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([brokenTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
@@ -371,7 +371,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
@@ -443,7 +443,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
@@ -484,7 +484,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool]);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
 
       const response = await getActivityData();
       const data = await response.json();
