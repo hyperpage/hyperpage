@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Activity, MessageCircle } from "lucide-react";
+import { BarChart3, Activity } from "lucide-react";
 
 interface TabNavigationProps {
   activeTab: string;
@@ -16,12 +16,6 @@ export default function TabNavigation({
   const menuItems = [
     { id: "overview", label: "Overview", icon: BarChart3, count: null },
     { id: "livefeed", label: "Livefeed", icon: Activity, count: null },
-    {
-      id: "communication",
-      label: "Communication",
-      icon: MessageCircle,
-      count: 2,
-    },
   ];
 
   return (

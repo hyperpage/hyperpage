@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getActivityData } from '../../app/api/tools/activity/route';
 import * as toolsModule from '../../tools';
 import { Tool, ToolConfig } from '../../tools/tool-types';
+import { NextRequest } from 'next/server';
 
 // Mock the tools registry - using the correct import path from the activity route
 vi.mock('../../tools', () => ({
@@ -41,8 +42,8 @@ interface MockActivityResponse {
 
 // Mock tool configuration for tests - use flexible typing for test mocks
 interface MockTool extends Omit<Tool, 'handlers' | 'ui'> {
-  handlers: Record<string, any>; // Allow any for test flexibility
-  ui: { color: string; icon: any }; // Allow any for mocking purposes
+  handlers: Record<string, (_request: NextRequest, _config: ToolConfig) => Promise<Record<string, unknown>>>; // Specific handler type
+  ui: { color: string; icon: () => React.ReactNode | null }; // Specific icon type
 }
 
 // Helper function to create minimal valid mock tools
@@ -72,7 +73,7 @@ describe('GET /api/tools/activity', () => {
         name: 'GitHub',
         slug: 'github',
         handlers: {
-          activity: async (_request: any, _config: any) => ({
+          activity: async (_request: NextRequest, _config: ToolConfig) => ({
             activity: [
               {
                 id: 'gh1',
@@ -136,7 +137,7 @@ describe('GET /api/tools/activity', () => {
         },
       });
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockGithubTool, mockJiraTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockGithubTool, mockJiraTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
@@ -188,7 +189,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
@@ -214,7 +215,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
@@ -279,7 +280,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([failingTool, workingTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([failingTool, workingTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
@@ -301,7 +302,7 @@ describe('GET /api/tools/activity', () => {
         handlers: {}, // No activity handler
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([incompleteTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([incompleteTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
@@ -326,7 +327,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([brokenTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([brokenTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
@@ -371,7 +372,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
@@ -443,7 +444,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
@@ -484,7 +485,7 @@ describe('GET /api/tools/activity', () => {
         },
       };
 
-      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any);
+      mockGetEnabledToolsByCapability.mockReturnValue([mockTool] as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const response = await getActivityData();
       const data = await response.json();
