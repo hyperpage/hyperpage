@@ -154,7 +154,7 @@ export const githubTool: Tool = {
       }
 
       // First get user's repositories to fetch workflow runs from
-      const reposUrl = `${apiUrl}/user/repos?type=owner&sort=pushed&per_page=10`;
+      const reposUrl = `${apiUrl}/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&per_page=10`;
 
       const reposResponse = await fetch(reposUrl, {
         method: "GET",
@@ -274,14 +274,12 @@ export const githubTool: Tool = {
       }
 
       // FIRST: Fetch recent PRs and issues and convert them to activity events
-      // This provides the navigation links that the public events API doesn't have
+      // This provides the navigation links that the repository events API may not have
       try {
         // Get recent PRs
         const prHandler = githubTool.handlers["pull-requests"];
         const prResult = await prHandler!(request, config);
         const prs = prResult.pullRequests as any[];
-
-        // If no real PRs found, don't add synthetic activities for clean implementation
 
         for (const pr of prs.slice(0, 3)) { // Limit to 3 recent PRs
           const prCreatedTime = new Date(pr.created);
@@ -293,13 +291,13 @@ export const githubTool: Tool = {
             toolIcon: "github",
             action: "Pull request opened",
             description: pr.title,
-            author: "Current User", // PRs fetched via search API don't have author details
+            author: "Current User",
             time: prTimeAgo,
             color: "purple",
             timestamp: pr.created,
             repository: pr.repository,
             url: pr.url,
-            displayId: pr.id, // Already formatted as #123
+            displayId: pr.id,
             status: pr.status,
             type: "pull-request"
           });
@@ -320,97 +318,136 @@ export const githubTool: Tool = {
             toolIcon: "github",
             action: "Issue opened",
             description: issue.title,
-            author: "Current User", // Issues fetched via search API don't have author details
+            author: "Current User",
             time: issueTimeAgo,
             color: "purple",
             timestamp: issue.created,
             repository: "N/A", // Issues search API doesn't provide repository
             url: issue.url,
-            displayId: issue.ticket, // Already formatted as #123
+            displayId: issue.ticket,
             status: issue.status,
             type: "issue"
           });
         }
       } catch (error) {
         console.warn("Failed to fetch PRs/issues for activity feed:", error);
-        // Continue with events even if PRs/issues fail
       }
 
-      // SECOND: Get user public events from GitHub API for push events and other activities
-      const username = process.env.GITHUB_USERNAME;
-      if (!username) {
-        throw new Error("GitHub username not configured (GITHUB_USERNAME)");
-      }
-      const eventsUrl = `${apiUrl}/users/${username}/events/public?per_page=30`;
+      // SECOND: Get recently active repositories and query their events
+      // This provides much faster updates than user public events
+      try {
+        const username = process.env.GITHUB_USERNAME;
+        if (!username) {
+          throw new Error("GitHub username not configured (GITHUB_USERNAME)");
+        }
 
-      const response = await fetch(eventsUrl, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github.v3+json",
-        },
-      });
+        // First, get user's repositories sorted by most recently pushed
+        // This gives us repositories they've recently worked on
+        const reposUrl = `${apiUrl}/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&direction=desc&per_page=10`;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`GitHub API error: ${response.status} - ${errorText}`);
-      }
+        const reposResponse = await fetch(reposUrl, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github.v3+json",
+          },
+        });
 
-      const events: GitHubEvent[] = await response.json();
+        if (!reposResponse.ok) {
+          throw new Error(`Failed to fetch repositories: ${reposResponse.status}`);
+        }
 
-      // Transform GitHub events to activity feed format, but give priority to PRs and issues
-      // Limit push events to avoid overwhelming the feed
-      const maxPushEvents = 5;
-      let pushEventCount = 0;
+        const repositories: GitHubRepository[] = await reposResponse.json();
 
-      for (const event of events) {
-        const eventTime = new Date(event.created_at);
-        const timeAgo = getTimeAgo(eventTime);
-        const repository = `${event.repo.name}`;
+        // Query events for each repository (limit to top 5 most recently active)
+        const recentRepos = repositories.slice(0, 5);
+        const repoEventsPromises = recentRepos.map(async (repo: GitHubRepository) => {
+          try {
+            const eventsUrl = `${apiUrl}/repos/${repo.owner.login}/${repo.name}/events?per_page=20`;
 
-        switch (event.type) {
-          case "PushEvent":
-            if (pushEventCount >= maxPushEvents) continue; // Limit push events
+            const eventsResponse = await fetch(eventsUrl, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/vnd.github.v3+json",
+              },
+            });
 
-            const pushPayload = event.payload as {
-              ref?: string;
-              commits?: unknown[];
-              size?: number;
-            };
-            const branch =
-              typeof pushPayload.ref === "string"
-                ? pushPayload.ref.split("/").pop()
-                : "unknown";
-
-            const pushCommits = Array.isArray(pushPayload.commits) ? pushPayload.commits : [];
-            const commitMessages: Array<{ type: 'commit'; text: string; author?: string; timestamp?: string }> = [];
-
-            if (pushCommits.length > 0) {
-              // Use the actual commits from the push event (limit to first 3)
-              pushCommits.slice(0, 3).forEach((pushCommit: any) => {
-                const fullSha = pushCommit.sha;
-                const shortSha = fullSha?.substring(0, 7) || 'unknown';
-                const message = pushCommit.message || `Commit ${shortSha}`;
-                const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
-
-                commitMessages.push({
-                  type: 'commit',
-                  text: truncatedMessage,
-                  url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
-                  displayId: shortSha !== 'unknown' ? shortSha : undefined,
-                  author: pushCommit.author?.name || event.actor.login,
-                  timestamp: eventTime.toISOString()
-                } as CommitContentItem);
-              });
+            if (eventsResponse.ok) {
+              const events: GitHubEvent[] = await eventsResponse.json();
+              return events;
             } else {
-              try {
-                const repoName = event.repo.name;
-                const [owner, repo] = repoName.split('/');
-                const before = (pushPayload as any).before;
-                const head = (pushPayload as any).head;
+              console.warn(`Failed to fetch events for ${repo.owner.login}/${repo.name}: ${eventsResponse.status}`);
+              return [];
+            }
+          } catch (error) {
+            console.warn(`Error fetching events for ${repo.owner.login}/${repo.name}:`, error);
+            return [];
+          }
+        });
 
-                if (before && head) {
-                  const compareUrl = `${apiUrl}/repos/${owner}/${repo}/compare/${before}...${head}`;
+        const repoEventsArrays = await Promise.all(repoEventsPromises);
+        const allRepoEvents = repoEventsArrays.flat();
+
+        // Deduplicate events by ID (since same event might appear in multiple repos)
+        const seenEventIds = new Set<string>();
+        const deduplicatedEvents = allRepoEvents.filter(event => {
+          if (seenEventIds.has(event.id)) {
+            return false;
+          }
+          seenEventIds.add(event.id);
+          return true;
+        });
+
+        // Transform repository events to activity feed format
+        let pushEventCount = 0;
+        const maxPushEvents = 8; // Allow more push events since we're getting from specific repos
+
+        for (const event of deduplicatedEvents) {
+          const eventTime = new Date(event.created_at);
+          const timeAgo = getTimeAgo(eventTime);
+          const repository = `${event.repo.name}`;
+
+          switch (event.type) {
+            case "PushEvent":
+              if (pushEventCount >= maxPushEvents) continue;
+
+              const pushPayload = event.payload as {
+                ref?: string;
+                commits?: unknown[];
+                before?: string;
+                head?: string;
+                size?: number;
+              };
+              const branch =
+                typeof pushPayload.ref === "string"
+                  ? pushPayload.ref.split("/").pop()
+                  : "unknown";
+
+              const pushCommits = Array.isArray(pushPayload.commits) ? pushPayload.commits : [];
+              const commitMessages: Array<{ type: 'commit'; text: string; author?: string; timestamp?: string }> = [];
+
+              if (pushCommits.length > 0) {
+                // Use the actual commits from the push event (limit to first 3)
+                pushCommits.slice(0, 3).forEach((pushCommit: any) => {
+                  const fullSha = pushCommit.sha;
+                  const shortSha = fullSha?.substring(0, 7) || 'unknown';
+                  const message = pushCommit.message || `Commit ${shortSha}`;
+                  const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
+
+                  commitMessages.push({
+                    type: 'commit',
+                    text: truncatedMessage,
+                    url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
+                    displayId: shortSha !== 'unknown' ? shortSha : undefined,
+                    author: pushCommit.author?.name || event.actor.login,
+                    timestamp: eventTime.toISOString()
+                  } as CommitContentItem);
+                });
+              } else if (pushPayload.before && pushPayload.head) {
+                try {
+                  const [owner, repo] = repository.split('/');
+                  const compareUrl = `${apiUrl}/repos/${owner}/${repo}/compare/${pushPayload.before}...${pushPayload.head}`;
 
                   const compareResponse = await fetch(compareUrl, {
                     method: "GET",
@@ -440,72 +477,150 @@ export const githubTool: Tool = {
                       } as CommitContentItem);
                     });
                   }
+                } catch (error) {
+                  console.warn(`Failed to fetch push comparison for ${repository}:`, error);
                 }
+              }
 
-                if (commitMessages.length === 0) {
-                  commitMessages.push({
-                    type: 'commit',
-                    text: `Code push to ${repository}/${branch}`,
-                    author: event.actor.login,
-                    timestamp: eventTime.toISOString()
-                  });
-                }
-              } catch (error) {
-                console.warn(`Failed to fetch push comparison for ${repository}:`, error);
+              if (commitMessages.length === 0) {
                 commitMessages.push({
                   type: 'commit',
-                  text: `GitHub push to ${branch}`,
+                  text: `Code push to ${repository}/${branch}`,
                   author: event.actor.login,
                   timestamp: eventTime.toISOString()
                 });
               }
+
+              const commitCount = commitMessages.length;
+
+              activityEvents.push({
+                id: event.id,
+                tool: "GitHub",
+                toolIcon: "github",
+                action: "Code pushed",
+                description: `Pushed to ${branch}`,
+                author: event.actor.login,
+                time: timeAgo,
+                color: "purple",
+                timestamp: eventTime.toISOString(),
+                repository,
+                branch,
+                commitCount,
+                url: "",
+                displayId: "",
+                content: commitMessages.length > 0 ? commitMessages : undefined,
+              });
+              pushEventCount++;
+              break;
+
+            case "PullRequestEvent":
+              // Handle PR events with proper links
+              const prPayload = event.payload as { action?: string; pull_request?: any };
+              if (prPayload.pull_request) {
+                const pr = prPayload.pull_request;
+                activityEvents.push({
+                  id: event.id,
+                  tool: "GitHub",
+                  toolIcon: "github",
+                  action: `Pull request ${prPayload.action}`,
+                  description: pr.title || "Pull request activity",
+                  author: event.actor.login,
+                  time: timeAgo,
+                  color: "purple",
+                  timestamp: eventTime.toISOString(),
+                  repository,
+                  url: pr.html_url,
+                  displayId: `#${pr.number}`,
+                  status: pr.state,
+                  type: "pull-request"
+                });
+              }
+              break;
+
+            case "IssuesEvent":
+              // Handle issue events
+              const issuePayload = event.payload as { action?: string; issue?: any };
+              if (issuePayload.issue) {
+                const issue = issuePayload.issue;
+                activityEvents.push({
+                  id: event.id,
+                  tool: "GitHub",
+                  toolIcon: "github",
+                  action: `Issue ${issuePayload.action}`,
+                  description: issue.title || "Issue activity",
+                  author: event.actor.login,
+                  time: timeAgo,
+                  color: "purple",
+                  timestamp: eventTime.toISOString(),
+                  repository,
+                  url: issue.html_url,
+                  displayId: `#${issue.number}`,
+                  status: issue.state,
+                  type: "issue"
+                });
+              }
+              break;
+
+            default:
+              // Generic event handling for other cases
+              activityEvents.push({
+                id: event.id,
+                tool: "GitHub",
+                toolIcon: "github",
+                action: event.type.replace("Event", ""),
+                description: `Activity in ${repository}`,
+                author: event.actor.login,
+                time: timeAgo,
+                color: "purple",
+                timestamp: eventTime.toISOString(),
+                repository,
+              });
+              break;
+          }
+        }
+
+      } catch (error) {
+        console.warn("Failed to fetch repository events:", error);
+        // Fall back to user public events if repository events fail
+        try {
+          const username = process.env.GITHUB_USERNAME;
+          if (username) {
+            const fallbackUrl = `${apiUrl}/users/${username}/events/public?per_page=15`;
+            const fallbackResponse = await fetch(fallbackUrl, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/vnd.github.v3+json",
+              },
+            });
+
+            if (fallbackResponse.ok) {
+              const events: GitHubEvent[] = await fallbackResponse.json();
+
+              for (const event of events.slice(0, 3)) { // Limited fallback
+                const eventTime = new Date(event.created_at);
+                const timeAgo = getTimeAgo(eventTime);
+                const repository = `${event.repo.name}`;
+
+                if (event.type === "PushEvent") {
+                  activityEvents.push({
+                    id: event.id,
+                    tool: "GitHub",
+                    toolIcon: "github",
+                    action: "Code pushed",
+                    description: "GitHub activity (fallback)",
+                    author: event.actor.login,
+                    time: timeAgo,
+                    color: "purple",
+                    timestamp: eventTime.toISOString(),
+                    repository,
+                  });
+                }
+              }
             }
-
-            // Use actual fetched commit count instead of unreliable pushPayload.size
-            const commitCount = commitMessages.length;
-
-            // Push events don't have specific activity IDs, so don't show links
-            // This meets the requirement that displayId should be the ID of the activity
-            activityEvents.push({
-              id: event.id,
-              tool: "GitHub",
-              toolIcon: "github",
-              action: "Code pushed",
-              description: `Pushed to ${branch}`,
-              author: event.actor.login,
-              time: timeAgo,
-              color: "purple",
-              timestamp: eventTime.toISOString(),
-              repository,
-              branch,
-              commitCount,
-              url: "", // No specific URL for push events
-              displayId: "", // No specific activity ID for push events
-              content: commitMessages.length > 0 ? commitMessages : undefined,
-            });
-            pushEventCount++;
-            break;
-
-          case "PullRequestEvent":
-          case "IssuesEvent":
-            // Skip these as they're handled by the PRs/issues handlers above
-            continue;
-
-          default:
-            // Generic event handling for other cases (forks, watches, etc.)
-            activityEvents.push({
-              id: event.id,
-              tool: "GitHub",
-              toolIcon: "github",
-              action: event.type.replace("Event", ""),
-              description: `Activity in ${repository}`,
-              author: event.actor.login,
-              time: timeAgo,
-              color: "purple",
-              timestamp: eventTime.toISOString(),
-              repository,
-            });
-            break;
+          }
+        } catch (fallbackError) {
+          console.warn("Fallback to user events also failed:", fallbackError);
         }
       }
 

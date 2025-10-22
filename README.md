@@ -32,7 +32,7 @@ Connect multiple tools and instantly gain unified visibility into:
 - **Code Reviews**: GitHub PRs and GitLab MRs in one view
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
 - **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues
-- **Activity Feeds**: Real-time updates from all connected platforms
+- **Activity Feeds**: Real-time updates from all repositories (owned, collaborator, and organization repositories)
 
 ## Quick Start
 

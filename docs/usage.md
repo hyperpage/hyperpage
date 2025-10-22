@@ -62,6 +62,7 @@ Real-time activity aggregation from all connected platforms featuring rich conte
 - **Contextual Metadata**: Repository, branch, assignees, labels, and status
 - **Navigation Links**: Click to open items in their original platforms
 - **Status Indicators**: Color-coded badges for issue/MR states
+- **Comprehensive Repository Coverage**: Includes activities from owned repositories, collaborator access, and organization memberships
 
 #### Rich Content Enhancement
 The livefeed now displays meaningful content instead of just basic action descriptions:
