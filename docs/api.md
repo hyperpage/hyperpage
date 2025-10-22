@@ -140,6 +140,8 @@ interface ActivityEvent {
   content?: Array<{        // Rich content items (commits, descriptions, comments)
     type: 'commit' | 'description' | 'comment' | 'change';
     text: string;          // Content text (truncated to ~150 chars)
+    url?: string;          // Optional navigation URL (e.g., GitHub commit URL)
+    displayId?: string;    // Optional user-friendly ID (e.g., commit SHA 'abc1234')
     author?: string;       // Who authored the content
     timestamp?: string;    // When content was created/modified
   }>;

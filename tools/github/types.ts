@@ -53,10 +53,24 @@ export interface GitHubEvent {
   repo: { name: string };
   payload: {
     action?: string;
-    pull_request?: Record<string, unknown>;
-    issue?: Record<string, unknown>;
+    pull_request?: {
+      number: number;
+      title?: string;
+      state?: string;
+      html_url: string;
+      commits?: number;
+    };
+    issue?: {
+      number: number;
+      title?: string;
+      state?: string;
+      html_url: string;
+    };
     ref?: string;
     commits?: unknown[];
+    before?: string;
+    head?: string;
+    size?: number;
   };
   created_at: string;
 }

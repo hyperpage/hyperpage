@@ -1,6 +1,7 @@
 import React from "react";
 import { Github } from "lucide-react";
 import { Tool, ToolConfig, TransformedIssue } from "../tool-types";
+import { CommitContentItem } from "../tool-types";
 import {
   GitHubSearchItem,
   GitHubRepository,
@@ -264,6 +265,7 @@ export const githubTool: Tool = {
       return { issues: results };
     },
     activity: async (request: Request, config: ToolConfig) => {
+      const activityEvents: unknown[] = [];
       const apiUrl = config.formatApiUrl?.("https://github.com");
       const token = process.env.GITHUB_TOKEN;
 
@@ -271,12 +273,75 @@ export const githubTool: Tool = {
         throw new Error("GitHub API token not configured");
       }
 
-      // Get user public events from GitHub API
+      // FIRST: Fetch recent PRs and issues and convert them to activity events
+      // This provides the navigation links that the public events API doesn't have
+      try {
+        // Get recent PRs
+        const prHandler = githubTool.handlers["pull-requests"];
+        const prResult = await prHandler!(request, config);
+        const prs = prResult.pullRequests as any[];
+
+        // If no real PRs found, don't add synthetic activities for clean implementation
+
+        for (const pr of prs.slice(0, 3)) { // Limit to 3 recent PRs
+          const prCreatedTime = new Date(pr.created);
+          const prTimeAgo = getTimeAgo(prCreatedTime);
+
+          activityEvents.push({
+            id: `pr_${pr.id}`,
+            tool: "GitHub",
+            toolIcon: "github",
+            action: "Pull request opened",
+            description: pr.title,
+            author: "Current User", // PRs fetched via search API don't have author details
+            time: prTimeAgo,
+            color: "purple",
+            timestamp: pr.created,
+            repository: pr.repository,
+            url: pr.url,
+            displayId: pr.id, // Already formatted as #123
+            status: pr.status,
+            type: "pull-request"
+          });
+        }
+
+        // Get recent issues
+        const issuesHandler = githubTool.handlers["issues"];
+        const issuesResult = await issuesHandler!(request, config);
+        const issues = issuesResult.issues as any[];
+
+        for (const issue of issues.slice(0, 3)) { // Limit to 3 recent issues
+          const issueCreatedTime = new Date(issue.created);
+          const issueTimeAgo = getTimeAgo(issueCreatedTime);
+
+          activityEvents.push({
+            id: `issue_${issue.ticket}`,
+            tool: "GitHub",
+            toolIcon: "github",
+            action: "Issue opened",
+            description: issue.title,
+            author: "Current User", // Issues fetched via search API don't have author details
+            time: issueTimeAgo,
+            color: "purple",
+            timestamp: issue.created,
+            repository: "N/A", // Issues search API doesn't provide repository
+            url: issue.url,
+            displayId: issue.ticket, // Already formatted as #123
+            status: issue.status,
+            type: "issue"
+          });
+        }
+      } catch (error) {
+        console.warn("Failed to fetch PRs/issues for activity feed:", error);
+        // Continue with events even if PRs/issues fail
+      }
+
+      // SECOND: Get user public events from GitHub API for push events and other activities
       const username = process.env.GITHUB_USERNAME;
       if (!username) {
         throw new Error("GitHub username not configured (GITHUB_USERNAME)");
       }
-      const eventsUrl = `${apiUrl}/users/${username}/events/public?per_page=50`;
+      const eventsUrl = `${apiUrl}/users/${username}/events/public?per_page=30`;
 
       const response = await fetch(eventsUrl, {
         method: "GET",
@@ -293,19 +358,20 @@ export const githubTool: Tool = {
 
       const events: GitHubEvent[] = await response.json();
 
-      // Transform GitHub events to activity feed format with safe property access
-      const activityEvents: unknown[] = [];
-      let count = 0;
+      // Transform GitHub events to activity feed format, but give priority to PRs and issues
+      // Limit push events to avoid overwhelming the feed
+      const maxPushEvents = 5;
+      let pushEventCount = 0;
 
       for (const event of events) {
-        if (count >= 10) break; // Limit to 10 events
-
         const eventTime = new Date(event.created_at);
         const timeAgo = getTimeAgo(eventTime);
         const repository = `${event.repo.name}`;
 
         switch (event.type) {
           case "PushEvent":
+            if (pushEventCount >= maxPushEvents) continue; // Limit push events
+
             const pushPayload = event.payload as {
               ref?: string;
               commits?: unknown[];
@@ -322,16 +388,19 @@ export const githubTool: Tool = {
             if (pushCommits.length > 0) {
               // Use the actual commits from the push event (limit to first 3)
               pushCommits.slice(0, 3).forEach((pushCommit: any) => {
-                const shortSha = pushCommit.sha?.substring(0, 7) || 'unknown';
+                const fullSha = pushCommit.sha;
+                const shortSha = fullSha?.substring(0, 7) || 'unknown';
                 const message = pushCommit.message || `Commit ${shortSha}`;
                 const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
 
                 commitMessages.push({
                   type: 'commit',
                   text: truncatedMessage,
+                  url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
+                  displayId: shortSha !== 'unknown' ? shortSha : undefined,
                   author: pushCommit.author?.name || event.actor.login,
                   timestamp: eventTime.toISOString()
-                });
+                } as CommitContentItem);
               });
             } else {
               try {
@@ -356,16 +425,19 @@ export const githubTool: Tool = {
                     const commits = compareData.commits || [];
 
                     commits.slice(0, 3).forEach((commit: any) => {
-                      const shortSha = commit.sha?.substring(0, 7) || 'unknown';
+                      const fullSha = commit.sha;
+                      const shortSha = fullSha?.substring(0, 7) || 'unknown';
                       const message = commit.commit?.message || `Commit ${shortSha}`;
                       const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
 
                       commitMessages.push({
                         type: 'commit',
                         text: truncatedMessage,
+                        url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
+                        displayId: shortSha !== 'unknown' ? shortSha : undefined,
                         author: commit.commit?.author?.name || commit.commit?.committer?.name || commit.author?.login || event.actor.login,
                         timestamp: commit.commit?.committer?.date || eventTime.toISOString()
-                      });
+                      } as CommitContentItem);
                     });
                   }
                 }
@@ -392,6 +464,8 @@ export const githubTool: Tool = {
             // Use actual fetched commit count instead of unreliable pushPayload.size
             const commitCount = commitMessages.length;
 
+            // Push events don't have specific activity IDs, so don't show links
+            // This meets the requirement that displayId should be the ID of the activity
             activityEvents.push({
               id: event.id,
               tool: "GitHub",
@@ -405,13 +479,20 @@ export const githubTool: Tool = {
               repository,
               branch,
               commitCount,
+              url: "", // No specific URL for push events
+              displayId: "", // No specific activity ID for push events
               content: commitMessages.length > 0 ? commitMessages : undefined,
             });
-            count++;
+            pushEventCount++;
             break;
 
+          case "PullRequestEvent":
+          case "IssuesEvent":
+            // Skip these as they're handled by the PRs/issues handlers above
+            continue;
+
           default:
-            // Generic event handling for other cases
+            // Generic event handling for other cases (forks, watches, etc.)
             activityEvents.push({
               id: event.id,
               tool: "GitHub",
@@ -424,12 +505,17 @@ export const githubTool: Tool = {
               timestamp: eventTime.toISOString(),
               repository,
             });
-            count++;
             break;
         }
       }
 
-      return { activity: activityEvents };
+      // Sort all activities by timestamp (most recent first)
+      activityEvents.sort((a: any, b: any) => {
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      });
+
+      // Limit to 15 total activities to keep feed manageable
+      return { activity: activityEvents.slice(0, 15) };
     },
   },
   config: {

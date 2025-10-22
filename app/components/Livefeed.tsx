@@ -39,6 +39,8 @@ interface ActivityItem {
   content?: Array<{
     type: 'commit' | 'comment' | 'description' | 'change';
     text: string;
+    url?: string;
+    displayId?: string;
     author?: string;
     timestamp?: string;
   }>;
@@ -74,6 +76,8 @@ interface ApiActivityItem {
   content?: Array<{
     type: 'commit' | 'comment' | 'description' | 'change';
     text: string;
+    url?: string;
+    displayId?: string;
     author?: string;
     timestamp?: string;
   }>;
@@ -571,9 +575,22 @@ export default function Livefeed({
                                       <span>{contentItem.author}</span>
                                     )}
                                   </div>
-                                  <p className="text-sm text-foreground font-mono leading-relaxed">
-                                    {contentItem.text}
-                                  </p>
+                                  <div className="flex items-start justify-between">
+                                    <p className="text-sm text-foreground font-mono leading-relaxed flex-1">
+                                      {contentItem.text}
+                                    </p>
+                                    {/* Commit displayId as hyperlink if available */}
+                                    {contentItem.displayId && contentItem.url && (
+                                      <a
+                                        href={contentItem.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-mono text-primary hover:underline ml-4 flex-shrink-0"
+                                      >
+                                        {contentItem.displayId}
+                                      </a>
+                                    )}
+                                  </div>
                                 </div>
                               )}
 

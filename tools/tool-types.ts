@@ -89,3 +89,37 @@ export interface Tool {
 export interface ToolRegistry {
   [key: string]: Tool | undefined;
 }
+
+// Activity content types
+export interface BaseContentItem {
+  type: 'commit' | 'comment' | 'description' | 'change';
+  text: string;
+  author?: string;
+  timestamp?: string;
+}
+
+export interface CommitContentItem extends BaseContentItem {
+  type: 'commit';
+  url?: string;
+  displayId?: string; // SHA for commits
+}
+
+export interface DescriptionContentItem extends BaseContentItem {
+  type: 'description';
+  url?: string;
+  displayId?: string;
+}
+
+export interface CommentContentItem extends BaseContentItem {
+  type: 'comment';
+  url?: string;
+  displayId?: string;
+}
+
+export interface ChangeContentItem extends BaseContentItem {
+  type: 'change';
+  url?: string;
+  displayId?: string;
+}
+
+export type ContentItem = CommitContentItem | DescriptionContentItem | CommentContentItem | ChangeContentItem;
