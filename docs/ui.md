@@ -8,7 +8,7 @@ Hyperpage is a dashboard application that aggregates activity and data from mult
 
 ### Design Philosophy
 
-- **Minimalist Professional**: Clean, uncluttered interface that prioritizes content over chrome
+- **Minimalist Flat Design**: Clean, shadow-free interface that prioritizes content over visual effects, creating a modern flat aesthetic
 - **Real-time Experience**: Seamless data updates with loading states and smooth transitions
 - **Accessibility First**: WCAG-compliant components with comprehensive keyboard navigation
 - **Cross-Platform Consistency**: Responsive design that works seamlessly across devices
@@ -162,17 +162,19 @@ Consistent spacing scale integrated with Tailwind:
 --space-12: 3rem    /* 48px - Major layout spacing */
 ```
 
-### Shadow & Elevation System
+### Flat Design System
 
-Multi-level shadows adapted for both light and dark themes:
+Hyperpage adopts a flat design approach without traditional shadows or elevation:
 
 ```css
---shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.05)     /* Subtle borders */
---shadow: 0 1px 3px 0 oklch(0 0 0 / 0.1)         /* Card default */
---shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.1)   /* Hover states */
---shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.1) /* Modals, popups */
---shadow-xl: 0 20px 25px -5px oklch(0 0 0 / 0.1) /* Maximum elevation */
+--shadow-sm: 0 0 #0000    /* No elevation - flat design */
+--shadow: 0 0 #0000       /* Flat surfaces */
+--shadow-md: 0 0 #0000    /* No hover elevation */
+--shadow-lg: 0 0 #0000    /* Flat modals and popups */
+--shadow-xl: 0 0 #0000    /* Flat maximum states */
 ```
+
+**Design Decision**: Shadows have been intentionally removed to create a clean, modern flat aesthetic that prioritizes content over visual effects. Visual hierarchy is achieved through color, typography, and spacing rather than elevation.
 
 ### Border Radius System
 

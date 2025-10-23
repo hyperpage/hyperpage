@@ -397,7 +397,7 @@ export default function Livefeed({
 
               {/* Activity content */}
               <div className="flex-1 pb-6">
-                <Card className="p-6 hover:shadow-md transition-all duration-200 border-l-4 border-l-transparent group-hover:border-l-primary/20">
+                <Card className="p-6 transition-all duration-200 border-l-4 border-l-transparent group-hover:border-l-primary/20">
                   <div className="space-y-3">
                     {/* Header: Action + Badge */}
                     <div className="flex items-center justify-between">
