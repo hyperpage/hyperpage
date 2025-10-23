@@ -72,7 +72,7 @@ export default function Dashboard({ enabledTools }: DashboardProps) {
 
   const mainContent =
     activeTab === "livefeed" ? (
-      <div className="p-6">
+      <div className="p-8">
         <Livefeed
           onRefresh={refreshActivities}
           isLoading={activityLoading}

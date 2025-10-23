@@ -82,7 +82,7 @@ export default function DashboardOverview({
   );
 
   return (
-    <div className="p-6">
+    <div className="p-8">
       {/* Search Results Summary */}
       {searchQuery && (
         <SearchResultsHeader
