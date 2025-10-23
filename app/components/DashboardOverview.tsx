@@ -57,10 +57,10 @@ export default function DashboardOverview({
         const widgetData =
           widget.dynamic && dynamicData[tool.name]
             ? dynamicData[tool.name]
-            : widget.data;
+            : widget.data || [];
 
         // Filter data based on search query
-        const filteredData = widgetData.filter((item) =>
+        const filteredData = (widgetData || []).filter((item) =>
           matchesSearch(item, searchQuery)
         );
 

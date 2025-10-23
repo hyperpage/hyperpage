@@ -38,7 +38,8 @@ export function useToolData({
 
     try {
       // Get the first available API endpoint for this tool
-      const availableApi = tool.apis && Object.keys(tool.apis)[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const availableApi = (tool.apis as any)?.length > 0 ? (tool.apis as any)[0].endpoint : null;
       if (!availableApi) return;
 
       const response = await fetch(`/api/tools/${tool.slug}/${availableApi}`);

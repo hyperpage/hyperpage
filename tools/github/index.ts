@@ -19,7 +19,35 @@ export const githubTool: Tool = {
     color: "bg-purple-500/10 border-purple-400/30 text-purple-400",
     icon: React.createElement(Github, { className: "w-5 h-5" }),
   },
-  widgets: [],
+  widgets: [
+    {
+      title: "GitHub Pull Requests",
+      type: "table",
+      headers: ["ID", "Title", "Repository", "Status", "Created"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 300000, // 5 minutes
+      displayName: "GitHub"
+    },
+    {
+      title: "Recent Commits",
+      type: "table",
+      headers: ["Repository", "Branch", "Commit", "Details"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 300000, // 5 minutes
+      displayName: "GitHub"
+    },
+    {
+      title: "GitHub Issues",
+      type: "table",
+      headers: ["Issue", "Title", "Status", "Created"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 300000, // 5 minutes
+      displayName: "GitHub"
+    }
+  ],
   capabilities: ["pull-requests", "workflows", "activity", "issues"], // Declares what this tool can provide
   apis: {
     "pull-requests": {

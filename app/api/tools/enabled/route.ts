@@ -11,6 +11,7 @@ export async function GET() {
     // Transform enabled tools to API format
     const enabledToolsData = enabledTools.map((tool: Tool) => ({
       name: tool.name,
+      slug: tool.slug,
       enabled: true, // All tools here are enabled
       widgets: Array.isArray(tool.widgets)
         ? tool.widgets.map((widget: ToolWidget) => ({
