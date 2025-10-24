@@ -12,6 +12,7 @@ Hyperpage is a dashboard application that aggregates activity and data from mult
 - **Real-time Experience**: Seamless data updates with loading states and smooth transitions
 - **Accessibility First**: WCAG-compliant components with comprehensive keyboard navigation
 - **Cross-Platform Consistency**: Responsive design that works seamlessly across devices
+- **Optimized Tailwind Architecture**: Modern design system built with Tailwind CSS configuration instead of CSS variables for better maintainability and performance
 
 ## Layout Structure
 
@@ -100,27 +101,32 @@ All UI components are built with custom Tailwind CSS classes for consistency and
 
 ## Design System
 
-### Color System (OkLCH-based)
+### Color System (Tailwind Configuration)
 
-Hyperpage uses OkLCH color space for perceptually uniform colors and better theme adaptation:
+Hyperpage uses OkLCH color space for perceptually uniform colors and better theme adaptation, now properly configured through Tailwind CSS instead of CSS variables:
 
-#### Light Theme Base Colors
-```css
---background: oklch(1 0 0)        /* Pure white */
---foreground: oklch(0.095 0 0)    /* Near black text */
---primary: oklch(0.55 0.15 180)   /* Blue primary */
---secondary: oklch(0.97 0 0)      /* Light gray secondary */
---muted: oklch(0.97 0.001 264)    /* Neutral muted background */
+#### Tailwind Configuration (`tailwind.config.js`)
+```javascript
+colors: {
+  background: 'oklch(1 0 0)',        /* Pure white */
+  foreground: 'oklch(0.095 0 0)',    /* Near black text */
+  primary: 'oklch(0.55 0.15 180)',   /* Blue primary (light) */
+  'primary-foreground': 'oklch(0.985 0 0)',
+  // ... additional semantic colors
+},
+dark: {
+  background: 'oklch(0.145 0 0)',    /* Dark blue-gray */
+  foreground: 'oklch(0.985 0 0)',    /* Near white text */
+  primary: 'oklch(0.65 0.18 180)',   /* Bright blue primary (dark) */
+  // ... dark theme variants
+}
 ```
 
-#### Dark Theme Base Colors
-```css
---background: oklch(0.145 0 0)    /* Dark blue-gray */
---foreground: oklch(0.985 0 0)    /* Near white text */
---primary: oklch(0.65 0.18 180)   /* Bright blue primary */
---secondary: oklch(0.269 0 0)     /* Elevated surface */
---muted: oklch(0.269 0 0)         /* Neutral dark background */
-```
+#### Design System Benefits
+- **Standard Tailwind**: Colors integrate with Tailwind's utility classes
+- **Maintainable**: Changes made in `tailwind.config.js` affect entire theme
+- **Performance**: Smaller CSS bundle by eliminating 200+ custom variables
+- **Developer Experience**: Standard Tailwind autocomplete and tooling support
 
 #### Semantic Color Roles
 - **Primary**: Interactive elements and call-to-actions

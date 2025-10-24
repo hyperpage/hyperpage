@@ -11,7 +11,7 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
 - **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues
 - **Activity Feeds**: Real-time updates from all repositories
-- **Professional UI**: Enterprise-grade design with custom Tailwind components, Inter typography, professional color palette, and dark mode support
+- **Professional UI**: Enterprise-grade design with optimized Tailwind CSS, Inter typography, OKLCH color palette, and comprehensive dark mode support
 - **Theme System**: Full light/dark mode switching with system preference detection
 
 ### Quality Assurance & Design
