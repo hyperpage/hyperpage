@@ -4,7 +4,7 @@ This document provides comprehensive documentation of Hyperpage's user interface
 
 ## Overview
 
-Hyperpage is a dashboard application that aggregates activity and data from multiple development tools (GitHub, GitLab, Jira, etc.) into a unified, real-time interface. The UI is built with Next.js 15, Tailwind CSS, and shadcn/ui components, featuring a professional design system with full dark/light mode support.
+Hyperpage is a dashboard application that aggregates activity and data from multiple development tools (GitHub, GitLab, Jira, etc.) into a unified, real-time interface. The UI is built with Next.js 15, Tailwind CSS, and custom component library, featuring a professional design system with full dark/light mode support.
 
 ### Design Philosophy
 
@@ -87,15 +87,14 @@ This creates a persistent navigation experience while allowing content to scroll
 - Empty state handling when no tools are enabled
 - Loading state coordination across widgets
 
-### UI Primitive Components (shadcn/ui)
+### UI Primitive Components (Custom Tailwind Components)
 
-All UI components are built on shadcn/ui primitives for consistency and accessibility:
+All UI components are built with custom Tailwind CSS classes for consistency and accessibility:
 
 - **Badge**: Status indicators, metadata tags, action labels
 - **Button**: Primary actions, secondary actions, icon buttons
 - **Card**: Content containers with optional headers/footers
 - **Input**: Text inputs with focus states and validation styles
-- **Select**: Dropdown selections for filters and configuration
 - **Table**: Data tables with sorting and pagination
 - **Pagination**: Multi-page content navigation
 
