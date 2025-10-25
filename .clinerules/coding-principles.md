@@ -12,9 +12,9 @@ This document outlines the core architectural principles and development pattern
 
 ## Component Architecture Patterns
 
-### Custom Hooks for State Management
-- **useToolData**: Centralizes all data fetching, refresh logic, and polling for tool widgets
-- **useActivityData**: Manages activity feed data with automatic refresh and error handling
+### Custom Hooks for State Management (React Query Integration)
+- **useActivities**: React Query-powered activity feed with automatic 15s polling and intelligent caching
+- **useToolQueries**: Dynamic query management for tool widgets with selective refresh intervals and registry-driven data fetching
 - **useDarkMode**: Handles theme switching with localStorage persistence
 - **Hook-First Pattern**: Extract complex stateful logic into reusable custom hooks before component implementation
 

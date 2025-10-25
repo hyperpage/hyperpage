@@ -48,10 +48,26 @@ interface ToolCapability {
 
 All complex stateful logic is extracted into custom hooks before component implementation:
 
-#### Data Management Hooks
-- **`useToolData`**: Centralized widget data fetching, refresh logic, and polling
-- **`useActivityData`**: Activity feed data management with automatic refresh
+#### Data Management Hooks (React Query Integration)
+- **`useActivities`**: React Query-powered activity feed with 15s auto-polling and caching
+- **`useToolQueries`**: Dynamic query management for tool widgets with selective refresh intervals
 - **`useDarkMode`**: Theme switching with localStorage persistence
+
+#### React Query Benefits
+**Automatic Caching & Background Updates:**
+- Intelligent request deduplication reduces API calls
+- Stale-while-revalidate pattern ensures fresh data with minimal loading states
+- Background refetching keeps data current without visual disruption
+
+**Built-in Error Handling & Retry Logic:**
+- Configurable retry attempts (3 by default) with exponential backoff
+- Automatic retry for network failures and intermittent issues
+- Graceful error states without complex manual error handling
+
+**Performance Optimizations:**
+- Focus/window refetch automatically updates data when users return to the tab
+- Request deduplication prevents multiple identical API calls
+- Garbage collection prevents memory leaks from stale cached data
 
 #### Component Responsibility
 Components focus on presentation, with all business logic delegated to hooks:
