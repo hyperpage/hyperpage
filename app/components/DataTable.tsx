@@ -17,7 +17,7 @@ export default function DataTable({
   title,
   headers,
   data,
-  tool,
+  tool, // eslint-disable-line @typescript-eslint/no-unused-vars
   isLoading = false,
   onRefresh,
 }: DataTableProps) {
