@@ -17,7 +17,7 @@ export default function TabNavigation({
   ];
 
   return (
-    <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 backdrop-blur-sm">
+    <div className="border-b border-base-200 bg-base-100 backdrop-blur-sm">
       <div className="flex items-center justify-center px-4 h-12">
         <nav className="flex space-x-1 overflow-x-auto">
           {menuItems.map((item) => (
@@ -26,14 +26,14 @@ export default function TabNavigation({
               onClick={() => setActiveTab(item.id)}
               className={`relative px-3 py-2 h-8 rounded-md transition-all flex-shrink-0 ${
                 activeTab === item.id
-                  ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  ? "bg-base-200 text-base-content"
+                  : "text-base-content/80 hover:text-base-content hover:bg-base-200"
               }`}
             >
               <item.icon className="mr-2 h-4 w-4 flex-shrink-0" />
               <span className="truncate">{item.label}</span>
               {item.count && (
-                <span className="ml-2 h-5 px-1.5 text-xs flex-shrink-0 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded">
+                <span className="ml-2 h-5 px-1.5 text-xs flex-shrink-0 bg-base-300 text-base-content rounded">
                   {item.count}
                 </span>
               )}

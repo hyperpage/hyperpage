@@ -105,7 +105,7 @@ export default function Livefeed({
   return (
     <div className="max-w-4xl mx-auto relative">
       {/* Quick status indicator */}
-      <div className="mb-4 text-xs text-gray-600 dark:text-gray-400 text-center">
+      <div className="mb-4 text-xs text-base-content/70 text-center">
         {activities.length} activities loaded
       </div>
 
@@ -115,7 +115,7 @@ export default function Livefeed({
           <button
             onClick={onRefresh}
             disabled={isLoading}
-            className="h-8 w-auto px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center text-sm"
+            className="btn btn-outline btn-sm"
             title="Refresh activity data"
           >
             <RefreshCw
@@ -165,8 +165,9 @@ export default function Livefeed({
 
                 {/* Activity content */}
                 <div className="flex-1 pb-6">
-                  <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800 transition-all duration-200 border-l-4 border-l-transparent group-hover:border-l-blue-500">
-                    <div className="space-y-3">
+                  <div className="card bg-base-100 border border-base-200 shadow-md transition-all duration-200">
+                    <div className="card-body">
+                      <div className="space-y-3">
                       {/* Header: Action + Badge */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -308,6 +309,7 @@ export default function Livefeed({
                           </div>
                         )}
                       </div>
+                    </div>
                     </div>
                   </div>
                 </div>

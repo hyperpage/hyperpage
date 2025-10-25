@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 
 import { Search, Bell, Moon, Sun, RefreshCw, Settings, X } from "lucide-react";
 import HyperpageLogo from "./HyperpageLogo";
+import ThemeSwitcher from "./ThemeSwitcher";
 import { getToolIcon } from "../../tools";
 import { ToolIntegration } from "../../tools/tool-types";
 
@@ -171,6 +172,8 @@ export default function TopBar({
         >
           {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
         </button>
+
+        <ThemeSwitcher />
       </div>
     </div>
   );
