@@ -7,6 +7,8 @@ import {
   GitHubRepository,
   GitHubWorkflowRun,
   GitHubEvent,
+  GitHubPushCommit,
+  GitHubComparisonCommit,
 } from "./types";
 import { registerTool } from "../registry";
 import { getTimeAgo } from "../../lib/time-utils";
@@ -408,7 +410,7 @@ export const githubTool: Tool = {
 
           if (pushCommits.length > 0) {
             // Use the actual commits from the push event (limit to first 2 per push)
-            pushCommits.slice(0, 2).forEach((pushCommit: any) => {
+            (pushCommits as GitHubPushCommit[]).slice(0, 2).forEach((pushCommit) => {
               const fullSha = pushCommit.sha;
               const shortSha = fullSha?.substring(0, 7) || 'unknown';
               const message = pushCommit.message || `Commit ${shortSha}`;
@@ -440,7 +442,7 @@ export const githubTool: Tool = {
                 const compareData = await compareResponse.json();
                 const commits = compareData.commits || [];
 
-                commits.slice(0, 2).forEach((commit: any) => {
+                    (commits as GitHubComparisonCommit[]).slice(0, 2).forEach((commit) => {
                   const fullSha = commit.sha;
                   const shortSha = fullSha?.substring(0, 7) || 'unknown';
                   const message = commit.commit?.message || `Commit ${shortSha}`;
@@ -488,8 +490,10 @@ export const githubTool: Tool = {
         }
 
         // Sort commit events by timestamp (most recent first)
-        commitEvents.sort((a: any, b: any) => {
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        commitEvents.sort((a: unknown, b: unknown) => {
+          const aTime = (a as { timestamp: string }).timestamp;
+          const bTime = (b as { timestamp: string }).timestamp;
+          return new Date(bTime).getTime() - new Date(aTime).getTime();
         });
 
         return { commits: commitEvents };
@@ -515,7 +519,14 @@ export const githubTool: Tool = {
         // Get recent PRs
         const prHandler = githubTool.handlers["pull-requests"];
         const prResult = await prHandler!(request, config);
-        const prs = prResult.pullRequests as any[];
+        const prs = prResult.pullRequests as Array<{
+          id: string;
+          title: string;
+          repository: string;
+          status: string;
+          created: string;
+          url: string;
+        }>;
 
         for (const pr of prs.slice(0, 3)) { // Limit to 3 recent PRs
           const prCreatedTime = new Date(pr.created);
@@ -542,7 +553,13 @@ export const githubTool: Tool = {
         // Get recent issues
         const issuesHandler = githubTool.handlers["issues"];
         const issuesResult = await issuesHandler!(request, config);
-        const issues = issuesResult.issues as any[];
+        const issues = issuesResult.issues as Array<{
+          ticket: string;
+          title: string;
+          status: string;
+          created: string;
+          url: string;
+        }>;
 
         for (const issue of issues.slice(0, 3)) { // Limit to 3 recent issues
           const issueCreatedTime = new Date(issue.created);
@@ -665,7 +682,7 @@ export const githubTool: Tool = {
 
               if (pushCommits.length > 0) {
                 // Use the actual commits from the push event (limit to first 3)
-                pushCommits.slice(0, 3).forEach((pushCommit: any) => {
+                (pushCommits as GitHubPushCommit[]).slice(0, 3).forEach((pushCommit) => {
                   const fullSha = pushCommit.sha;
                   const shortSha = fullSha?.substring(0, 7) || 'unknown';
                   const message = pushCommit.message || `Commit ${shortSha}`;
@@ -697,7 +714,7 @@ export const githubTool: Tool = {
                     const compareData = await compareResponse.json();
                     const commits = compareData.commits || [];
 
-                    commits.slice(0, 3).forEach((commit: any) => {
+                    (commits as GitHubComparisonCommit[]).slice(0, 3).forEach((commit) => {
                       const fullSha = commit.sha;
                       const shortSha = fullSha?.substring(0, 7) || 'unknown';
                       const message = commit.commit?.message || `Commit ${shortSha}`;
@@ -751,7 +768,7 @@ export const githubTool: Tool = {
 
             case "PullRequestEvent":
               // Handle PR events with proper links
-              const prPayload = event.payload as { action?: string; pull_request?: any };
+              const prPayload = event.payload as { action?: string; pull_request?: { title?: string; html_url: string; number: number; state: string } };
               if (prPayload.pull_request) {
                 const pr = prPayload.pull_request;
                 activityEvents.push({
@@ -775,7 +792,7 @@ export const githubTool: Tool = {
 
             case "IssuesEvent":
               // Handle issue events
-              const issuePayload = event.payload as { action?: string; issue?: any };
+              const issuePayload = event.payload as { action?: string; issue?: { title?: string; html_url: string; number: number; state: string } };
               if (issuePayload.issue) {
                 const issue = issuePayload.issue;
                 activityEvents.push({
@@ -861,9 +878,10 @@ export const githubTool: Tool = {
       }
 
       // Sort all activities by timestamp (most recent first)
-      activityEvents.sort((a: any, b: any) => {
-        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-      });
+      (activityEvents as Array<{ timestamp: string }>).
+        sort((a: { timestamp: string }, b: { timestamp: string }) => {
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        });
 
       // Limit to 15 total activities to keep feed manageable
       return { activity: activityEvents.slice(0, 15) };

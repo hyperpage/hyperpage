@@ -1,7 +1,8 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // This test file intentionally uses loose typing for mock objects to avoid complex Response type matching
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useActivities } from '../../../app/components/hooks/useActivities';
@@ -313,9 +314,7 @@ describe('useActivities', () => {
       expect(callCount).toBe(1);
 
       // Manually refetch
-      await act(async () => {
-        await result.current.refetch();
-      });
+      await result.current.refetch();
 
       // Wait for refetch to complete
       await waitFor(() => {

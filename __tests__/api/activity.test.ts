@@ -11,33 +11,10 @@ vi.mock('../../tools', () => ({
 }));
 
 const mockGetEnabledToolsByCapability = vi.mocked(toolsModule.getEnabledToolsByCapability);
-const mockGetToolByName = vi.mocked(toolsModule.getToolByName);
 
-// Activity item structure used in tests
-interface MockActivityItem {
-  id: string;
-  tool: string;
-  toolIcon: string;
-  action: string;
-  description: string;
-  author: string;
-  time: string;
-  color: string;
-  timestamp: string;
-  url?: string;
-  displayId?: string;
-  repository?: string;
-  branch?: string;
-  status?: string;
-  assignee?: string;
-  labels?: string[] | string;
-  commitCount?: number;
-}
+// Removed unused MockActivityItem interface
 
-// Mock activity response structure
-interface MockActivityResponse {
-  activity: MockActivityItem[];
-}
+// Removed unused MockActivityResponse interface
 
 
 // Mock tool configuration for tests - use flexible typing for test mocks
@@ -73,6 +50,7 @@ describe('GET /api/tools/activity', () => {
         name: 'GitHub',
         slug: 'github',
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: async (_request: NextRequest, _config: ToolConfig) => ({
             activity: [
               {
@@ -114,6 +92,7 @@ describe('GET /api/tools/activity', () => {
         name: 'Jira',
         slug: 'jira',
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.resolve({
             activity: [
               {
@@ -183,6 +162,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://test.com/api',
         },
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.resolve({
             activity: mockActivityArray,
           })),
@@ -209,6 +189,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://empty.com/api',
         },
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.resolve({
             activity: [],
           })),
@@ -248,6 +229,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://fail.com/api',
         },
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.reject(new Error('API down'))),
         },
       };
@@ -260,6 +242,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://work.com/api',
         },
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.resolve({
             activity: [
               {
@@ -321,6 +304,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://broken.com/api',
         },
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.resolve({
             activity: 'not-an-array', // Invalid format
           })),
@@ -346,6 +330,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://validation-test.com/api',
         },
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.resolve({
             activity: [
               {
@@ -423,6 +408,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://sort.com/api',
         },
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.resolve({
             activity: [
               { id: '1', timestamp: '2025-01-10T10:00:00Z' },
@@ -464,6 +450,7 @@ describe('GET /api/tools/activity', () => {
           formatApiUrl: () => 'https://invalid.com/api',
         },
         handlers: {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           activity: vi.fn((request, config) => Promise.resolve({
             activity: [
               { id: '1', timestamp: null },

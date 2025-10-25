@@ -46,6 +46,25 @@ export interface GitHubWorkflowRun {
   html_url: string;
 }
 
+export interface GitHubPushCommit {
+  sha: string;
+  message: string;
+  author?: { name: string };
+}
+
+export interface GitHubComparisonCommit {
+  sha: string;
+  commit?: {
+    message: string;
+    author?: { name: string };
+    committer?: {
+      name?: string;
+      date?: string;
+    };
+  };
+  author?: { login: string };
+}
+
 export interface GitHubEvent {
   id: string;
   type: string;
