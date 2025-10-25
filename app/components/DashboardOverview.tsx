@@ -58,17 +58,9 @@ export default function DashboardOverview({
         // Use dynamic data if available and widget supports it
         if (widget.dynamic) {
           const toolDynamicData = dynamicData[tool.name];
-          if (toolDynamicData) {
-            if (widget.apiEndpoint && toolDynamicData[widget.apiEndpoint]) {
-              // Use API-specific data
-              widgetData = toolDynamicData[widget.apiEndpoint];
-            } else {
-              // Fall back to legacy behavior (pick first available API)
-              const firstApi = Object.keys(toolDynamicData)[0];
-              if (firstApi) {
-                widgetData = toolDynamicData[firstApi];
-              }
-            }
+          if (toolDynamicData && widget.apiEndpoint && toolDynamicData[widget.apiEndpoint]) {
+            // Use API-specific data
+            widgetData = toolDynamicData[widget.apiEndpoint];
           }
         }
 

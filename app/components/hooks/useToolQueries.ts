@@ -48,13 +48,7 @@ const createQueryConfigs = (enabledTools: Omit<Tool, "handlers">[]) => {
         .map(widget => widget.apiEndpoint!)
     ));
 
-    // If no widgets specify apiEndpoint, fall back to legacy behavior
-    if (requiredApiEndpoints.length === 0) {
-      const availableApi = tool.apis ? Object.keys(tool.apis)[0] : null;
-      if (availableApi) {
-        requiredApiEndpoints.push(availableApi);
-      }
-    }
+
 
     // Create a query for each endpoint this tool needs
     for (const endpoint of requiredApiEndpoints) {
@@ -149,7 +143,7 @@ export function useToolQueries({
     );
   }, [queryConfigs, queryClient]);
 
-  // Activity feed refresh function (now just delegates to useActivities)
+  // Activity feed refresh function
   const refreshActivityData = useCallback(async () => {
     await queryClient.refetchQueries({ queryKey: ["activities"] });
   }, [queryClient]);
@@ -164,15 +158,10 @@ export function useToolQueries({
     await queryClient.refetchQueries({ queryKey: ["activities"] });
   }, [queryConfigs, queryClient]);
 
-  // Initialize polling (mostly handled by React Query now, but we can add custom logic)
+  // Initialize polling - cleanup function since React Query handles polling automatically
   const initializePolling = useCallback(() => {
-    // React Query handles polling automatically based on query configurations
-    // This function now mainly handles initial data loading if needed
-
-    // Return cleanup function (no intervals to clear since React Query manages them)
-    return () => {
-      // Cleanup is handled automatically by React Query
-    };
+    // All polling is handled automatically by React Query's refetchInterval configuration
+    return () => {};
   }, []);
 
   return {
