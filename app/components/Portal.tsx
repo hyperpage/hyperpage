@@ -3,18 +3,18 @@
 import { useState, useEffect } from "react";
 import TopBar from "./TopBar";
 import TabNavigation from "./TabNavigation";
-import DashboardOverview from "./DashboardOverview";
+import PortalOverview from "./PortalOverview";
 import Livefeed from "./Livefeed";
 
 import { Tool } from "../../tools/tool-types";
 import { useToolQueries } from "./hooks/useToolQueries";
 import { useActivities } from "./hooks/useActivities";
 
-interface DashboardProps {
+interface PortalProps {
   enabledTools: Omit<Tool, "handlers">[];
 }
 
-export default function Dashboard({ enabledTools }: DashboardProps) {
+export default function Portal({ enabledTools }: PortalProps) {
   const [isDark, setIsDark] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,7 +80,7 @@ export default function Dashboard({ enabledTools }: DashboardProps) {
         />
       </div>
     ) : (
-      <DashboardOverview
+      <PortalOverview
         enabledTools={enabledTools}
         searchQuery={searchQuery}
         dynamicData={dynamicData}

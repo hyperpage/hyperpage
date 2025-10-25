@@ -1,6 +1,6 @@
 # Hyperpage
 
-A comprehensive data aggregation dashboard that consolidates information from multiple external tools (GitHub, GitLab, Jira, etc.) into a unified, interactive interface. Built with Next.js, TypeScript, and Tailwind CSS.
+A comprehensive data aggregation portal that consolidates information from multiple external tools (GitHub, GitLab, Jira, etc.) into a unified, interactive interface. Built with Next.js, TypeScript, and Tailwind CSS.
 
 ## Overview
 
@@ -35,7 +35,7 @@ cp .env.local.sample .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view your dashboard.
+Open [http://localhost:3000](http://localhost:3000) to view your portal.
 
 ## Testing
 
@@ -72,7 +72,7 @@ GITHUB_TOKEN=github_pat_...
 ```
 
 **View Unified Code Reviews:**
-Once configured, the dashboard automatically aggregates PRs/MRs from all enabled platforms in the Code Reviews tab.
+Once configured, the portal automatically aggregates PRs/MRs from all enabled platforms in the Code Reviews tab.
 
 ## Project Structure
 
@@ -80,7 +80,7 @@ Once configured, the dashboard automatically aggregates PRs/MRs from all enabled
 hyperpage/
 ├── app/                 # Next.js app directory
 │   ├── api/            # API routes and handlers
-│   ├── components/     # React components (Dashboard, UI)
+│   ├── components/     # React components (Portal, UI)
 │   └── globals.css     # Global styles
 ├── components/          # Shared UI components library
 ├── tools/              # Tool integrations registry
@@ -96,7 +96,7 @@ hyperpage/
 ## Documentation
 
 - **[Installation & Setup](docs/installation.md)**: Detailed setup instructions and configuration
-- **[Usage Guide](docs/usage.md)**: Dashboard features and navigation
+- **[Usage Guide](docs/usage.md)**: Portal features and navigation
 - **[Testing Guide](docs/testing.md)**: Testing strategy and quality assurance
 - **[API Documentation](docs/api.md)**: Technical API reference
 - **[System Architecture](docs/architecture.md)**: Core design and integration patterns

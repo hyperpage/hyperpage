@@ -1,7 +1,7 @@
 import React from "react";
 import { Tool, ToolData } from "../../tools/tool-types";
 import DataTable from "./DataTable";
-import { DashboardEmptyState } from "./DashboardEmptyState";
+import { PortalEmptyState } from "./PortalEmptyState";
 
 interface WidgetWithToolName {
   toolName: string;
@@ -11,21 +11,21 @@ interface WidgetWithToolName {
   data: ToolData[];
 }
 
-interface DashboardWidgetGridProps {
+interface PortalWidgetGridProps {
   toolWidgets: WidgetWithToolName[];
   loadingStates: Record<string, boolean>;
   enabledTools: Omit<Tool, "handlers">[];
   refreshToolData: (tool: Omit<Tool, "handlers">) => void;
 }
 
-export function DashboardWidgetGrid({
+export function PortalWidgetGrid({
   toolWidgets,
   loadingStates,
   enabledTools,
   refreshToolData,
-}: DashboardWidgetGridProps) {
+}: PortalWidgetGridProps) {
   if (toolWidgets.length === 0) {
-    return <DashboardEmptyState />;
+    return <PortalEmptyState />;
   }
 
   return (
