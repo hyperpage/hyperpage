@@ -1,6 +1,7 @@
 import SearchResultsHeader from "./SearchResultsHeader";
 import ToolWidgetGrid from "./ToolWidgetGrid";
 import NoToolsState from "./NoToolsState";
+import ToolStatusRow from "./ToolStatusRow";
 import { Tool, ToolData, ToolWidget } from "../../tools/tool-types";
 import { sortDataByTime } from "../../lib/time-utils";
 
@@ -107,6 +108,9 @@ export default function PortalOverview({
       ) : (
         <NoToolsState />
       )}
+
+      {/* Tool Status Row */}
+      <ToolStatusRow />
     </div>
   );
 }

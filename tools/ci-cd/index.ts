@@ -1,5 +1,5 @@
 import React from "react";
-import { Play } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Tool, ToolConfig } from "../tool-types";
 import { registerTool } from "../registry";
 
@@ -12,7 +12,7 @@ export const ciCdTool: Tool = {
   enabled: process.env.ENABLE_CICD === "true",
   ui: {
     color: "bg-emerald-500/10 border-emerald-400/30 text-emerald-400",
-    icon: React.createElement(Play, { className: "w-5 h-5" }),
+    icon: React.createElement(RotateCcw, { className: "w-5 h-5" }),
   },
   widgets: [
     {

@@ -6,7 +6,7 @@ const normalizeToolName = (name: string): string => {
   return name
     .toLowerCase()
     .replace(/%20/g, " ") // Decode URL-encoded spaces
-    .replace(/[\s]+/g, "-") // Convert spaces to hyphens (consistent with registration)
+    .replace(/[\s\/]+/g, "-") // Convert spaces and slashes to hyphens (consistent with registration)
     .replace(/[^a-z0-9-]/g, ""); // Remove any other invalid characters
 };
 
