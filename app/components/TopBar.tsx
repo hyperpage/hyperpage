@@ -84,7 +84,7 @@ export default function TopBar({
             placeholder="Search across all tools..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className={`w-64 pl-10 border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:focus:ring-blue-400 ${searchQuery ? "pr-10" : ""}`}
+            className={`input input-bordered w-64 pl-10 ${searchQuery ? "pr-10" : ""}`}
           />
           {searchQuery && (
             <button
@@ -104,7 +104,7 @@ export default function TopBar({
           <button
             onMouseEnter={() => setIsDropdownOpen(true)}
             onMouseLeave={() => setIsDropdownOpen(false)}
-            className="h-8 w-8 p-1 border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
+            className="btn btn-ghost btn-square"
             aria-label="Tool Integrations"
             title="Tool Integrations"
           >
@@ -150,13 +150,13 @@ export default function TopBar({
           )}
         </div>
 
-        <button className="h-8 w-8 p-1 border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors flex items-center justify-center" title="Notifications">
+        <button className="btn btn-ghost btn-square" title="Notifications">
           <Bell className="h-4 w-4" />
         </button>
 
         <button
           onClick={() => onGlobalRefresh?.()}
-          className="h-8 w-8 p-1 border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
+          className="btn btn-ghost btn-square"
           aria-label="Refresh all data"
           title="Refresh all data"
         >
@@ -165,7 +165,7 @@ export default function TopBar({
 
         <button
           onClick={toggleDarkMode}
-          className="h-8 w-8 p-1 border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
+          className="btn btn-ghost btn-square"
           aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           title={isDark ? "Switch to light mode" : "Switch to dark mode"}
         >
