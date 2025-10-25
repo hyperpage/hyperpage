@@ -40,6 +40,9 @@ This document outlines the core architectural principles and development pattern
 
 - **Widget Requirements**: New widgets must include title, configurable data source, refresh capabilities, and appropriate loading/error states.
 - **Dynamic Data Loading**: Widgets can be marked as `dynamic: true` to enable server-side API data fetching via Next.js API routes.
+- **API Endpoint Specification**: **Critical**: All dynamic widgets must specify `apiEndpoint` property that matches a defined API handler in the tool's `apis` object. This property drives widget-driven data fetching rather than relying on dangerous fallback logic.
+  - **Example**: `apiEndpoint: "pull-requests"` for Code Reviews, `apiEndpoint: "issues"` for Ticketing
+  - **Fallback Prevented**: Without explicit `apiEndpoint`, widgets used Object.keys()[0] which could result in invalid endpoints like "0"
 - **Auto-Refresh Configuration**: Widgets support configurable `refreshInterval` (in milliseconds) for automatic background polling - e.g., 300000ms for 5-minute intervals.
 - **Manual Refresh**: All dynamic widgets include refresh buttons with loading indicators and error handling.
 - **Data Integration**: Widgets should accept mock data initially, but be designed for easy integration with real API endpoints through the `dynamic` flag system.

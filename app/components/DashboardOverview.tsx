@@ -10,7 +10,7 @@ type ExtendedToolWidget = ToolWidget & { toolName: string };
 interface DashboardOverviewProps {
   enabledTools: Omit<Tool, "handlers">[];
   searchQuery: string;
-  dynamicData: Record<string, ToolData[]>;
+  dynamicData: Record<string, Record<string, ToolData[]>>;
   loadingStates: Record<string, boolean>;
   refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
 }
@@ -53,14 +53,27 @@ export default function DashboardOverview({
     .filter((tool) => tool.apis && Object.keys(tool.apis).length > 0)
     .flatMap((tool) =>
       tool.widgets.map((widget) => {
+        let widgetData = widget.data || [];
+
         // Use dynamic data if available and widget supports it
-        const widgetData =
-          widget.dynamic && dynamicData[tool.name]
-            ? dynamicData[tool.name]
-            : widget.data || [];
+        if (widget.dynamic) {
+          const toolDynamicData = dynamicData[tool.name];
+          if (toolDynamicData) {
+            if (widget.apiEndpoint && toolDynamicData[widget.apiEndpoint]) {
+              // Use API-specific data
+              widgetData = toolDynamicData[widget.apiEndpoint];
+            } else {
+              // Fall back to legacy behavior (pick first available API)
+              const firstApi = Object.keys(toolDynamicData)[0];
+              if (firstApi) {
+                widgetData = toolDynamicData[firstApi];
+              }
+            }
+          }
+        }
 
         // Filter data based on search query
-        const filteredData = (widgetData || []).filter((item) =>
+        const filteredData = widgetData.filter((item: ToolData) =>
           matchesSearch(item, searchQuery)
         );
 

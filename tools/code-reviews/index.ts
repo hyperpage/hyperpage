@@ -23,6 +23,7 @@ export const codeReviewsTool: Tool = {
       dynamic: true, // Indicate this widget needs dynamic data loading
       refreshInterval: 600000, // 10 minutes refresh interval (longer since it's aggregated data)
       displayName: "Combined", // Show "Combined" instead of individual tool names
+      apiEndpoint: "pull-requests", // Specify the API endpoint this widget consumes
     },
   ],
   apis: {

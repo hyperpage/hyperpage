@@ -135,6 +135,18 @@ interface Tool {
   config: ToolConfig;                // Server-side settings
   widgets: ToolWidget[];             // UI definitions
 }
+
+export interface ToolWidget {
+  title: string;
+  type: "metric" | "chart" | "table" | "feed";
+  data: ToolData[];
+  headers?: string[];
+  component?: React.ComponentType<ToolWidget>;
+  dynamic?: boolean; // Indicates if widget data needs to be loaded dynamically
+  refreshInterval?: number; // Auto-refresh interval in milliseconds
+  displayName?: string; // Optional display name for widgets
+  apiEndpoint?: string; // Specifies which API endpoint this widget consumes for data fetching
+}
 ```
 
 ### URL Auto-Derivation

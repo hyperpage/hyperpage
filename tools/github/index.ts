@@ -27,7 +27,8 @@ export const githubTool: Tool = {
       data: [],
       dynamic: true,
       refreshInterval: 300000, // 5 minutes
-      displayName: "GitHub"
+      displayName: "GitHub",
+      apiEndpoint: "pull-requests"
     },
     {
       title: "Recent Commits",
@@ -36,7 +37,8 @@ export const githubTool: Tool = {
       data: [],
       dynamic: true,
       refreshInterval: 300000, // 5 minutes
-      displayName: "GitHub"
+      displayName: "GitHub",
+      apiEndpoint: "commits"
     },
     {
       title: "GitHub Issues",
@@ -45,7 +47,8 @@ export const githubTool: Tool = {
       data: [],
       dynamic: true,
       refreshInterval: 300000, // 5 minutes
-      displayName: "GitHub"
+      displayName: "GitHub",
+      apiEndpoint: "issues"
     }
   ],
   capabilities: ["pull-requests", "workflows", "activity", "issues"], // Declares what this tool can provide
@@ -118,6 +121,14 @@ export const githubTool: Tool = {
         dataKey: "issues",
         description:
           "Array of issue objects with ticket, title, status, assignee, and URL",
+      },
+    },
+    commits: {
+      method: "GET",
+      description: "Get recent GitHub commit/push events",
+      response: {
+        dataKey: "commits",
+        description: "Array of recent GitHub commit push events",
       },
     },
     activity: {
@@ -291,6 +302,203 @@ export const githubTool: Tool = {
       }
 
       return { issues: results };
+    },
+    commits: async (request: Request, config: ToolConfig) => {
+      const commitEvents: unknown[] = [];
+      const apiUrl = config.formatApiUrl?.("https://github.com");
+      const token = process.env.GITHUB_TOKEN;
+
+      if (!token) {
+        throw new Error("GitHub API token not configured");
+      }
+
+      try {
+        const username = process.env.GITHUB_USERNAME;
+        if (!username) {
+          throw new Error("GitHub username not configured (GITHUB_USERNAME)");
+        }
+
+        // First, get user's repositories sorted by most recently pushed
+        // This gives us repositories they've recently worked on
+        const reposUrl = `${apiUrl}/user/repos?affiliation=owner,collaborator,organization_member&sort=pushed&direction=desc&per_page=10`;
+
+        const reposResponse = await fetch(reposUrl, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github.v3+json",
+          },
+        });
+
+        if (!reposResponse.ok) {
+          throw new Error(`Failed to fetch repositories: ${reposResponse.status}`);
+        }
+
+        const repositories: GitHubRepository[] = await reposResponse.json();
+
+        // Query events for each repository (limit to top 5 most recently active)
+        const recentRepos = repositories.slice(0, 5);
+        const repoEventsPromises = recentRepos.map(async (repo: GitHubRepository) => {
+          try {
+            const eventsUrl = `${apiUrl}/repos/${repo.owner.login}/${repo.name}/events?per_page=20`;
+
+            const eventsResponse = await fetch(eventsUrl, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/vnd.github.v3+json",
+              },
+            });
+
+            if (eventsResponse.ok) {
+              const events: GitHubEvent[] = await eventsResponse.json();
+              return events;
+            } else {
+              console.warn(`Failed to fetch events for ${repo.owner.login}/${repo.name}: ${eventsResponse.status}`);
+              return [];
+            }
+          } catch (error) {
+            console.warn(`Error fetching events for ${repo.owner.login}/${repo.name}:`, error);
+            return [];
+          }
+        });
+
+        const repoEventsArrays = await Promise.all(repoEventsPromises);
+        const allRepoEvents = repoEventsArrays.flat();
+
+        // Deduplicate events by ID (since same event might appear in multiple repos)
+        const seenEventIds = new Set<string>();
+        const deduplicatedEvents = allRepoEvents.filter(event => {
+          if (seenEventIds.has(event.id)) {
+            return false;
+          }
+          seenEventIds.add(event.id);
+          return true;
+        });
+
+        // Transform repository events to commit format
+        let pushEventCount = 0;
+        const maxPushEvents = 12; // Return more commit events since this is commit-specific
+
+        for (const event of deduplicatedEvents) {
+          if (event.type !== "PushEvent") {
+            continue; // Only process push events for commits
+          }
+
+          if (pushEventCount >= maxPushEvents) continue;
+
+          const eventTime = new Date(event.created_at);
+          const timeAgo = getTimeAgo(eventTime);
+          const repository = `${event.repo.name}`;
+
+          const pushPayload = event.payload as {
+            ref?: string;
+            commits?: unknown[];
+            before?: string;
+            head?: string;
+            size?: number;
+          };
+          const branch =
+            typeof pushPayload.ref === "string"
+              ? pushPayload.ref.split("/").pop()
+              : "unknown";
+
+          const pushCommits = Array.isArray(pushPayload.commits) ? pushPayload.commits : [];
+          const commitMessages: Array<{ type: 'commit'; text: string; author?: string; timestamp?: string; url?: string; displayId?: string }> = [];
+
+          if (pushCommits.length > 0) {
+            // Use the actual commits from the push event (limit to first 2 per push)
+            pushCommits.slice(0, 2).forEach((pushCommit: any) => {
+              const fullSha = pushCommit.sha;
+              const shortSha = fullSha?.substring(0, 7) || 'unknown';
+              const message = pushCommit.message || `Commit ${shortSha}`;
+              const truncatedMessage = message.length > 60 ? message.substring(0, 60) + '...' : message;
+
+              commitMessages.push({
+                type: 'commit',
+                text: truncatedMessage,
+                url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
+                displayId: shortSha !== 'unknown' ? shortSha : undefined,
+                author: pushCommit.author?.name || event.actor.login,
+                timestamp: eventTime.toISOString()
+              } as CommitContentItem);
+            });
+          } else if (pushPayload.before && pushPayload.head) {
+            try {
+              const [owner, repo] = repository.split('/');
+              const compareUrl = `${apiUrl}/repos/${owner}/${repo}/compare/${pushPayload.before}...${pushPayload.head}`;
+
+              const compareResponse = await fetch(compareUrl, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  Accept: "application/vnd.github.v3+json",
+                },
+              });
+
+              if (compareResponse.ok) {
+                const compareData = await compareResponse.json();
+                const commits = compareData.commits || [];
+
+                commits.slice(0, 2).forEach((commit: any) => {
+                  const fullSha = commit.sha;
+                  const shortSha = fullSha?.substring(0, 7) || 'unknown';
+                  const message = commit.commit?.message || `Commit ${shortSha}`;
+                  const truncatedMessage = message.length > 60 ? message.substring(0, 60) + '...' : message;
+
+                  commitMessages.push({
+                    type: 'commit',
+                    text: truncatedMessage,
+                    url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
+                    displayId: shortSha !== 'unknown' ? shortSha : undefined,
+                    author: commit.commit?.author?.name || commit.commit?.committer?.name || commit.author?.login || event.actor.login,
+                    timestamp: commit.commit?.committer?.date || eventTime.toISOString()
+                  } as CommitContentItem);
+                });
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch push comparison for ${repository}:`, error);
+            }
+          }
+
+          // Always include at least one entry even if no commit details
+          if (commitMessages.length === 0) {
+            commitMessages.push({
+              type: 'commit',
+              text: `Code push to ${repository}/${branch}`,
+              author: event.actor.login,
+              timestamp: eventTime.toISOString()
+            });
+          }
+
+          const commitCount = commitMessages.length;
+
+          commitEvents.push({
+            repository,
+            branch,
+            id: commitCount > 1 ? `${event.id}_multiple` : `${event.id}_${commitMessages[0].displayId || 'push'}`,
+            time: timeAgo,
+            author: event.actor.login,
+            content: commitMessages,
+            details: `${commitCount} commit${commitCount > 1 ? 's' : ''}`,
+            timestamp: eventTime.toISOString(),
+            url: commitMessages[0]?.url || `https://github.com/${repository}`
+          });
+          pushEventCount++;
+        }
+
+        // Sort commit events by timestamp (most recent first)
+        commitEvents.sort((a: any, b: any) => {
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        });
+
+        return { commits: commitEvents };
+
+      } catch (error) {
+        console.warn("Failed to fetch GitHub commits:", error);
+        // Return empty array on error
+        return { commits: [] };
+      }
     },
     activity: async (request: Request, config: ToolConfig) => {
       const activityEvents: unknown[] = [];
