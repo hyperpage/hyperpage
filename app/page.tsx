@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Dashboard from "./components/Dashboard";
+import Portal from "./components/Portal";
 import { Tool } from "../tools/tool-types";
-import { DashboardEmptyState } from "./components/DashboardEmptyState";
+import { PortalEmptyState } from "./components/PortalEmptyState";
 
 export default function Home() {
   const [enabledTools, setEnabledTools] = useState<Tool[]>([]);
@@ -28,8 +28,8 @@ export default function Home() {
   }, []);
 
   if (isLoading) {
-    return <DashboardEmptyState />;
+    return <PortalEmptyState />;
   }
 
-  return <Dashboard enabledTools={enabledTools} />;
+  return <Portal enabledTools={enabledTools} />;
 }

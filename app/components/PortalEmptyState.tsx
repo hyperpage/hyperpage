@@ -1,4 +1,4 @@
-export function DashboardEmptyState() {
+export function PortalEmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-12">
       <div className="text-center">
@@ -6,7 +6,7 @@ export function DashboardEmptyState() {
           No Tools Enabled
         </h2>
         <p className="text-muted-foreground">
-          Enable tools in your environment configuration to see dashboard
+          Enable tools in your environment configuration to see portal
           widgets. Configure integrations using the settings dropdown in the top
           bar.
         </p>

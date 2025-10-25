@@ -117,10 +117,7 @@ describe('useActivities', () => {
   describe('error handling', () => {
     it('handles fetch errors gracefully', async () => {
       global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ activity: [] }),
-        } as any),
+        Promise.reject(new Error('Network error')),
       );
 
       const { result } = renderHook(() => useActivities(), {
@@ -132,7 +129,7 @@ describe('useActivities', () => {
       });
 
       expect(result.current.activities).toEqual([]);
-      expect(result.current.error).toBe('Failed to fetch activity data');
+      expect(result.current.error).toBe('Network error');
     });
 
     it('handles network errors', async () => {

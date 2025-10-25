@@ -126,6 +126,7 @@ describe('GET /api/tools/enabled', () => {
       // Check first tool transformation
       expect(data.enabledTools[0]).toEqual({
         name: 'GitHub',
+        slug: 'github',
         enabled: true,
         widgets: [
           {

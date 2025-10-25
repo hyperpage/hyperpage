@@ -7,7 +7,7 @@ import { sortDataByTime } from "../../lib/time-utils";
 // Define ToolWidget extended type for components that need toolName
 type ExtendedToolWidget = ToolWidget & { toolName: string };
 
-interface DashboardOverviewProps {
+interface PortalOverviewProps {
   enabledTools: Omit<Tool, "handlers">[];
   searchQuery: string;
   dynamicData: Record<string, Record<string, ToolData[]>>;
@@ -15,13 +15,13 @@ interface DashboardOverviewProps {
   refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
 }
 
-export default function DashboardOverview({
+export default function PortalOverview({
   enabledTools,
   searchQuery,
   dynamicData,
   loadingStates,
   refreshToolData,
-}: DashboardOverviewProps) {
+}: PortalOverviewProps) {
   // Search helper function
   const matchesSearch = (item: ToolData, query: string): boolean => {
     if (!query) return true;

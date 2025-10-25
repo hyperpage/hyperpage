@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Hyperpage Dashboard E2E Tests', () => {
-  test('should load dashboard and display initial state', async ({ page }) => {
+test.describe('Hyperpage Portal E2E Tests', () => {
+  test('should load portal and display initial state', async ({ page }) => {
     await page.goto('/');
 
     // Check that the page loaded successfully
