@@ -226,20 +226,20 @@ const endpointPattern = /^[a-zA-Z0-9_%-]+$/;
 
 ### Recent Improvements
 
-Following a comprehensive refactoring initiative:
+Following a comprehensive shadcn/ui to vanilla Tailwind CSS migration:
 
-| Component | Before | After | Improvement |
-|-----------|--------|-------|-------------|
-| `Dashboard` | 350 lines | 90 lines | Modular decomposition |
-| `Livefeed` | 400 lines | 68 lines | Focused sub-components |
-| **Overall Reduction** | - | **75% size reduction** | Cleaner architecture |
+| Component | Framework | Now | Architecture Change |
+|-----------|-----------|-----|---------------------|
+| `TopBar` | shadcn/Button+Input | HTML button+input + Tailwind | 100% vanilla CSS |
+| `DataTable` | shadcn/Table+Card | HTML table+div + Tailwind | 100% semantic HTML |
+| `Livefeed` | shadcn/Card+Badge | HTML div+span + Tailwind | 100% standard flexbox/grid |
+| **5/6 Components** | shadcn/ui | Vanila Tailwind | **Minimal framework dependencies |
 
 #### Key Refactoring Changes
-- **Interface Simplification**: Removed complex nested prop structures
-- **Custom Hook Extraction**: Business logic centralized in reusable hooks
-- **Type Safety**: Eliminated all `any` types across the codebase
-- **Error Boundaries**: Consistent error handling patterns
-- **Performance**: `React.memo` optimization for critical components
+- **Styling System**: Complete migration from OKLCH color palette to standard Tailwind gray-*, blue-*, etc.
+- **Component Implementation**: Removed all variant systems, using direct HTML elements with utility classes
+- **Bundle Size**: Eliminated shadcn/ui dependencies (clsx, class-variance-authority, tailwind-merge)
+- **Theme Consistency**: Maintained exact visual design while removing framework abstractions
 
 ## Activity Feed Architecture
 

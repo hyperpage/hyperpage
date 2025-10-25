@@ -1,22 +1,5 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { ExternalLink, RefreshCw } from "lucide-react";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { useState, useEffect } from "react";
 
 import { ToolData } from "../../tools/tool-types";
@@ -57,41 +40,39 @@ export default function DataTable({
   }, [data.length]);
 
   return (
-    <Card>
-      <CardHeader>
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <CardTitle>{title}</CardTitle>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           {onRefresh && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onRefresh}
               disabled={isLoading}
-              className="h-6 w-6 p-0"
+              className="h-6 w-6 p-0 border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
               title="Refresh data"
             >
               <RefreshCw
                 className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`}
               />
-            </Button>
+            </button>
           )}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
+      </div>
+      <div className="p-6">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+              <tr>
                 {headers.map((header, index) => (
-                  <TableHead key={index} className="font-medium">
+                  <th key={index} className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100 border-b">
                     {header}
-                  </TableHead>
+                  </th>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
               {displayItems.map((row, rowIndex) => (
-                <TableRow key={rowIndex}>
+                <tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   {headers.map((header, colIndex) => {
                     let cellValue =
                       row[header.toLowerCase().replace(/\s+/g, "_")] ||
@@ -118,13 +99,13 @@ export default function DataTable({
                     const displayValue = cellValue;
 
                     return (
-                      <TableCell key={colIndex}>
+                      <td key={colIndex} className="px-4 py-3 text-gray-900 dark:text-gray-100">
                         {isLinkableIdentifier ? (
                           <a
                             href={String(urlField)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-primary hover:text-primary/80 underline decoration-transparent hover:decoration-current transition-colors"
+                            className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
                             title={`Open in ${tool}`}
                           >
                             {displayValue}
@@ -133,53 +114,41 @@ export default function DataTable({
                         ) : (
                           displayValue
                         )}
-                      </TableCell>
+                      </td>
                     );
                   })}
-                </TableRow>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
               {totalItems} entries
             </div>
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() =>
-                      handlePageChange(Math.max(1, currentPage - 1))
-                    }
-                    className={
-                      currentPage === 1
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      handlePageChange(Math.min(totalPages, currentPage + 1))
-                    }
-                    className={
-                      currentPage === totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

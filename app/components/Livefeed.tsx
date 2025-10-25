@@ -1,8 +1,4 @@
 "use client";
-
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   GitMerge,
   GitPullRequest,
@@ -104,46 +100,36 @@ export default function Livefeed({
     return <Clock className="h-4 w-4" />;
   };
 
-  const getActionBadgeVariant = (color: string) => {
-    switch (color) {
-      case "green":
-        return "secondary" as const;
-      case "red":
-        return "destructive" as const;
-      default:
-        return "outline" as const;
-    }
-  };
+
 
   return (
     <div className="max-w-4xl mx-auto relative">
       {/* Quick status indicator */}
-      <div className="mb-4 text-xs text-muted-foreground text-center">
+      <div className="mb-4 text-xs text-gray-600 dark:text-gray-400 text-center">
         {activities.length} activities loaded
       </div>
 
       {/* Refresh button */}
       {onRefresh && (
         <div className="flex justify-end mb-6">
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={onRefresh}
             disabled={isLoading}
+            className="h-8 w-auto px-3 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center text-sm"
             title="Refresh activity data"
           >
             <RefreshCw
               className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
             />
             {isLoading ? "Refreshing..." : "Refresh"}
-          </Button>
+          </button>
         </div>
       )}
 
       {/* Loading state */}
       {isLoading && activities.length === 0 && (
         <div className="relative">
-          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border"></div>
+          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-600"></div>
           <div className="space-y-6">
             {[...Array(5)].map((_, i) => (
               <ActivitySkeleton key={i} index={i} />
@@ -155,7 +141,7 @@ export default function Livefeed({
       {/* Timeline container */}
       {!isLoading || activities.length > 0 ? (
         <div className="relative">
-          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border"></div>
+          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-600"></div>
           <div className="space-y-6">
             {activities.map((activity, index) => (
               <div
@@ -172,41 +158,38 @@ export default function Livefeed({
               >
                 {/* Timeline dot with icon */}
                 <div
-                  className={`relative z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-muted group-hover:scale-110 transition-transform duration-200 ${getColorClass(activity.color)}`}
+                  className={`relative z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 border-white dark:border-gray-800 bg-gray-100 dark:bg-gray-800 group-hover:scale-110 transition-transform duration-200 ${getColorClass(activity.color)}`}
                 >
                   <div className="text-lg">{getToolIcon(activity.tool)}</div>
                 </div>
 
                 {/* Activity content */}
                 <div className="flex-1 pb-6">
-                  <Card className="p-6 transition-all duration-200 border-l-4 border-l-transparent group-hover:border-l-primary/20">
+                  <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800 transition-all duration-200 border-l-4 border-l-transparent group-hover:border-l-blue-500">
                     <div className="space-y-3">
                       {/* Header: Action + Badge */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Badge
-                            variant={getActionBadgeVariant(activity.color)}
-                            className="flex items-center gap-1.5"
-                          >
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${activity.color === 'red' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>
                             {getActionIcon(activity.action)}
-                            <span className="font-medium capitalize">
+                            <span className="capitalize">
                               {activity.action}
                             </span>
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
+                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
                             {activity.time ||
                               formatRelativeTime(activity.timestamp)}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-xs">
+                        <span className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                           {activity.tool}
-                        </Badge>
+                        </span>
                       </div>
 
                       {/* Details */}
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
-                          <p className="text-foreground font-medium">
+                          <p className="text-gray-900 dark:text-gray-100 font-medium">
                             {activity.details}
                           </p>
                           {/* Display ID as hyperlink if available */}
@@ -215,7 +198,7 @@ export default function Livefeed({
                               href={activity.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm font-mono text-primary hover:underline ml-4 flex-shrink-0"
+                              className="text-sm font-mono text-blue-600 dark:text-blue-400 hover:underline ml-4 flex-shrink-0"
                             >
                               {activity.displayId}
                             </a>
@@ -229,17 +212,14 @@ export default function Livefeed({
                           activity.status ||
                           activity.assignee ||
                           (activity.labels && activity.labels.length > 0)) && (
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
                             {/* Repository */}
                             {activity.repository && (
                               <span className="flex items-center gap-1">
                                 <span className="font-medium">Repo:</span>
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs px-2 py-0.5"
-                                >
+                                <span className="text-xs px-2 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
                                   {activity.repository}
-                                </Badge>
+                                </span>
                               </span>
                             )}
 
@@ -247,12 +227,9 @@ export default function Livefeed({
                             {activity.branch && (
                               <span className="flex items-center gap-1">
                                 <span className="font-medium">Branch:</span>
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800"
-                                >
+                                <span className="text-xs px-2 py-0.5 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded">
                                   {activity.branch}
-                                </Badge>
+                                </span>
                               </span>
                             )}
 
@@ -260,12 +237,9 @@ export default function Livefeed({
                             {activity.commitCount && activity.commitCount > 0 && (
                               <span className="flex items-center gap-1">
                                 <span className="font-medium">Commits:</span>
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs px-2 py-0.5"
-                                >
+                                <span className="text-xs px-2 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
                                   {activity.commitCount}
-                                </Badge>
+                                </span>
                               </span>
                             )}
 
@@ -273,28 +247,17 @@ export default function Livefeed({
                             {activity.status && (
                               <span className="flex items-center gap-1">
                                 <span className="font-medium">Status:</span>
-                                <Badge
-                                  variant={
-                                    activity.status.toLowerCase() === "open" ||
-                                    activity.status.toLowerCase() === "merged"
-                                      ? "default"
-                                      : activity.status.toLowerCase() === "closed"
-                                        ? "secondary"
-                                        : "outline"
-                                  }
-                                  className={`text-xs px-2 py-0.5 ${
-                                    activity.status.toLowerCase() === "open"
-                                      ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-300 dark:border-green-700"
-                                      : activity.status.toLowerCase() === "closed"
-                                        ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-900 dark:text-red-300 dark:border-red-700"
-                                        : activity.status.toLowerCase() ===
-                                            "merged"
-                                          ? "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-700"
-                                          : ""
-                                  }`}
-                                >
+                                <span className={`text-xs px-2 py-0.5 rounded border ${
+                                  activity.status.toLowerCase() === "open"
+                                    ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-300 dark:border-green-700"
+                                    : activity.status.toLowerCase() === "closed"
+                                      ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-900 dark:text-red-300 dark:border-red-700"
+                                      : activity.status.toLowerCase() === "merged"
+                                        ? "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-700"
+                                        : "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600"
+                                }`}>
                                   {activity.status}
-                                </Badge>
+                                </span>
                               </span>
                             )}
 
@@ -303,12 +266,9 @@ export default function Livefeed({
                               activity.assignee !== activity.author && (
                                 <span className="flex items-center gap-1">
                                   <span className="font-medium">Assigned:</span>
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs px-2 py-0.5"
-                                  >
+                                  <span className="text-xs px-2 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
                                     {activity.assignee}
-                                  </Badge>
+                                  </span>
                                 </span>
                               )}
 
@@ -320,21 +280,17 @@ export default function Livefeed({
                                   {activity.labels
                                     .slice(0, 3)
                                     .map((label, index) => (
-                                      <Badge
+                                      <span
                                         key={index}
-                                        variant="outline"
-                                        className="text-xs px-2 py-0.5"
+                                        className="text-xs px-2 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                                       >
                                         {label}
-                                      </Badge>
+                                      </span>
                                     ))}
                                   {activity.labels.length > 3 && (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs px-2 py-0.5"
-                                    >
+                                    <span className="text-xs px-2 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
                                       +{activity.labels.length - 3}
-                                    </Badge>
+                                    </span>
                                   )}
                                 </div>
                               </span>
@@ -344,8 +300,8 @@ export default function Livefeed({
 
                         {/* Author info */}
                         {activity.author && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium">
+                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium">
                               {activity.author.charAt(0).toUpperCase()}
                             </div>
                             <span>by {activity.author}</span>
@@ -353,17 +309,17 @@ export default function Livefeed({
                         )}
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 </div>
               </div>
             ))}
 
             {activities.length === 0 && (
               <div className="text-center py-12 col-span-full">
-                <p className="text-muted-foreground">
+                <p className="text-gray-600 dark:text-gray-400">
                   No recent activity to display.
                 </p>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Enable tools like GitHub, GitLab, or Jira to see activity here.
                 </p>
               </div>
