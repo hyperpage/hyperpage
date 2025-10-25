@@ -129,7 +129,7 @@ export default function Livefeed({
       {/* Loading state */}
       {isLoading && activities.length === 0 && (
         <div className="relative">
-          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-600"></div>
+          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-base-300"></div>
           <div className="space-y-6">
             {[...Array(5)].map((_, i) => (
               <ActivitySkeleton key={i} index={i} />
@@ -141,7 +141,7 @@ export default function Livefeed({
       {/* Timeline container */}
       {!isLoading || activities.length > 0 ? (
         <div className="relative">
-          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-600"></div>
+          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-base-300"></div>
           <div className="space-y-6">
             {activities.map((activity, index) => (
               <div
@@ -171,7 +171,7 @@ export default function Livefeed({
                       {/* Header: Action + Badge */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${activity.color === 'red' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>
+                          <span className={`badge ${activity.color === 'red' ? 'badge-error' : 'badge-neutral'}`}>
                             {getActionIcon(activity.action)}
                             <span className="capitalize">
                               {activity.action}
@@ -182,7 +182,7 @@ export default function Livefeed({
                               formatRelativeTime(activity.timestamp)}
                           </span>
                         </div>
-                        <span className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                        <span className="badge badge-outline">
                           {activity.tool}
                         </span>
                       </div>
@@ -248,14 +248,14 @@ export default function Livefeed({
                             {activity.status && (
                               <span className="flex items-center gap-1">
                                 <span className="font-medium">Status:</span>
-                                <span className={`text-xs px-2 py-0.5 rounded border ${
+                                <span className={`badge ${
                                   activity.status.toLowerCase() === "open"
-                                    ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-300 dark:border-green-700"
+                                    ? "badge-success"
                                     : activity.status.toLowerCase() === "closed"
-                                      ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-900 dark:text-red-300 dark:border-red-700"
+                                      ? "badge-error"
                                       : activity.status.toLowerCase() === "merged"
-                                        ? "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-700"
-                                        : "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600"
+                                        ? "badge-primary"
+                                        : "badge-neutral"
                                 }`}>
                                   {activity.status}
                                 </span>
@@ -302,7 +302,7 @@ export default function Livefeed({
                         {/* Author info */}
                         {activity.author && (
                           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium">
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-base-300 text-base-content text-xs font-medium">
                               {activity.author.charAt(0).toUpperCase()}
                             </div>
                             <span>by {activity.author}</span>

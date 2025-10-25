@@ -40,39 +40,38 @@ export default function DataTable({
   }, [data.length]);
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+    <div className="card bg-base-100 border border-base-200 shadow-md">
+      <div className="card-body">
+        <div className="card-title justify-between">
+          <h3 className="text-lg font-semibold">{title}</h3>
           {onRefresh && (
             <button
               onClick={onRefresh}
               disabled={isLoading}
-              className="h-6 w-6 p-0 border border-gray-300 rounded hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              className="btn btn-ghost btn-square btn-sm"
               title="Refresh data"
             >
               <RefreshCw
-                className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`}
+                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
               />
             </button>
           )}
         </div>
-      </div>
-      <div className="p-6">
-        <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+
+        <div className="overflow-x-auto">
+          <table className="table table-zebra">
+            <thead className="bg-base-content/10">
               <tr>
                 {headers.map((header, index) => (
-                  <th key={index} className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100 border-b">
+                  <th key={index} className="text-base-content">
                     {header}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+            <tbody>
               {displayItems.map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr key={rowIndex} className="hover:bg-base-200">
                   {headers.map((header, colIndex) => {
                     let cellValue =
                       row[header.toLowerCase().replace(/\s+/g, "_")] ||
@@ -99,17 +98,16 @@ export default function DataTable({
                     const displayValue = cellValue;
 
                     return (
-                      <td key={colIndex} className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                      <td key={colIndex} className="text-base-content">
                         {isLinkableIdentifier ? (
                           <a
                             href={String(urlField)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
-                            title={`Open in ${tool}`}
+                            className="link link-primary"
                           >
                             {displayValue}
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-3 h-3 inline ml-1" />
                           </a>
                         ) : (
                           displayValue
@@ -126,22 +124,22 @@ export default function DataTable({
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-base-content/70">
               Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
               {totalItems} entries
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="btn btn-outline btn-sm"
               >
                 Previous
               </button>
               <button
                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="btn btn-outline btn-sm"
               >
                 Next
               </button>
