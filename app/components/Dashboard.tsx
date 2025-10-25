@@ -8,7 +8,7 @@ import Livefeed from "./Livefeed";
 
 import { Tool } from "../../tools/tool-types";
 import { useToolData } from "./hooks/useToolData";
-import { useActivityData } from "./hooks/useActivityData";
+import { useActivities } from "./hooks/useActivities";
 
 interface DashboardProps {
   enabledTools: Omit<Tool, "handlers">[];
@@ -28,7 +28,7 @@ export default function Dashboard({ enabledTools }: DashboardProps) {
     initializePolling,
   } = useToolData({ enabledTools });
 
-  const { refreshActivities, isRefreshing: activityLoading } = useActivityData();
+  const { activities, refetch: refreshActivities, isRefreshing: activityLoading } = useActivities();
 
   useEffect(() => {
     const darkMode = localStorage.getItem("darkMode");
@@ -74,6 +74,7 @@ export default function Dashboard({ enabledTools }: DashboardProps) {
     activeTab === "livefeed" ? (
       <div className="p-8">
         <Livefeed
+          activities={activities}
           onRefresh={refreshActivities}
           isLoading={activityLoading}
         />
