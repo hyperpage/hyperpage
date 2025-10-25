@@ -55,7 +55,7 @@ This document outlines the planned enhancements and future development direction
 
 ## Timeline
 
-**Q4 2025**: Production readiness features (caching, rate limiting, authentication system)
+**Late Q4 2025**: Production readiness features (caching, rate limiting, authentication system)
 **Q1 2026**: Advanced monitoring, workspace management, and analytics capabilities
 **Q2 2026**: Mobile application and plugin architecture
-**Q3 2026**: Advanced analytics and mobile application
+**Q3 2026**: Advanced analytics and mobile application features

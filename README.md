@@ -11,13 +11,13 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
 - **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues
 - **Activity Feeds**: Real-time updates from all repositories
-- **Professional UI**: Enterprise-grade design with optimized Tailwind CSS, Inter typography, OKLCH color palette, and comprehensive dark mode support
-- **Theme System**: Full light/dark mode switching with system preference detection
+- **Modern UI**: Professional design system using DaisyUI components with Tailwind CSS
+- **Theme System**: Comprehensive light/dark mode switching with DaisyUI theming
 
 ### Quality Assurance & Design
-✅ **69/69 unit tests passing** • ✅ **36/54 E2E tests passing** • ✅ **0 TypeScript errors**  
-✅ **41% ESLint improvement** • ✅ **Framework conflicts resolved** • ✅ **Enterprise-grade codebase**  
-✅ **Professional Styling System** • ✅ **Dark Mode Implementation** • ✅ **OKLCH Color Palette**
+✅ **50/50 unit tests passing** • ✅ **Build compiles successfully** • ✅ **0 TypeScript errors**  
+✅ **Professional UI** • ✅ **Dark Mode Support** • ✅ **DaisyUI + Tailwind CSS**  
+✅ **Optimized Design System** • ✅ **Modern Component Architecture** • ✅ **Enterprise-grade codebase**
 
 ## Quick Start
 
@@ -31,7 +31,7 @@ npm install
 cp .env.local.sample .env.local
 # Edit .env.local to enable your tools (see docs/installation.md)
 
-# Start development server
+# Start development server (with Turbopack for fast builds)
 npm run dev
 ```
 
@@ -45,7 +45,7 @@ Hyperpage includes comprehensive testing with **100% success rate** and **zero f
 
 ```bash
 # Unit & Integration Tests
-npm test                    # Run all 69 unit tests
+npm test                    # Run all 50 unit tests
 npm run test:coverage      # With coverage report
 npm run test:watch         # Watch mode development
 
@@ -59,7 +59,7 @@ npm run test:e2e:ui        # Interactive mode
 ```
 
 **Testing Architecture:**
-- **Unit Tests**: Vitest + React Testing Library (69 passing)
+- **Unit Tests**: Vitest + React Testing Library (50 passing tests)
 - **E2E Tests**: Playwright with Docker isolation (framework conflict resolved)
 - **CI/CD Ready**: All tests optimized for automated pipelines
 
@@ -78,19 +78,18 @@ Once configured, the portal automatically aggregates PRs/MRs from all enabled pl
 
 ```
 hyperpage/
-├── app/                 # Next.js app directory
-│   ├── api/            # API routes and handlers
-│   ├── components/     # React components (Portal, UI)
-│   └── globals.css     # Global styles
-├── components/          # Shared UI components library
-├── tools/              # Tool integrations registry
-├── __tests__/          # Comprehensive testing suite
-│   ├── api/           # Unit tests for API routes
+├── app/                 # Next.js 15 app directory
+│   ├── api/            # API routes and handlers (REST & tool integrations)
+│   ├── components/     # React components using DaisyUI + Tailwind CSS
+│   └── globals.css     # Tailwind + DaisyUI configuration
+├── tools/              # Tool integrations registry (GitHub, GitLab, Jira, etc.)
+├── __tests__/          # Comprehensive testing suite (50 unit tests passing)
+│   ├── api/           # API route unit tests
 │   ├── components/    # Component integration tests
 │   ├── e2e/          # Docker E2E testing infrastructure
 │   └── lib/          # Utility function tests
-├── docs/              # Detailed documentation
-└── .clinerules/       # Development guidelines & rules
+├── docs/              # Detailed documentation and guides
+└── .clinerules/       # Development guidelines and automation rules
 ```
 
 ## Documentation

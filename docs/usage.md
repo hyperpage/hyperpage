@@ -45,6 +45,26 @@ The main dashboard view displaying real-time data from all enabled tools.
 - **CI/CD**: Unified pipelines from GitLab + GitHub Actions
 - **Ticketing**: Combined issues from Jira + GitHub + GitLab
 
+#### Dashboard Components
+
+**Layout Components:**
+- **Portal**: Main dashboard container with tab navigation
+- **PortalOverview**: Overview tab with widget grid display
+- **PortalWidgetGrid**: Responsive grid container for tool widgets
+- **TabNavigation**: Tab bar for switching between Overview/Livefeed
+- **TopBar**: Fixed top bar with search, tool status indicators, and theme toggle
+
+**Data Display Components:**
+- **DataTable**: Sortable, paginated table for issues, PRs, and other lists
+- **Livefeed**: Real-time activity stream with rich content display
+- **ActivitySkeleton**: Loading animation for activity feed items
+
+**Specialized Components:**
+- **QueryProvider**: React Query context provider for data management
+- **SearchResultsHeader**: Search results counter and filtering options
+- **NoToolsState**: Empty state display when no tools are enabled
+- **PortalEmptyState**: Placeholder content for portfolio/diagram views
+
 #### Widget Features
 - **Manual Refresh**: Click refresh icon to update data immediately
 - **Loading States**: Smooth transitions with skeleton loading

@@ -1,22 +1,5 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { ExternalLink, RefreshCw } from "lucide-react";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { useState, useEffect } from "react";
 
 import { ToolData } from "../../tools/tool-types";
@@ -57,41 +40,38 @@ export default function DataTable({
   }, [data.length]);
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{title}</CardTitle>
+    <div className="card bg-base-100 border border-base-200 shadow-md">
+      <div className="card-body">
+        <div className="card-title justify-between">
+          <h3 className="text-lg font-semibold">{title}</h3>
           {onRefresh && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onRefresh}
               disabled={isLoading}
-              className="h-6 w-6 p-0"
+              className="btn btn-ghost btn-square btn-sm"
               title="Refresh data"
             >
               <RefreshCw
-                className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`}
+                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
               />
-            </Button>
+            </button>
           )}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
+
+        <div className="overflow-x-auto">
+          <table className="table table-zebra">
+            <thead className="bg-base-content/10">
+              <tr>
                 {headers.map((header, index) => (
-                  <TableHead key={index} className="font-medium">
+                  <th key={index} className="text-base-content">
                     {header}
-                  </TableHead>
+                  </th>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+              </tr>
+            </thead>
+            <tbody>
               {displayItems.map((row, rowIndex) => (
-                <TableRow key={rowIndex}>
+                <tr key={rowIndex} className="hover:bg-base-200">
                   {headers.map((header, colIndex) => {
                     let cellValue =
                       row[header.toLowerCase().replace(/\s+/g, "_")] ||
@@ -118,68 +98,55 @@ export default function DataTable({
                     const displayValue = cellValue;
 
                     return (
-                      <TableCell key={colIndex}>
+                      <td key={colIndex} className="text-base-content">
                         {isLinkableIdentifier ? (
                           <a
                             href={String(urlField)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-primary hover:text-primary/80 underline decoration-transparent hover:decoration-current transition-colors"
-                            title={`Open in ${tool}`}
+                            className="link link-primary"
                           >
                             {displayValue}
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-3 h-3 inline ml-1" />
                           </a>
                         ) : (
                           displayValue
                         )}
-                      </TableCell>
+                      </td>
                     );
                   })}
-                </TableRow>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-base-content/70">
               Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
               {totalItems} entries
             </div>
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() =>
-                      handlePageChange(Math.max(1, currentPage - 1))
-                    }
-                    className={
-                      currentPage === 1
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      handlePageChange(Math.min(totalPages, currentPage + 1))
-                    }
-                    className={
-                      currentPage === totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="btn btn-outline btn-sm"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="btn btn-outline btn-sm"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

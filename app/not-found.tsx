@@ -1,44 +1,39 @@
 /* eslint-disable react/no-unescaped-entities */
 'use client';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Home, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-4xl font-bold text-primary mb-2">
-            404
-          </CardTitle>
-          <h2 className="text-xl font-semibold">Page Not Found</h2>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-center">
+    <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
+      <div className="card bg-base-100 w-full max-w-md shadow-xl">
+        <div className="card-body items-center text-center">
+          <h1 className="text-6xl font-bold text-primary">404</h1>
+          <h2 className="card-title text-2xl">Page Not Found</h2>
+          <p className="text-base-content/70">
             The page you're looking for doesn't exist or has been moved.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              onClick={() => window.history.back()}
-              variant="outline"
-              className="flex-1"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Go Back
-            </Button>
-            <Button
-              onClick={() => window.location.href = '/'}
-              className="flex-1"
-            >
-              <Home className="mr-2 h-4 w-4" />
-              Home
-            </Button>
+          <div className="card-actions justify-center w-full">
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() => window.history.back()}
+                className="btn btn-outline flex-1"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Go Back
+              </button>
+              <button
+                onClick={() => window.location.href = '/'}
+                className="btn btn-primary flex-1"
+              >
+                <Home className="w-4 h-4" />
+                Home
+              </button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
