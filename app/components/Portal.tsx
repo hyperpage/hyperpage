@@ -90,7 +90,7 @@ export default function Portal({ enabledTools }: PortalProps) {
     );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-base-100">
       <TopBar
         toggleDarkMode={toggleDarkMode}
         isDark={isDark}

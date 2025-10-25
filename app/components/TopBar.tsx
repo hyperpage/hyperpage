@@ -70,7 +70,7 @@ export default function TopBar({
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center h-16">
+    <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-base-100/80 border-b border-base-200 px-4 py-3 flex items-center h-16">
       <div className="flex items-center space-x-4">
         <Link href="/" className="cursor-pointer">
           <HyperpageLogo isDark={isDark} />
@@ -79,7 +79,7 @@ export default function TopBar({
 
       <div className="flex-1 flex justify-center">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/50 h-4 w-4" />
           <input
             type="text"
             placeholder="Search across all tools..."
@@ -90,7 +90,7 @@ export default function TopBar({
           {searchQuery && (
             <button
               onClick={onClearSearch}
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 text-base-content/60 hover:text-base-content rounded-full hover:bg-base-200 transition-colors flex items-center justify-center"
               aria-label="Clear search"
             >
               <X className="h-3 w-3" />
@@ -115,35 +115,35 @@ export default function TopBar({
           {/* Dropdown Content */}
           {isDropdownOpen && (
             <div
-              className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg p-4 z-50"
+              className="dropdown-content bg-base-100 border border-base-200 rounded-box shadow-xl p-4 z-50 w-64"
               onMouseEnter={() => setIsDropdownOpen(true)}
               onMouseLeave={() => setIsDropdownOpen(false)}
             >
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              <h3 className="text-sm font-semibold text-base-content mb-3">
                 Tool Integrations
               </h3>
               <div className="grid grid-cols-4 gap-3">
                 {toolIntegrations.map((tool, index) => (
                   <div
                     key={index}
-                    className="flex flex-col items-center justify-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    className="flex flex-col items-center justify-center p-2 rounded-lg bg-base-200 hover:bg-base-300 transition-colors"
                     title={tool.name}
                   >
                     <div className="relative">
                       <span className="text-lg">{tool.icon}</span>
                       <div
-                        className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(tool.status)}`}
+                        className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-base-100 ${getStatusColor(tool.status)}`}
                         title={tool.status}
                       />
                     </div>
-                    <span className="text-xs text-center mt-1 truncate w-full text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-center mt-1 truncate w-full text-base-content/70">
                       {tool.name}
                     </span>
                   </div>
                 ))}
               </div>
               {toolIntegrations.length === 0 && (
-                <p className="text-sm text-center text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-center text-base-content/60">
                   No tools enabled
                 </p>
               )}
