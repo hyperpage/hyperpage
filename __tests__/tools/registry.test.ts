@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { registerTool, toolRegistry } from '../../tools/registry';
 import { Tool } from '../../tools/tool-types';
 
@@ -18,7 +18,7 @@ describe('registerTool', () => {
       enabled: true,
       ui: {
         color: 'bg-blue-500',
-        icon: vi.fn(() => null) as any,
+        icon: null,
       },
       widgets: [],
       apis: {},
@@ -36,7 +36,7 @@ describe('registerTool', () => {
       name: 'Original',
       slug: 'original',
       enabled: true,
-      ui: { color: 'bg-blue-500', icon: vi.fn(() => null) as any },
+      ui: { color: 'bg-blue-500', icon: null },
       widgets: [],
       apis: {},
       handlers: {},
@@ -47,7 +47,7 @@ describe('registerTool', () => {
       name: 'Updated',
       slug: 'updated',
       enabled: false,
-      ui: { color: 'bg-green-500', icon: vi.fn(() => null) as any },
+      ui: { color: 'bg-green-500', icon: null },
       widgets: [],
       apis: {},
       handlers: {},
@@ -66,7 +66,7 @@ describe('registerTool', () => {
       name: 'Tool1',
       slug: 'tool-1',
       enabled: true,
-      ui: { color: 'bg-blue-500', icon: vi.fn(() => null) as any },
+      ui: { color: 'bg-blue-500', icon: null },
       widgets: [],
       apis: {},
       handlers: {},
@@ -77,7 +77,7 @@ describe('registerTool', () => {
       name: 'Tool2',
       slug: 'tool-2',
       enabled: false,
-      ui: { color: 'bg-green-500', icon: vi.fn(() => null) as any },
+      ui: { color: 'bg-green-500', icon: null },
       widgets: [],
       apis: {},
       handlers: {},
@@ -104,7 +104,7 @@ describe('toolRegistry', () => {
       name: 'Tool1',
       slug: 'tool-1',
       enabled: true,
-      ui: { color: 'bg-blue-500', icon: vi.fn(() => null) as any },
+      ui: { color: 'bg-blue-500', icon: null },
       widgets: [],
       apis: {},
       handlers: {},
@@ -115,7 +115,7 @@ describe('toolRegistry', () => {
       name: 'Tool2',
       slug: 'tool-2',
       enabled: true,
-      ui: { color: 'bg-green-500', icon: vi.fn(() => null) as any },
+      ui: { color: 'bg-green-500', icon: null },
       widgets: [],
       apis: {},
       handlers: {},
@@ -132,7 +132,8 @@ describe('toolRegistry', () => {
 
   it('allows undefined tools to be registered', () => {
     // This tests edge case where undefined might be registered
-    registerTool('undefinedTool', undefined as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (registerTool as any)('undefinedTool', undefined);
 
     expect(toolRegistry.undefinedTool).toBeUndefined();
   });

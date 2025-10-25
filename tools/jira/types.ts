@@ -10,6 +10,21 @@ export interface JiraIssue {
   self: string;
 }
 
+interface AtlassianDocument {
+  type: string;
+  content?: AtlassianNode[];
+}
+
+export interface AtlassianNode {
+  type: string; // e.g., 'paragraph'
+  content?: AtlassianContent[];
+}
+
+interface AtlassianContent {
+  type: string; // e.g., 'text'
+  text?: string;
+}
+
 export interface JiraApiIssue {
   id: string;
   key: string;
@@ -21,6 +36,6 @@ export interface JiraApiIssue {
     issuetype?: { name: string };
     labels?: string[];
     project?: { name: string; key: string };
-    description?: string | any; // Can be string or Atlassian Document Format object
+    description?: string | AtlassianDocument; // Can be string or Atlassian Document Format object
   };
 }

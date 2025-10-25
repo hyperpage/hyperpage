@@ -7,6 +7,7 @@ import {
   GitLabPipeline,
   GitLabIssue,
   GitLabEvent,
+  GitLabComparisonCommit,
 } from "./types";
 import { registerTool } from "../registry";
 import { getTimeAgo } from "../../lib/time-utils";
@@ -364,7 +365,7 @@ export const gitlabTool: Tool = {
               const commits = compareData.commits || [];
 
               // Show up to 3 commits from this specific push
-              commits.slice(0, 3).forEach((commit: any) => {
+              (commits as GitLabComparisonCommit[]).slice(0, 3).forEach((commit) => {
                 const shortSha = commit.id?.substring(0, 8) || 'unknown';
                 const message = commit.message || `Commit ${shortSha}`;
                 // Remove any trailing newlines and limit length

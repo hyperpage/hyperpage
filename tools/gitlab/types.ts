@@ -48,3 +48,11 @@ export interface GitLabEvent {
   project_id?: number;
   created_at: string;
 }
+
+export interface GitLabComparisonCommit {
+  id: string;
+  message: string;
+  author_name?: string;
+  committer_name?: string;
+  committed_date: string;
+}

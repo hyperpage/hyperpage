@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useToolQueries } from '../../../app/components/hooks/useToolQueries';
-import { Tool, ToolData } from '../../../tools/tool-types';
 
 // Mock the getToolDataKey function
 vi.mock('../../../tools', () => ({

@@ -1,7 +1,7 @@
 import React from "react";
 import { Kanban } from "lucide-react";
 import { Tool, ToolConfig } from "../tool-types";
-import { JiraApiIssue } from "./types";
+import { JiraApiIssue, AtlassianNode } from "./types";
 import { registerTool } from "../registry";
 import { getTimeAgo } from "../../lib/time-utils";
 
@@ -179,7 +179,7 @@ export const jiraTool: Tool = {
                 const adfContent = issue.fields.description.content;
                 if (Array.isArray(adfContent) && adfContent.length > 0) {
                   // Simple ADF text extraction - just get the first few text nodes
-                  const extractText = (nodes: any[]): string => {
+                  const extractText = (nodes: AtlassianNode[]): string => {
                     let text = '';
                     for (const node of nodes) {
                       if (node.type === 'paragraph' && node.content) {
