@@ -19,6 +19,7 @@ export async function GET() {
             type: widget.type,
             headers: widget.headers,
             dynamic: widget.dynamic,
+            apiEndpoint: widget.apiEndpoint,
           }))
         : [],
       apis: tool.apis
