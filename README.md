@@ -11,13 +11,13 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
 - **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues
 - **Activity Feeds**: Real-time updates from all repositories
-- **Professional UI**: Enterprise-grade design with optimized vanilla Tailwind CSS utilities and comprehensive dark mode support
-- **Theme System**: Full light/dark mode switching with system preference detection using native Tailwind classes
+- **Modern UI**: Professional design system using DaisyUI components with Tailwind CSS
+- **Theme System**: Comprehensive light/dark mode switching with DaisyUI theming
 
 ### Quality Assurance & Design
 ✅ **50/50 unit tests passing** • ✅ **Build compiles successfully** • ✅ **0 TypeScript errors**  
-✅ **Professional UI** • ✅ **Dark Mode Support** • ✅ **Vanilla Tailwind CSS**  
-✅ **shadcn/ui Framework Removed** • ✅ **Modern Component Architecture** • ✅ **Enterprise-grade codebase**
+✅ **Professional UI** • ✅ **Dark Mode Support** • ✅ **DaisyUI + Tailwind CSS**  
+✅ **Optimized Design System** • ✅ **Modern Component Architecture** • ✅ **Enterprise-grade codebase**
 
 ## Quick Start
 
@@ -31,7 +31,7 @@ npm install
 cp .env.local.sample .env.local
 # Edit .env.local to enable your tools (see docs/installation.md)
 
-# Start development server
+# Start development server (with Turbopack for fast builds)
 npm run dev
 ```
 
@@ -80,8 +80,8 @@ Once configured, the portal automatically aggregates PRs/MRs from all enabled pl
 hyperpage/
 ├── app/                 # Next.js 15 app directory
 │   ├── api/            # API routes and handlers (REST & tool integrations)
-│   ├── components/     # React components using vanilla Tailwind CSS
-│   └── globals.css     # Minimal global styles (no custom frameworks)
+│   ├── components/     # React components using DaisyUI + Tailwind CSS
+│   └── globals.css     # Tailwind + DaisyUI configuration
 ├── tools/              # Tool integrations registry (GitHub, GitLab, Jira, etc.)
 ├── __tests__/          # Comprehensive testing suite (50 unit tests passing)
 │   ├── api/           # API route unit tests

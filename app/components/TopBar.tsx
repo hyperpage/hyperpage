@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
-import { Search, Bell, Moon, Sun, RefreshCw, Settings, X } from "lucide-react";
+import { Search, Bell, RefreshCw, Settings, X } from "lucide-react";
 import HyperpageLogo from "./HyperpageLogo";
 import ThemeSwitcher from "./ThemeSwitcher";
 import { getToolIcon } from "../../tools";
 import { ToolIntegration } from "../../tools/tool-types";
 
 interface TopBarProps {
-  toggleDarkMode: () => void;
-  isDark: boolean;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onClearSearch: () => void;
@@ -19,8 +17,6 @@ interface TopBarProps {
 }
 
 export default function TopBar({
-  toggleDarkMode,
-  isDark,
   searchQuery,
   onSearchChange,
   onClearSearch,
@@ -73,7 +69,7 @@ export default function TopBar({
     <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-base-100/80 border-b border-base-200 px-4 py-3 flex items-center h-16">
       <div className="flex items-center space-x-4">
         <Link href="/" className="cursor-pointer">
-          <HyperpageLogo isDark={isDark} />
+          <HyperpageLogo />
         </Link>
       </div>
 
@@ -162,15 +158,6 @@ export default function TopBar({
           title="Refresh all data"
         >
           <RefreshCw className="h-4 w-4" />
-        </button>
-
-        <button
-          onClick={toggleDarkMode}
-          className="btn btn-ghost btn-square"
-          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
         </button>
 
         <ThemeSwitcher />

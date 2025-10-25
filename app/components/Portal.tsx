@@ -15,7 +15,6 @@ interface PortalProps {
 }
 
 export default function Portal({ enabledTools }: PortalProps) {
-  const [isDark, setIsDark] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -30,23 +29,6 @@ export default function Portal({ enabledTools }: PortalProps) {
 
   const { activities, refetch: refreshActivities, isRefreshing: activityLoading } = useActivities();
 
-  useEffect(() => {
-    const darkMode = localStorage.getItem("darkMode");
-    if (darkMode === "true") {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    } else if (darkMode === "false") {
-      setIsDark(false);
-      document.documentElement.classList.remove("dark");
-    } else {
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      setIsDark(prefersDark);
-      if (prefersDark) document.documentElement.classList.add("dark");
-    }
-  }, []);
-
   // Initialize polling when component mounts
   useEffect(() => {
     if (enabledTools.length > 0) {
@@ -54,17 +36,6 @@ export default function Portal({ enabledTools }: PortalProps) {
       return cleanup;
     }
   }, [enabledTools, initializePolling]);
-
-  const toggleDarkMode = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    localStorage.setItem("darkMode", newIsDark.toString());
-    if (newIsDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
 
   const clearSearch = () => {
     setSearchQuery("");
@@ -92,8 +63,6 @@ export default function Portal({ enabledTools }: PortalProps) {
   return (
     <div className="min-h-screen bg-base-100">
       <TopBar
-        toggleDarkMode={toggleDarkMode}
-        isDark={isDark}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onClearSearch={clearSearch}

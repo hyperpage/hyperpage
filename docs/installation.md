@@ -4,8 +4,8 @@ This guide covers the detailed installation process, system requirements, and co
 
 ## Prerequisites
 
-- **Node.js 18+** installed
-- **npm, yarn, pnpm, or bun** package manager
+- **Node.js 18+** installed (recommended: 20+ for best performance)
+- **npm 9+** package manager
 - Access to your development tool accounts (GitHub, GitLab, Jira, etc.)
 
 ## Installation

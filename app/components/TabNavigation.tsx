@@ -24,19 +24,13 @@ export default function TabNavigation({
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`relative px-3 py-2 h-8 rounded-md transition-all flex-shrink-0 ${
+              className={`px-6 py-2 rounded-md font-medium transition-colors flex-shrink-0 ${
                 activeTab === item.id
                   ? "bg-base-200 text-base-content"
-                  : "text-base-content/80 hover:text-base-content hover:bg-base-200"
+                  : "text-base-content/80 hover:text-base-content hover:bg-base-200/50"
               }`}
             >
-              <item.icon className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span className="truncate">{item.label}</span>
-              {item.count && (
-                <span className="ml-2 h-5 px-1.5 text-xs flex-shrink-0 bg-base-300 text-base-content rounded">
-                  {item.count}
-                </span>
-              )}
+              {item.label}
             </button>
           ))}
         </nav>

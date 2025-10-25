@@ -226,14 +226,14 @@ const endpointPattern = /^[a-zA-Z0-9_%-]+$/;
 
 ### Recent Improvements
 
-Following a comprehensive shadcn/ui to vanilla Tailwind CSS migration:
+Following component optimization and daisyUI integration:
 
-| Component | Framework | Now | Architecture Change |
-|-----------|-----------|-----|---------------------|
-| `TopBar` | shadcn/Button+Input | HTML button+input + Tailwind | 100% vanilla CSS |
-| `DataTable` | shadcn/Table+Card | HTML table+div + Tailwind | 100% semantic HTML |
-| `Livefeed` | shadcn/Card+Badge | HTML div+span + Tailwind | 100% standard flexbox/grid |
-| **5/6 Components** | shadcn/ui | Vanila Tailwind | **Minimal framework dependencies |
+| Component | Implementation | Technologies | Architecture Change |
+|-----------|----------------|--------------|---------------------|
+| `TopBar` | Custom component | DaisyUI + Tailwind CSS | Semantic HTML + component library |
+| `DataTable` | Custom table component | DaisyUI + Tailwind CSS | Flexible data presentation |
+| `Livefeed` | Rich content feed | DaisyUI + Tailwind CSS | Enhanced user experience |
+| **All Components** | DaisyUI + custom | Tailwind CSS + component library | **Balanced framework approach** |
 
 #### Key Refactoring Changes
 - **Styling System**: Complete migration from OKLCH color palette to standard Tailwind gray-*, blue-*, etc.
