@@ -28,6 +28,7 @@ export interface ToolWidget {
   dynamic?: boolean; // Indicates if widget data needs to be loaded dynamically
   refreshInterval?: number; // Auto-refresh interval in milliseconds (e.g., 300000 = 5 minutes)
   displayName?: string; // Optional display name for widgets (replaces default tool name)
+  apiEndpoint?: string; // Specifies which API endpoint this widget consumes (for widget-specific data fetching)
 }
 
 export interface ToolApiResponse {

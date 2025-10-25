@@ -21,6 +21,7 @@ export const ciCdTool: Tool = {
       headers: ["Project", "Branch", "Status", "Duration", "Finished", "Tool"],
       data: [], // Data will be loaded asynchronously
       dynamic: true, // Indicate this widget needs dynamic data loading
+      apiEndpoint: "pipelines", // Specify the API endpoint this widget consumes
     },
   ],
   apis: {

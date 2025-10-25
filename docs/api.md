@@ -71,22 +71,25 @@ Aggregates recent activities from all enabled tools.
 ### Tool-Specific Endpoints
 
 #### GitHub Tool
-- **`GET /api/tools/github/repos`**: List user repositories
+- **`GET /api/tools/github/pull-requests`**: List user pull requests
+- **`GET /api/tools/github/commits`**: List recent commit/push events
+- **`GET /api/tools/github/issues`**: List user issues
 - **`GET /api/tools/github/workflows`**: List recent workflow runs
 - **`GET /api/tools/github/activity`**: Get user activity events with unique commit content (prevents duplicate commits across push events)
 
 #### GitLab Tool
 - **`GET /api/tools/gitlab/merge-requests`**: List merge requests
 - **`GET /api/tools/gitlab/pipelines`**: List recent pipelines
+- **`GET /api/tools/gitlab/issues`**: List user issues
 - **`GET /api/tools/gitlab/activity`**: Get user activity events
 
 #### Jira Tool
 - **`GET /api/tools/jira/issues`**: List issues by project/assignee
 
-#### Aggregated Views
-- **`GET /api/tools/code-reviews/data`**: Combined PRs/MRs from all providers
-- **`GET /api/tools/ci-cd/data`**: Unified CI/CD pipelines
-- **`GET /api/tools/ticketing/data`**: Combined issues from all providers
+#### Aggregation Tools
+- **`GET /api/tools/code-reviews/pull-requests`**: Combined PRs/MRs from all git tools (GitHub PRs, GitLab MRs)
+- **`GET /api/tools/ci-cd/pipelines`**: Unified CI/CD pipelines from all providers (GitLab pipelines, GitHub workflows)
+- **`GET /api/tools/ticketing/issues`**: Combined issues/tickets from all ticketing tools (GitHub issues, GitLab issues, Jira issues)
 
 ## Data Schemas
 
@@ -108,9 +111,10 @@ interface ToolWidget {
   type: 'metric' | 'chart' | 'table' | 'feed';
   data: ToolData[];
   headers?: string[];
-  dynamic?: boolean;
-  refreshInterval?: number;
-  displayName?: string;
+  dynamic?: boolean;                           // Enables API data fetching when true
+  apiEndpoint?: string;                       // Specifies which API endpoint this widget consumes
+  refreshInterval?: number;                   // Auto-refresh interval in milliseconds
+  displayName?: string;                       // Optional display override for widget title
 }
 ```
 

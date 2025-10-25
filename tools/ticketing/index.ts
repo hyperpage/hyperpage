@@ -23,6 +23,7 @@ export const ticketingTool: Tool = {
       dynamic: true, // Indicate this widget needs dynamic data loading
       refreshInterval: 300000, // 5 minutes refresh interval (matches Jira's previous setting)
       displayName: "Combined", // Show "Combined" instead of individual tool names
+      apiEndpoint: "issues", // Specify the API endpoint this widget consumes
     },
   ],
   apis: {

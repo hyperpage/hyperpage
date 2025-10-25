@@ -7,7 +7,7 @@ interface UseToolDataProps {
 }
 
 interface UseToolDataReturn {
-  dynamicData: Record<string, ToolData[]>;
+  dynamicData: Record<string, Record<string, ToolData[]>>;
   loadingStates: Record<string, boolean>;
   refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
   refreshActivityData: () => Promise<void>;
@@ -18,7 +18,7 @@ interface UseToolDataReturn {
 export function useToolData({
   enabledTools,
 }: UseToolDataProps): UseToolDataReturn {
-  const [dynamicData, setDynamicData] = useState<Record<string, ToolData[]>>(
+  const [dynamicData, setDynamicData] = useState<Record<string, Record<string, ToolData[]>>>(
     {},
   );
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
@@ -33,26 +33,73 @@ export function useToolData({
     const hasDynamicWidgets = tool.widgets.some((widget) => widget.dynamic);
     if (!hasDynamicWidgets) return;
 
+    // Find unique API endpoints that widgets require
+    const requiredApiEndpoints = Array.from(new Set(
+      tool.widgets
+        .filter(widget => widget.dynamic && widget.apiEndpoint)
+        .map(widget => widget.apiEndpoint!)
+    ));
+
+    // If no widgets specify apiEndpoint, fall back to legacy behavior
+    if (requiredApiEndpoints.length === 0) {
+      const availableApi = tool.apis ? Object.keys(tool.apis)[0] : null;
+      if (!availableApi) return;
+      requiredApiEndpoints.push(availableApi);
+    }
+
     const toolKey = `${tool.name}-refresh`;
     setLoadingStates((prev) => ({ ...prev, [toolKey]: true }));
 
     try {
-      // Get the first available API endpoint for this tool
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const availableApi = (tool.apis as any)?.length > 0 ? (tool.apis as any)[0].endpoint : null;
-      if (!availableApi) return;
+      // Fetch all required APIs concurrently
+      const fetchPromises = requiredApiEndpoints.map(async (endpoint) => {
+        try {
+          const response = await fetch(`/api/tools/${tool.slug}/${endpoint}`);
+          if (response.ok) {
+            const data = await response.json();
+            // Use registry-driven data key access
+            const dataKey = getToolDataKey(tool.name, endpoint) || endpoint;
+            return {
+              endpoint,
+              data: data[dataKey] || [],
+              success: true
+            };
+          } else {
+            console.error(`Failed to fetch ${tool.name}/${endpoint}: ${response.status}`);
+            return {
+              endpoint,
+              data: [],
+              success: false
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching ${tool.name}/${endpoint}:`, error);
+          return {
+            endpoint,
+            data: [],
+            success: false
+          };
+        }
+      });
 
-      const response = await fetch(`/api/tools/${tool.slug}/${availableApi}`);
-      if (response.ok) {
-        const data = await response.json();
-        // Use registry-driven data key access
-        const dataKey = getToolDataKey(tool.name, availableApi) || availableApi;
-        setDynamicData((prev) => ({
+      const results = await Promise.all(fetchPromises);
+
+      // Update state with all fetched data
+      setDynamicData((prev) => {
+        const toolData = { ...(prev[tool.name] || {}) };
+        results.forEach(({ endpoint, data }) => {
+          toolData[endpoint] = data;
+        });
+        return {
           ...prev,
-          [tool.name]: data[dataKey] || [],
-        }));
-      } else {
-        console.error(`Failed to refresh ${tool.name}: ${response.status}`);
+          [tool.name]: toolData,
+        };
+      });
+
+      // Log any failures
+      const failures = results.filter(r => !r.success);
+      if (failures.length > 0) {
+        console.warn(`Some API fetches failed for ${tool.name}:`, failures.map(f => f.endpoint));
       }
     } catch (error) {
       console.error(`Error refreshing ${tool.name}:`, error);
