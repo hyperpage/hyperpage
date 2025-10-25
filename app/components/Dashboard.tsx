@@ -7,7 +7,7 @@ import DashboardOverview from "./DashboardOverview";
 import Livefeed from "./Livefeed";
 
 import { Tool } from "../../tools/tool-types";
-import { useToolData } from "./hooks/useToolData";
+import { useToolQueries } from "./hooks/useToolQueries";
 import { useActivities } from "./hooks/useActivities";
 
 interface DashboardProps {
@@ -26,7 +26,7 @@ export default function Dashboard({ enabledTools }: DashboardProps) {
     refreshToolData,
     refreshAllData,
     initializePolling,
-  } = useToolData({ enabledTools });
+  } = useToolQueries({ enabledTools });
 
   const { activities, refetch: refreshActivities, isRefreshing: activityLoading } = useActivities();
 
