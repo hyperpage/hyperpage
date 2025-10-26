@@ -22,6 +22,11 @@ export const gitlabTool: Tool = {
   },
   widgets: [],
   capabilities: ["merge-requests", "pipelines", "activity", "issues"], // Declares what this tool can provide
+  validation: {
+    required: ['GITLAB_WEB_URL', 'GITLAB_TOKEN'],
+    optional: [],
+    description: 'GitLab integration requires instance URL and personal access token'
+  },
   apis: {
     "merge-requests": {
       method: "GET",

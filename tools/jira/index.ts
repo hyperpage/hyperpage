@@ -15,6 +15,11 @@ export const jiraTool: Tool = {
   },
   capabilities: ["issues", "activity"], // Declares what this tool can provide for unified views
   widgets: [], // Removed individual widget - now unified in ticketing tool
+  validation: {
+    required: ['JIRA_WEB_URL', 'JIRA_EMAIL', 'JIRA_API_TOKEN'],
+    optional: [],
+    description: 'Jira integration requires instance URL, email, and API token'
+  },
   apis: {
     issues: {
       method: "GET",
