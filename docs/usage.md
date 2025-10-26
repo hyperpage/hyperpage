@@ -90,14 +90,16 @@ The livefeed now displays meaningful content instead of just basic action descri
 **Content Types:**
 - **GitHub Commits** 🔵: Individual commit messages with clickable SHA links to GitHub commit pages
 - **GitLab Commits** 🟠: Individual commit messages with clickable SHA links to GitLab commit pages
-- **Jira Descriptions** 🟢: Displays issue descriptions extracted from Atlassian Document Format
-- **Git Comments** 🟣: Future support for code review and issue comments
+- **Jira Status Changes** 🟢: Shows actual status transitions like "To Do → In Progress" extracted from Jira changelog
+- **Jira Issue Updates** 🟣: Displays issue descriptions with rich metadata including assignee and status
+- **Git Comments** 🔴: Future support for code review and issue comments
 - **Change Details** 🟡: Future support for field change summaries
 
 **Visual Design:**
 - **Color-Coded Cards**: Different border colors and icons for each content type
+- **Status Transition Badges**: Special formatting for Jira status changes with transition arrows
 - **Content Truncation**: Smart 150-character limits with ellipsis for readability
-- **Author Attribution**: Shows who made commits or comments when available
+- **Author Attribution**: Shows who made commits, status changes, or comments when available
 - **Progressive Disclosure**: Up to 3 content items per activity with expansion option
 
 #### Activity Types

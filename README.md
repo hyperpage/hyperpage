@@ -9,8 +9,8 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 ### Key Features
 - **Code Reviews**: GitHub PRs and GitLab MRs in one view
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
-- **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues
-- **Activity Feeds**: Real-time updates from all repositories
+- **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues with status change tracking
+- **Activity Feeds**: Real-time updates from all repositories with rich status transitions
 - **Modern UI**: Professional design system using DaisyUI components with Tailwind CSS
 - **Theme System**: Comprehensive light/dark mode switching with DaisyUI theming
 

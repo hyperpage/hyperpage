@@ -79,6 +79,7 @@ export async function GET() {
                   ? Number(activity.commitCount)
                   : undefined,
                 status: activity.status ? String(activity.status) : undefined,
+                statusTransition: activity.statusTransition ? String(activity.statusTransition) : undefined, // Add status transition
                 assignee: activity.assignee
                   ? String(activity.assignee)
                   : undefined,

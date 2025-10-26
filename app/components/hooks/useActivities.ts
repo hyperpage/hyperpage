@@ -17,6 +17,7 @@ interface ActivityItem {
   branch?: string;
   commitCount?: number;
   status?: string;
+  statusTransition?: string;
   assignee?: string;
   labels?: string[];
 }
@@ -37,6 +38,7 @@ interface ApiActivityItem {
   branch?: string;
   commitCount?: number;
   status?: string;
+  statusTransition?: string;
   assignee?: string;
   labels?: string[];
 }
@@ -67,6 +69,7 @@ const fetchActivities = async (): Promise<ActivityItem[]> => {
     branch: item.branch,
     commitCount: item.commitCount,
     status: item.status,
+    statusTransition: item.statusTransition,
     assignee: item.assignee,
     labels: item.labels,
   }));

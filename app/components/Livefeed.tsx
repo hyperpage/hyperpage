@@ -27,6 +27,7 @@ interface ActivityItem {
   branch?: string;
   commitCount?: number;
   status?: string;
+  statusTransition?: string; // Add status transition field
   assignee?: string;
   labels?: string[];
 }
@@ -245,19 +246,19 @@ export default function Livefeed({
                             )}
 
                             {/* Status */}
-                            {activity.status && (
+                            {(activity.status || activity.statusTransition) && (
                               <span className="flex items-center gap-1">
                                 <span className="font-medium">Status:</span>
                                 <span className={`badge ${
-                                  activity.status.toLowerCase() === "open"
+                                  activity.status && activity.status.toLowerCase() === "open"
                                     ? "badge-success"
-                                    : activity.status.toLowerCase() === "closed"
+                                    : activity.status && activity.status.toLowerCase() === "closed"
                                       ? "badge-error"
-                                      : activity.status.toLowerCase() === "merged"
+                                      : activity.status && activity.status.toLowerCase() === "merged"
                                         ? "badge-primary"
                                         : "badge-neutral"
                                 }`}>
-                                  {activity.status}
+                                  {activity.statusTransition || activity.status}
                                 </span>
                               </span>
                             )}
