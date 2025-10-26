@@ -7,11 +7,10 @@ import {
   GitHubRepository,
   GitHubWorkflowRun,
   GitHubEvent,
-  GitHubPushCommit,
-  GitHubComparisonCommit,
 } from "./types";
 import { registerTool } from "../registry";
 import { getTimeAgo } from "../../lib/time-utils";
+import { processGitHubPushEvent } from "./utils";
 
 export const githubTool: Tool = {
   name: "GitHub",
@@ -374,75 +373,11 @@ export const githubTool: Tool = {
               ? pushPayload.ref.split("/").pop()
               : "unknown";
 
-          const pushCommits = Array.isArray(pushPayload.commits) ? pushPayload.commits : [];
-          const commitMessages: Array<{ type: 'commit'; text: string; author?: string; timestamp?: string; url?: string; displayId?: string }> = [];
-
-          if (pushCommits.length > 0) {
-            // Use the actual commits from the push event (limit to first 2 per push)
-            (pushCommits as GitHubPushCommit[]).slice(0, 2).forEach((pushCommit) => {
-              const fullSha = pushCommit.sha;
-              const shortSha = fullSha?.substring(0, 7) || 'unknown';
-              const message = pushCommit.message || `Commit ${shortSha}`;
-              const truncatedMessage = message.length > 60 ? message.substring(0, 60) + '...' : message;
-
-              commitMessages.push({
-                type: 'commit',
-                text: truncatedMessage,
-                url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
-                displayId: shortSha !== 'unknown' ? shortSha : undefined,
-                author: pushCommit.author?.name || event.actor.login,
-                timestamp: eventTime.toISOString()
-              } as CommitContentItem);
-            });
-          } else if (pushPayload.before && pushPayload.head) {
-            try {
-              const [owner, repo] = repository.split('/');
-              const compareUrl = `${apiUrl}/repos/${owner}/${repo}/compare/${pushPayload.before}...${pushPayload.head}`;
-
-              const compareResponse = await fetch(compareUrl, {
-                method: "GET",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  Accept: "application/vnd.github.v3+json",
-                },
-              });
-
-              if (compareResponse.ok) {
-                const compareData = await compareResponse.json();
-                const commits = compareData.commits || [];
-
-                    (commits as GitHubComparisonCommit[]).slice(0, 2).forEach((commit) => {
-                  const fullSha = commit.sha;
-                  const shortSha = fullSha?.substring(0, 7) || 'unknown';
-                  const message = commit.commit?.message || `Commit ${shortSha}`;
-                  const truncatedMessage = message.length > 60 ? message.substring(0, 60) + '...' : message;
-
-                  commitMessages.push({
-                    type: 'commit',
-                    text: truncatedMessage,
-                    url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
-                    displayId: shortSha !== 'unknown' ? shortSha : undefined,
-                    author: commit.commit?.author?.name || commit.commit?.committer?.name || commit.author?.login || event.actor.login,
-                    timestamp: commit.commit?.committer?.date || eventTime.toISOString()
-                  } as CommitContentItem);
-                });
-              }
-            } catch (error) {
-              console.warn(`Failed to fetch push comparison for ${repository}:`, error);
-            }
-          }
-
-          // Always include at least one entry even if no commit details
-          if (commitMessages.length === 0) {
-            commitMessages.push({
-              type: 'commit',
-              text: `Code push to ${repository}/${branch}`,
-              author: event.actor.login,
-              timestamp: eventTime.toISOString()
-            });
-          }
-
-          const commitCount = commitMessages.length;
+          // Use shared utility to process commit messages
+          const { messages: commitMessages, count: commitCount } = await processGitHubPushEvent(event, config, {
+            commitLimit: 2, // Limit to 2 commits per push for commits handler
+            messageTruncation: 60, // Shorter messages for commits view
+          });
 
           commitEvents.push({
             repository,
@@ -646,74 +581,11 @@ export const githubTool: Tool = {
                   ? pushPayload.ref.split("/").pop()
                   : "unknown";
 
-              const pushCommits = Array.isArray(pushPayload.commits) ? pushPayload.commits : [];
-              const commitMessages: Array<{ type: 'commit'; text: string; author?: string; timestamp?: string }> = [];
-
-              if (pushCommits.length > 0) {
-                // Use the actual commits from the push event (limit to first 3)
-                (pushCommits as GitHubPushCommit[]).slice(0, 3).forEach((pushCommit) => {
-                  const fullSha = pushCommit.sha;
-                  const shortSha = fullSha?.substring(0, 7) || 'unknown';
-                  const message = pushCommit.message || `Commit ${shortSha}`;
-                  const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
-
-                  commitMessages.push({
-                    type: 'commit',
-                    text: truncatedMessage,
-                    url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
-                    displayId: shortSha !== 'unknown' ? shortSha : undefined,
-                    author: pushCommit.author?.name || event.actor.login,
-                    timestamp: eventTime.toISOString()
-                  } as CommitContentItem);
-                });
-              } else if (pushPayload.before && pushPayload.head) {
-                try {
-                  const [owner, repo] = repository.split('/');
-                  const compareUrl = `${apiUrl}/repos/${owner}/${repo}/compare/${pushPayload.before}...${pushPayload.head}`;
-
-                  const compareResponse = await fetch(compareUrl, {
-                    method: "GET",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                      Accept: "application/vnd.github.v3+json",
-                    },
-                  });
-
-                  if (compareResponse.ok) {
-                    const compareData = await compareResponse.json();
-                    const commits = compareData.commits || [];
-
-                    (commits as GitHubComparisonCommit[]).slice(0, 3).forEach((commit) => {
-                      const fullSha = commit.sha;
-                      const shortSha = fullSha?.substring(0, 7) || 'unknown';
-                      const message = commit.commit?.message || `Commit ${shortSha}`;
-                      const truncatedMessage = message.length > 150 ? message.substring(0, 150) + '...' : message;
-
-                      commitMessages.push({
-                        type: 'commit',
-                        text: truncatedMessage,
-                        url: fullSha ? `https://github.com/${repository}/commit/${fullSha}` : undefined,
-                        displayId: shortSha !== 'unknown' ? shortSha : undefined,
-                        author: commit.commit?.author?.name || commit.commit?.committer?.name || commit.author?.login || event.actor.login,
-                        timestamp: commit.commit?.committer?.date || eventTime.toISOString()
-                      } as CommitContentItem);
-                    });
-                  }
-                } catch (error) {
-                  console.warn(`Failed to fetch push comparison for ${repository}:`, error);
-                }
-              }
-
-              if (commitMessages.length === 0) {
-                commitMessages.push({
-                  type: 'commit',
-                  text: `Code push to ${repository}/${branch}`,
-                  author: event.actor.login,
-                  timestamp: eventTime.toISOString()
-                });
-              }
-
-              const commitCount = commitMessages.length;
+              // Use shared utility to process commit messages
+              const { messages: commitMessages, count: commitCount } = await processGitHubPushEvent(event, config, {
+                commitLimit: 3, // Limit to 3 commits per push for activity handler
+                messageTruncation: 150, // Longer messages for activity feed
+              });
 
               activityEvents.push({
                 id: event.id,
