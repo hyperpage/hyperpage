@@ -22,6 +22,11 @@ export const githubTool: Tool = {
   },
   widgets: [],
   capabilities: ["pull-requests", "workflows", "activity", "issues"], // Declares what this tool can provide
+  validation: {
+    required: ['GITHUB_TOKEN'],
+    optional: ['GITHUB_USERNAME'],
+    description: 'GitHub integration requires a personal access token with repo and user scopes'
+  },
   apis: {
     "pull-requests": {
       method: "GET",
