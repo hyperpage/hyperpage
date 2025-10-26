@@ -9,8 +9,7 @@ The Hyperpage dashboard consolidates data from multiple developer tools into a u
 ### Top Bar (64px, Fixed)
 - **Logo**: Clickable link to refresh the dashboard
 - **Global Search**: Search across all tool data (real-time filtering)
-- **Settings Dropdown**: Configure integrations (notifications and theme toggles coming soon)
-- **Theme Toggle**: Switch between light and dark modes
+- **Theme Toggle**: Switch between light and dark modes with professional Lucide React icons
 
 ### Tab Navigation (48px, Fixed)
 Three main tabs for different views:
