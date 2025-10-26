@@ -39,3 +39,25 @@ export interface JiraApiIssue {
     description?: string | AtlassianDocument; // Can be string or Atlassian Document Format object
   };
 }
+
+export interface JiraChangelogItem {
+  id: string;
+  author: {
+    displayName: string;
+  };
+  created: string;
+  items: Array<{
+    field: string;
+    fieldtype: string;
+    from: string | null;
+    fromString: string | null;
+    to: string | null;
+    toString: string | null;
+  }>;
+}
+
+export interface JiraChangelogResponse {
+  values: JiraChangelogItem[];
+  maxResults: number;
+  total: number;
+}

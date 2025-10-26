@@ -760,10 +760,21 @@ export const githubTool: Tool = {
               break;
 
             case "IssuesEvent":
-              // Handle issue events
+              // Handle issue events with status transitions
               const issuePayload = event.payload as { action?: string; issue?: { title?: string; html_url: string; number: number; state: string } };
-              if (issuePayload.issue) {
+              if (issuePayload.issue && issuePayload.action) {
                 const issue = issuePayload.issue;
+                let statusTransition = null;
+
+                // Map GitHub actions to status transitions
+                if (issuePayload.action === "reopened" && issue.state === "open") {
+                  statusTransition = "Closed → Open";
+                } else if (issuePayload.action === "opened") {
+                  statusTransition = `Opened in ${issue.state}`;
+                } else if (issuePayload.action === "closed") {
+                  statusTransition = `${issue.state === "closed" ? "In Progress → Closed" : "Open → Closed"}`;
+                }
+
                 activityEvents.push({
                   id: event.id,
                   tool: "GitHub",
@@ -778,6 +789,7 @@ export const githubTool: Tool = {
                   url: issue.html_url,
                   displayId: `#${issue.number}`,
                   status: issue.state,
+                  statusTransition,
                   type: "issue"
                 });
               }

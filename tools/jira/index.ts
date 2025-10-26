@@ -1,7 +1,7 @@
 import React from "react";
 import { Kanban } from "lucide-react";
 import { Tool, ToolConfig } from "../tool-types";
-import { JiraApiIssue, AtlassianNode } from "./types";
+import { JiraApiIssue, AtlassianNode, JiraChangelogItem, JiraChangelogResponse } from "./types";
 import { registerTool } from "../registry";
 import { getTimeAgo } from "../../lib/time-utils";
 
@@ -39,10 +39,10 @@ export const jiraTool: Tool = {
     },
     activity: {
       method: "GET",
-      description: "Get recent Jira activity",
+      description: "Get recent Jira activity with status change tracking",
       response: {
         dataKey: "activity",
-        description: "Array of recent Jira activity events",
+        description: "Array of recent Jira activity events with status transitions",
       },
     },
   },
@@ -142,9 +142,9 @@ export const jiraTool: Tool = {
       const data = await response.json();
 
       // Create activity events from recent issues updates
-      const activityEvents = (data.issues as JiraApiIssue[])
+      const activityPromises = (data.issues as JiraApiIssue[])
         .slice(0, 10)
-        .map((issue: JiraApiIssue, index: number) => {
+        .map(async (issue: JiraApiIssue, index: number) => {
           const eventTime = new Date(issue.fields.updated);
           const timeAgo = getTimeAgo(eventTime);
           const jiraWebUrl = process.env.JIRA_WEB_URL;
@@ -215,7 +215,40 @@ export const jiraTool: Tool = {
             }
           }
 
+          // Fetch the most recent status change for this issue
+          let statusTransition = null;
+          try {
+            const changelogUrl = `${apiUrl}/issue/${issue.key}/changelog?maxResults=10`;
+            const changelogResponse = await fetch(changelogUrl, {
+              method: "GET",
+              headers: {
+                Authorization: `Basic ${auth}`,
+                "Content-Type": "application/json",
+              },
+            });
 
+            if (changelogResponse.ok) {
+              const changelogData: JiraChangelogResponse = await changelogResponse.json();
+
+              // Find the most recent status change
+              const statusChanges = changelogData.values
+                .filter((change: JiraChangelogItem) =>
+                  change.items.some(item => item.field === 'status')
+                );
+
+              if (statusChanges.length > 0) {
+                const recentChange = statusChanges[0];
+                const statusItem = recentChange.items.find(item => item.field === 'status')!;
+                if (statusItem.fromString && statusItem.toString && statusItem.fromString !== statusItem.toString) {
+                  statusTransition = `${statusItem.fromString} → ${statusItem.toString}`;
+                }
+              }
+            } else {
+              console.warn(`Failed to fetch changelog for ${issue.key}: ${changelogResponse.status}`);
+            }
+          } catch (changelogError) {
+            console.warn(`Changelog error for ${issue.key}:`, changelogError instanceof Error ? changelogError.message : String(changelogError));
+          }
 
           const result = {
             id: `jira_${issue.id}_${index}`,
@@ -234,15 +267,17 @@ export const jiraTool: Tool = {
             displayId: issue.key,
             repository: projectName, // Use project name as repository context
             status: issue.fields.status?.name || "Unknown",
+            statusTransition, // Add status transition info
             assignee,
             labels,
             content: content.length > 0 ? content : undefined,
           };
 
-
-
           return result;
         });
+
+      // Wait for all async operations to complete
+      const activityEvents = await Promise.all(activityPromises);
 
       return { activity: activityEvents };
     },
