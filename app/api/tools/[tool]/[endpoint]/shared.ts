@@ -63,9 +63,21 @@ export async function executeHandler(
   tool: Tool,
   endpoint: string,
 ): Promise<NextResponse> {
+  const { canExecuteRequest, recordRequestSuccess, recordRequestFailure } = require("../../../../../tools/validation");
+
+  // Check circuit breaker before executing
+  if (!canExecuteRequest(tool.slug)) {
+    console.warn(`Circuit breaker open for tool '${tool.slug}' - blocking request`);
+    return NextResponse.json(
+      { error: "Service temporarily unavailable", circuitBreaker: "open" },
+      { status: 503 },
+    );
+  }
+
   // Route to tool-specific handler from registry
   const handler = tool.handlers[endpoint];
   if (!handler) {
+    recordRequestFailure(tool.slug); // Record handler missing as a failure
     return NextResponse.json(
       {
         error: `Tool '${tool.name}' does not implement endpoint '${endpoint}'`,
@@ -76,9 +88,11 @@ export async function executeHandler(
 
   try {
     const data = await handler(request, tool.config || {});
+    recordRequestSuccess(tool.slug); // Record successful execution
     return NextResponse.json(data);
   } catch (error) {
     console.error(`Handler error for ${tool.name}/${endpoint}:`, error);
+    recordRequestFailure(tool.slug); // Record handler error as a failure
     return NextResponse.json(
       { error: "An error occurred while processing the request" },
       { status: 500 },

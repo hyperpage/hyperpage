@@ -89,16 +89,12 @@ const getIconComponent = (name: string): ReactNode => {
 // Helper function to get tool integrations for UI display
 // Returns tools with their integration status for sidebar/components
 export const getToolIntegrations = (): ToolIntegration[] => {
-  return getEnabledTools().map((tool) => {
-    // Determine status based on enabled state and potential connectivity
-    let status: "connected" | "connecting" | "error" | "disabled" = "connected";
+  const { validateToolConfig } = require('./validation');
 
-    // Check if tool has valid URL configuration
-    const hasValidUrls = () => {
-      const { webUrl, apiUrl } = getToolUrls(tool);
-      return !!(webUrl && apiUrl);
-    };
-    status = hasValidUrls() ? "connected" : "error";
+  return getEnabledTools().map((tool) => {
+    // Use the validation system to determine status
+    const healthCheck = validateToolConfig(tool);
+    const status = healthCheck.status === 'configuration_error' ? 'error' : healthCheck.status;
 
     return {
       name: tool.name,
