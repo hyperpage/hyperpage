@@ -8,10 +8,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sun, Moon } from "lucide-react";
 
 const themes = [
-  { name: "light", label: "Light", icon: "☀️" },
-  { name: "dark", label: "Dark", icon: "🌙" },
+  { name: "light", label: "Light", icon: Sun },
+  { name: "dark", label: "Dark", icon: Moon },
 ] as const;
 
 type Theme = typeof themes[number]["name"];
@@ -46,23 +47,26 @@ export default function ThemeSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" title="Change theme">
-          {currentThemeData?.icon || "☀️"}
+          {currentThemeData && <currentThemeData.icon className="h-4 w-4" />}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {themes.map((theme) => (
-          <DropdownMenuItem
-            key={theme.name}
-            onClick={() => switchTheme(theme.name)}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <span>{theme.icon}</span>
-            <span>{theme.label}</span>
-            {currentTheme === theme.name && (
-              <span className="ml-auto">✓</span>
-            )}
-          </DropdownMenuItem>
-        ))}
+        {themes.map((theme) => {
+          const IconComponent = theme.icon;
+          return (
+            <DropdownMenuItem
+              key={theme.name}
+              onClick={() => switchTheme(theme.name)}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <IconComponent className="h-4 w-4" />
+              <span>{theme.label}</span>
+              {currentTheme === theme.name && (
+                <span className="ml-auto">✓</span>
+              )}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );
