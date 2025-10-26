@@ -61,7 +61,7 @@ export default function Portal({ enabledTools }: PortalProps) {
     );
 
   return (
-    <div className="min-h-screen bg-base-100">
+    <div className="min-h-screen bg-background">
       <TopBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

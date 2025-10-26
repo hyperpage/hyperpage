@@ -1,6 +1,16 @@
 import React from "react";
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { ToolData } from "../../tools/tool-types";
 
@@ -40,113 +50,115 @@ export default function DataTable({
   }, [data.length]);
 
   return (
-    <div className="card bg-base-100 border border-base-200 shadow-md">
-      <div className="card-body">
-        <div className="card-title justify-between">
-          <h3 className="text-lg font-semibold">{title}</h3>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>{title}</CardTitle>
           {onRefresh && (
-            <button
+            <Button
               onClick={onRefresh}
               disabled={isLoading}
-              className="btn btn-ghost btn-square btn-sm"
+              variant="ghost"
+              size="icon"
               title="Refresh data"
             >
               <RefreshCw
                 className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
               />
-            </button>
+            </Button>
           )}
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="table table-zebra">
-            <thead className="bg-base-content/10">
-              <tr>
-                {headers.map((header, index) => (
-                  <th key={index} className="text-base-content">
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {displayItems.map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-base-200">
-                  {headers.map((header, colIndex) => {
-                    let cellValue =
-                      row[header.toLowerCase().replace(/\s+/g, "_")] ||
-                      row[header] ||
-                      "-";
-                    const urlField =
-                      row.url ||
-                      row.html_url ||
-                      row[`${header.toLowerCase().replace(/\s+/g, "_")}_url`];
-
-                    // Special handling for Created column: use created_display if available
-                    if (header === "Created" && row.created_display) {
-                      cellValue = row.created_display;
-                    }
-
-                    // Check if this cell should be rendered as a link
-                    // Link cells that have identifiers (ticket numbers, IDs, keys) when URL is available
-                    const isLinkableIdentifier =
-                      (header === "Ticket" ||
-                        header === "ID" ||
-                        header.toLowerCase().includes("key")) &&
-                      urlField &&
-                      urlField !== "#";
-                    const displayValue = cellValue;
-
-                    return (
-                      <td key={colIndex} className="text-base-content">
-                        {isLinkableIdentifier ? (
-                          <a
-                            href={String(urlField)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="link link-primary"
-                          >
-                            {displayValue}
-                            <ExternalLink className="w-3 h-3 inline ml-1" />
-                          </a>
-                        ) : (
-                          displayValue
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {headers.map((header, index) => (
+                <TableHead key={index}>
+                  {header}
+                </TableHead>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {displayItems.map((row, rowIndex) => (
+              <TableRow key={rowIndex}>
+                {headers.map((header, colIndex) => {
+                  let cellValue =
+                    row[header.toLowerCase().replace(/\s+/g, "_")] ||
+                    row[header] ||
+                    "-";
+                  const urlField =
+                    row.url ||
+                    row.html_url ||
+                    row[`${header.toLowerCase().replace(/\s+/g, "_")}_url`];
+
+                  // Special handling for Created column: use created_display if available
+                  if (header === "Created" && row.created_display) {
+                    cellValue = row.created_display;
+                  }
+
+                  // Check if this cell should be rendered as a link
+                  // Link cells that have identifiers (ticket numbers, IDs, keys) when URL is available
+                  const isLinkableIdentifier =
+                    (header === "Ticket" ||
+                      header === "ID" ||
+                      header.toLowerCase().includes("key")) &&
+                    urlField &&
+                    urlField !== "#";
+                  const displayValue = cellValue;
+
+                  return (
+                    <TableCell key={colIndex}>
+                      {isLinkableIdentifier ? (
+                        <a
+                          href={String(urlField)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary/80 underline"
+                        >
+                          {displayValue}
+                          <ExternalLink className="w-3 h-3 inline ml-1" />
+                        </a>
+                      ) : (
+                        displayValue
+                      )}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-base-content/70">
+            <div className="text-sm text-muted-foreground">
               Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
               {totalItems} entries
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="btn btn-outline btn-sm"
+                variant="outline"
+                size="sm"
               >
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="btn btn-outline btn-sm"
+                variant="outline"
+                size="sm"
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
