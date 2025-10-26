@@ -20,45 +20,21 @@ export interface ToolValidationResult {
 }
 
 /**
- * Environment variable requirements for each tool
- * Maps tool slug to required and optional environment variables
- */
-export const TOOL_ENV_REQUIREMENTS: Record<string, {
-  required: string[];
-  optional: string[];
-  description: string;
-}> = {
-  github: {
-    required: ['GITHUB_TOKEN'],
-    optional: ['GITHUB_USERNAME'],
-    description: 'GitHub integration requires a personal access token with repo and user scopes'
-  },
-  jira: {
-    required: ['JIRA_WEB_URL', 'JIRA_EMAIL', 'JIRA_API_TOKEN'],
-    optional: [],
-    description: 'Jira integration requires instance URL, email, and API token'
-  },
-  gitlab: {
-    required: ['GITLAB_WEB_URL', 'GITLAB_API_TOKEN'],
-    optional: [],
-    description: 'GitLab integration requires instance URL and personal access token'
-  }
-};
-
-/**
  * Validates tool configuration and returns detailed status
+ * Uses tool-owned validation requirements instead of hardcoded mappings
  */
 export function validateToolConfig(tool: Tool): ToolValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const slug = tool.slug;
 
-  // Check if tool has environment requirements defined
-  const requirements = TOOL_ENV_REQUIREMENTS[slug];
-  if (!requirements) {
-    // Tool doesn't have specific requirements, check basic config
+  // Check if tool has validation requirements defined
+  if (!tool.validation) {
+    // Tool doesn't have validation requirements, check basic config
     return validateBasicConfig(tool);
   }
+
+  const requirements = tool.validation;
 
   // Check required environment variables
   for (const envVar of requirements.required) {

@@ -66,6 +66,17 @@ export interface ToolUI {
   icon: React.ReactNode;
 }
 
+export interface ToolValidation {
+  required: string[]; // Required environment variable names
+  optional: string[]; // Optional environment variable names
+  description: string; // Human-readable description of requirements
+  urlPatterns?: {
+    // Patterns for URL validation
+    webUrl?: RegExp;
+    apiUrl?: RegExp;
+  };
+}
+
 export interface ToolConfig {
   apiUrl?: string;
   webUrl?: string;
@@ -85,6 +96,7 @@ export interface Tool {
   handlers: Record<string, ToolApiHandler>;
   config?: ToolConfig;
   capabilities?: string[]; // Optional list of capabilities this tool provides
+  validation?: ToolValidation; // Tool-owned validation requirements
 }
 
 export interface ToolRegistry {
