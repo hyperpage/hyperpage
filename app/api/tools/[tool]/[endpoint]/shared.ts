@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getToolByName, Tool } from "../../../../../tools";
 import { ToolApi } from "../../../../../tools/tool-types";
+import { canExecuteRequest, recordRequestSuccess, recordRequestFailure } from "../../../../../tools/validation";
 
 // Input validation helper
 export function validateInput(
@@ -63,8 +64,6 @@ export async function executeHandler(
   tool: Tool,
   endpoint: string,
 ): Promise<NextResponse> {
-  const { canExecuteRequest, recordRequestSuccess, recordRequestFailure } = require("../../../../../tools/validation");
-
   // Check circuit breaker before executing
   if (!canExecuteRequest(tool.slug)) {
     console.warn(`Circuit breaker open for tool '${tool.slug}' - blocking request`);

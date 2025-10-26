@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAllTools } from "../../../../tools";
-import { validateToolConfig, testToolConnectivity, getAllToolsHealth, getCircuitBreakerStatus } from "../../../../tools/validation";
+import { testToolConnectivity, getAllToolsHealth, getCircuitBreakerStatus } from "../../../../tools/validation";
 
 /**
  * Tool Health API Endpoint
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
         try {
           const result = await testToolConnectivity(tool, 3000); // 3 second timeout
           return { slug: tool.slug, connectivity: result };
-        } catch (error) {
+        } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
           return {
             slug: tool.slug,
             connectivity: {
