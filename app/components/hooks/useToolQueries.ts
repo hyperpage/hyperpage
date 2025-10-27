@@ -9,6 +9,7 @@ import {
   getActivePlatforms,
   TOOL_PLATFORM_MAP,
   getMaxUsageForPlatform,
+  getGitHubWeightedUsage,
   getActivityAccelerationFactor,
   clampInterval,
   formatInterval
@@ -65,7 +66,16 @@ const createQueryConfigs = (
     // Get platform-specific rate limit usage for this tool
     const platform = TOOL_PLATFORM_MAP[tool.slug];
     const platformStatus = platform ? rateLimitStatuses.get(platform) : null;
-    const usagePercent = platformStatus ? getMaxUsageForPlatform(platformStatus) : 0;
+
+    // Use GitHub-specific weighted usage for better search API awareness
+    let usagePercent = 0;
+    if (platformStatus) {
+      if (platform === 'github') {
+        usagePercent = getGitHubWeightedUsage(platformStatus);
+      } else {
+        usagePercent = getMaxUsageForPlatform(platformStatus);
+      }
+    }
 
     // Apply activity-based acceleration factor
     const activityFactor = getActivityAccelerationFactor(isTabVisible, isUserActive);
