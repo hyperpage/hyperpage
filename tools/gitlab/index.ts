@@ -21,7 +21,7 @@ export const gitlabTool: Tool = {
     icon: React.createElement(Gitlab, { className: "w-5 h-5" }),
   },
   widgets: [],
-  capabilities: ["merge-requests", "pipelines", "activity", "issues"], // Declares what this tool can provide
+  capabilities: ["merge-requests", "pipelines", "activity", "issues", "rate-limit"], // Declares what this tool can provide
   validation: {
     required: ['GITLAB_WEB_URL', 'GITLAB_TOKEN'],
     optional: [],
@@ -77,6 +77,14 @@ export const gitlabTool: Tool = {
       response: {
         dataKey: "activity",
         description: "Array of recent GitLab activity events",
+      },
+    },
+    "rate-limit": {
+      method: "GET",
+      description: "Get current GitLab API rate limit status",
+      response: {
+        dataKey: "rateLimit",
+        description: "Current rate limit status for GitLab instance (based on Retry-After headers)",
       },
     },
   },
@@ -609,6 +617,55 @@ export const gitlabTool: Tool = {
       }
 
       return { activity: activityEvents };
+    },
+    "rate-limit": async (request: Request, config: ToolConfig) => {
+      // GitLab doesn't have a dedicated rate limit API like GitHub
+      // We'll make a test request to the user endpoint to check connectivity and basic rate limiting
+      const webUrl = config.getWebUrl?.() || "https://gitlab.com";
+      const apiUrl =
+        config.formatApiUrl?.(webUrl) || "https://gitlab.com/api/v4";
+      const token = process.env.GITLAB_TOKEN;
+
+      if (!token) {
+        throw new Error("GitLab API token not configured");
+      }
+
+      const userUrl = `${apiUrl}/user`; // Simple endpoint to test API connectivity
+
+      const response = await fetch(userUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Return basic rate limit information for GitLab
+      // Since GitLab doesn't expose actual rate limits via API, we report status based on response codes
+      if (!response.ok) {
+        if (response.status === 429) {
+          // Rate limited response - report as high usage
+          return {
+            rateLimit: {
+              message: "GitLab API rate limit exceeded",
+              statusCode: response.status,
+              retryAfter: response.headers.get('Retry-After')
+            }
+          };
+        }
+
+        // Other error - might be authentication or server issue
+        throw new Error(`GITLAB user API error: ${response.status}`);
+      }
+
+      // Success - return basic status information
+      return {
+        rateLimit: {
+          message: "GitLab API accessible - rate limiting status unknown (not exposed by API)",
+          statusCode: response.status,
+          serverInfo: "GitLab API connection confirmed"
+        }
+      };
     },
   },
   config: {

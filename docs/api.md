@@ -77,6 +77,7 @@ Aggregates recent activities from all enabled tools.
 - **`GET /api/tools/github/workflows`**: List recent workflow runs
 - **`GET /api/tools/github/activity`**: Get user activity events with unique commit content (prevents duplicate commits across push events)
 - **`GET /api/tools/github/rate-limit`**: Get current GitHub API rate limit status for debugging 403 errors (includes core, search, graphql limits and reset times)
+- **`GET /api/rate-limit/github`**: Unified rate limit monitoring endpoint (returns platform-specific limit structures)
 
 #### GitLab Tool
 - **`GET /api/tools/gitlab/merge-requests`**: List merge requests
@@ -422,6 +423,104 @@ const data = await makeRetryRequest(url, options, { rateLimitConfig: toolConfig.
 - **Comprehensive Testing**: Full test suite validates retry logic
 
 For implementation details, see [`lib/api-client.ts`](../lib/api-client.ts).
+
+## Rate Limit Monitoring API
+
+Hyperpage provides unified rate limit monitoring endpoints for all supported platforms:
+
+### `GET /api/rate-limit/[platform]`
+
+Retrieves current rate limit status for the specified platform (GitHub, GitLab, Jira).
+
+**Platform Support:**
+- **GitHub**: Core API, Search API, GraphQL API limits
+- **GitLab**: Global instance limits (retry-after based)
+- **Jira**: Instance-wide limits (varies by Jira deployment)
+
+**Parameters:**
+- **`platform`**: Platform identifier (`github`, `gitlab`, `jira`)
+
+**Success Response (200):**
+```json
+{
+  "platform": "github",
+  "limits": {
+    "github": {
+      "core": {
+        "limit": 5000,
+        "remaining": 4990,
+        "used": 10,
+        "usagePercent": 0.2,
+        "resetTime": 1640995200000,
+        "retryAfter": null
+      },
+      "search": {
+        "limit": 30,
+        "remaining": 27,
+        "used": 3,
+        "usagePercent": 10,
+        "resetTime": 1640995200000,
+        "retryAfter": null
+      },
+      "graphql": {
+        "limit": 5000,
+        "remaining": 4995,
+        "used": 5,
+        "usagePercent": 0.1,
+        "resetTime": 1640995200000,
+        "retryAfter": null
+      }
+    }
+  },
+  "timestamp": 1640995200000
+}
+```
+
+**Error Responses:**
+- **400**: Platform doesn't support rate limiting or missing capability
+- **500**: Internal error fetching rate limit data
+- **501**: Platform transformation not implemented
+
+**Caching:** Results are cached for 5 minutes to prevent excessive API calls.
+
+**Usage in UI:** The dashboard automatically uses these endpoints to show rate limit status in tool status indicators and tooltips.
+
+**Platform-Specific Details:**
+
+**GitHub Rate Limits:**
+```json
+{
+  "limits": {
+    "github": {
+      "core": { "limit": 5000, "remaining": 4990, "used": 10, "usagePercent": 0.2 },
+      "search": { "limit": 30, "remaining": 27, "used": 3, "usagePercent": 10 },
+      "graphql": { "limit": 5000, "remaining": 4995, "used": 5, "usagePercent": 0.1 }
+    }
+  }
+}
+```
+
+**GitLab Rate Limits:**
+```json
+{
+  "limits": {
+    "gitlab": {
+      "global": { "limit": null, "remaining": null, "usagePercent": null, "retryAfter": 60, "resetTime": 1640995200000 }
+    }
+  }
+}
+```
+
+**Jira Rate Limits:**
+```json
+{
+  "limits": {
+    "jira": {
+      "global": { "limit": null, "remaining": null, "usagePercent": null, "resetTime": null, "retryAfter": null }
+    }
+  }
+}
+```
 
 ## Development Endpoints
 

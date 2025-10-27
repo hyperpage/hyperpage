@@ -13,7 +13,7 @@ export const jiraTool: Tool = {
     color: "bg-green-500/10 border-green-400/30 text-green-400",
     icon: React.createElement(Kanban, { className: "w-5 h-5" }),
   },
-  capabilities: ["issues", "activity"], // Declares what this tool can provide for unified views
+  capabilities: ["issues", "activity", "rate-limit"], // Declares what this tool can provide for unified views
   widgets: [], // Removed individual widget - now unified in ticketing tool
   validation: {
     required: ['JIRA_WEB_URL', 'JIRA_EMAIL', 'JIRA_API_TOKEN'],
@@ -48,6 +48,14 @@ export const jiraTool: Tool = {
       response: {
         dataKey: "activity",
         description: "Array of recent Jira activity events with status transitions",
+      },
+    },
+    "rate-limit": {
+      method: "GET",
+      description: "Get current Jira API rate limit status",
+      response: {
+        dataKey: "rateLimit",
+        description: "Current rate limit status for Jira instance (limited support - mainly status based)",
       },
     },
   },
@@ -285,6 +293,57 @@ export const jiraTool: Tool = {
       const activityEvents = await Promise.all(activityPromises);
 
       return { activity: activityEvents };
+    },
+    "rate-limit": async (request: Request, config: ToolConfig) => {
+      // Jira doesn't have a dedicated rate limit API like GitHub
+      // We'll make a test request to the server info endpoint to check connectivity and basic rate limiting
+      const webUrl = process.env.JIRA_WEB_URL;
+      const apiUrl =
+        config.formatApiUrl?.(webUrl || "") || process.env.JIRA_API_URL;
+      const apiToken = process.env.JIRA_API_TOKEN;
+      const email = process.env.JIRA_EMAIL;
+
+      if (!apiUrl || !apiToken) {
+        throw new Error("JIRA API credentials not configured");
+      }
+
+      const auth = Buffer.from(`${email}:${apiToken}`).toString("base64");
+      const serverInfoUrl = `${apiUrl}/serverInfo`; // Simple endpoint to test API connectivity
+
+      const response = await fetch(serverInfoUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Return basic rate limit information for Jira
+      // Since Jira doesn't expose actual rate limits via API, we report status based on response codes
+      if (!response.ok) {
+        if (response.status === 429) {
+          // Rate limited response - report as high usage
+          return {
+            rateLimit: {
+              message: "Jira API rate limit exceeded",
+              statusCode: response.status,
+              retryAfter: response.headers.get('Retry-After')
+            }
+          };
+        }
+
+        // Other error - might be authentication or server issue
+        throw new Error(`JIRA server info API error: ${response.status}`);
+      }
+
+      // Success - return basic status information
+      return {
+        rateLimit: {
+          message: "Jira API accessible - rate limiting status unknown (not exposed by API)",
+          statusCode: response.status,
+          serverInfo: "Jira API connection confirmed"
+        }
+      };
     },
   },
   config: {
