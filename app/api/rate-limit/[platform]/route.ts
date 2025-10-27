@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { toolRegistry } from "../../../../tools/registry";
-import { transformGitHubLimits, transformGitLabLimits, transformJiraLimits } from "../../../../lib/rate-limit-monitor";
+import { transformGitHubLimits, transformGitLabLimits, transformJiraLimits, calculateOverallStatus } from "../../../../lib/rate-limit-monitor";
 import { Tool } from "../../../../tools/tool-types";
 import { PlatformRateLimits } from "../../../../lib/types/rate-limit";
 
@@ -67,11 +67,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }, { status: 500 });
     }
 
-    // Return the universal format
+    // Calculate overall status and include complete status fields
+    const status: 'normal' | 'warning' | 'critical' | 'unknown' = calculateOverallStatus(limits);
+    const lastUpdated = Date.now();
+    const dataFresh = true;
+
+    // Return the complete RateLimitStatus format
     return NextResponse.json({
       platform,
-      limits,
-      timestamp: Date.now()
+      lastUpdated,
+      dataFresh,
+      status,
+      limits
     });
 
   } catch (error) {

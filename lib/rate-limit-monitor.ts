@@ -78,13 +78,35 @@ export function transformGitHubLimits(data: unknown): PlatformRateLimits {
 /**
  * Transform GitLab rate limit response (mainly retry-after based)
  */
-export function transformGitLabLimits(/* eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally unused */_: GitLabRateLimitResponse, retryAfter: number | null): PlatformRateLimits {
+export function transformGitLabLimits(gitLabResponse: unknown, retryAfter: number | null): PlatformRateLimits {
+  // GitLab handler returns different format - extract retryAfter if available
+  const response = gitLabResponse as { retryAfter?: string | number; statusCode?: number };
+
+  // Check if retryAfter in response takes precedence
+  let effectiveRetryAfter = retryAfter;
+  if (response.retryAfter) {
+    effectiveRetryAfter = typeof response.retryAfter === 'string'
+      ? parseInt(response.retryAfter, 10)
+      : response.retryAfter;
+  }
+
+  // Determine usage status based on response
+  let usagePercent: number | null = null;
+  if (response.statusCode === 429) {
+    usagePercent = 100; // Rate limited = 100% usage
+  } else if (effectiveRetryAfter || response.statusCode === 200) {
+    usagePercent = effectiveRetryAfter ? 90 : 10; // High usage if retry-after present, low otherwise
+  }
+
   return {
     gitlab: {
       global: {
-        ...calculateLimitUsage(null, null), // GitLab doesn't provide limit/remaining
-        resetTime: retryAfter ? Date.now() + (retryAfter * 1000) : null,
-        retryAfter
+        limit: null,
+        remaining: null,
+        used: null,
+        usagePercent,
+        resetTime: effectiveRetryAfter ? Date.now() + (effectiveRetryAfter * 1000) : null,
+        retryAfter: effectiveRetryAfter
       }
     }
   };
@@ -93,13 +115,32 @@ export function transformGitLabLimits(/* eslint-disable-next-line @typescript-es
 /**
  * Transform Jira rate limit response (instance-specific)
  */
-export function transformJiraLimits(_: JiraRateLimitResponse): PlatformRateLimits {
+export function transformJiraLimits(jiraResponse: unknown): PlatformRateLimits {
+  // Jira handler returns different format - check for rate limiting indicators
+  const response = jiraResponse as { retryAfter?: string; statusCode?: number };
+
+  // Determine usage status based on response
+  let usagePercent: number | null = null;
+  let effectiveRetryAfter: number | null = null;
+
+  if (response.statusCode === 429) {
+    usagePercent = 100; // Rate limited = 100% usage
+    if (response.retryAfter) {
+      effectiveRetryAfter = parseInt(response.retryAfter, 10);
+    }
+  } else if (response.statusCode === 200) {
+    usagePercent = 10; // Normal usage when API is accessible
+  }
+
   return {
     jira: {
       global: {
-        ...calculateLimitUsage(null, null), // Jira limits vary by instance, not exposed via API
-        resetTime: null,
-        retryAfter: null
+        limit: null,
+        remaining: null,
+        used: null,
+        usagePercent,
+        resetTime: effectiveRetryAfter ? Date.now() + (effectiveRetryAfter * 1000) : null,
+        retryAfter: effectiveRetryAfter
       }
     }
   };
@@ -140,19 +181,7 @@ export async function getRateLimitStatus(platform: string, baseUrl?: string): Pr
       return cached?.data || null;
     }
 
-    const data = await response.json();
-    const lastUpdated = now;
-    const limits = data.limits as PlatformRateLimits;
-    const status: 'normal' | 'warning' | 'critical' | 'unknown' = calculateOverallStatus(limits);
-    const dataFresh = true;
-
-    const rateLimitStatus: RateLimitStatus = {
-      platform,
-      lastUpdated,
-      dataFresh,
-      status,
-      limits
-    };
+    const rateLimitStatus = await response.json() as RateLimitStatus;
 
     // Cache the result
     rateLimitCache[cacheKey] = {

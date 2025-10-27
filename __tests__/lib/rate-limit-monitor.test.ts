@@ -373,6 +373,9 @@ describe('Rate Limit Monitor Library', () => {
     it('should fetch fresh rate limit data successfully', async () => {
       const mockResponseData = {
         platform: 'github',
+        lastUpdated: Date.now(),
+        dataFresh: true,
+        status: 'normal' as const,
         limits: {
           github: {
             core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: 1640995200 * 1000, retryAfter: null },
@@ -393,12 +396,16 @@ describe('Rate Limit Monitor Library', () => {
       expect(result).not.toBeNull();
       expect(result!.platform).toBe('github');
       expect(result!.dataFresh).toBe(true);
-      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/rate-limit/github'), expect.any(Object));
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('api/rate-limit/github'), expect.any(Object));
     });
 
     it('should use cached data when available and fresh', async () => {
       const mockResponseData = {
         platform: 'github',
+        lastUpdated: Date.now(),
+        dataFresh: true,
+        status: 'normal' as const,
         limits: {
           github: {
             core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: 1640995200 * 1000, retryAfter: null },
@@ -447,20 +454,43 @@ describe('Rate Limit Monitor Library', () => {
 
     it('should use baseUrl parameter for custom origins', async () => {
       const customBaseUrl = 'http://custom.example.com';
-      global.fetch = vi.fn().mockResolvedValue({
+
+      // This test runs separately, so we need to set up the tool
+      (toolRegistry as any).github = {
+        capabilities: ['rate-limit'],
+        handlers: {
+          'rate-limit': vi.fn().mockResolvedValue({
+            rateLimit: {
+              resources: {
+                core: { limit: 5000, remaining: 4000, reset: 1640995200 }
+              }
+            }
+          })
+        }
+      };
+
+      const fetchSpy = vi.fn().mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue({
           platform: 'github',
+          lastUpdated: Date.now(),
+          dataFresh: true,
+          status: 'normal' as const,
           limits: {}
         })
       });
 
+      global.fetch = fetchSpy;
+
       await getRateLimitStatus('github', customBaseUrl);
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         `${customBaseUrl}/api/rate-limit/github`,
         expect.any(Object)
       );
+
+      // Clean up
+      delete (toolRegistry as any).github;
     });
   });
 

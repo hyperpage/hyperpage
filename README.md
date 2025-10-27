@@ -10,7 +10,7 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 - **Code Reviews**: GitHub PRs and GitLab MRs in one view
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
 - **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues with status change tracking
-- **Rate Limit Monitoring**: Real-time API rate limit tracking with intelligent tooltips and status indicators
+- **Rate Limit Monitoring**: Real-time API rate limit tracking across all platforms (GitHub, GitLab, Jira) with visual indicators, intelligent tooltips, and automatic status warnings (yellow >75%, red >90%)
 - **Modern UI**: Professional design system using DaisyUI components with Tailwind CSS
 - **Theme System**: Comprehensive light/dark mode switching with DaisyUI theming
 
