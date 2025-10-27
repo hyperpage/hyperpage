@@ -4,7 +4,7 @@
  * Automatically cleans up expired entries on cache miss.
  */
 
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   data: T;
   expiresAt: number; // Unix timestamp in milliseconds
   accessTime?: number; // For LRU tracking (optional)
@@ -34,8 +34,8 @@ export interface CacheStats {
  * Memory-based cache with TTL and LRU eviction support.
  * Designed for caching API responses to reduce external API calls.
  */
-export class MemoryCache {
-  private cache = new Map<string, CacheEntry>();
+export class MemoryCache<T = unknown> {
+  private cache = new Map<string, CacheEntry<T>>();
   private stats = {
     hits: 0,
     misses: 0,
@@ -54,7 +54,7 @@ export class MemoryCache {
    * @param data - Data to cache
    * @param ttlMs - Time to live in milliseconds
    */
-  set(key: string, data: any, ttlMs: number): void {
+  set(key: string, data: T, ttlMs: number): void {
     // Clean up expired entries if over 90% capacity
     const capacityRatio = this.cache.size / this.maxSize;
     if (capacityRatio > 0.9) {
@@ -85,11 +85,11 @@ export class MemoryCache {
 
   /**
    * Retrieve a value from the cache if it exists and hasn't expired.
-   * Automatically cleans up expired entries on miss.
+   * Automatically cleans up expired entries on cache miss.
    * @param key - Cache key
    * @returns Cached data or undefined if not found/expired
    */
-  get(key: string): any | undefined {
+  get(key: string): T | undefined {
     const entry = this.cache.get(key);
 
     if (!entry) {
@@ -211,7 +211,7 @@ export const defaultCache = new MemoryCache();
 export function generateCacheKey(
   toolName: string,
   endpoint: string,
-  queryParams: string | Record<string, any>
+  queryParams: string | Record<string, unknown>
 ): string {
   let paramsHash: string;
   if (typeof queryParams === 'string') {
