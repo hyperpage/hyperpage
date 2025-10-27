@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from '../../app/api/health/route';
-import { toolRegistry } from '../../tools/registry';
 import { defaultCache } from '../../lib/cache/memory-cache';
+import { toolRegistry } from '../../tools/registry';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -13,36 +13,41 @@ vi.mock('../../lib/cache/memory-cache', () => ({
   },
 }));
 
-// Mock tool registry with rate-limit capabilities
-const mockRateLimitHandler = vi.fn();
-const mockToolRegistry = {
-  github: {
+describe('GET /api/health', () => {
+  const mockRateLimitHandler = vi.fn();
+
+  const mockToolGitHub = {
     name: 'GitHub',
     slug: 'github',
     enabled: true,
     capabilities: ['rate-limit'],
+    ui: { color: '', icon: 'GitHubIcon' },
+    widgets: [],
+    apis: {},
     handlers: {
       'rate-limit': mockRateLimitHandler,
     },
-  },
-  gitlab: {
+  };
+
+  const mockToolGitLab = {
     name: 'GitLab',
     slug: 'gitlab',
     enabled: true,
     capabilities: ['rate-limit'],
+    ui: { color: '', icon: 'GitLabIcon' },
+    widgets: [],
+    apis: {},
     handlers: {
       'rate-limit': mockRateLimitHandler,
     },
-  },
-};
+  };
 
-vi.mock('../../tools/registry', () => ({
-  toolRegistry: mockToolRegistry,
-}));
-
-describe('GET /api/health', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Set up mock tools in registry
+    (toolRegistry as any).github = mockToolGitHub;
+    (toolRegistry as any).gitlab = mockToolGitLab;
 
     // Mock cache stats
     (defaultCache.getStats as any).mockReturnValue({
@@ -67,6 +72,9 @@ describe('GET /api/health', () => {
 
   afterEach(() => {
     vi.clearAllTimers();
+    // Clean up mock tools after each test
+    delete (toolRegistry as any).github;
+    delete (toolRegistry as any).gitlab;
   });
 
   it('should return enhanced health status with rate limiting metrics', async () => {

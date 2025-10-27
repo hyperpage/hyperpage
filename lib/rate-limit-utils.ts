@@ -207,7 +207,7 @@ export const clampInterval = (interval: number): number => {
  * @returns Human-readable string
  */
 export const formatInterval = (intervalMs: number): string => {
-  const seconds = Math.round(intervalMs / 1000);
+  const seconds = Math.floor(Math.max(0, intervalMs) / 1000);
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
   return `${Math.round(seconds / 3600)}h`;

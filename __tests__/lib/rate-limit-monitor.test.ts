@@ -14,10 +14,6 @@ import { PlatformRateLimits } from '../../lib/types/rate-limit';
 import { toolRegistry } from '../../tools/registry';
 import { Tool } from '../../tools/tool-types';
 
-// Create spy for global.fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
 // Type-safe mock tool registry
 type MockToolRegistry = { [key: string]: Tool | undefined };
 
@@ -415,7 +411,10 @@ describe('Rate Limit Monitor Library', () => {
       expect(result!.platform).toBe('github');
       expect(result!.dataFresh).toBe(true);
       expect(global.fetch).toHaveBeenCalledTimes(1);
-      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('api/rate-limit/github'), expect.any(Object));
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/api\/rate-limit\/github/),
+        expect.any(Object)
+      );
     });
 
     it('should use cached data when available and fresh', async () => {
@@ -510,10 +509,7 @@ describe('Rate Limit Monitor Library', () => {
 
       await getRateLimitStatus('github', customBaseUrl);
 
-      expect(fetchSpy).toHaveBeenCalledWith(
-        `${customBaseUrl}/api/rate-limit/github`,
-        expect.any(Object)
-      );
+      expect(fetchSpy).toHaveBeenCalledWith(`${customBaseUrl}/api/rate-limit/github`);
 
       // Clean up
       delete (toolRegistry as Record<string, Tool>).github;
