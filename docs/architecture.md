@@ -87,9 +87,13 @@ class ApiClient {
 }
 ```
 
-#### ToolApiService
-Centralized API operations with proper error boundaries:
+#### ToolApiService & Rate Limiting Infrastructure
+Centralized API operations with intelligent rate limiting:
 - **Type Safety**: Full TypeScript support for all API responses
+- **Rate Limiting Protection**: Platform-specific retry logic prevents API throttling
+- **Registry-Driven Strategy**: Each tool defines its own rate limiting behavior
+- **Exponential Backoff**: Smart retry timing (1s → 2s → 4s → max 60s cap)
+- **Platform Awareness**: GitHub uses X-RateLimit headers, GitLab honors Retry-After, Jira uses 429 detection
 - **Error Handling**: Graceful degradation with user-friendly messages
 - **Isolation**: Each tool's API calls are scoped and sandboxed
 

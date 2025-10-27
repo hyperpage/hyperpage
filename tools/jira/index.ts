@@ -292,6 +292,25 @@ export const jiraTool: Tool = {
     headers: {
       // Headers will be set dynamically in handlers
     },
+    rateLimit: {
+      detectHeaders: (response: Response) => ({
+        remaining: null, // Jira doesn't provide remaining count headers
+        resetTime: null, // Jira doesn't provide reset time headers
+        retryAfter: null  // Jira uses 429 status, not Retry-After header typically
+      }),
+      shouldRetry: (response: Response, attemptNumber: number) => {
+        // Handle 429 (Too Many Requests) responses
+        if (response.status === 429) {
+          // Use exponential backoff starting at 2 seconds (more conservative than GitHub)
+          const baseDelay = 2000; // 2 seconds
+          return baseDelay * Math.pow(2, attemptNumber);
+        }
+
+        return null; // No retry needed
+      },
+      maxRetries: 5, // Jira can have more retries due to instance variability
+      backoffStrategy: 'exponential'
+    },
   },
 };
 

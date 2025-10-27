@@ -784,6 +784,38 @@ export const githubTool: Tool = {
     headers: {
       // Headers will be set dynamically in handlers
     },
+    rateLimit: {
+      detectHeaders: (response: Response) => ({
+        remaining: response.headers.get('X-RateLimit-Remaining') ? parseInt(response.headers.get('X-RateLimit-Remaining')!, 10) : null,
+        resetTime: response.headers.get('X-RateLimit-Reset') ? parseInt(response.headers.get('X-RateLimit-Reset')!, 10) : null,
+        retryAfter: null
+      }),
+      shouldRetry: (response: Response, attemptNumber: number) => {
+        // Handle 429 (Too Many Requests) responses
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After');
+          const baseDelay = retryAfter ? parseInt(retryAfter, 10) * 1000 : 1000;
+          return baseDelay * Math.pow(2, attemptNumber); // Exponential backoff
+        }
+
+        // Proactive GitHub rate limit avoidance
+        const remaining = response.headers.get('X-RateLimit-Remaining');
+        if (remaining !== null) {
+          const remainingCount = parseInt(remaining, 10);
+          const resetTime = response.headers.get('X-RateLimit-Reset');
+
+          if (remainingCount <= 1 && resetTime) {
+            // Wait until reset time
+            const resetTimestamp = parseInt(resetTime, 10) * 1000;
+            return Math.max(resetTimestamp - Date.now(), 1000);
+          }
+        }
+
+        return null; // No retry needed
+      },
+      maxRetries: 3,
+      backoffStrategy: 'exponential'
+    },
   },
 };
 

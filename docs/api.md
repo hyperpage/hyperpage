@@ -350,12 +350,78 @@ MYTOOL_TOKEN=api_token_here
 | 429 | Rate Limited (too many requests) |
 | 500 | Internal Server Error |
 
-## Rate Limiting
+## Rate Limiting Protection
 
-- **Per Tool**: Respects individual tool API limits
+### Intelligent Retry & Backoff System
+
+Hyperpage implements sophisticated **platform-specific rate limiting** to prevent API throttling:
+
+#### Core Infrastructure (`lib/api-client.ts`)
+- **Registry-Driven Strategy**: Each tool defines its own rate limiting behavior
+- **Exponential Backoff**: 1s → 2s → 4s → max 60s cap with configurable base delays
+- **Platform Awareness**: Tailored handling for GitHub, GitLab, and Jira rate limit patterns
+
+#### Tool-Specific Configurations
+
+**GitHub Rate Limiting:**
+- **Proactive Avoidance**: Monitors `X-RateLimit-Remaining` and waits until `X-RateLimit-Reset`
+- **Priority Headers**: Checks remaining calls before hitting zero
+- **Fallback Backoff**: 429 responses trigger retry with exponential timing
+
+**GitLab Rate Limiting:**
+- **Server Compliance**: Honors `Retry-After` header when present
+- **Flexible Strategy**: Falls back to exponential backoff when header missing
+- **Conservative Timing**: Shorter delays than GitHub due to different API patterns
+
+**Jira Rate Limiting:**
+- **Response-Based**: Detects 429 status codes without specific headers
+- **INSTANCE-AWARE**: More conservative backoff (2s base) for varying server sizes
+- **Graceful Degradation**: Handles unpredictable enterprise environments
+
+#### Implementation Pattern
+
+```typescript
+// Tool defines rate limiting behavior
+config: {
+  rateLimit: {
+    detectHeaders: (response: Response) => ({
+      remaining: parseInt(response.headers.get('X-RateLimit-Remaining')!),
+      resetTime: parseInt(response.headers.get('X-RateLimit-Reset')!),
+      retryAfter: null
+    }),
+
+    shouldRetry: (response: Response, attemptNumber: number) => {
+      // Platform-specific retry logic
+      if (response.status === 429) return calculateBackoffDelay(attemptNumber);
+      // GitHub proactive avoidance logic...
+      return null; // No retry needed
+    },
+
+    maxRetries: 3, // or 5 for enterprise tools
+    backoffStrategy: 'exponential'
+  }
+}
+
+// API calls automatically protect against rate limiting
+const data = await makeRetryRequest(url, options, { rateLimitConfig: toolConfig.rateLimit });
+```
+
+#### Architectural Benefits
+
+- **Registry-Driven**: No hardcoded platform logic - tools self-configure
+- **Extensible**: New platforms add rate limiting without core changes
+- **Production-Ready**: Prevents API failures and user disruption
+- **Performance Optimized**: Smart retry timing minimizes wasted requests
+- **User Experience**: Seamless operation during API limit events
+
+#### Additional Protections
+
 - **Request Deduplication**: Identical requests are cached/grouped
-- **Exponential Backoff**: Failed requests retry with increasing delays
+- **Graceful Degradation**: Failed tools don't break entire dashboard
 - **Client Feedback**: Loading states indicate rate limit status
+- **Comprehensive Testing**: Full test suite validates retry logic
+
+For implementation details, see [`lib/api-client.ts`](../lib/api-client.ts).
 
 ## Development Endpoints
 
