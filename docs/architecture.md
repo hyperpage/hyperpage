@@ -32,8 +32,8 @@ interface ToolCapability {
   'merge-requests': 'GitLab merge requests';
   'workflows': 'GitHub Actions workflows';
   'pipelines': 'GitLab CI/CD pipelines';
-  'activity': 'Activity feed events';
   'issues': 'Ticketing and issue management';
+  'rate-limit': 'API rate limit monitoring';
 }
 ```
 
@@ -49,9 +49,9 @@ interface ToolCapability {
 All complex stateful logic is extracted into custom hooks before component implementation:
 
 #### Data Management Hooks (React Query Integration)
-- **`useActivities`**: React Query-powered activity feed with 15s auto-polling and caching
 - **`useToolQueries`**: Dynamic query management for tool widgets with selective refresh intervals
 - **`useDarkMode`**: Theme switching with localStorage persistence
+- **`useRateLimit`**: Rate limit monitoring across all enabled tools
 
 #### React Query Benefits
 **Automatic Caching & Background Updates:**
@@ -334,33 +334,7 @@ Status displayed through visual indicators:
 - **Platform Awareness**: Optimized handling for different rate limit patterns
 - **Error Resilience**: Graceful degradation when rate limit monitoring fails
 
-## Activity Feed Architecture
 
-### Real-Time Data Aggregation
-
-**Registry-Driven Activity Discovery:**
-1. Tools with `activity` capability are discovered automatically
-2. Activity endpoints are called in parallel
-3. Results merged, sorted by timestamp, and filtered to recent items
-4. Rich context information preserved from multiple sources
-
-### Data Enrichment
-
-Activity items include comprehensive metadata:
-- **Repository/Project Context**: Shows where activity occurred
-- **Branch Information**: Code-related activities show branch names
-- **Commit Counts**: Push events display number of commits
-- **Status Indicators**: Color-coded status badges (open/closed/merged)
-- **Assignee Information**: Shows current assignees
-- **Labels/Tags**: Applicable labels from issues/PRs
-- **Navigation Links**: Direct links back to source platforms
-
-### High-Performance Implementation
-
-- **Limit of 50 Items**: Prevents UI overwhelm from excess data
-- **Tab Visibility Refresh**: Automatically refreshes when user returns to tab
-- **Background Loading**: Updates happen invisibly while preserving existing data
-- **Graceful Degradation**: Individual tool failures don't break the entire feed
 
 ## Development Workflow
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Activity } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 
 interface TabNavigationProps {
   activeTab: string;
@@ -13,7 +13,6 @@ export default function TabNavigation({
 }: TabNavigationProps) {
   const menuItems = [
     { id: "overview", label: "Overview", icon: BarChart3, count: null },
-    { id: "livefeed", label: "Livefeed", icon: Activity, count: null },
   ];
 
   return (

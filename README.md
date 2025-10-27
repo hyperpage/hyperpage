@@ -4,13 +4,12 @@ A comprehensive data aggregation portal that consolidates information from multi
 
 ## Overview
 
-Hyperpage solves the challenge of scattered development data across multiple platforms. For development teams and project managers, it provides a single pane of glass to monitor code reviews, CI/CD pipelines, tickets, and activity feeds from your entire toolchain.
+Hyperpage solves the challenge of scattered development data across multiple platforms. For development teams and project managers, it provides a single pane of glass to monitor code reviews, CI/CD pipelines, tickets, and project status from your entire toolchain.
 
 ### Key Features
 - **Code Reviews**: GitHub PRs and GitLab MRs in one view
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
 - **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues with status change tracking
-- **Activity Feeds**: Real-time updates from all repositories with rich status transitions
 - **Rate Limit Monitoring**: Real-time API rate limit tracking with intelligent tooltips and status indicators
 - **Modern UI**: Professional design system using DaisyUI components with Tailwind CSS
 - **Theme System**: Comprehensive light/dark mode switching with DaisyUI theming

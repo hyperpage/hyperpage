@@ -34,35 +34,7 @@ Returns all enabled tools with their UI-safe configuration.
         "icon": "<GitHubIcon />"
       },
       "widgets": [...],
-      "capabilities": ["pull-requests", "workflows", "activity", "issues"]
-    }
-  ]
-}
-```
-
-### Activity Feed
-
-#### `GET /api/tools/activity`
-Aggregates recent activities from all enabled tools.
-
-**Response:**
-```json
-{
-  "activity": [
-    {
-      "id": "123",
-      "tool": "GitHub",
-      "toolIcon": "🐙",
-      "action": "Pull request opened",
-      "description": "feat: Add dark mode toggle",
-      "author": "johndoe",
-      "time": "2 hours ago",
-      "color": "purple",
-      "timestamp": "2025-10-20T14:30:00Z",
-      "url": "https://github.com/...",
-      "displayId": "#123",
-      "repository": "hyperpage/hyperpage",
-      "branch": "feature/dark-mode"
+      "capabilities": ["pull-requests", "workflows", "issues", "rate-limit"]
     }
   ]
 }
@@ -72,18 +44,14 @@ Aggregates recent activities from all enabled tools.
 
 #### GitHub Tool
 - **`GET /api/tools/github/pull-requests`**: List user pull requests
-- **`GET /api/tools/github/commits`**: List recent commit/push events
 - **`GET /api/tools/github/issues`**: List user issues
 - **`GET /api/tools/github/workflows`**: List recent workflow runs
-- **`GET /api/tools/github/activity`**: Get user activity events with unique commit content (prevents duplicate commits across push events)
-- **`GET /api/tools/github/rate-limit`**: Get current GitHub API rate limit status for debugging 403 errors (includes core, search, graphql limits and reset times)
 - **`GET /api/rate-limit/github`**: Unified rate limit monitoring endpoint (returns platform-specific limit structures)
 
 #### GitLab Tool
 - **`GET /api/tools/gitlab/merge-requests`**: List merge requests
 - **`GET /api/tools/gitlab/pipelines`**: List recent pipelines
 - **`GET /api/tools/gitlab/issues`**: List user issues
-- **`GET /api/tools/gitlab/activity`**: Get user activity events
 
 #### Jira Tool
 - **`GET /api/tools/jira/issues`**: List issues by project/assignee
@@ -120,40 +88,6 @@ interface ToolWidget {
 }
 ```
 
-### Activity Event Schema
-
-```typescript
-interface ActivityEvent {
-  id: string;              // Unique identifier
-  tool: string;            // Tool name ('GitHub', 'Jira', etc.)
-  toolIcon: string;        // Emoji representation
-  action: string;          // Action performed
-  description: string;     // Detailed description
-  author: string;          // Person who performed action
-  time: string;            // Human-readable time ago
-  color: string;           // Theme color ('purple', 'green', 'orange')
-  timestamp: string;       // ISO timestamp for sorting
-  url?: string;            // Optional navigation URL
-  displayId?: string;      // Optional user-friendly ID ('#123', '!456')
-  repository?: string;     // Optional repo/project context
-  branch?: string;         // Optional branch name
-  commitCount?: number;    // Optional commit count
-  status?: string;         // Optional status indicator
-  assignee?: string;       // Optional assignee information
-  labels?: string[];       // Optional labels/tags
-
-  // Enhanced Rich Content Fields (New)
-  content?: Array<{        // Rich content items (commits, descriptions, comments)
-    type: 'commit' | 'description' | 'comment' | 'change';
-    text: string;          // Content text (truncated to ~150 chars)
-    url?: string;          // Optional navigation URL (e.g., GitHub commit URL)
-    displayId?: string;    // Optional user-friendly ID (e.g., commit SHA 'abc1234')
-    author?: string;       // Who authored the content
-    timestamp?: string;    // When content was created/modified
-  }>;
-}
-```
-
 ## Tool Integration API
 
 ### Tool Definition Interface
@@ -172,7 +106,6 @@ interface Tool {
   handlers: Record<string, Handler>; // API implementations
   config: ToolConfig;             // Server-side configuration
   widgets: ToolWidget[];          // UI widget definitions
-  activity?: boolean;             // Activity feed participation
 }
 ```
 
@@ -195,8 +128,8 @@ Tools declare capabilities for automatic discovery by aggregators:
 | `merge-requests` | GitLab merge requests | GitLab |
 | `workflows` | CI/CD workflows | GitHub |
 | `pipelines` | CI/CD pipelines | GitLab |
-| `activity` | Activity feed events | GitHub, GitLab, Jira |
 | `issues` | Ticketing issues | GitHub, GitLab, Jira |
+| `rate-limit` | API rate limit monitoring | GitHub, GitLab, Jira |
 
 ### Registry System
 

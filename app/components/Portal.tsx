@@ -4,11 +4,9 @@ import { useState, useEffect } from "react";
 import TopBar from "./TopBar";
 import TabNavigation from "./TabNavigation";
 import PortalOverview from "./PortalOverview";
-import Livefeed from "./Livefeed";
 
 import { Tool } from "../../tools/tool-types";
 import { useToolQueries } from "./hooks/useToolQueries";
-import { useActivities } from "./hooks/useActivities";
 
 interface PortalProps {
   enabledTools: Omit<Tool, "handlers">[];
@@ -27,8 +25,6 @@ export default function Portal({ enabledTools }: PortalProps) {
     initializePolling,
   } = useToolQueries({ enabledTools });
 
-  const { activities, refetch: refreshActivities, isRefreshing: activityLoading } = useActivities();
-
   // Initialize polling when component mounts
   useEffect(() => {
     if (enabledTools.length > 0) {
@@ -40,25 +36,6 @@ export default function Portal({ enabledTools }: PortalProps) {
   const clearSearch = () => {
     setSearchQuery("");
   };
-
-  const mainContent =
-    activeTab === "livefeed" ? (
-      <div className="p-8">
-        <Livefeed
-          activities={activities}
-          onRefresh={refreshActivities}
-          isLoading={activityLoading}
-        />
-      </div>
-    ) : (
-      <PortalOverview
-        enabledTools={enabledTools}
-        searchQuery={searchQuery}
-        dynamicData={dynamicData}
-        loadingStates={loadingStates}
-        refreshToolData={refreshToolData}
-      />
-    );
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,7 +56,15 @@ export default function Portal({ enabledTools }: PortalProps) {
         {/* Full-width Content container */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Scrollable main content */}
-          <div className="flex-1 overflow-y-auto">{mainContent}</div>
+          <div className="flex-1 overflow-y-auto">
+            <PortalOverview
+              enabledTools={enabledTools}
+              searchQuery={searchQuery}
+              dynamicData={dynamicData}
+              loadingStates={loadingStates}
+              refreshToolData={refreshToolData}
+            />
+          </div>
         </div>
       </div>
     </div>
