@@ -45,6 +45,9 @@ __tests__/e2e/test-results
 # docker
 docker-compose.e2e.override.yml
 
+# logs
+logs/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
