@@ -1,9 +1,19 @@
 "use client";
 
 import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { Tool, ToolData } from "../../../tools/tool-types";
 import { getToolDataKey } from "../../../tools";
+import {
+  getDynamicInterval,
+  getActivePlatforms,
+  TOOL_PLATFORM_MAP,
+  getMaxUsageForPlatform,
+  getActivityAccelerationFactor,
+  clampInterval,
+  formatInterval
+} from "../../../lib/rate-limit-utils";
+import { useMultipleRateLimits, RateLimitStatus } from "./useRateLimit";
 
 interface UseToolQueriesProps {
   enabledTools: Omit<Tool, "handlers">[];
@@ -13,7 +23,6 @@ interface UseToolQueriesReturn {
   dynamicData: Record<string, Record<string, ToolData[]>>;
   loadingStates: Record<string, boolean>;
   refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
-  refreshActivityData: () => Promise<void>;
   refreshAllData: () => void;
   initializePolling: () => () => void;
 }
@@ -30,8 +39,13 @@ const fetchToolData = async (tool: Omit<Tool, "handlers">, endpoint: string): Pr
   return data[dataKey] || [];
 };
 
-// Create query configurations for all enabled tool endpoints
-const createQueryConfigs = (enabledTools: Omit<Tool, "handlers">[]) => {
+// Create query configurations for all enabled tool endpoints with adaptive polling
+const createQueryConfigs = (
+  enabledTools: Omit<Tool, "handlers">[],
+  rateLimitStatuses: Map<string, RateLimitStatus>,
+  isTabVisible: boolean,
+  isUserActive: boolean
+) => {
   const queries = [];
 
   for (const tool of enabledTools) {
@@ -48,15 +62,36 @@ const createQueryConfigs = (enabledTools: Omit<Tool, "handlers">[]) => {
         .map(widget => widget.apiEndpoint!)
     ));
 
+    // Get platform-specific rate limit usage for this tool
+    const platform = TOOL_PLATFORM_MAP[tool.slug];
+    const platformStatus = platform ? rateLimitStatuses.get(platform) : null;
+    const usagePercent = platformStatus ? getMaxUsageForPlatform(platformStatus) : 0;
 
+    // Apply activity-based acceleration factor
+    const activityFactor = getActivityAccelerationFactor(isTabVisible, isUserActive);
 
     // Create a query for each endpoint this tool needs
     for (const endpoint of requiredApiEndpoints) {
       const queryKey = ['tool-data', tool.name, endpoint];
 
-      // Find the maximum refresh interval for this endpoint (widgets can specify different intervals)
+      // Find the base refresh interval for this endpoint
       const endpointWidget = dynamicWidgets.find(w => w.apiEndpoint === endpoint);
-      const refreshInterval = endpointWidget?.refreshInterval;
+      const baseInterval = endpointWidget?.refreshInterval;
+
+      // Calculate final adaptive interval
+      let finalInterval: number | false = false;
+      let originalInterval = 0;
+
+      if (baseInterval && baseInterval > 0) {
+        originalInterval = baseInterval;
+
+        // Apply adaptive polling: rate-aware dynamic interval + activity factor
+        const rateAwareInterval = getDynamicInterval(usagePercent, baseInterval);
+        const finalDynamicInterval = Math.round(rateAwareInterval * activityFactor);
+
+        // Clamp to reasonable bounds and ensure at least 30 seconds
+        finalInterval = clampInterval(finalDynamicInterval) || false;
+      }
 
       queries.push({
         queryKey,
@@ -64,10 +99,17 @@ const createQueryConfigs = (enabledTools: Omit<Tool, "handlers">[]) => {
         staleTime: 5 * 60 * 1000, // 5 minutes
         refetchOnWindowFocus: true,
         retry: 3,
-        // Only enable background polling if refresh interval is configured
-        refetchInterval: refreshInterval && refreshInterval > 0 ? refreshInterval : (false as const),
+        // Use dynamic adaptive interval
+        refetchInterval: finalInterval,
         refetchIntervalInBackground: true,
-        meta: { toolName: tool.name, endpoint },
+        meta: {
+          toolName: tool.name,
+          endpoint,
+          originalInterval,
+          finalInterval,
+          usagePercent,
+          activityFactor
+        },
       });
     }
   }
@@ -80,10 +122,65 @@ export function useToolQueries({
 }: UseToolQueriesProps): UseToolQueriesReturn {
   const queryClient = useQueryClient();
 
-  // Create dynamic query configurations based on enabled tools
-  const queryConfigs = useMemo(
-    () => createQueryConfigs(enabledTools),
+  // Rate limit monitoring for all active platforms
+  const activePlatforms = useMemo(() =>
+    getActivePlatforms(enabledTools),
     [enabledTools]
+  );
+  const { statuses: rateLimitStatuses } = useMultipleRateLimits(
+    activePlatforms,
+    activePlatforms.length > 0
+  );
+
+  // User activity and tab visibility detection for adaptive polling
+  const [isTabVisible, setIsTabVisible] = useState(true);
+  const [isUserActive, setIsUserActive] = useState(true);
+
+  // Tab visibility detection
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // User activity detection (keyboard/mouse events)
+  useEffect(() => {
+    let inactivityTimeout: NodeJS.Timeout;
+
+    const resetActivity = () => {
+      setIsUserActive(true);
+      clearTimeout(inactivityTimeout);
+      // Set user as inactive after 5 minutes of no activity
+      inactivityTimeout = setTimeout(() => setIsUserActive(false), 5 * 60 * 1000);
+    };
+
+    // Activity events to monitor
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+
+    // Add event listeners
+    events.forEach(event => {
+      document.addEventListener(event, resetActivity, { passive: true });
+    });
+
+    // Initial activity
+    resetActivity();
+
+    // Cleanup
+    return () => {
+      clearTimeout(inactivityTimeout);
+      events.forEach(event => {
+        document.removeEventListener(event, resetActivity);
+      });
+    };
+  }, []);
+
+  // Create dynamic query configurations based on enabled tools and rate limits
+  const queryConfigs = useMemo(
+    () => createQueryConfigs(enabledTools, rateLimitStatuses, isTabVisible, isUserActive),
+    [enabledTools, rateLimitStatuses, isTabVisible, isUserActive]
   );
 
   // Execute all queries
@@ -143,19 +240,12 @@ export function useToolQueries({
     );
   }, [queryConfigs, queryClient]);
 
-  // Activity feed refresh function
-  const refreshActivityData = useCallback(async () => {
-    await queryClient.refetchQueries({ queryKey: ["activities"] });
-  }, [queryClient]);
-
   // Global refresh function
   const refreshAllData = useCallback(async () => {
     // Refresh all tool queries
     await Promise.all(
       queryConfigs.map((config) => queryClient.refetchQueries({ queryKey: config.queryKey }))
     );
-    // Refresh activity data
-    await queryClient.refetchQueries({ queryKey: ["activities"] });
   }, [queryConfigs, queryClient]);
 
   // Initialize polling - cleanup function since React Query handles polling automatically
@@ -168,7 +258,6 @@ export function useToolQueries({
     dynamicData,
     loadingStates,
     refreshToolData,
-    refreshActivityData,
     refreshAllData,
     initializePolling,
   };
