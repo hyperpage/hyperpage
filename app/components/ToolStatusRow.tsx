@@ -196,7 +196,7 @@ export default function ToolStatusRow() {
                           .map((usage: any) => usage.usagePercent)
                           .filter((percent: number | null) => percent !== null) as number[];
 
-                        return allUsages.length > 0 ? `${Math.max(...allUsages)}%` : '?';
+                        return allUsages.length > 0 ? `${Math.max(...allUsages).toFixed(2)}%` : '?';
                       })()}
                     </div>
                   )}
