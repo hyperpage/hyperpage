@@ -77,12 +77,24 @@ export interface ToolValidation {
   };
 }
 
+export interface ToolRateLimitConfig {
+  detectHeaders: (response: Response) => {
+    remaining: number | null;
+    resetTime: number | null;
+    retryAfter: number | null;
+  };
+  shouldRetry: (response: Response, attemptNumber: number) => number | null; // Returns delay in ms, null means no retry
+  maxRetries: number;
+  backoffStrategy?: 'exponential' | 'linear';
+}
+
 export interface ToolConfig {
   apiUrl?: string;
   webUrl?: string;
   headers?: Record<string, string>;
   formatApiUrl?: (webUrl: string) => string; // Tool-owned URL formatter
   getWebUrl?: () => string; // Optional default web URL provider
+  rateLimit?: ToolRateLimitConfig;
   [key: string]: unknown;
 }
 

@@ -617,6 +617,31 @@ export const gitlabTool: Tool = {
     headers: {
       // Headers will be set dynamically in handlers
     },
+    rateLimit: {
+      detectHeaders: (response: Response) => ({
+        remaining: null, // GitLab doesn't provide remaining count headers
+        resetTime: null, // GitLab doesn't provide reset time headers
+        retryAfter: response.headers.get('Retry-After') ? parseInt(response.headers.get('Retry-After')!, 10) : null
+      }),
+      shouldRetry: (response: Response, attemptNumber: number) => {
+        // Handle 429 (Too Many Requests) responses with Retry-After header
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After');
+          if (retryAfter) {
+            // Honor GitLab's requested wait time from Retry-After header
+            const retryAfterSeconds = parseInt(retryAfter, 10);
+            return retryAfterSeconds * 1000; // Convert to milliseconds
+          }
+          // Fallback to exponential backoff if no Retry-After header
+          const baseDelay = 1000; // 1 second base
+          return baseDelay * Math.pow(2, attemptNumber);
+        }
+
+        return null; // No retry needed
+      },
+      maxRetries: 5, // GitLab can have more retries due to tier variability
+      backoffStrategy: 'exponential'
+    },
   },
 };
 
