@@ -130,6 +130,7 @@ describe('GET /api/tools/enabled', () => {
         name: 'GitHub',
         slug: 'github',
         enabled: true,
+        capabilities: ['pull-requests'],
         widgets: [
           {
             title: 'Pull Requests',

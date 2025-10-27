@@ -23,7 +23,7 @@ export async function makeRetryRequest(
   config: RetryConfig
 ): Promise<Response> {
   const { rateLimitConfig } = config;
-  const maxRetries = rateLimitConfig.maxRetries;
+  const maxRetries = rateLimitConfig.maxRetries ?? 3; // Default to 3 retries
 
   let lastResponse: Response | null = null;
   let attemptNumber = 0;

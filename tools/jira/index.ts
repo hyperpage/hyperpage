@@ -3,6 +3,53 @@ import { Kanban } from "lucide-react";
 import { Tool, ToolConfig } from "../tool-types";
 import { JiraApiIssue } from "./types";
 import { registerTool } from "../registry";
+import { detectJiraInstanceSize } from "../../lib/rate-limit-utils";
+import { MemoryCache } from "../../lib/cache/memory-cache";
+
+// Advisory locking for concurrent requests to prevent API storms
+class RequestDeduper {
+  private pendingRequests = new Map<string, Promise<any>>();
+
+  /**
+   * Execute a request with deduplication - if identical request is already in flight, return that promise instead
+   * @param key Unique key identifying this request (cache-like key strategy)
+   * @param executor Function that performs the actual request
+   * @returns Promise that resolves to the result
+   */
+  async dedupe<T>(key: string, executor: () => Promise<T>): Promise<T> {
+    const existingRequest = this.pendingRequests.get(key);
+    if (existingRequest) {
+      // Return existing request promise instead of making new call
+      return existingRequest;
+    }
+
+    const requestPromise = executor()
+      .finally(() => {
+        // Clean up the pending request, but don't await cleanup
+        setTimeout(() => this.pendingRequests.delete(key), 0);
+      });
+
+    this.pendingRequests.set(key, requestPromise);
+    return requestPromise;
+  }
+
+  /**
+   * Get current number of pending requests (for monitoring)
+   */
+  getPendingCount(): number {
+    return this.pendingRequests.size;
+  }
+
+  /**
+   * Cancel all pending requests (for cleanup)
+   */
+  cancelAll(): void {
+    this.pendingRequests.clear();
+  }
+}
+
+// Instance-wide deduper for Jira requests
+const jiraRequestDeduper = new RequestDeduper();
 
 export const jiraTool: Tool = {
   name: "Jira",
@@ -39,6 +86,53 @@ export const jiraTool: Tool = {
         dataKey: "issues",
         description:
           "Array of issue objects with ticket, title, status, and assignee",
+      },
+    },
+
+    changelogs: {
+      method: "POST",
+      description: "Batch fetch changelogs for multiple Jira issues (rate limit optimized)",
+      parameters: {
+        issueIds: {
+          type: "array",
+          required: true,
+          description: "Array of issue IDs/keys to fetch changelogs for",
+        },
+        since: {
+          type: "string",
+          required: false,
+          description: "Only return changes since this timestamp (ISO 8601)",
+        },
+        maxResults: {
+          type: "number",
+          required: false,
+          description: "Maximum results per issue changelog (default: 10)",
+        },
+      },
+      response: {
+        dataKey: "changelogs",
+        description: "Batched changelog entries for requested issues",
+      },
+    },
+
+    projects: {
+      method: "GET",
+      description: "Get Jira project metadata with 24-hour caching (rate limit optimized)",
+      parameters: {
+        projectKey: {
+          type: "string",
+          required: false,
+          description: "Specific project key to fetch (returns all projects if omitted)",
+        },
+        includeDetails: {
+          type: "boolean",
+          required: false,
+          description: "Include detailed project information (default: false)",
+        },
+      },
+      response: {
+        dataKey: "projects",
+        description: "Cached project metadata (24-hour TTL to reduce API calls)",
       },
     },
 
@@ -100,6 +194,259 @@ export const jiraTool: Tool = {
 
       return { issues: transformedIssues };
     },
+    changelogs: async (request: Request, config: ToolConfig) => {
+      const webUrl = process.env.JIRA_WEB_URL;
+      const apiUrl =
+        config.formatApiUrl?.(webUrl || "") || process.env.JIRA_API_URL;
+      const apiToken = process.env.JIRA_API_TOKEN;
+      const email = process.env.JIRA_EMAIL;
+
+      if (!apiUrl || !apiToken) {
+        throw new Error("JIRA API credentials not configured");
+      }
+
+      const auth = Buffer.from(`${email}:${apiToken}`).toString("base64");
+
+      // Parse request body for parameters
+      let body: any;
+      try {
+        body = await request.json();
+      } catch {
+        throw new Error("Invalid JSON in request body");
+      }
+
+      const { issueIds, since, maxResults = 10 } = body;
+
+      if (!Array.isArray(issueIds) || issueIds.length === 0) {
+        throw new Error("issueIds must be a non-empty array");
+      }
+
+      if (issueIds.length > 50) {
+        throw new Error("Maximum 50 issue IDs allowed per batch request");
+      }
+
+      // Filter out invalid issue IDs
+      const validIssueIds = issueIds.filter((id: any) =>
+        typeof id === 'string' && id.trim().length > 0
+      );
+
+      if (validIssueIds.length === 0) {
+        return { changelogs: [] };
+      }
+
+      // Batch processing with rate limit awareness
+      // Use adaptive chunking based on instance size
+      const instanceSize = detectJiraInstanceSize(
+        new Response(null, { status: 200 })
+      );
+
+      const chunkSize = Math.min(
+        validIssueIds.length,
+        instanceSize === 'small' ? 5 :
+        instanceSize === 'cloud' ? 10 :
+        instanceSize === 'large' ? 15 : 8
+      );
+
+      const changelogPromises: Promise<any>[] = [];
+      const allChangelogs: any[] = [];
+
+      // Process issues in chunks to avoid overwhelming the API
+      for (let i = 0; i < validIssueIds.length; i += chunkSize) {
+        const chunk = validIssueIds.slice(i, i + chunkSize);
+
+        // Create promises for this chunk
+        for (const issueId of chunk) {
+          const changelogPromise = (async () => {
+            try {
+              const changelogUrl = `${apiUrl}/issue/${issueId}/changelog?maxResults=${maxResults}`;
+              const response = await fetch(changelogUrl, {
+                method: "GET",
+                headers: {
+                  Authorization: `Basic ${auth}`,
+                  "Content-Type": "application/json",
+                },
+              });
+
+              if (!response.ok) {
+                if (response.status === 404) {
+                  return { issueId, changelog: [], error: "Issue not found" };
+                }
+                if (response.status === 403) {
+                  return { issueId, changelog: [], error: "Access denied to issue" };
+                }
+                if (response.status === 429) {
+                  // Rate limited - return partial data indicating retry needed
+                  return { issueId, changelog: [], error: "Rate limited - try again later" };
+                }
+                return { issueId, changelog: [], error: `API error: ${response.status}` };
+              }
+
+              const data = await response.json();
+              const changelog = (data.values || []).map((entry: any) => ({
+                id: entry.id,
+                author: entry.author?.displayName || entry.author?.name || "Unknown",
+                created: entry.created,
+                items: entry.items?.map((item: any) => ({
+                  field: item.field,
+                  fieldtype: item.fieldtype,
+                  from: item.fromString || item.from,
+                  to: item.toString || item.to,
+                })) || [],
+              }));
+
+              return { issueId, changelog };
+            } catch (error) {
+              return { issueId, changelog: [], error: `Network error: ${error}` };
+            }
+          })();
+
+          changelogPromises.push(changelogPromise);
+        }
+
+        // Process this chunk with adaptive delays for rate limit protection
+        if (instanceSize === 'small' || instanceSize === 'medium') {
+          // Add delays between chunks for conservative instances
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      // Wait for all changelog requests to complete
+      const results = await Promise.allSettled(changelogPromises);
+
+      // Process results and handle failures gracefully
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          allChangelogs.push(result.value);
+        } else {
+          // Handle rejected promises (network failures, etc.)
+          allChangelogs.push({
+            issueId: 'unknown',
+            changelog: [],
+            error: `Promise rejected: ${result.reason}`
+          });
+        }
+      }
+
+      return { changelogs: allChangelogs };
+    },
+    projects: async (request: Request, config: ToolConfig) => {
+      const webUrl = process.env.JIRA_WEB_URL;
+      const apiUrl =
+        config.formatApiUrl?.(webUrl || "") || process.env.JIRA_API_URL;
+      const apiToken = process.env.JIRA_API_TOKEN;
+      const email = process.env.JIRA_EMAIL;
+
+      if (!apiUrl || !apiToken) {
+        throw new Error("JIRA API credentials not configured");
+      }
+
+      const auth = Buffer.from(`${email}:${apiToken}`).toString("base64");
+      const url = new URL(request.url);
+      const projectKey = url.searchParams.get("projectKey");
+      const includeDetails = url.searchParams.get("includeDetails") === "true";
+
+      // Cache key strategy for project metadata (24-hour TTL)
+      const cacheKey = projectKey
+        ? `jira:project:${projectKey}:${includeDetails}`
+        : `jira:projects:list:${includeDetails}`;
+
+      const cache = new MemoryCache(); // Use instance-based cache
+
+      // Try to get from cache first
+      try {
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+          return { projects: cachedData };
+        }
+      } catch (cacheError) {
+        console.warn('Cache read error:', cacheError);
+        // Continue with API call if cache fails
+      }
+
+      // Use advisory locking to prevent concurrent requests for same data
+      return jiraRequestDeduper.dedupe(`projects:${cacheKey}`, async () => {
+        let apiEndpoint: string;
+        if (projectKey) {
+          // Single project request
+          apiEndpoint = includeDetails ? `/project/${projectKey}` : `/project/${projectKey}?expand=`;
+        } else {
+          // All projects request
+          apiEndpoint = "/project";
+        }
+
+        const projectsUrl = `${apiUrl}${apiEndpoint}`;
+
+        const response = await fetch(projectsUrl, {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${auth}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 404 && projectKey) {
+            throw new Error(`Project ${projectKey} not found`);
+          }
+          if (response.status === 403) {
+            throw new Error("Access denied to project information");
+          }
+          if (response.status === 429) {
+            throw new Error("Rate limited - project metadata temporarily unavailable");
+          }
+          throw new Error(`JIRA API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Transform project data - handle both single project and project list responses
+        let projects: any[];
+        if (projectKey && !Array.isArray(data)) {
+          // Single project response
+          projects = [{
+            key: data.key,
+            name: data.name,
+            description: data.description,
+            projectTypeKey: data.projectTypeKey,
+            lead: data.lead?.displayName || data.lead?.name || "Unknown",
+            url: webUrl ? `${webUrl}/projects/${data.key}` : undefined,
+            category: data.projectCategory?.name || null,
+            // Include additional details if requested
+            ...(includeDetails && {
+              components: data.components || [],
+              versions: data.versions || [],
+              roles: data.roles || {},
+              issueTypes: data.issueTypes || [],
+            }),
+          }];
+        } else {
+          // Multiple projects response
+          projects = (Array.isArray(data) ? data : data.values || []).map((project: any) => ({
+            key: project.key,
+            name: project.name,
+            description: project.description,
+            projectTypeKey: project.projectTypeKey,
+            lead: project.lead?.displayName || project.lead?.name || "Unknown",
+            url: webUrl ? `${webUrl}/projects/${project.key}` : undefined,
+            category: project.projectCategory?.name || null,
+            // Include additional details if requested (limited for list view)
+            ...(includeDetails && {
+              roles: project.roles || {},
+            }),
+          }));
+        }
+
+        // Cache the results for 24 hours to reduce API calls
+        try {
+          cache.set(cacheKey, projects, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
+        } catch (cacheError) {
+          console.warn('Cache write error:', cacheError);
+          // Continue even if caching fails
+        }
+
+        return { projects };
+      });
+    },
     "rate-limit": async (request: Request, config: ToolConfig) => {
       // Jira doesn't have a dedicated rate limit API like GitHub
       // We'll make a test request to the server info endpoint to check connectivity and basic rate limiting
@@ -158,23 +505,73 @@ export const jiraTool: Tool = {
       // Headers will be set dynamically in handlers
     },
     rateLimit: {
+      // Instance-aware rate limiting for Jira
+      instanceAware: true,
       detectHeaders: (response: Response) => ({
         remaining: null, // Jira doesn't provide remaining count headers
         resetTime: null, // Jira doesn't provide reset time headers
         retryAfter: null  // Jira uses 429 status, not Retry-After header typically
       }),
       shouldRetry: (response: Response, attemptNumber: number) => {
+        // Instance-specific retry logic
+        const instanceSize = detectJiraInstanceSize(response);
+
+        // Adjust retry behavior based on instance size
+        let baseDelay: number;
+        let maxRetries: number;
+
+        switch (instanceSize) {
+          case 'small':
+            baseDelay = 3000; // 3s - more conservative for small instances
+            maxRetries = 3;
+            break;
+          case 'cloud':
+            baseDelay = 1500; // 1.5s - Atlassian Cloud is responsive
+            maxRetries = 6;
+            break;
+          case 'large':
+            baseDelay = 1000; // 1s - large instances can handle more
+            maxRetries = 8;
+            break;
+          case 'medium':
+          default:
+            baseDelay = 2000; // 2s - default for medium instances
+            maxRetries = 5;
+            break;
+        }
+
         // Handle 429 (Too Many Requests) responses
         if (response.status === 429) {
-          // Use exponential backoff starting at 2 seconds (more conservative than GitHub)
-          const baseDelay = 2000; // 2 seconds
+          // Use exponential backoff with instance-specific base delay
           return baseDelay * Math.pow(2, attemptNumber);
         }
 
         return null; // No retry needed
       },
-      maxRetries: 5, // Jira can have more retries due to instance variability
-      backoffStrategy: 'exponential'
+      getMaxRetries: (response: Response) => {
+        // Dynamic max retries based on instance size
+        const instanceSize = detectJiraInstanceSize(response);
+
+        switch (instanceSize) {
+          case 'small':
+            return 3; // Conservative approach for small instances
+          case 'cloud':
+            return 6; // Cloud can handle more retries
+          case 'large':
+            return 8; // Large instances are more robust
+          case 'medium':
+          default:
+            return 5; // Default for medium instances
+        }
+      },
+      backoffStrategy: 'adaptive-exponential', // More adaptive than simple exponential
+      adaptiveThresholds: {
+        // Instance size determines when to trigger backoff
+        small: { warningThreshold: 25, criticalThreshold: 50 },   // Very conservative
+        medium: { warningThreshold: 50, criticalThreshold: 75 },  // Default thresholds
+        large: { warningThreshold: 70, criticalThreshold: 85 },   // Less conservative
+        cloud: { warningThreshold: 60, criticalThreshold: 80 },   // Optimized for Atlassian Cloud
+      }
     },
   },
 };

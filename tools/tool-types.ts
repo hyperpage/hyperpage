@@ -78,14 +78,23 @@ export interface ToolValidation {
 }
 
 export interface ToolRateLimitConfig {
+  instanceAware?: boolean; // Enables instance-specific rate limiting
   detectHeaders: (response: Response) => {
     remaining: number | null;
     resetTime: number | null;
     retryAfter: number | null;
   };
   shouldRetry: (response: Response, attemptNumber: number) => number | null; // Returns delay in ms, null means no retry
-  maxRetries: number;
-  backoffStrategy?: 'exponential' | 'linear';
+  getMaxRetries?: (response: Response) => number; // Dynamic max retries based on instance
+  maxRetries?: number; // Optional fallback static max retries
+  backoffStrategy?: 'exponential' | 'linear' | 'adaptive-exponential'; // Include new adaptive strategy
+  adaptiveThresholds?: {
+    // Instance-specific monitoring thresholds
+    small: { warningThreshold: number; criticalThreshold: number };
+    medium: { warningThreshold: number; criticalThreshold: number };
+    large: { warningThreshold: number; criticalThreshold: number };
+    cloud: { warningThreshold: number; criticalThreshold: number };
+  };
 }
 
 export interface ToolConfig {

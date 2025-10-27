@@ -304,7 +304,7 @@ describe('Rate Limit Monitor Library', () => {
           limit: null,
           remaining: null,
           used: null,
-          usagePercent: null,
+          usagePercent: 90, // High usage when retry-after is present (indicates API stress)
           resetTime: Date.now() + (60 * 1000),
           retryAfter: 60
         }
