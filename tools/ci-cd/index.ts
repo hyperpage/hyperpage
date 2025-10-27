@@ -2,9 +2,9 @@ import React from "react";
 import { RotateCcw } from "lucide-react";
 import { Tool, ToolConfig } from "../tool-types";
 import { registerTool } from "../registry";
+import { getEnabledTools } from "../index";
 
-// Import capability-based tool discovery
-import { getEnabledToolsByCapability } from "../index";
+
 
 export const ciCdTool: Tool = {
   name: "CI/CD",
@@ -57,10 +57,14 @@ export const ciCdTool: Tool = {
       const limit = parseInt(url.searchParams.get("limit") || "20", 10);
 
       // Get all enabled tools that provide pipelines capability (GitLab-style)
-      const pipelineTools = getEnabledToolsByCapability("pipelines");
+      const pipelineTools = getEnabledTools().filter(
+        (tool) => tool.capabilities && tool.capabilities.includes("pipelines"),
+      );
 
       // Get all enabled tools that provide workflows capability (GitHub-style)
-      const workflowTools = getEnabledToolsByCapability("workflows");
+      const workflowTools = getEnabledTools().filter(
+        (tool) => tool.capabilities && tool.capabilities.includes("workflows"),
+      );
 
       // Combine all CI/CD tools
       const ciCdTools = [...pipelineTools, ...workflowTools];

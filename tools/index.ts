@@ -46,19 +46,7 @@ export const getToolsByApi = (apiEndpoint: string): Tool[] => {
   return getAllTools().filter((tool) => tool.apis && tool.apis[apiEndpoint]);
 };
 
-// Helper function to find tools that provide a specific capability
-export const getToolsByCapability = (capability: string): Tool[] => {
-  return getAllTools().filter(
-    (tool) => tool.capabilities && tool.capabilities.includes(capability),
-  );
-};
 
-// Helper function to find enabled tools that provide a specific capability
-export const getEnabledToolsByCapability = (capability: string): Tool[] => {
-  return getEnabledTools().filter(
-    (tool) => tool.capabilities && tool.capabilities.includes(capability),
-  );
-};
 
 // Helper function to get all available APIs across enabled tools
 export const getAvailableApis = (): Record<

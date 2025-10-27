@@ -3,8 +3,7 @@ import { Ticket } from "lucide-react";
 import { Tool, ToolConfig, TransformedIssue } from "../tool-types";
 import { registerTool } from "../registry";
 
-// Import capability-based tool discovery
-import { getEnabledToolsByCapability } from "../index";
+import { getEnabledTools } from "../index";
 
 export const ticketingTool: Tool = {
   name: "Ticketing",
@@ -43,7 +42,9 @@ export const ticketingTool: Tool = {
       const results: TransformedIssue[] = [];
 
       // Get all enabled tools that provide issues capability (Jira-style)
-      const issueTools = getEnabledToolsByCapability("issues");
+      const issueTools = getEnabledTools().filter(
+        (tool) => tool.capabilities && tool.capabilities.includes("issues"),
+      );
 
       // Aggregate issues from all supported ticketing tools
       for (const tool of issueTools) {

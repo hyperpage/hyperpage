@@ -21,7 +21,7 @@ export const gitlabTool: Tool = {
     icon: React.createElement(Gitlab, { className: "w-5 h-5" }),
   },
   widgets: [],
-  capabilities: ["merge-requests", "pipelines", "activity", "issues"], // Declares what this tool can provide
+  capabilities: ["merge-requests", "pipelines", "issues", "rate-limit"], // Declares what this tool can provide
   validation: {
     required: ['GITLAB_WEB_URL', 'GITLAB_TOKEN'],
     optional: [],
@@ -71,12 +71,13 @@ export const gitlabTool: Tool = {
           "Array of pipeline objects with project, branch, status, duration, and finished date",
       },
     },
-    activity: {
+
+    "rate-limit": {
       method: "GET",
-      description: "Get recent GitLab activity events",
+      description: "Get current GitLab API rate limit status",
       response: {
-        dataKey: "activity",
-        description: "Array of recent GitLab activity events",
+        dataKey: "rateLimit",
+        description: "Current rate limit status for GitLab instance (based on Retry-After headers)",
       },
     },
   },
@@ -270,8 +271,10 @@ export const gitlabTool: Tool = {
 
       return { issues: results };
     },
-    activity: async (request: Request, config: ToolConfig) => {
-      // Use tool-owned logic to format URLs
+
+    "rate-limit": async (request: Request, config: ToolConfig) => {
+      // GitLab doesn't have a dedicated rate limit API like GitHub
+      // We'll make a test request to the user endpoint to check connectivity and basic rate limiting
       const webUrl = config.getWebUrl?.() || "https://gitlab.com";
       const apiUrl =
         config.formatApiUrl?.(webUrl) || "https://gitlab.com/api/v4";
@@ -281,10 +284,9 @@ export const gitlabTool: Tool = {
         throw new Error("GitLab API token not configured");
       }
 
-      // Get user events from GitLab API (all events, not just pushes)
-      const eventsUrl = `${apiUrl}/events?per_page=20`;
+      const userUrl = `${apiUrl}/user`; // Simple endpoint to test API connectivity
 
-      const response = await fetch(eventsUrl, {
+      const response = await fetch(userUrl, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -292,323 +294,32 @@ export const gitlabTool: Tool = {
         },
       });
 
+      // Return basic rate limit information for GitLab
+      // Since GitLab doesn't expose actual rate limits via API, we report status based on response codes
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`GitLab API error: ${response.status} - ${errorText}`);
-      }
-
-      const events: GitLabEvent[] = await response.json();
-
-      // GitLab /events API doesn't include project_path, so we need to fetch project details
-      // Create a map of project_id -> project details to avoid multiple API calls
-      const projectCache = new Map<number, string>();
-
-      const fetchProjectPath = async (projectId: number): Promise<string> => {
-        if (projectCache.has(projectId)) {
-          return projectCache.get(projectId)!;
-        }
-
-        try {
-          const projectUrl = `${apiUrl}/projects/${projectId}`;
-          const projectResponse = await fetch(projectUrl, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-
-          if (projectResponse.ok) {
-            const project = await projectResponse.json();
-            const path = project.path_with_namespace || `Project ${projectId}`;
-            projectCache.set(projectId, path);
-            return path;
-          }
-        } catch (error) {
-          console.warn(`Failed to fetch project ${projectId}:`, error);
-        }
-
-        const fallback = `Project ${projectId}`;
-        projectCache.set(projectId, fallback);
-        return fallback;
-      };
-
-      // Helper function to create GitLab push events (no hyperlinks due to URL limitations)
-      const createPushEvent = async (
-        event: GitLabEvent,
-        index: number,
-        eventTime: Date,
-        timeAgo: string,
-      ) => {
-        const branchName = event.push_data?.ref?.split("/").pop() || "unknown";
-        const pushData = event.push_data;
-
-        // Get project name from the event data
-        let project = event.project_path;
-        if (!project && event.project_id) {
-          project = await fetchProjectPath(event.project_id);
-        }
-        project = project || "unknown";
-
-        // Collect commit messages for rich content from GitLab Compare API
-        const commitMessages: Array<{ type: 'commit'; text: string; author?: string; timestamp?: string }> = [];
-
-        // Use GitLab Compare API to get exact commits in this push
-        if (pushData?.commit_from && pushData?.commit_to && event.project_id) {
-          try {
-            const compareUrl = `${apiUrl}/projects/${event.project_id}/repository/compare?from=${pushData.commit_from}&to=${pushData.commit_to}`;
-            const compareResponse = await fetch(compareUrl, {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            });
-
-            if (compareResponse.ok) {
-              const compareData = await compareResponse.json();
-              const commits = compareData.commits || [];
-
-              // Show up to 3 commits from this specific push
-              (commits as GitLabComparisonCommit[]).slice(0, 3).forEach((commit) => {
-                const shortSha = commit.id?.substring(0, 8) || 'unknown';
-                const message = commit.message || `Commit ${shortSha}`;
-                // Remove any trailing newlines and limit length
-                const cleanMessage = message.split('\n')[0]?.substring(0, 150) || `Commit ${shortSha}`;
-                const truncatedMessage = cleanMessage.length < message.split('\n')[0]?.length ?
-                  cleanMessage + '...' : cleanMessage;
-
-                commitMessages.push({
-                  type: 'commit',
-                  text: truncatedMessage,
-                  author: commit.author_name || commit.committer_name || event.author?.name || event.author_username || "Unknown",
-                  timestamp: commit.committed_date || eventTime.toISOString()
-                });
-              });
-            } else {
-              console.warn(`Failed to fetch GitLab compare data for project ${event.project_id}:`, compareResponse.status);
-              // Single fallback message
-              commitMessages.push({
-                type: 'commit',
-                text: `Code push to ${project}/${branchName}`,
-                author: event.author?.name || event.author_username || "Unknown",
-                timestamp: eventTime.toISOString()
-              });
+        if (response.status === 429) {
+          // Rate limited response - report as high usage
+          return {
+            rateLimit: {
+              message: "GitLab API rate limit exceeded",
+              statusCode: response.status,
+              retryAfter: response.headers.get('Retry-After')
             }
-          } catch (error) {
-            console.warn(`Error fetching GitLab commits for push ${event.id}:`, error);
-            commitMessages.push({
-              type: 'commit',
-              text: `GitLab push to ${branchName}`,
-              author: event.author?.name || event.author_username || "Unknown",
-              timestamp: eventTime.toISOString()
-            });
-          }
-        } else {
-          // No commit SHAs available, fallback to single message
-          commitMessages.push({
-            type: 'commit',
-            text: `Code push to ${project}/${branchName}`,
-            author: event.author?.name || event.author_username || "Unknown",
-            timestamp: eventTime.toISOString()
-          });
+          };
         }
 
-        const commitCount = commitMessages.length;
-
-        return {
-          id: `${event.id}_${index}`,
-          tool: "GitLab",
-          toolIcon: "🦊",
-          action: "Code pushed",
-          description: `Pushed to ${branchName}`,
-          author: event.author?.name || event.author_username || "Unknown",
-          time: timeAgo,
-          color: "orange",
-          timestamp: eventTime.toISOString(),
-          repository: project,
-          branch: branchName,
-          commitCount,
-          content: commitMessages.length > 0 ? commitMessages : undefined,
-        };
-      };
-
-      // Helper function to create MR/Issue events
-      const createTargetEvent = async (
-        event: GitLabEvent,
-        index: number,
-        eventTime: Date,
-        timeAgo: string,
-        action: string,
-        targetType: string,
-      ) => {
-        const isMR = event.target_type === "MergeRequest";
-        const isIssue =
-          event.target_type === "Issue" || event.target_type === "WorkItem"; // WorkItem might be GitLab's term for issues
-
-        let displayId: string;
-        if (isMR) {
-          displayId = `!${event.target_iid}`;
-        } else if (isIssue) {
-          displayId = `#${event.target_iid}`;
-        } else {
-          displayId = "";
-        }
-
-        // Get project info for context
-        let project = event.project_path || "unknown";
-        if (!isNaN(Number(project)) && event.project_id) {
-          project = `Project ${event.project_id}`;
-        }
-
-        // Construct URL if target_url is missing (common issue with GitLab events API)
-        let url = event.target_url;
-        if (!url && event.project_path && event.target_iid) {
-          const webUrl = config.getWebUrl?.() || "https://gitlab.com";
-          if (isMR) {
-            url = `${webUrl}/${event.project_path}/-/merge_requests/${event.target_iid}`;
-          } else if (isIssue) {
-            url = `${webUrl}/${event.project_path}/-/issues/${event.target_iid}`;
-          }
-        }
-
-        // For MRs and Issues, we'll need to fetch assignee and label info separately
-        // For now, include basic info - can be enhanced later with individual API calls
-        return {
-          id: `${event.id}_${index}`,
-          tool: "GitLab",
-          toolIcon: "🦊",
-          action: `${targetType} ${action}`,
-          description:
-            event.target_title || `Unnamed ${targetType.toLowerCase()}`,
-          author: event.author?.name || event.author_username || "Unknown",
-          time: timeAgo,
-          color: "orange",
-          timestamp: eventTime.toISOString(),
-          repository: project,
-          url: url || undefined,
-          displayId: displayId || undefined,
-          status:
-            action === "closed"
-              ? "closed"
-              : action === "opened"
-                ? "opened"
-                : action === "merged"
-                  ? "merged"
-                  : "unknown",
-        };
-      };
-
-      // Transform GitLab events to activity feed format
-      // Since we need to make async calls to fetch project paths, we'll use Promise.all
-      const activityPromises = events
-        .slice(0, 10)
-        .map(async (event: GitLabEvent, index: number) => {
-          const eventTime = new Date(event.created_at);
-          const timeAgo = getTimeAgo(eventTime);
-
-          // Fetch project path if it's missing
-          let projectPath = event.project_path;
-          if (!projectPath && event.project_id) {
-            projectPath = await fetchProjectPath(event.project_id);
-          }
-
-          // Update the event object with the fetched project path
-          const enrichedEvent = { ...event, project_path: projectPath };
-
-          switch (event.action_name) {
-            case "pushed":
-              return createPushEvent(enrichedEvent, index, eventTime, timeAgo);
-
-            case "opened":
-            case "closed":
-            case "reopened":
-            case "updated":
-              if (event.target_type === "MergeRequest") {
-                return await createTargetEvent(
-                  enrichedEvent,
-                  index,
-                  eventTime,
-                  timeAgo,
-                  event.action_name,
-                  "Merge request",
-                );
-              } else if (
-                event.target_type === "Issue" ||
-                event.target_type === "WorkItem"
-              ) {
-                // WorkItem is GitLab's internal issue type
-                return await createTargetEvent(
-                  enrichedEvent,
-                  index,
-                  eventTime,
-                  timeAgo,
-                  event.action_name,
-                  "Issue",
-                );
-              }
-              break;
-
-            case "approved":
-              if (event.target_type === "MergeRequest") {
-                return await createTargetEvent(
-                  enrichedEvent,
-                  index,
-                  eventTime,
-                  timeAgo,
-                  "approved",
-                  "Merge request",
-                );
-              }
-              break;
-
-            case "merged":
-              if (event.target_type === "MergeRequest") {
-                return await createTargetEvent(
-                  enrichedEvent,
-                  index,
-                  eventTime,
-                  timeAgo,
-                  "merged",
-                  "Merge request",
-                );
-              }
-              break;
-
-            default:
-              // Generic event with no special handling
-              let project = enrichedEvent.project_path || "unknown";
-              if (!isNaN(Number(project)) && event.project_id) {
-                project = `Project ${event.project_id}`;
-              }
-
-              return {
-                id: `${event.id}_${index}`,
-                tool: "GitLab",
-                toolIcon: "🦊",
-                action: event.action_name || "Activity",
-                description: event.target_title || "General activity",
-                author:
-                  event.author?.name || event.author_username || "Unknown",
-                time: timeAgo,
-                color: "orange",
-                timestamp: eventTime.toISOString(),
-                repository: project,
-              };
-          }
-          return null;
-        });
-
-      const activityEvents = (await Promise.all(activityPromises)).filter(
-        Boolean,
-      );
-
-      // If no events, return empty array
-      if (activityEvents.length === 0) {
-        return { activity: [] };
+        // Other error - might be authentication or server issue
+        throw new Error(`GITLAB user API error: ${response.status}`);
       }
 
-      return { activity: activityEvents };
+      // Success - return basic status information
+      return {
+        rateLimit: {
+          message: "GitLab API accessible - rate limiting status unknown (not exposed by API)",
+          statusCode: response.status,
+          serverInfo: "GitLab API connection confirmed"
+        }
+      };
     },
   },
   config: {

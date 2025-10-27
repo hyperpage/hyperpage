@@ -3,8 +3,7 @@ import { GitBranch } from "lucide-react";
 import { Tool, ToolConfig } from "../tool-types";
 import { registerTool } from "../registry";
 
-// Import capability-based tool discovery
-import { getEnabledToolsByCapability } from "../index";
+import { getEnabledTools } from "../index";
 
 export const codeReviewsTool: Tool = {
   name: "Code Reviews",
@@ -44,10 +43,14 @@ export const codeReviewsTool: Tool = {
       const results: unknown[] = [];
 
       // Get all enabled tools that provide pull-requests capability (GitHub)
-      const pullRequestTools = getEnabledToolsByCapability("pull-requests");
+      const pullRequestTools = getEnabledTools().filter(
+        (tool) => tool.capabilities && tool.capabilities.includes("pull-requests"),
+      );
 
       // Get all enabled tools that provide merge-requests capability (GitLab)
-      const mergeRequestTools = getEnabledToolsByCapability("merge-requests");
+      const mergeRequestTools = getEnabledTools().filter(
+        (tool) => tool.capabilities && tool.capabilities.includes("merge-requests"),
+      );
 
       // Combine all Git tools
       const gitTools = [...pullRequestTools, ...mergeRequestTools];

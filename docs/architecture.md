@@ -32,8 +32,8 @@ interface ToolCapability {
   'merge-requests': 'GitLab merge requests';
   'workflows': 'GitHub Actions workflows';
   'pipelines': 'GitLab CI/CD pipelines';
-  'activity': 'Activity feed events';
   'issues': 'Ticketing and issue management';
+  'rate-limit': 'API rate limit monitoring';
 }
 ```
 
@@ -49,9 +49,9 @@ interface ToolCapability {
 All complex stateful logic is extracted into custom hooks before component implementation:
 
 #### Data Management Hooks (React Query Integration)
-- **`useActivities`**: React Query-powered activity feed with 15s auto-polling and caching
 - **`useToolQueries`**: Dynamic query management for tool widgets with selective refresh intervals
 - **`useDarkMode`**: Theme switching with localStorage persistence
+- **`useRateLimit`**: Rate limit monitoring across all enabled tools
 
 #### React Query Benefits
 **Automatic Caching & Background Updates:**
@@ -245,33 +245,96 @@ Following component optimization and daisyUI integration:
 - **Bundle Size**: Eliminated shadcn/ui dependencies (clsx, class-variance-authority, tailwind-merge)
 - **Theme Consistency**: Maintained exact visual design while removing framework abstractions
 
-## Activity Feed Architecture
+## Rate Limit Monitoring System
 
-### Real-Time Data Aggregation
+### Unified Monitoring Architecture
 
-**Registry-Driven Activity Discovery:**
-1. Tools with `activity` capability are discovered automatically
-2. Activity endpoints are called in parallel
-3. Results merged, sorted by timestamp, and filtered to recent items
-4. Rich context information preserved from multiple sources
+Hyperpage implements **multi-platform rate limit monitoring** with unified API endpoints and intelligent UI feedback:
 
-### Data Enrichment
+#### System Components
+- **`lib/rate-limit-monitor.ts`**: Core monitoring logic with platform-specific transformations
+- **`app/api/rate-limit/[platform]/route.ts`**: Platform-specific API endpoints with capability validation
+- **`app/components/hooks/useRateLimit.ts`**: React hooks for rate limit state management
+- **`app/components/ToolStatusRow.tsx`**: UI components with rich tooltips and status indicators
+- **`lib/types/rate-limit.ts`**: Type-safe interfaces for universal rate limit data structures
 
-Activity items include comprehensive metadata:
-- **Repository/Project Context**: Shows where activity occurred
-- **Branch Information**: Code-related activities show branch names
-- **Commit Counts**: Push events display number of commits
-- **Status Indicators**: Color-coded status badges (open/closed/merged)
-- **Assignee Information**: Shows current assignees
-- **Labels/Tags**: Applicable labels from issues/PRs
-- **Navigation Links**: Direct links back to source platforms
+#### Platform-Specific Implementations
+Each tool integration defines rate limit monitoring through registered handlers:
+```typescript
+export const githubTool: Tool = {
+  // ... basic configuration
+  capabilities: ['rate-limit'], // Declares support
 
-### High-Performance Implementation
+  apis: {
+    'rate-limit': {
+      method: 'GET',
+      description: 'Monitor GitHub API rate limits',
+      response: { dataKey: 'rateLimit' }
+    }
+  },
 
-- **Limit of 50 Items**: Prevents UI overwhelm from excess data
-- **Tab Visibility Refresh**: Automatically refreshes when user returns to tab
-- **Background Loading**: Updates happen invisibly while preserving existing data
-- **Graceful Degradation**: Individual tool failures don't break the entire feed
+  handlers: {
+    'rate-limit': async (request, config) => {
+      const response = await fetch('https://api.github.com/rate_limit', {
+        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
+      });
+      return { rateLimit: await response.json() };
+    }
+  }
+};
+```
+
+#### Data Transformation Pipeline
+Raw platform responses are transformed to universal format:
+```typescript
+// GitHub: Multiple API limits (core, search, graphql)
+transformGitHubLimits(data) → {
+  github: {
+    core: { limit, remaining, used, usagePercent, resetTime },
+    search: { limit, remaining, used, usagePercent, resetTime },
+    graphql: { limit, remaining, used, usagePercent, resetTime }
+  }
+}
+
+// GitLab: Retry-after based (no explicit limit/remaining)
+transformGitLabLimits(response, retryAfter) → {
+  gitlab: {
+    global: { resetTime: Date.now() + (retryAfter * 1000), retryAfter }
+  }
+}
+
+// Jira: Instance-level limits (not exposed via API)
+transformJiraLimits(data) → { jira: { global: { /* null values */ } } }
+```
+
+#### Intelligent Status Calculation
+Overall health status derived from all platforms:
+```typescript
+calculateOverallStatus(limits) → 'normal' | 'warning' | 'critical' | 'unknown'
+// normal: < 75% usage across all limits
+// warning: 75-89% usage on any limit
+// critical: 90%+ usage on any limit
+```
+
+#### UI Integration
+Status displayed through visual indicators:
+- **Badges**: Percentage usage (5%, 95%) with color-coded backgrounds
+- **Icons**: Warning symbols for rates approaching limits
+- **Tooltips**: Detailed platform-specific information on hover
+
+#### Caching Strategy
+- **5-minute TTL**: Balances fresh data with API rate limiting
+- **Freshness Tracking**: UI indicates data age and freshness
+- **Stale Data Handling**: Falls back to cached data after network failures
+
+#### Benefits
+- **Unified API**: Single endpoint per platform regardless of underlying API differences
+- **Intelligent Caching**: Prevents excessive API calls while maintaining freshness
+- **Rich UI Feedback**: Users understand API health without technical knowledge
+- **Platform Awareness**: Optimized handling for different rate limit patterns
+- **Error Resilience**: Graceful degradation when rate limit monitoring fails
+
+
 
 ## Development Workflow
 

@@ -34,35 +34,7 @@ Returns all enabled tools with their UI-safe configuration.
         "icon": "<GitHubIcon />"
       },
       "widgets": [...],
-      "capabilities": ["pull-requests", "workflows", "activity", "issues"]
-    }
-  ]
-}
-```
-
-### Activity Feed
-
-#### `GET /api/tools/activity`
-Aggregates recent activities from all enabled tools.
-
-**Response:**
-```json
-{
-  "activity": [
-    {
-      "id": "123",
-      "tool": "GitHub",
-      "toolIcon": "🐙",
-      "action": "Pull request opened",
-      "description": "feat: Add dark mode toggle",
-      "author": "johndoe",
-      "time": "2 hours ago",
-      "color": "purple",
-      "timestamp": "2025-10-20T14:30:00Z",
-      "url": "https://github.com/...",
-      "displayId": "#123",
-      "repository": "hyperpage/hyperpage",
-      "branch": "feature/dark-mode"
+      "capabilities": ["pull-requests", "workflows", "issues", "rate-limit"]
     }
   ]
 }
@@ -72,17 +44,14 @@ Aggregates recent activities from all enabled tools.
 
 #### GitHub Tool
 - **`GET /api/tools/github/pull-requests`**: List user pull requests
-- **`GET /api/tools/github/commits`**: List recent commit/push events
 - **`GET /api/tools/github/issues`**: List user issues
 - **`GET /api/tools/github/workflows`**: List recent workflow runs
-- **`GET /api/tools/github/activity`**: Get user activity events with unique commit content (prevents duplicate commits across push events)
-- **`GET /api/tools/github/rate-limit`**: Get current GitHub API rate limit status for debugging 403 errors (includes core, search, graphql limits and reset times)
+- **`GET /api/rate-limit/github`**: Unified rate limit monitoring endpoint (returns platform-specific limit structures)
 
 #### GitLab Tool
 - **`GET /api/tools/gitlab/merge-requests`**: List merge requests
 - **`GET /api/tools/gitlab/pipelines`**: List recent pipelines
 - **`GET /api/tools/gitlab/issues`**: List user issues
-- **`GET /api/tools/gitlab/activity`**: Get user activity events
 
 #### Jira Tool
 - **`GET /api/tools/jira/issues`**: List issues by project/assignee
@@ -119,40 +88,6 @@ interface ToolWidget {
 }
 ```
 
-### Activity Event Schema
-
-```typescript
-interface ActivityEvent {
-  id: string;              // Unique identifier
-  tool: string;            // Tool name ('GitHub', 'Jira', etc.)
-  toolIcon: string;        // Emoji representation
-  action: string;          // Action performed
-  description: string;     // Detailed description
-  author: string;          // Person who performed action
-  time: string;            // Human-readable time ago
-  color: string;           // Theme color ('purple', 'green', 'orange')
-  timestamp: string;       // ISO timestamp for sorting
-  url?: string;            // Optional navigation URL
-  displayId?: string;      // Optional user-friendly ID ('#123', '!456')
-  repository?: string;     // Optional repo/project context
-  branch?: string;         // Optional branch name
-  commitCount?: number;    // Optional commit count
-  status?: string;         // Optional status indicator
-  assignee?: string;       // Optional assignee information
-  labels?: string[];       // Optional labels/tags
-
-  // Enhanced Rich Content Fields (New)
-  content?: Array<{        // Rich content items (commits, descriptions, comments)
-    type: 'commit' | 'description' | 'comment' | 'change';
-    text: string;          // Content text (truncated to ~150 chars)
-    url?: string;          // Optional navigation URL (e.g., GitHub commit URL)
-    displayId?: string;    // Optional user-friendly ID (e.g., commit SHA 'abc1234')
-    author?: string;       // Who authored the content
-    timestamp?: string;    // When content was created/modified
-  }>;
-}
-```
-
 ## Tool Integration API
 
 ### Tool Definition Interface
@@ -171,7 +106,6 @@ interface Tool {
   handlers: Record<string, Handler>; // API implementations
   config: ToolConfig;             // Server-side configuration
   widgets: ToolWidget[];          // UI widget definitions
-  activity?: boolean;             // Activity feed participation
 }
 ```
 
@@ -194,8 +128,8 @@ Tools declare capabilities for automatic discovery by aggregators:
 | `merge-requests` | GitLab merge requests | GitLab |
 | `workflows` | CI/CD workflows | GitHub |
 | `pipelines` | CI/CD pipelines | GitLab |
-| `activity` | Activity feed events | GitHub, GitLab, Jira |
 | `issues` | Ticketing issues | GitHub, GitLab, Jira |
+| `rate-limit` | API rate limit monitoring | GitHub, GitLab, Jira |
 
 ### Registry System
 
@@ -422,6 +356,104 @@ const data = await makeRetryRequest(url, options, { rateLimitConfig: toolConfig.
 - **Comprehensive Testing**: Full test suite validates retry logic
 
 For implementation details, see [`lib/api-client.ts`](../lib/api-client.ts).
+
+## Rate Limit Monitoring API
+
+Hyperpage provides unified rate limit monitoring endpoints for all supported platforms:
+
+### `GET /api/rate-limit/[platform]`
+
+Retrieves current rate limit status for the specified platform (GitHub, GitLab, Jira).
+
+**Platform Support:**
+- **GitHub**: Core API, Search API, GraphQL API limits
+- **GitLab**: Global instance limits (retry-after based)
+- **Jira**: Instance-wide limits (varies by Jira deployment)
+
+**Parameters:**
+- **`platform`**: Platform identifier (`github`, `gitlab`, `jira`)
+
+**Success Response (200):**
+```json
+{
+  "platform": "github",
+  "limits": {
+    "github": {
+      "core": {
+        "limit": 5000,
+        "remaining": 4990,
+        "used": 10,
+        "usagePercent": 0.2,
+        "resetTime": 1640995200000,
+        "retryAfter": null
+      },
+      "search": {
+        "limit": 30,
+        "remaining": 27,
+        "used": 3,
+        "usagePercent": 10,
+        "resetTime": 1640995200000,
+        "retryAfter": null
+      },
+      "graphql": {
+        "limit": 5000,
+        "remaining": 4995,
+        "used": 5,
+        "usagePercent": 0.1,
+        "resetTime": 1640995200000,
+        "retryAfter": null
+      }
+    }
+  },
+  "timestamp": 1640995200000
+}
+```
+
+**Error Responses:**
+- **400**: Platform doesn't support rate limiting or missing capability
+- **500**: Internal error fetching rate limit data
+- **501**: Platform transformation not implemented
+
+**Caching:** Results are cached for 5 minutes to prevent excessive API calls.
+
+**Usage in UI:** The dashboard automatically uses these endpoints to show rate limit status in tool status indicators and tooltips.
+
+**Platform-Specific Details:**
+
+**GitHub Rate Limits:**
+```json
+{
+  "limits": {
+    "github": {
+      "core": { "limit": 5000, "remaining": 4990, "used": 10, "usagePercent": 0.2 },
+      "search": { "limit": 30, "remaining": 27, "used": 3, "usagePercent": 10 },
+      "graphql": { "limit": 5000, "remaining": 4995, "used": 5, "usagePercent": 0.1 }
+    }
+  }
+}
+```
+
+**GitLab Rate Limits:**
+```json
+{
+  "limits": {
+    "gitlab": {
+      "global": { "limit": null, "remaining": null, "usagePercent": null, "retryAfter": 60, "resetTime": 1640995200000 }
+    }
+  }
+}
+```
+
+**Jira Rate Limits:**
+```json
+{
+  "limits": {
+    "jira": {
+      "global": { "limit": null, "remaining": null, "usagePercent": null, "resetTime": null, "retryAfter": null }
+    }
+  }
+}
+```
 
 ## Development Endpoints
 
