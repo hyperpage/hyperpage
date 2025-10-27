@@ -11,6 +11,7 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
 - **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues with status change tracking
 - **Activity Feeds**: Real-time updates from all repositories with rich status transitions
+- **Rate Limit Monitoring**: Real-time API rate limit tracking with intelligent tooltips and status indicators
 - **Modern UI**: Professional design system using DaisyUI components with Tailwind CSS
 - **Theme System**: Comprehensive light/dark mode switching with DaisyUI theming
 

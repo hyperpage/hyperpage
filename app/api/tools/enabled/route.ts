@@ -12,6 +12,7 @@ export async function GET() {
     const enabledToolsData = enabledTools.map((tool: Tool) => ({
       name: tool.name,
       slug: tool.slug,
+      capabilities: tool.capabilities || [],
       enabled: true, // All tools here are enabled
       widgets: Array.isArray(tool.widgets)
         ? tool.widgets.map((widget: ToolWidget) => ({
