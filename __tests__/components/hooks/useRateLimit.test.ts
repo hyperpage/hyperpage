@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useRateLimit, useMultipleRateLimits, getRateLimitStatusColor, getRateLimitStatusBgColor, formatUsagePercent, formatTimeUntilReset } from '../../../app/components/hooks/useRateLimit';
 

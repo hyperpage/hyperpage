@@ -1,6 +1,6 @@
 // Rate limit cache and monitoring system
 
-import { RateLimitStatus, RateLimitCache, RateLimitUsage, PlatformRateLimits, GitHubRateLimitResponse, GitLabRateLimitResponse, JiraRateLimitResponse } from './types/rate-limit';
+import { RateLimitStatus, RateLimitCache, RateLimitUsage, PlatformRateLimits, GitHubRateLimitResponse } from './types/rate-limit';
 import { toolRegistry } from '../tools/registry';
 
 // In-memory cache with TTL support

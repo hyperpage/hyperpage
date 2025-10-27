@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Tool, ToolRegistry, ToolIntegration } from "./tool-types";
 import { getToolIcon } from "./ui-props";
 import { toolRegistry } from "./registry";
+import { validateToolConfig } from "./validation";
 
 // Import tools server-side - each tool registers itself and checks enabled status
 // This eliminates client-side race conditions
@@ -77,8 +78,6 @@ const getIconComponent = (name: string): ReactNode => {
 // Helper function to get tool integrations for UI display
 // Returns tools with their integration status for sidebar/components
 export const getToolIntegrations = (): ToolIntegration[] => {
-  const { validateToolConfig } = require('./validation');
-
   return getEnabledTools().map((tool) => {
     // Use the validation system to determine status
     const healthCheck = validateToolConfig(tool);

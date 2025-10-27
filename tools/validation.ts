@@ -1,6 +1,5 @@
-import { NextRequest } from "next/server";
-import { Tool, ToolConfig } from "./tool-types";
-import { getToolUrls } from "./index";
+import { Tool } from "./tool-types";
+import { getToolUrls, getAllTools } from "./index";
 
 /**
  * Tool configuration validation and error recovery system
@@ -26,7 +25,6 @@ export interface ToolValidationResult {
 export function validateToolConfig(tool: Tool): ToolValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const slug = tool.slug;
 
   // Check if tool has validation requirements defined
   if (!tool.validation) {
@@ -130,8 +128,6 @@ export async function testToolConnectivity(
   try {
     // Test connectivity based on tool's first API endpoint
     if (tool.apis && Object.keys(tool.apis).length > 0) {
-      const firstEndpoint = Object.keys(tool.apis)[0];
-
       // Create a test request to the tool's API endpoint
       const { apiUrl } = getToolUrls(tool);
       if (apiUrl) {
@@ -160,14 +156,14 @@ export async function testToolConnectivity(
             result.errors.push(`API responded with status ${response.status}`);
             result.status = 'error';
           }
-        } catch (fetchError) {
+        } catch {
           clearTimeout(timeoutId);
           result.errors.push('API connectivity test failed');
           result.status = 'error';
         }
       }
     }
-  } catch (error) {
+  } catch {
     result.errors.push('Unexpected error during connectivity test');
     result.status = 'error';
   }
@@ -262,7 +258,6 @@ export function getCircuitBreakerStatus(toolName: string) {
  */
 export function getAllToolsHealth(): Record<string, ToolValidationResult> {
   const health: Record<string, ToolValidationResult> = {};
-  const { getAllTools } = require('./index');
 
   getAllTools().forEach((tool: Tool) => {
     health[tool.slug] = validateToolConfig(tool);

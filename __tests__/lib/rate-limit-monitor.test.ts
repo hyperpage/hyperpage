@@ -9,18 +9,24 @@ import {
   clearRateLimitCache,
   getCacheStats
 } from '../../lib/rate-limit-monitor';
-import { RateLimitStatus, PlatformRateLimits } from '../../lib/types/rate-limit';
-
-// Spy on the toolRegistry directly
-vi.mock('../../tools/registry', () => ({
-  toolRegistry: {}
-}));
+import { PlatformRateLimits } from '../../lib/types/rate-limit';
 
 import { toolRegistry } from '../../tools/registry';
+import { Tool } from '../../tools/tool-types';
 
 // Create spy for global.fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+// Type-safe mock tool registry
+type MockToolRegistry = { [key: string]: Tool | undefined };
+
+// Mock tool for testing with minimal required properties
+type MockTool = Tool & {
+  handlers: {
+    'rate-limit': ReturnType<typeof vi.fn>;
+  };
+};
 
 describe('Rate Limit Monitor Library', () => {
   beforeEach(() => {
@@ -241,7 +247,8 @@ describe('Rate Limit Monitor Library', () => {
         }
       };
 
-      expect(calculateOverallStatus(limits)).toBe('critical');
+      const result = calculateOverallStatus(limits);
+      expect(result).toBe('critical');
     });
   });
 
@@ -332,16 +339,24 @@ describe('Rate Limit Monitor Library', () => {
   });
 
   describe('getRateLimitStatus', () => {
-    const mockTool = {
+    const mockRateLimitHandler = vi.fn();
+
+    const mockTool: Tool = {
+      name: 'GitHub',
+      slug: 'github',
+      enabled: true,
       capabilities: ['rate-limit'],
+      ui: { color: '', icon: 'GitHubIcon' },
+      widgets: [],
+      apis: {},
       handlers: {
-        'rate-limit': vi.fn()
+        'rate-limit': mockRateLimitHandler
       }
     };
 
     beforeEach(() => {
-      (toolRegistry as any).github = mockTool;
-      mockTool.handlers['rate-limit'].mockResolvedValue({
+      (toolRegistry as Record<string, Tool>).github = mockTool;
+      mockRateLimitHandler.mockResolvedValue({
         rateLimit: {
           resources: {
             core: { limit: 5000, remaining: 4000, reset: 1640995200 },
@@ -353,11 +368,14 @@ describe('Rate Limit Monitor Library', () => {
     });
 
     afterEach(() => {
-      delete (toolRegistry as any).github;
+      delete (toolRegistry as Record<string, Tool>).github;
     });
 
     it('should return null for tools without rate-limit capability', async () => {
-      (toolRegistry as any).github.capabilities = [];
+      const tool = (toolRegistry as Record<string, Tool>).github;
+      if (tool) {
+        tool.capabilities = [];
+      }
 
       const result = await getRateLimitStatus('github');
 
@@ -456,8 +474,14 @@ describe('Rate Limit Monitor Library', () => {
       const customBaseUrl = 'http://custom.example.com';
 
       // This test runs separately, so we need to set up the tool
-      (toolRegistry as any).github = {
+      const testTool: Tool = {
+        name: 'GitHub',
+        slug: 'github',
+        enabled: true,
         capabilities: ['rate-limit'],
+        ui: { color: '', icon: 'GitHubIcon' },
+        widgets: [],
+        apis: {},
         handlers: {
           'rate-limit': vi.fn().mockResolvedValue({
             rateLimit: {
@@ -468,6 +492,8 @@ describe('Rate Limit Monitor Library', () => {
           })
         }
       };
+
+      (toolRegistry as Record<string, Tool>).github = testTool;
 
       const fetchSpy = vi.fn().mockResolvedValue({
         ok: true,
@@ -490,7 +516,7 @@ describe('Rate Limit Monitor Library', () => {
       );
 
       // Clean up
-      delete (toolRegistry as any).github;
+      delete (toolRegistry as Record<string, Tool>).github;
     });
   });
 
