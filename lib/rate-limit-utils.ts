@@ -93,12 +93,39 @@ export const getMaxUsageForPlatform = (rateLimitStatus: any): number => {
   // Get all usage percentages for this platform's endpoints
   const usagePercents = Object.values(platformLimits)
     .map((usage: any) => usage.usagePercent)
-    .filter((percent): percent is number => percent !== null && percent !== undefined);
+    .filter((percent): percent is number => percent !== null);
 
   if (usagePercents.length === 0) return 0;
 
   // Return the maximum usage to be conservative
   return Math.max(...usagePercents);
+};
+
+/**
+ * GitHub-specific rate limit assessment that prioritizes search API limitations
+ * GitHub Search API is much more restrictive (30/min) than core/GraphQL (5000/hour)
+ * @param rateLimitStatus Rate limit status for GitHub
+ * @param searchMultiplier Additional penalty multiplier for search-heavy operations (default: 1.5x)
+ * @returns Adjusted usage percentage that prioritizes search API limits
+ */
+export const getGitHubWeightedUsage = (rateLimitStatus: any, searchMultiplier: number = 1.5): number => {
+  if (!rateLimitStatus?.limits?.github) return 0;
+
+  const githubLimits = rateLimitStatus.limits.github;
+
+  // Get individual API resource usages
+  const searchUsage = githubLimits.search?.usagePercent ?? 0;
+  const coreUsage = githubLimits.core?.usagePercent ?? 0;
+  const graphqlUsage = githubLimits.graphql?.usagePercent ?? 0;
+
+  // Prioritize search API usage with higher weighting since it's most restrictive
+  // Core and GraphQL APIs have similar limits (5000/hour)
+  const weightedCore = coreUsage * 0.7;      // Lower weight for core API
+  const weightedGraphql = graphqlUsage * 0.8; // Medium weight for GraphQL
+  const weightedSearch = searchUsage * searchMultiplier; // Higher weight for search API
+
+  // Return the maximum of weighted usages to be conservative
+  return Math.max(weightedCore, weightedGraphql, weightedSearch);
 };
 
 /**

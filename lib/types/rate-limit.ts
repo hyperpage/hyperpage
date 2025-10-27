@@ -78,3 +78,32 @@ export interface JiraRateLimitResponse {
   // Jira doesn't have structured rate limit responses
   message?: string;
 }
+
+// Cache-related types for API response caching
+export interface CacheEntry<T = any> {
+  data: T;
+  expiresAt: number; // Unix timestamp in milliseconds
+  accessTime?: number; // For LRU tracking
+}
+
+export interface CacheStats {
+  /** Current number of entries */
+  size: number;
+  /** Number of cache hits */
+  hits: number;
+  /** Number of cache misses */
+  misses: number;
+  /** Number of expired entries removed */
+  expiries: number;
+  /** Number of entries evicted due to size limit */
+  evictions: number;
+}
+
+export interface CacheConfig {
+  /** Default TTL for cache entries in milliseconds */
+  defaultTtlMs: number;
+  /** Maximum number of cache entries */
+  maxSize: number;
+  /** Whether to enable analytics/tracking */
+  enableStats: boolean;
+}
