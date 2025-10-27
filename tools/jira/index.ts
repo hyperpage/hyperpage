@@ -1,9 +1,8 @@
 import React from "react";
 import { Kanban } from "lucide-react";
 import { Tool, ToolConfig } from "../tool-types";
-import { JiraApiIssue, AtlassianNode, JiraChangelogItem, JiraChangelogResponse } from "./types";
+import { JiraApiIssue } from "./types";
 import { registerTool } from "../registry";
-import { getTimeAgo } from "../../lib/time-utils";
 
 export const jiraTool: Tool = {
   name: "Jira",

@@ -6,11 +6,8 @@ import {
   GitLabProject,
   GitLabPipeline,
   GitLabIssue,
-  GitLabEvent,
-  GitLabComparisonCommit,
 } from "./types";
 import { registerTool } from "../registry";
-import { getTimeAgo } from "../../lib/time-utils";
 
 export const gitlabTool: Tool = {
   name: "GitLab",
