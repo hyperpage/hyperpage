@@ -312,6 +312,30 @@ Hyperpage implements sophisticated **platform-specific rate limiting** to preven
 - **INSTANCE-AWARE**: More conservative backoff (2s base) for varying server sizes
 - **Graceful Degradation**: Handles unpredictable enterprise environments
 
+#### GitLab Rate Limiting Details
+
+**GitLab.com (SaaS) vs GitLab Premium/Silver Tiers:**
+
+|
+Tier | Rate Limit | Scope | Notes |
+|-----|------------|------|-------|
+| **GitLab.com** | 2000 requests/hour | Per user across all endpoints | All users have same limits regardless of billing tier |
+| **GitLab Premium** | 2000 requests/hour | Per user across all endpoints | No API limit increase over Free tier |
+| **GitLab Self-managed** | Configurable by administrator | Instance-wide or per-user | No default limits - entirely customizable |
+
+**Key Differences from GitHub:**
+- **No Tier Benefits**: Unlike GitHub (5,000 requests/hour for authenticated users), GitLab Premium does not provide increased API limits
+- **No Explicit Limits**: GitLab doesn't expose rate limit counters like GitHub's `X-RateLimit-Remaining` headers
+- **Retry-After Only**: Rate limiting detected solely through 429 responses and `Retry-After` headers
+- **Instance Variability**: Self-managed instances may have completely different (or no) rate limiting
+- **Conservative Backoff**: Hyperpage uses more conservative retry intervals compared to GitHub
+
+**Implementation Notes:**
+- **Configuration-Aware**: Tool automatically adapts to different GitLab instance types
+- **Fallback Strategy**: Progressive backoff (1m→4m→16m→64m→128m) when no `Retry-After` header present
+- **Jitter Implementation**: ±15% random jitter on retry delays to prevent thundering herd issues
+- **Premium Awareness**: Code comments note that Premium tier doesn't increase API limits
+
 #### Implementation Pattern
 
 ```typescript

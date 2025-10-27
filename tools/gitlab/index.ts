@@ -104,7 +104,33 @@ export const gitlabTool: Tool = {
       });
 
       if (!response.ok) {
+        // Handle rate limiting with fallback to reduced data
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After');
+          console.warn(`GitLab rate limited for merge requests. Retry after: ${retryAfter}s`);
+
+          // Return minimal emergency data instead of throwing
+          return {
+            mergeRequests: [{
+              id: "!RATE_LIMITED",
+              title: "Rate Limited - Reduced Data",
+              project: "System",
+              status: "limited",
+              author: "System",
+              created: new Date().toLocaleDateString(),
+              url: webUrl,
+              rateLimited: true,
+              message: `Waiting ${retryAfter}s before retry. Showing cached data.`
+            }],
+            warning: {
+              message: "GitLab API rate limited",
+              retryAfter: retryAfter ? parseInt(retryAfter, 10) : 60
+            }
+          };
+        }
+
         const errorText = await response.text();
+        // For other errors, throw to maintain existing behavior
         throw new Error(`GitLab API error: ${response.status} - ${errorText}`);
       }
 
@@ -338,17 +364,32 @@ export const gitlabTool: Tool = {
           if (retryAfter) {
             // Honor GitLab's requested wait time from Retry-After header
             const retryAfterSeconds = parseInt(retryAfter, 10);
-            return retryAfterSeconds * 1000; // Convert to milliseconds
+
+            // Add jitter (±15%) to prevent thundering herd issues
+            const jitter = (Math.random() - 0.5) * 0.3; // -15% to +15%
+            const jitterMultiplier = 1 + jitter;
+            const adjustedDelay = Math.max(retryAfterSeconds * jitterMultiplier, 1);
+
+            return Math.floor(adjustedDelay * 1000); // Convert to milliseconds
           }
-          // Fallback to exponential backoff if no Retry-After header
-          const baseDelay = 1000; // 1 second base
-          return baseDelay * Math.pow(2, attemptNumber);
+
+          // Fallback to enhanced exponential backoff if no Retry-After header
+          // GitLab SaaS: 2000 requests/hour per user across all endpoints
+          // Use progressive delays starting from 1 minute
+          const baseDelayMinutes = [1, 4, 16, 64, 128]; // Progressive delays in minutes
+          const delayMinutes = baseDelayMinutes[Math.min(attemptNumber, baseDelayMinutes.length - 1)] || 256;
+
+          // Add jitter to prevent multiple instances from retrying simultaneously
+          const jitter = (Math.random() - 0.5) * 0.2; // -10% to +10%
+          const jitterMultiplier = 1 + jitter;
+
+          return Math.floor(delayMinutes * 60 * 1000 * jitterMultiplier);
         }
 
         return null; // No retry needed
       },
-      maxRetries: 5, // GitLab can have more retries due to tier variability
-      backoffStrategy: 'exponential'
+      maxRetries: 3, // Reduced from 5 - GitLab Premium doesn't increase API limits significantly
+      backoffStrategy: 'linear' // Use linear backoff for progressive delays
     },
   },
 };

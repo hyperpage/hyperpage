@@ -11,8 +11,7 @@ import {
   getMaxUsageForPlatform,
   getGitHubWeightedUsage,
   getActivityAccelerationFactor,
-  clampInterval,
-  formatInterval
+  clampInterval
 } from "../../../lib/rate-limit-utils";
 import { useMultipleRateLimits, RateLimitStatus } from "./useRateLimit";
 

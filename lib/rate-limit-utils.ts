@@ -1,5 +1,7 @@
 // Rate limit utilities for adaptive polling and dynamic interval calculation
 
+import type { RateLimitStatus, PlatformRateLimits, RateLimitUsage } from './types/rate-limit';
+
 /**
  * Calculate dynamic poll interval based on rate limit usage and time-of-day
  * @param usagePercent Current API usage percentage (0-100)
@@ -79,21 +81,21 @@ export const getActivePlatforms = (enabledTools: Array<{ slug: string; capabilit
 /**
  * Get the maximum usage percentage across all endpoints for a platform
  * This provides the most conservative rate limit assessment
- * @param ratesLimitStatus Rate limit status for a platform
+ * @param rateLimitStatus Rate limit status for a platform
  * @returns Maximum usage percentage (0-100) or 0 if unknown
  */
-export const getMaxUsageForPlatform = (rateLimitStatus: any): number => {
+export const getMaxUsageForPlatform = (rateLimitStatus: RateLimitStatus): number => {
   if (!rateLimitStatus?.limits) return 0;
 
-  const platform = rateLimitStatus.platform;
+  const platform = rateLimitStatus.platform as keyof PlatformRateLimits;
   const platformLimits = rateLimitStatus.limits[platform];
 
   if (!platformLimits) return 0;
 
   // Get all usage percentages for this platform's endpoints
   const usagePercents = Object.values(platformLimits)
-    .map((usage: any) => usage.usagePercent)
-    .filter((percent): percent is number => percent !== null);
+    .map((usage: RateLimitUsage) => usage.usagePercent)
+    .filter((percent): percent is number => percent !== null && percent !== undefined);
 
   if (usagePercents.length === 0) return 0;
 
@@ -108,7 +110,7 @@ export const getMaxUsageForPlatform = (rateLimitStatus: any): number => {
  * @param searchMultiplier Additional penalty multiplier for search-heavy operations (default: 1.5x)
  * @returns Adjusted usage percentage that prioritizes search API limits
  */
-export const getGitHubWeightedUsage = (rateLimitStatus: any, searchMultiplier: number = 1.5): number => {
+export const getGitHubWeightedUsage = (rateLimitStatus: RateLimitStatus, searchMultiplier: number = 1.5): number => {
   if (!rateLimitStatus?.limits?.github) return 0;
 
   const githubLimits = rateLimitStatus.limits.github;

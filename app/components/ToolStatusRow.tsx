@@ -201,6 +201,15 @@ export default function ToolStatusRow() {
                     </div>
                   )}
 
+                  {/* Rate limit warning notification badge for GitLab */}
+                  {rateLimitStatus && tool.slug === 'gitlab' && rateLimitStatus.status === 'critical' && (
+                    <div className="absolute -top-2 -left-2">
+                      <div className="bg-red-500 text-white text-[8px] px-1 py-0.5 rounded font-bold animate-pulse">
+                        LIMITED
+                      </div>
+                    </div>
+                  )}
+
                   {/* Rate limit warning/critical indicator */}
                   {rateLimitStatus && (rateLimitStatus.status === 'warning' || rateLimitStatus.status === 'critical') && (
                     <div className="absolute -top-1 -left-1">

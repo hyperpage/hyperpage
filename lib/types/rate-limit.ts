@@ -80,7 +80,7 @@ export interface JiraRateLimitResponse {
 }
 
 // Cache-related types for API response caching
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   data: T;
   expiresAt: number; // Unix timestamp in milliseconds
   accessTime?: number; // For LRU tracking
