@@ -87,9 +87,9 @@ export const makeRetryRequest = async (
 
 ## ⚡ Dynamic Polling & Caching Tasks
 
-### 3. Implement Adaptive Polling Intervals
+### 3. Implement Adaptive Polling ![✅ COMPLETED]
 
-**Priority: Medium** | **Effort: High** | **Duration: 4-5 hours**
+**Priority: Medium** | **Effort: High** | **Duration: 3-4 hours** | **Status: COMPLETE**
 
 #### Subtasks:
 - [ ] Modify `useActivities` hook to support dynamic intervals
