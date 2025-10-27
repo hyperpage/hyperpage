@@ -21,7 +21,7 @@ export const githubTool: Tool = {
     icon: React.createElement(Github, { className: "w-5 h-5" }),
   },
   widgets: [],
-  capabilities: ["pull-requests", "workflows", "activity", "issues"], // Declares what this tool can provide
+  capabilities: ["pull-requests", "workflows", "activity", "issues", "rate-limit"], // Declares what this tool can provide
   validation: {
     required: ['GITHUB_TOKEN'],
     optional: ['GITHUB_USERNAME'],
@@ -112,6 +112,14 @@ export const githubTool: Tool = {
       response: {
         dataKey: "activity",
         description: "Array of recent GitHub activity events",
+      },
+    },
+    "rate-limit": {
+      method: "GET",
+      description: "Get current GitHub API rate limit status",
+      response: {
+        dataKey: "rateLimit",
+        description: "Current rate limit status including core, search, graphql limits and reset times",
       },
     },
   },
@@ -743,6 +751,31 @@ export const githubTool: Tool = {
 
       // Limit to 15 total activities to keep feed manageable
       return { activity: activityEvents.slice(0, 15) };
+    },
+    "rate-limit": async (request: Request, config: ToolConfig) => {
+      const apiUrl = config.formatApiUrl?.("https://github.com");
+      const token = process.env.GITHUB_TOKEN;
+
+      if (!token) {
+        throw new Error("GitHub API token not configured");
+      }
+
+      const rateLimitUrl = `${apiUrl}/rate_limit`;
+
+      const response = await fetch(rateLimitUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub rate limit API error: ${response.status}`);
+      }
+
+      const rateLimitData = await response.json();
+      return { rateLimit: rateLimitData };
     },
   },
   config: {
