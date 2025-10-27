@@ -76,6 +76,7 @@ Aggregates recent activities from all enabled tools.
 - **`GET /api/tools/github/issues`**: List user issues
 - **`GET /api/tools/github/workflows`**: List recent workflow runs
 - **`GET /api/tools/github/activity`**: Get user activity events with unique commit content (prevents duplicate commits across push events)
+- **`GET /api/tools/github/rate-limit`**: Get current GitHub API rate limit status for debugging 403 errors (includes core, search, graphql limits and reset times)
 
 #### GitLab Tool
 - **`GET /api/tools/gitlab/merge-requests`**: List merge requests
