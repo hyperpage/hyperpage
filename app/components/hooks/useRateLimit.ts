@@ -100,11 +100,11 @@ export function useMultipleRateLimits(platforms: string[], enabled: boolean = tr
       if (rateLimitStatus) {
         statuses.set(platform, rateLimitStatus);
       } else {
-        errors.set(platform, `Rate limit monitoring not supported`);
+        errors.set(platform, `Rate limit monitoring not supported for platform: ${platform}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      errors.set(platform, errorMessage);
+      errors.set(platform, `Failed to fetch rate limit status: ${errorMessage}`);
     } finally {
       loading.set(platform, false);
     }

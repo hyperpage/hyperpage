@@ -104,6 +104,38 @@ export const getMaxUsageForPlatform = (rateLimitStatus: RateLimitStatus): number
 };
 
 /**
+ * Jira instance size detection based on response patterns and headers
+ * Jira instances vary significantly in rate limits based on deployment type and size
+ * @param response Response object from Jira API
+ * @param defaultSize Fallback instance size
+ * @returns Detected instance size category
+ */
+export const detectJiraInstanceSize = (response: Response, defaultSize: 'small' | 'medium' | 'large' | 'cloud' = 'medium'): 'small' | 'medium' | 'large' | 'cloud' => {
+  // Check response headers for instance information
+  const serverHeader = response.headers.get('server') || '';
+  const xApplicationHost = response.headers.get('x-application-host') || '';
+
+  // Check for specific instance patterns
+  if (serverHeader.includes('atlassian') && xApplicationHost.includes('cloud')) {
+    return 'cloud';
+  }
+
+  // Check for Data Center/Server pattern hints
+  if (serverHeader.toLowerCase().includes('apache') ||
+      serverHeader.toLowerCase().includes('nginx') &&
+      !serverHeader.toLowerCase().includes('fastly')) {
+    return 'large'; // Server/Data Center instances
+  }
+
+  // Cloud instances return 'fastly' in server header
+  if (serverHeader.toLowerCase().includes('fastly')) {
+    return 'cloud';
+  }
+
+  return defaultSize;
+};
+
+/**
  * GitHub-specific rate limit assessment that prioritizes search API limitations
  * GitHub Search API is much more restrictive (30/min) than core/GraphQL (5000/hour)
  * @param rateLimitStatus Rate limit status for GitHub
