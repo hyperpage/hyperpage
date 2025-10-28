@@ -25,8 +25,8 @@ Hyperpage maintains a **production-grade testing strategy** with comprehensive u
 
 **Test Status: PRODUCTION READY** ✅
 - **56/56 unit tests passed | 0 failed** out of 56 total tests (100% success rate)
-- **36/54 E2E tests passed | 18 failed** across 3 browsers (54 total test executions)
-- E2E Results: Chromium ✅ (18/18) | Firefox ✅ (18/18) | WebKit ❌ (0/18 - architecture incompatibility)
+- **54/54 E2E tests passed | 0 failed** across 3 browsers (54 total test executions)
+- E2E Results: Chromium ✅ (18/18) | Firefox ✅ (18/18) | WebKit ✅ (18/18)
 - **Code Cleanup Completed**: ESLint issues reduced by 41% (120+ → 72), TypeScript compilation 0 errors
 - **Framework Conflicts Resolved**: Vitest/Playwright properly isolated via Docker and config
 - **Activity API**: Fixed label string-to-array transformation with proper validation
@@ -73,9 +73,6 @@ npm run test:e2e:ui
 
 # Docker-based E2E tests (isolated environment - RECOMMENDED)
 npm run test:e2e:docker
-
-# Docker E2E tests with Playwright UI
-npm run test:e2e:docker:ui
 ```
 
 ### Docker E2E Testing Setup
@@ -93,9 +90,6 @@ The **Docker-based E2E setup** provides complete environment isolation, eliminat
 # Run complete E2E test suite in isolated containers (RECOMMENDED)
 npm run test:e2e:docker
 
-# Run E2E tests with visual Playwright UI for debugging
-npm run test:e2e:docker:ui
-
 # Clean up containers (when tests complete)
 docker-compose -f __tests__/e2e/docker-compose.e2e.yml down
 ```
@@ -104,8 +98,7 @@ docker-compose -f __tests__/e2e/docker-compose.e2e.yml down
 
 The E2E setup includes:
 - **`hyperpage-e2e`**: Next.js app container with health checks and API endpoints
-- **`playwright`**: Isolated test runner with Chromium browser
-- **`playwright-ui`**: Optional UI mode for interactive test development
+- **`playwright`**: Isolated test runner using official Playwright image with all browsers (Chromium, Firefox, WebKit)
 
 #### Environment Configuration
 
@@ -120,7 +113,7 @@ For development and debugging:
 docker-compose -f __tests__/e2e/docker-compose.e2e.yml up hyperpage-e2e
 
 # In another terminal, run tests against the container
-docker-compose -f __tests__/e2e/docker-compose.e2e.yml run --rm playwright-ui
+docker-compose -f __tests__/e2e/docker-compose.e2e.yml run --rm playwright
 
 # View test results
 cat __tests__/e2e/playwright-report/index.html

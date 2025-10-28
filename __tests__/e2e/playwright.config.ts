@@ -6,6 +6,10 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './',
   testMatch: '**/*.spec.ts',
+
+  // Folder for test artifacts such as screenshots, videos, traces, etc.
+  outputDir: './__tests__/e2e/test-results',
+
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */

@@ -3,7 +3,7 @@ services:
     build:
       context: ../../.
       dockerfile: ./__tests__/e2e/Dockerfile.e2e
-      target: app
+      target: playwright
     ports:
       - "8010:3000"
     environment:
@@ -29,30 +29,11 @@ services:
       hyperpage-e2e:
         condition: service_healthy
     volumes:
-      - ./__tests__/e2e/playwright-report:/app/playwright-report
-      - ./__tests__/e2e/test-results:/app/test-results
+      - ./playwright-report:/app/playwright-report
+      - ./test-results:/app/test-results
     environment:
-      - BASE_URL=http://hyperpage-e2e:3000
+      - BASE_URL=http://localhost:3000
       - E2E_TEST=true
     command: npx playwright test --config=./__tests__/e2e/playwright.config.ts
     profiles:
       - e2e
-
-  # Optional: Keep container running for manual testing
-  playwright-ui:
-    build:
-      context: ../../.
-      dockerfile: ./__tests__/e2e/Dockerfile.e2e
-      target: playwright
-    depends_on:
-      hyperpage-e2e:
-        condition: service_healthy
-    volumes:
-      - ./__tests__/e2e/playwright-report:/app/playwright-report
-      - ./__tests__/e2e/test-results:/app/test-results
-    environment:
-      - BASE_URL=http://hyperpage-e2e:3000
-      - E2E_TEST=true
-    command: npx playwright test --config=./__tests__/e2e/playwright.config.ts --ui
-    profiles:
-      - e2e-ui

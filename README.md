@@ -51,7 +51,6 @@ npm run test:watch         # Watch mode development
 
 # E2E Tests (RECOMMENDED - Docker Isolation)
 npm run test:e2e:docker     # Full E2E suite in containers
-npm run test:e2e:docker:ui  # Interactive debug mode
 
 # Alternative E2E (Framework Conflicts Possible)
 npm run test:e2e           # Standard E2E with Playwright
