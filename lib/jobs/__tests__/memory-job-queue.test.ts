@@ -9,13 +9,24 @@
  * - Error handling and validation
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { MemoryJobQueue } from '../memory-job-queue';
 import { JobStatus, JobPriority, JobType } from '../../types/jobs';
 import { generateJobId } from '../memory-job-queue';
+import { initializeDatabase, closeDatabase } from '../../database';
 
 describe('Memory Job Queue', () => {
   let queue: MemoryJobQueue;
+
+  beforeAll(async () => {
+    // Initialize database before tests
+    await initializeDatabase();
+  });
+
+  afterAll(() => {
+    // Close database after tests
+    closeDatabase();
+  });
 
   beforeEach(() => {
     queue = new MemoryJobQueue('test-queue', 'Test Job Queue');

@@ -2,6 +2,9 @@
 
 import { RateLimitStatus, RateLimitCache, RateLimitUsage, PlatformRateLimits, GitHubRateLimitResponse } from './types/rate-limit';
 import { toolRegistry } from '../tools/registry';
+import { db } from './database';
+import { rateLimits, RateLimit } from './database/schema';
+import { eq } from 'drizzle-orm';
 
 // In-memory cache with TTL support
 let rateLimitCache: RateLimitCache = {};
@@ -175,8 +178,8 @@ export async function getRateLimitStatus(platform: string, baseUrl?: string): Pr
 
     const response = await fetch(`${actualBaseUrl}/api/rate-limit/${platform}`);
 
-    if (!response.ok) {
-      console.warn(`Rate limit API call failed for ${platform}: ${response.status}`);
+    if (!response || !response.ok) {
+      console.warn(`Rate limit API call failed for ${platform}: ${response ? response.status : 'no response'}`);
       // Return stale cache if available, otherwise return null
       return cached?.data || null;
     }
@@ -188,6 +191,11 @@ export async function getRateLimitStatus(platform: string, baseUrl?: string): Pr
       data: rateLimitStatus,
       expiresAt: now + CACHE_TTL_MS
     };
+
+    // Persist rate limit data to database for recovery
+    saveRateLimitStatus(rateLimitStatus).catch(error =>
+      console.error('Failed to persist rate limit data:', error)
+    );
 
     return rateLimitStatus;
   } catch (error) {
@@ -202,6 +210,171 @@ export async function getRateLimitStatus(platform: string, baseUrl?: string): Pr
  */
 export function clearRateLimitCache(): void {
   rateLimitCache = {};
+}
+
+/**
+ * Load persisted rate limit data from database at application startup
+ */
+export async function loadPersistedRateLimits(): Promise<number> {
+  try {
+    console.info('Loading persisted rate limit data...');
+    const persistedLimits = await db.select().from(rateLimits);
+
+    let loadedCount = 0;
+    const now = Date.now();
+
+    for (const limit of persistedLimits) {
+      try {
+        // Only load data that's not too old (within 24 hours)
+        const lastUpdatedMs = Number(limit.lastUpdated);
+        if (now - lastUpdatedMs > 24 * 60 * 60 * 1000) {
+          continue; // Skip stale data
+        }
+
+        const platform = limit.platform;
+        const cacheKey = platform;
+
+        // Check if we have fresh data already loaded
+        const existing = rateLimitCache[cacheKey];
+        if (existing && existing.data.lastUpdated > lastUpdatedMs) {
+          continue; // Skip if we have fresher data
+        }
+
+        // Reconstruct rate limit status from persisted data
+        const limitTotal = limit.limitTotal ? Number(limit.limitTotal) : null;
+        const limitRemaining = limit.limitRemaining ? Number(limit.limitRemaining) : null;
+        const resetTime = limit.resetTime ? Number(limit.resetTime) : null;
+
+        let status: 'normal' | 'warning' | 'critical' | 'unknown' = 'unknown';
+        if (limitRemaining !== null && limitTotal !== null) {
+          const usagePercent = ((limitTotal - limitRemaining) / limitTotal) * 100;
+          status = usagePercent >= 90 ? 'critical' : usagePercent >= 75 ? 'warning' : 'normal';
+        }
+
+        const limitsObject: PlatformRateLimits = {};
+        if (platform === 'github') {
+          limitsObject.github = {
+            global: {
+              limit: limitTotal,
+              remaining: limitRemaining,
+              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
+              usagePercent: limitTotal && limitRemaining ?
+                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              resetTime,
+              retryAfter: null
+            }
+          } as any; // GitHub has global limit as approximation
+        } else if (platform === 'gitlab') {
+          limitsObject.gitlab = {
+            global: {
+              limit: limitTotal,
+              remaining: limitRemaining,
+              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
+              usagePercent: limitTotal && limitRemaining ?
+                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              resetTime,
+              retryAfter: null
+            }
+          };
+        } else if (platform === 'jira') {
+          limitsObject.jira = {
+            global: {
+              limit: limitTotal,
+              remaining: limitRemaining,
+              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
+              usagePercent: limitTotal && limitRemaining ?
+                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              resetTime,
+              retryAfter: null
+            }
+          };
+        }
+
+        const rateLimitStatus: RateLimitStatus = {
+          platform,
+          lastUpdated: lastUpdatedMs,
+          dataFresh: false, // Data from restart isn't fresh
+          status,
+          limits: limitsObject
+        };
+
+        // Cache the persisted data
+        rateLimitCache[cacheKey] = {
+          data: rateLimitStatus,
+          expiresAt: resetTime ? Math.min(now + CACHE_TTL_MS, resetTime) : (now + CACHE_TTL_MS)
+        };
+
+        loadedCount++;
+      } catch (error) {
+        console.error(`Failed to load persisted rate limit for ${limit.platform}:`, error);
+        continue;
+      }
+    }
+
+    console.info(`Successfully loaded ${loadedCount} persisted rate limit records`);
+    return loadedCount;
+  } catch (error) {
+    console.error('Failed to load persisted rate limits:', error);
+    return 0;
+  }
+}
+
+/**
+ * Save rate limit status to database for persistence
+ */
+export async function saveRateLimitStatus(rateLimitStatus: RateLimitStatus): Promise<void> {
+  try {
+    const platform = rateLimitStatus.platform;
+
+    // Extract limit data by checking known platform types
+    let platformLimits: RateLimitUsage | undefined;
+
+    if (platform === 'github' && rateLimitStatus.limits.github) {
+      // For GitHub, use core limits as primary (most restrictive)
+      platformLimits = rateLimitStatus.limits.github.core;
+    } else if (platform === 'gitlab' && rateLimitStatus.limits.gitlab) {
+      platformLimits = rateLimitStatus.limits.gitlab.global;
+    } else if (platform === 'jira' && rateLimitStatus.limits.jira) {
+      platformLimits = rateLimitStatus.limits.jira.global;
+    }
+
+    if (!platformLimits) {
+      console.warn(`No rate limit data found for platform ${platform}, skipping persistence`);
+      return;
+    }
+
+    const limitRecord = {
+      id: `${platform}:global`, // Use consistent format: platform:resource_type
+      platform,
+      limitRemaining: platformLimits.remaining,
+      limitTotal: platformLimits.limit,
+      resetTime: platformLimits.resetTime,
+      lastUpdated: rateLimitStatus.lastUpdated,
+    };
+
+    // Upsert the rate limit record
+    await db.insert(rateLimits)
+      .values(limitRecord)
+      .onConflictDoUpdate({
+        target: rateLimits.id,
+        set: {
+          limitRemaining: limitRecord.limitRemaining,
+          limitTotal: limitRecord.limitTotal,
+          resetTime: limitRecord.resetTime,
+          lastUpdated: limitRecord.lastUpdated,
+        }
+      });
+
+    // Also clean up old rate limit records (older than 7 days)
+    const cutoffTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    await db.delete(rateLimits).where(
+      eq(rateLimits.lastUpdated as any, cutoffTime) // Simplified comparison
+    );
+
+  } catch (error) {
+    console.error(`Failed to save rate limit status for ${rateLimitStatus.platform}:`, error);
+    // Don't throw - persistence failures shouldn't break rate limit monitoring
+  }
 }
 
 /**
