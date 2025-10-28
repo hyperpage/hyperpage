@@ -34,7 +34,7 @@ Verify tool follows registry-driven pattern:
 Check type definitions:
 - [ ] Tool-specific interfaces defined in tools/[tool]/types.ts
 - [ ] ApiParams, Response, ActivityItem interfaces present
-- [ ] Capabilities type correctly defined as union of 'dashboard' | 'activity'
+- [ ] Capabilities type correctly defined as union of 'portal' | 'activity'
 - [ ] Proper TypeScript typing without any
 
 ### Handler Implementation
@@ -118,7 +118,7 @@ Test the tool endpoints (requires environment config):
 
 ```xml
 <execute_command>
-<command>curl -X GET "http://localhost:3000/api/tools/{tool-name}/dashboard" -H "Content-Type: application/json"</command>
+<command>curl -X GET "http://localhost:3000/api/tools/{tool-name}/portal" -H "Content-Type: application/json"</command>
 <requires_approval>false</requires_approval>
 </execute_command>
 ```
@@ -140,7 +140,7 @@ Verify API responses:
 
 Validate UI integration:
 - [ ] Tool appears in enabled tools list
-- [ ] Widgets render in dashboard
+- [ ] Widgets render in portal
 - [ ] Sidebar shows tool status
 - [ ] Dark mode compatibility
 - [ ] Responsive behavior (mobile/desktop)

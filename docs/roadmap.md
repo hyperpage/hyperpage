@@ -11,14 +11,14 @@ This document outlines the planned enhancements and future development direction
 
 ### Medium Priority
 4. **Authentication System**: OAuth integration for secure tool access
-5. **Workspace Management**: Multiple dashboard configurations and multi-project support
+5. **Workspace Management**: Multiple portal configurations and multi-project support
 6. **Performance Monitoring**: Real-time metrics and alerting for production operations
 
 ## Advanced Features
 
 ### Future Considerations
 7. **Advanced Analytics**: Deeper insights and reporting capabilities
-8. **Mobile Application**: Native mobile dashboard access
+8. **Mobile Application**: Native mobile portal access
 9. **Plugin Architecture**: Third-party extension support
 10. **Background Processing**: Enhanced async job execution for heavy computations
 

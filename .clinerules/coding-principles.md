@@ -46,7 +46,7 @@ This document outlines the core architectural principles and development pattern
 - **Auto-Refresh Configuration**: Widgets support configurable `refreshInterval` (in milliseconds) for automatic background polling - e.g., 300000ms for 5-minute intervals.
 - **Manual Refresh**: All dynamic widgets include refresh buttons with loading indicators and error handling.
 - **Data Integration**: Widgets should accept mock data initially, but be designed for easy integration with real API endpoints through the `dynamic` flag system.
-- **Data Sorting**: All widgets in the overview dashboard automatically sort data by time with the most recent items displayed first. Time-based sorting detects common timestamp fields (`created_at`, `updated_at`, `created`, `updated`, `timestamp`) across different tools.
+- **Data Sorting**: All widgets in the overview portal automatically sort data by time with the most recent items displayed first. Time-based sorting detects common timestamp fields (`created_at`, `updated_at`, `created`, `updated`, `timestamp`) across different tools.
 - **State Management**: Use React hooks for widget-specific state. Avoid global state for simple interactions.
 - **Loading States**: Widgets implement smooth loading animations with shimmer effects and background refresh capability. Content remains visible during refresh operations to prevent visual disruption - users maintain interaction with existing data while updates load seamlessly.
 - **Animation Framework**: Use custom CSS animations (`animate-shimmer`, `animate-fade-in-up`) for loading skeletons and content transitions. Staggered fade-in animations provide polished, professional loading experiences.
@@ -65,12 +65,12 @@ This document outlines the core architectural principles and development pattern
 - **Client/Server Separation**: UI components fetch enabled tools via API to avoid passing sensitive handlers and configs to client-side code.
 - **Single API Router**: All tool API calls route through `/api/tools/[tool]/[endpoint]` which uses `tool.handlers[endpoint]` for execution.
 - **Tool Addition**: New tools require ONLY 3 steps: create tool definition, import in tools/index.ts, and set environment variables.
-- **UI Filtering**: Only enabled tools appear in the dashboard UI and sidebar; disabled tools don't register in active UI or API routing. Widgets are only displayed for enabled tools that have both widget definitions and API endpoints configured.
+- **UI Filtering**: Only enabled tools appear in the portal UI and sidebar; disabled tools don't register in active UI or API routing. Widgets are only displayed for enabled tools that have both widget definitions and API endpoints configured.
 - **Refresh Configuration**: Tools can configure `refreshInterval` in widget definitions for automatic data polling (e.g., Jira refreshes every 5 minutes). Refresh intervals should be appropriate to data update frequency to balance real-time updates with API rate limits.
 
 ## Activity System & Livefeed
 
-- **Realtime Activity Feed**: Activity feed automatically refreshes every 15 seconds with polling intervals, matching widget realtime behavior. Includes tab visibility refresh when returning to dashboard tab.
+- **Realtime Activity Feed**: Activity feed automatically refreshes every 15 seconds with polling intervals, matching widget realtime behavior. Includes tab visibility refresh when returning to portal tab.
 - **Enhanced Context Information**: Activity items now include comprehensive metadata for better understanding:
   - **Repository/Project Context**: Shows the repository (GitHub/GitLab) or project (Jira) where the activity occurred
   - **Branch Information**: Displays branch names for code-related activities (pushes, PRs/MRs)
@@ -87,7 +87,7 @@ This document outlines the core architectural principles and development pattern
   Push events show descriptive text only (no hyperlinks) to avoid 404 errors from GitLab URL limitations.
 - **Clean Descriptions**: Activity descriptions should not duplicate item identifiers - ticket keys are displayed as hyperlinks instead of prefixed text (e.g., use "Issue title" + **PROJ-456** hyperlink, not "PROJ-456: Issue title").
 - **Navigation Security**: All activity hyperlinks open in new tabs with `target="_blank"` and `rel="noopener noreferrer"` for security.
-- **Status Color Coding**: Status badges use consistent color schemes across the dashboard:
+- **Status Color Coding**: Status badges use consistent color schemes across the portal:
   - Green: open, active, success states
   - Red: closed, failed states
   - Purple: merged, special states
@@ -124,7 +124,7 @@ This document outlines the core architectural principles and development pattern
 - ✅ Register tool in `tools/index.ts`
 - ✅ Set environment variables in `.env.local`
 - ✅ Test API endpoints work at `/api/tools/[tool]/[endpoint]`
-- ✅ Verify widgets appear in dashboard automatically
+- ✅ Verify widgets appear in portal automatically
 - ✅ Confirm sidebar fetches enabled tools from `/api/tools/enabled` endpoint
 
 ## Workflow Automation

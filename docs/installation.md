@@ -100,13 +100,13 @@ Only web URLs need to be configured in environment variables.
    npm run dev
    ```
 
-2. **Access the dashboard:**
+2. **Access the portal:**
    Open [http://localhost:3000](http://localhost:3000) in your browser
 
 3. **Enable tools:**
    - Edit `.env.local` to set `ENABLE_TOOL=true` for desired integrations
    - Restart the development server
-   - Tool widgets will appear on the dashboard automatically
+   - Tool widgets will appear on the portal automatically
 
 ## Production Build
 
@@ -125,7 +125,7 @@ Only web URLs need to be configured in environment variables.
 
 ### Common Issues
 
-**"Tool not appearing on dashboard"**
+**"Tool not appearing on portal"**
 - Verify `ENABLE_TOOL=true` in `.env.local`
 - Restart the development server after configuration changes
 - Check that all required environment variables are set
@@ -150,7 +150,7 @@ Only web URLs need to be configured in environment variables.
 ## Next Steps
 
 Once installed and configured:
-- See [`docs/usage.md`](usage.md) for comprehensive dashboard features and navigation
+- See [`docs/usage.md`](usage.md) for comprehensive portal features and navigation
 - Read [`docs/testing.md`](testing.md) for testing strategy and quality assurance
 - Check [`docs/api.md`](api.md) for technical integration details
 - Review [`docs/architecture.md`](architecture.md) for system design patterns
