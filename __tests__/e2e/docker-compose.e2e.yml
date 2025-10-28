@@ -5,7 +5,7 @@ services:
       dockerfile: ./__tests__/e2e/Dockerfile.e2e
       target: app
     ports:
-      - "3000:3000"
+      - "8010:3000"
     environment:
       - NODE_ENV=test
       - ENABLE_GITHUB=true
@@ -29,8 +29,8 @@ services:
       hyperpage-e2e:
         condition: service_healthy
     volumes:
-      - ./playwright-report:/app/playwright-report
-      - ./test-results:/app/test-results
+      - ./__tests__/e2e/playwright-report:/app/playwright-report
+      - ./__tests__/e2e/test-results:/app/test-results
     environment:
       - BASE_URL=http://hyperpage-e2e:3000
       - E2E_TEST=true
