@@ -105,7 +105,7 @@ const cacheEvictionsTotal = new promClient.Counter({
 async function updateMetrics() {
   try {
     // Update cache metrics
-    const cacheStats = defaultCache.getStats();
+    const cacheStats = await defaultCache.getStats();
     cacheSizeGauge.set(cacheStats.size);
     cacheHitsTotal.reset(); // Reset counter and set to current value
     cacheHitsTotal.inc(cacheStats.hits);

@@ -1,40 +1,12 @@
+import type { ICache, CacheEntry, CacheOptions, CacheStats } from './cache-interface';
+
 /**
  * In-memory cache with TTL support for API response caching.
  * Implements LRU eviction when cache exceeds maximum size.
  * Automatically cleans up expired entries on cache miss.
+ * Implements the ICache interface for unified caching across backends.
  */
-
-export interface CacheEntry<T = unknown> {
-  data: T;
-  expiresAt: number; // Unix timestamp in milliseconds
-  accessTime?: number; // For LRU tracking (optional)
-}
-
-export interface CacheOptions {
-  /** Maximum number of entries before LRU eviction starts */
-  maxSize: number;
-  /** Whether to enable LRU tracking for access-based eviction */
-  enableLru: boolean;
-}
-
-export interface CacheStats {
-  /** Current number of entries */
-  size: number;
-  /** Number of cache hits */
-  hits: number;
-  /** Number of cache misses */
-  misses: number;
-  /** Number of expired entries removed */
-  expiries: number;
-  /** Number of entries evicted due to size limit */
-  evictions: number;
-}
-
-/**
- * Memory-based cache with TTL and LRU eviction support.
- * Designed for caching API responses to reduce external API calls.
- */
-export class MemoryCache<T = unknown> {
+export class MemoryCache<T = unknown> implements ICache<T> {
   private cache = new Map<string, CacheEntry<T>>();
   private stats = {
     hits: 0,
@@ -54,11 +26,11 @@ export class MemoryCache<T = unknown> {
    * @param data - Data to cache
    * @param ttlMs - Time to live in milliseconds
    */
-  set(key: string, data: T, ttlMs: number): void {
+  async set(key: string, data: T, ttlMs: number): Promise<void> {
     // Clean up expired entries if over 90% capacity
     const capacityRatio = this.cache.size / this.maxSize;
     if (capacityRatio > 0.9) {
-      this.cleanupExpired();
+      await this.cleanupExpired();
     }
 
     // Enforce size limit using simple FIFO eviction if needed
@@ -89,7 +61,7 @@ export class MemoryCache<T = unknown> {
    * @param key - Cache key
    * @returns Cached data or undefined if not found/expired
    */
-  get(key: string): T | undefined {
+  async get(key: string): Promise<T | undefined> {
     const entry = this.cache.get(key);
 
     if (!entry) {
@@ -117,16 +89,17 @@ export class MemoryCache<T = unknown> {
    * @param key - Cache key
    * @returns true if found and valid
    */
-  has(key: string): boolean {
-    return this.get(key) !== undefined;
+  async has(key: string): Promise<boolean> {
+    const value = await this.get(key);
+    return value !== undefined;
   }
 
   /**
    * Remove a specific entry from the cache.
    * @param key - Cache key
-   * @returns true if entry existed
+   * @returns true if entry existed and was removed
    */
-  delete(key: string): boolean {
+  async delete(key: string): Promise<boolean> {
     const existed = this.cache.delete(key);
     if (existed) {
       this.stats.evictions++; // Count as eviction since manually removed
@@ -137,7 +110,7 @@ export class MemoryCache<T = unknown> {
   /**
    * Clear all entries from the cache.
    */
-  clear(): void {
+  async clear(): Promise<void> {
     this.cache.clear();
     // Reset stats but keep hit/miss ratio metrics
     this.stats.expiries = 0;
@@ -148,10 +121,14 @@ export class MemoryCache<T = unknown> {
    * Get cache statistics.
    * @returns current cache stats
    */
-  getStats(): CacheStats {
+  async getStats(): Promise<CacheStats> {
     return {
       size: this.cache.size,
-      ...this.stats,
+      hits: this.stats.hits,
+      misses: this.stats.misses,
+      expiries: this.stats.expiries,
+      evictions: this.stats.evictions,
+      backend: 'memory',
     };
   }
 
@@ -159,7 +136,7 @@ export class MemoryCache<T = unknown> {
    * Force cleanup of all expired entries.
    * @returns number of entries removed
    */
-  cleanupExpired(): number {
+  async cleanupExpired(): Promise<number> {
     const now = Date.now();
     let removed = 0;
 
@@ -175,30 +152,35 @@ export class MemoryCache<T = unknown> {
   }
 
   /**
-   * Get the number of entries currently in the cache (including expired).
-   * For accurate count of valid entries, use getStats().size after cleanup.
+   * Get cache entry details for a key (for debugging).
+   */
+  async getEntry(key: string): Promise<CacheEntry<T> | undefined> {
+    return this.cache.get(key);
+  }
+
+  /**
+   * Get the current number of entries in the cache (including expired).
+   * For accurate count of valid entries, implementations should
+   * consider expired entries unless they have auto-cleanup.
    */
   get size(): number {
     return this.cache.size;
   }
 
   /**
-   * Get a snapshot of all cache keys (for debugging/monitoring).
+   * Get snapshot of all cache keys (for debugging/admin purposes).
+   * Implementations may limit this for performance in production.
    */
-  get keys(): string[] {
+  get keys(): readonly string[] {
     return Array.from(this.cache.keys());
-  }
-
-  /**
-   * Get cache entry details for a key (for debugging).
-   */
-  getEntry(key: string): CacheEntry | undefined {
-    return this.cache.get(key);
   }
 }
 
 // Export a default cache instance for global use
-export const defaultCache = new MemoryCache();
+export const defaultMemoryCache = new MemoryCache();
+
+// Export alias for backward compatibility with existing API routes
+export const defaultCache = defaultMemoryCache;
 
 /**
  * Utility function to generate a cache key from tool, endpoint, and query params.
