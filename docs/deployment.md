@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deployment, CI/CD pipelines, and production security for the Hyperpage dashboard.
+This guide covers deployment, CI/CD pipelines, and production security for the Hyperpage portal.
 
 ## Deployment Options
 
@@ -20,7 +20,7 @@ Hyperpage is optimized for Vercel's serverless platform:
    ```
 
 2. **Environment Variables:**
-   Configure environment variables in Vercel dashboard:
+   Configure environment variables in Vercel portal:
    ```env
    ENABLE_GITHUB=true
    GITHUB_TOKEN=your_github_token
@@ -217,7 +217,7 @@ const validateApiToken = (token: string, tool: string): boolean => {
 ```env
 # Production Environment
 NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://your-dashboard.com
+NEXT_PUBLIC_APP_URL=https://your-portal.com
 
 # Tool Configurations
 ENABLE_GITHUB=true
@@ -285,7 +285,7 @@ export default function App({ Component, pageProps }) {
 ### Configuration Backup
 - **Environment Variables**: Regularly export configurations (without secrets)
 - **Tool Settings**: Backup enablement and threshold settings
-- **User Preferences**: Export dashboard customizations if applicable
+- **User Preferences**: Export portal customizations if applicable
 
 ### Disaster Recovery
 - **Automated Builds**: CI/CD enables rapid redeployment

@@ -1,6 +1,6 @@
 # Contributing to Hyperpage
 
-We welcome contributions from the community! This guide outlines the development process, coding standards, and workflow for contributing to the Hyperpage dashboard.
+We welcome contributions from the community! This guide outlines the development process, coding standards, and workflow for contributing to the Hyperpage portal.
 
 ## Development Workflow
 
@@ -222,7 +222,7 @@ Hyperpage implements a comprehensive testing strategy with **69 tests** across u
 └── components/hooks/useToolData.test.ts     # 17/17 undefined (act() wrappers needed)
 
 🌐 E2E Tests (environment configuration needed):
-├── dashboard.spec.ts            # Dashboard functionality tests
+├── portal.spec.ts            # Dashboard functionality tests
 └── tool-integration.spec.ts     # Tool integration validation
 ```
 
@@ -259,7 +259,7 @@ __tests__/
 
 e2e/                       # End-to-End Tests (16 tests)
 ├── playwright.config.ts   # Multi-browser configuration
-├── dashboard.spec.ts      # Dashboard user journeys (8 tests)
+├── portal.spec.ts      # Dashboard user journeys (8 tests)
 └── tool-integration.spec.ts # Tool integration validation (8 tests)
 ```
 

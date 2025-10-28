@@ -21,7 +21,7 @@ Analyze component placement and relationships:
 
 ```xml
 <ask_followup_question>
-<question>Which existing component should render this new component? Or should it be added at dashboard level?</question>
+<question>Which existing component should render this new component? Or should it be added at portal level?</question>
 <options>["Add to existing component", "Create new top-level component", "This replaces existing functionality", "Dashboard-level addition"]</options>
 </ask_followup_question>
 ```

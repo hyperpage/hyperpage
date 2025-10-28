@@ -4,7 +4,7 @@ This document provides comprehensive documentation of Hyperpage's user interface
 
 ## Overview
 
-Hyperpage is a dashboard application that aggregates activity and data from multiple development tools (GitHub, GitLab, Jira, etc.) into a unified, real-time interface. The UI is built with Next.js 15, Tailwind CSS, and custom component library, featuring a professional design system with full dark/light mode support.
+Hyperpage is a portal application that aggregates activity and data from multiple development tools (GitHub, GitLab, Jira, etc.) into a unified, real-time interface. The UI is built with Next.js 15, Tailwind CSS, and custom component library, featuring a professional design system with full dark/light mode support.
 
 ### Design Philosophy
 
@@ -227,7 +227,7 @@ Visual status communication throughout the interface:
 Tailwind-based responsive design with semantic breakpoints:
 - **Mobile** (`sm:768px`): Single column, collapsed navigation, stacked elements
 - **Tablet** (`md:1024px`): Two-column grids, adjusted spacing, compact tool widgets
-- **Desktop** (`lg:1280px`): Multi-column dashboards, expanded layouts, full feature set
+- **Desktop** (`lg:1280px`): Multi-column portals, expanded layouts, full feature set
 - **Large Desktop** (`xl:1536px`): Optimized for wide displays, maximum information density
 
 ### Layout Adaptations
@@ -371,7 +371,7 @@ const {
 
 ### Data Resilience
 - **Fallback Content**: Mock data when APIs are unavailable
-- **Partial Loading**: Individual tool failures don't break entire dashboard
+- **Partial Loading**: Individual tool failures don't break entire portal
 - **Offline Capability**: Basic functionality without network connectivity
 - **Recovery Actions**: Manual refresh and reconnection options
 
@@ -384,7 +384,7 @@ const {
 - **Testing**: All components include corresponding test files
 
 ### Code Organization
-- **Feature-based Structure**: Components grouped by domain (dashboard, activity)
+- **Feature-based Structure**: Components grouped by domain (portal, activity)
 - **Shared Components**: Reusable UI primitives in `components/ui/`
 - **Custom Hooks**: Business logic encapsulated in `hooks/` directory
 - **Configuration Management**: Environment variables in `.env.local.sample`

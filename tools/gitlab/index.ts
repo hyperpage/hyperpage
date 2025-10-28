@@ -136,7 +136,7 @@ export const gitlabTool: Tool = {
 
       const data = await response.json();
 
-      // Transform GitLab merge requests to dashboard format
+      // Transform GitLab merge requests to portal format
       const transformedMRs = (data as GitLabMergeRequest[]).map((mr) => ({
         id: `!${mr.iid}`, // MR number like !456
         title: mr.title,
@@ -289,7 +289,7 @@ export const gitlabTool: Tool = {
         results.push(...transformedIssues.slice(0, 15)); // Limit to prevent overwhelming
       } catch (error) {
         console.warn("Error fetching GitLab issues:", error);
-        // Return empty array instead of throwing to avoid breaking the dashboard
+        // Return empty array instead of throwing to avoid breaking the portal
       }
 
       return { issues: results };

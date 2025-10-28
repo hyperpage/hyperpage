@@ -6,7 +6,7 @@ export default function NoToolsState() {
           No Tools Enabled
         </h2>
         <p className="text-muted-foreground">
-          Enable tools in your environment configuration to see dashboard
+          Enable tools in your environment configuration to see portal
           widgets. Configure integrations using the settings dropdown in
           the top bar.
         </p>

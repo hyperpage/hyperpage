@@ -1,13 +1,13 @@
 # Usage Guide
 
-This guide covers advanced usage of the Hyperpage dashboard, including navigation, features, and workflows.
+This guide covers advanced usage of the Hyperpage portal, including navigation, features, and workflows.
 
 ## Dashboard Overview
 
-The Hyperpage dashboard consolidates data from multiple developer tools into a unified interface with three main areas:
+The Hyperpage portal consolidates data from multiple developer tools into a unified interface with three main areas:
 
 ### Top Bar (64px, Fixed)
-- **Logo**: Clickable link to refresh the dashboard
+- **Logo**: Clickable link to refresh the portal
 - **Global Search**: Search across all tool data (real-time filtering)
 - **Theme Toggle**: Switch between light and dark modes with professional Lucide React icons
 
@@ -24,7 +24,7 @@ Responsive grid layout that adapts from mobile (1 column) to desktop (2+ columns
 
 ### Overview Tab
 
-The main dashboard view displaying real-time data from all enabled tools.
+The main portal view displaying real-time data from all enabled tools.
 
 #### Widget System
 - **Automatic Data Loading**: Widgets populate automatically when tools are enabled
@@ -47,7 +47,7 @@ The main dashboard view displaying real-time data from all enabled tools.
 #### Dashboard Components
 
 **Layout Components:**
-- **Portal**: Main dashboard container with tab navigation
+- **Portal**: Main portal container with tab navigation
 - **PortalOverview**: Overview tab with widget grid display
 - **PortalWidgetGrid**: Responsive grid container for tool widgets
 - **TabNavigation**: Tab bar for switching between Overview/Livefeed
@@ -161,7 +161,7 @@ Located in the top bar, provides instant search across all tool data:
 # Tool-Specific Settings
 ENABLE_CODE_REVIEWS=true  # Aggregated code review view
 ENABLE_CICD=true         # Unified CI/CD pipeline view
-ENABLE_TICKETING=true    # Combined ticketing dashboard
+ENABLE_TICKETING=true    # Combined ticketing portal
 
 # Performance Tuning
 DATA_REFRESH_INTERVAL=300000  # 5 minutes (milliseconds)
@@ -221,7 +221,7 @@ GITLAB_WEB_URL=https://gitlab.com
 ## Advanced Features
 
 ### Registry-Driven Architecture
-The dashboard uses a completely registry-driven architecture where:
+The portal uses a completely registry-driven architecture where:
 - Tools declare their capabilities automatically
 - Widgets appear without hardcoded logic
 - New integrations extend the system without code changes

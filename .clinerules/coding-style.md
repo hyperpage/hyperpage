@@ -46,9 +46,9 @@ This document outlines the coding standards and style guidelines for the Hyperpa
 - **Clean Implementation**: Code compiles successfully with TypeScript and builds without errors. ESLint is configured to ignore build artifacts (`.next/` directory, `next-env.d.ts`) while maintaining source code quality standards, following all TypeScript best practices for const declarations and unused variable removal.
 
 ### Layout and Spacing
-- **Encapsulated Padding**: Main content areas (grids, feeds) should be wrapped with `<div className="p-6">` at the dashboard level instead of applying `pt-6` or padding directly to individual components.
-- **Consistent Tab Spacing**: All tab content (overview, livefeed, etc.) should have uniform spacing from the tab bar through dashboard-level padding encapsulation.
-- **Component Spacing**: Components should not manage their own top padding for dashboard integration - this should be handled at the container level.
+- **Encapsulated Padding**: Main content areas (grids, feeds) should be wrapped with `<div className="p-6">` at the portal level instead of applying `pt-6` or padding directly to individual components.
+- **Consistent Tab Spacing**: All tab content (overview, livefeed, etc.) should have uniform spacing from the tab bar through portal-level padding encapsulation.
+- **Component Spacing**: Components should not manage their own top padding for portal integration - this should be handled at the container level.
 
 ## Next.js Patterns
 

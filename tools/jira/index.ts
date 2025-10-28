@@ -181,7 +181,7 @@ export const jiraTool: Tool = {
 
       const data = await response.json();
 
-      // Transform JIRA issues to our dashboard format
+      // Transform JIRA issues to our portal format
       const transformedIssues = (data.issues as JiraApiIssue[]).map(
         (issue: JiraApiIssue) => ({
           ticket: issue.key,

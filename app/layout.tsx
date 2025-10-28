@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Hyperpage",
-  description: "Comprehensive data aggregation dashboard",
+  description: "Comprehensive data aggregation portal",
   icons: [
     { rel: "icon", url: "/favicon.ico", type: "image/x-icon" },
     { rel: "icon", url: "/favicon.svg", type: "image/svg+xml" },

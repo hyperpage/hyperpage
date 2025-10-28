@@ -76,4 +76,4 @@ export interface {ToolName}ActivityItem {
   labels?: string[];
 }
 
-export type {ToolName}Capabilities = 'dashboard' | 'activity';
+export type {ToolName}Capabilities = 'portal' | 'activity';

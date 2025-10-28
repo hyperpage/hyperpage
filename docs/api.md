@@ -469,7 +469,7 @@ const data = await makeRetryRequest(url, options, { rateLimitConfig: toolConfig.
 #### Additional Protections
 
 - **Request Deduplication**: Identical requests are cached/grouped
-- **Graceful Degradation**: Failed tools don't break entire dashboard
+- **Graceful Degradation**: Failed tools don't break entire portal
 - **Client Feedback**: Loading states indicate rate limit status
 - **Comprehensive Testing**: Full test suite validates retry logic
 
@@ -534,7 +534,7 @@ Retrieves current rate limit status for the specified platform (GitHub, GitLab, 
 
 **Caching:** Results are cached for 5 minutes to prevent excessive API calls.
 
-**Usage in UI:** The dashboard automatically uses these endpoints to show rate limit status in tool status indicators and tooltips.
+**Usage in UI:** The portal automatically uses these endpoints to show rate limit status in tool status indicators and tooltips.
 
 **Platform-Specific Details:**
 

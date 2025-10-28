@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 
-// Create QueryClient with sensible defaults for dashboard data
+// Create QueryClient with sensible defaults for portal data
 const createQueryClient = () =>
   new QueryClient({
     defaultOptions: {
