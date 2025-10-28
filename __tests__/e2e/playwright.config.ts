@@ -48,10 +48,11 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: process.env.E2E_TEST ? {
+  // Disabled in Docker E2E tests - app container provides the server
+  webServer: process.env.E2E_TEST ? undefined : {
     command: 'npm run dev',
-    url: process.env.BASE_URL || 'http://localhost:3000',
+    url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120 * 1000, // 2 minutes
-  } : undefined,
+  },
 });
