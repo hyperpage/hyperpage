@@ -33,7 +33,7 @@ This document outlines the coding standards and style guidelines for the Hyperpa
 - Test empty state handling when no tools are enabled
 - Verify tool widget loading and error states
 
-## Dashboard-Specific Rules
+## Portal-Specific Rules
 
 ### Component Structure
 - **shadcn/ui Components**: Use shadcn/ui components built on Radix UI primitives for consistent design system

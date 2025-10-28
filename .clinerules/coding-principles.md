@@ -30,7 +30,7 @@ This document outlines the core architectural principles and development pattern
 - **Error Handling**: Services include graceful error handling without exposing implementation details
 
 ### Performance Optimizations
-- **React.memo**: Applied to frequently re-rendering components like DashboardSearchResults
+- **React.memo**: Applied to frequently re-rendering components like Portal
 - **useMemo**: Used for expensive computations like data filtering and widget processing
 - **Error Boundaries**: ErrorBoundary component catches and handles React errors gracefully
 - **Memoization Strategy**: Balance performance benefits with code maintainability
@@ -50,7 +50,7 @@ This document outlines the core architectural principles and development pattern
 - **Loading States**: Widgets implement smooth loading animations with shimmer effects and background refresh capability. Content remains visible during refresh operations to prevent visual disruption - users maintain interaction with existing data while updates load seamlessly.
 - **Animation Framework**: Use custom CSS animations (`animate-shimmer`, `animate-fade-in-up`) for loading skeletons and content transitions. Staggered fade-in animations provide polished, professional loading experiences.
 - **Performance**: Charts should support virtual scrolling for large datasets; data tables implement pagination (10 items per page) for efficient data browsing.
-- **Real-time Updates**: Dashboard automatically refreshes data when browser tabs become visible again (comes back from other tabs).
+- **Real-time Updates**: Portal automatically refreshes data when browser tabs become visible again (comes back from other tabs).
 
 ## Tool Integration System
 

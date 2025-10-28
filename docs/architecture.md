@@ -101,9 +101,7 @@ Centralized API operations with intelligent rate limiting:
 
 #### React.memo Usage
 Frequently re-rendering components are optimized:
-- **ActivityItem**: Memoized to prevent unnecessary re-renders
-- **DashboardSearchResults**: Cached for expensive search operations
-- **MetricCard**: Optimized for real-time KPI updates
+- **PortalSearchResults**: Cached for expensive search operations
 
 #### Smart Loading Strategies
 - **Background Refresh**: Data updates without visual disruption
