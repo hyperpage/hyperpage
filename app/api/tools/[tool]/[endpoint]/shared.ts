@@ -87,7 +87,7 @@ export async function executeHandler(
 
   // Check cache first (unless bypass requested)
   if (!skipCache) {
-    const cachedData = defaultCache.get(cacheKey);
+    const cachedData = await defaultCache.get(cacheKey);
     if (cachedData) {
       console.debug(`Cache hit for ${tool.slug}/${endpoint} (${cacheKey})`);
       return NextResponse.json(cachedData, {

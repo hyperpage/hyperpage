@@ -1,7 +1,7 @@
 # Major Improvement: Redis-Ready Application Architecture
 
 ## Overview
-Implement Redis-based caching and background job foundation within the Hyperpage application to enable production scalability. Note: Redis deployment infrastructure (Docker, Kubernetes manifests) will be handled in a separate deployment repository.
+Implement Redis-based caching and background job foundation within the Hyperpage application to enable production scalability.
 
 ## Impact
 - **Multi-user scalability** - Persistent cache survives restarts and scales across multiple instances

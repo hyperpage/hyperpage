@@ -6,7 +6,7 @@ import { getRateLimitStatus } from '../../../lib/rate-limit-monitor';
 import { toolRegistry } from '../../../tools/registry';
 
 export async function GET() {
-  const cacheStats = defaultCache.getStats();
+  const cacheStats = await defaultCache.getStats();
 
   // Get rate limit status for all enabled platforms
   const enabledTools = (Object.values(toolRegistry) as any[])
