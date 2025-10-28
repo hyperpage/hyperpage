@@ -10,6 +10,7 @@ The `.clinerules/` directory contains focused rule files organized by domain for
 - **[`.clinerules/coding-style.md`](.clinerules/coding-style.md)** - Code standards, TypeScript usage, and Next.js patterns
 - **[`.clinerules/security-practices.md`](.clinerules/security-practices.md)** - Security standards, API token management, and validation requirements
 - **[`.clinerules/configuration-guidelines.md`](.clinerules/configuration-guidelines.md)** - Configuration management, environment setup, and tool addition workflow
+- **[`.clinerules/avoid-marketing-hype.md`](.clinerules/avoid-marketing-hype.md)** - Documentation accuracy rules and anti-hype guidelines
 - **[`.clinerules/documentation-guidelines.md`](.clinerules/documentation-guidelines.md)** - Documentation maintenance and this file
 - **[`.clinerules/workflows/`](./workflows/)** - Executable Cline workflows for common development tasks
 
