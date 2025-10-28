@@ -101,6 +101,7 @@ hyperpage/
 - **[Installation & Setup](docs/installation.md)**: Detailed setup instructions and configuration
 - **[Usage Guide](docs/usage.md)**: Portal features and navigation
 - **[Testing Guide](docs/testing.md)**: Testing strategy and quality assurance
+- **[Monitoring & Observability](docs/monitoring.md)**: Prometheus metrics, structured logging, and Grafana dashboards
 - **[API Documentation](docs/api.md)**: Technical API reference
 - **[System Architecture](docs/architecture.md)**: Core design and integration patterns
 
