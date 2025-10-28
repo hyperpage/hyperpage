@@ -15,8 +15,8 @@ import {
 
 interface ScheduledJob {
   job: IJob;
-  timerId?: NodeJS.Timer;
-  intervalId?: NodeJS.Timer;
+  timerId?: NodeJS.Timeout;
+  intervalId?: NodeJS.Timeout;
 }
 
 /**
@@ -27,7 +27,7 @@ export class MemoryJobScheduler implements IJobScheduler {
 
   private jobs: Map<string, ScheduledJob> = new Map();
   private running: boolean = false;
-  private checkInterval?: NodeJS.Timer;
+  private checkInterval?: NodeJS.Timeout;
 
   constructor(id: string = 'memory-scheduler') {
     this.id = id;
@@ -60,28 +60,22 @@ export class MemoryJobScheduler implements IJobScheduler {
 
     // Schedule immediate execution if due time is in the past
     if (job.schedule?.scheduledAt && job.schedule.scheduledAt <= now) {
-      scheduledJob.timerId = setTimeout(() => this.executeImmediate(job), 0);
+      scheduledJob.timerId = setTimeout(() => this.executeImmediate(job), 0) as NodeJS.Timeout;
     } else if (job.schedule?.scheduledAt) {
       // Schedule for future execution
       const delay = job.schedule.scheduledAt - now;
       if (delay > 0) {
-        scheduledJob.timerId = setTimeout(() => this.executeImmediate(job), delay);
+        scheduledJob.timerId = setTimeout(() => this.executeImmediate(job), delay) as NodeJS.Timeout;
       }
     }
 
     // Set up recurring execution if interval is specified
     if (job.schedule?.intervalMs) {
-      // Calculate when the first recurring execution should happen
-      let firstExecution = now;
-      if (job.schedule.scheduledAt && job.schedule.scheduledAt > now) {
-        firstExecution = job.schedule.scheduledAt;
-      }
-
       scheduledJob.intervalId = setInterval(() => {
         const updatedJob = { ...job };
         updatedJob.id = `${job.id}-${Date.now()}`; // Unique ID for recurrence
         this.executeImmediate(updatedJob);
-      }, job.schedule.intervalMs) as NodeJS.Timer;
+      }, job.schedule.intervalMs) as NodeJS.Timeout;
 
       // Clear the interval after max recurrences if specified
       if (job.schedule.maxRecurrences) {
@@ -97,11 +91,11 @@ export class MemoryJobScheduler implements IJobScheduler {
 
           // Clear after max recurrences
           if (executionCount >= job.schedule!.maxRecurrences!) {
-            clearInterval(originalInterval);
-            clearInterval(scheduledJob.intervalId);
+            clearInterval(originalInterval!);
+            clearInterval(scheduledJob.intervalId!);
             this.jobs.delete(job.id);
           }
-        }, job.schedule.intervalMs);
+        }, job.schedule.intervalMs) as NodeJS.Timeout;
       }
     }
 
@@ -275,7 +269,6 @@ export class MemoryJobScheduler implements IJobScheduler {
       success: true,
       metadata: {
         executionTimeMs: executionTime,
-        simulated: true,
       },
     };
 
@@ -305,7 +298,7 @@ export class MemoryJobScheduler implements IJobScheduler {
       throw new Error('Scheduled job must have a valid priority');
     }
 
-    if (!Object.values(JobType).includes(job.type as any)) {
+    if (!Object.values(JobType).includes(job.type)) {
       throw new Error('Scheduled job must have a valid type');
     }
 

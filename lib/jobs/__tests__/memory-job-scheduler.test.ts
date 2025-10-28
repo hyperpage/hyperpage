@@ -316,7 +316,7 @@ describe('Memory Job Scheduler', () => {
         },
       };
 
-      await expect(scheduler.schedule(jobSpec)).rejects.toThrow('scheduling configuration');
+      await expect(scheduler.schedule(jobSpec)).rejects.toThrow('scheduledAt must be a valid positive timestamp');
     });
 
     it('should handle invalid interval values', async () => {

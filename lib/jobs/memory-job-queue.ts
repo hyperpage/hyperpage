@@ -126,8 +126,8 @@ class PriorityQueue<T> {
   private sinkDown(index: number): void {
     const length = this.heap.length;
     while (true) {
-      let left = 2 * index + 1;
-      let right = 2 * index + 2;
+      const left = 2 * index + 1;
+      const right = 2 * index + 2;
       let largest = index;
 
       if (left < length && this.heap[left].priority > this.heap[largest].priority) {
@@ -363,7 +363,7 @@ export class MemoryJobQueue implements IJobQueue {
       throw new JobError('Job must have a valid priority', 'INVALID_PRIORITY', job.id, false);
     }
 
-    if (!Object.values(JobType).includes(job.type as any)) {
+    if (!Object.values(JobType).includes(job.type)) {
       throw new JobError('Job must have a valid type', 'INVALID_JOB_TYPE', job.id, false);
     }
   }
