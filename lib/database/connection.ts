@@ -9,6 +9,9 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as schema from './schema';
+
+type DrizzleInstance = ReturnType<typeof drizzle<typeof schema>>;
 
 // Database configuration
 export const DATABASE_PATH = process.env.DATABASE_PATH || './data/hyperpage.db';
@@ -26,7 +29,7 @@ try {
 
 // Application database connection (for business logic)
 let _appDb: Database.Database | null = null;
-let _appDrizzleDb: ReturnType<typeof drizzle> | null = null;
+let _appDrizzleDb: DrizzleInstance | null = null;
 
 // Internal database connection (for migrations and system operations)
 let _internalDb: Database.Database | null = null;
@@ -35,7 +38,7 @@ let _internalDb: Database.Database | null = null;
  * Get the application database instance (singleton)
  * Used for all business logic operations
  */
-export function getAppDatabase(): { sqlite: Database.Database; drizzle: ReturnType<typeof drizzle> } {
+export function getAppDatabase(): { sqlite: Database.Database; drizzle: DrizzleInstance } {
   if (!_appDb || !_appDrizzleDb) {
     _appDb = new Database(DATABASE_PATH, {
       verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
@@ -48,7 +51,7 @@ export function getAppDatabase(): { sqlite: Database.Database; drizzle: ReturnTy
     _appDb.pragma('temp_store = memory'); // Temporary tables in memory
 
     // Set up Drizzle with schema
-    _appDrizzleDb = drizzle(_appDb);
+    _appDrizzleDb = drizzle(_appDb, { schema });
 
     console.info(`Application database initialized at ${DATABASE_PATH}`);
   }

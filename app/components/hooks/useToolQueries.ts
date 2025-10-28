@@ -304,11 +304,12 @@ export function useToolQueries({
         refreshJob.payload!.data.query = 'global-refresh';
 
         // Enqueue the job and add to promises for error handling
-        const jobPromise = defaultMemoryQueue.enqueue(refreshJob).catch(error => {
-          console.error(`Global refresh job creation failed for ${tool.name}:`, error);
-        });
-
-        refreshPromises.push(jobPromise);
+        refreshPromises.push(
+          defaultMemoryQueue.enqueue(refreshJob).catch(error => {
+            console.error(`Global refresh job creation failed for ${tool.name}:`, error);
+            return undefined;
+          }).then(() => undefined)
+        );
       } catch (error) {
         console.error(`Global refresh job creation failed for ${tool.name}:`, error);
       }
