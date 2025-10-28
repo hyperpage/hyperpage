@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getToolByName, Tool } from "../../../../../tools";
 import { ToolApi } from "../../../../../tools/tool-types";
 import { canExecuteRequest, recordRequestSuccess, recordRequestFailure } from "../../../../../tools/validation";
-import { defaultCache, generateCacheKey } from "../../../../../lib/cache/memory-cache";
+import { defaultCache } from "../../../../../lib/cache/cache-factory";
+import { generateCacheKey } from "../../../../../lib/cache/memory-cache";
 
 // Input validation helper
 export function validateInput(

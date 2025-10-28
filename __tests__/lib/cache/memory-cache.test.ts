@@ -12,110 +12,111 @@ describe('Memory Cache', () => {
   });
 
   describe('Basic Operations', () => {
-    it('should store and retrieve data', () => {
-      cache.set(cacheKey, testData, 1000);
-      const result = cache.get(cacheKey);
+    it('should store and retrieve data', async () => {
+      await cache.set(cacheKey, testData, 1000);
+      const result = await cache.get(cacheKey);
       expect(result).toEqual(testData);
     });
 
-    it('should return undefined for non-existent keys', () => {
-      const result = cache.get('non-existent');
+    it('should return undefined for non-existent keys', async () => {
+      const result = await cache.get('non-existent');
       expect(result).toBeUndefined();
     });
 
-    it('should handle TTL expiration', () => {
-      cache.set(cacheKey, testData, 10); // 10ms TTL
-      expect(cache.get(cacheKey)).toEqual(testData);
+    it('should handle TTL expiration', async () => {
+      await cache.set(cacheKey, testData, 10); // 10ms TTL
+      expect(await cache.get(cacheKey)).toEqual(testData);
 
       // Advance timers to expire the entry
       vi.advanceTimersByTime(15);
-      expect(cache.get(cacheKey)).toBeUndefined();
+      expect(await cache.get(cacheKey)).toBeUndefined();
     });
 
-    it('should check if key exists and is valid', () => {
-      cache.set(cacheKey, testData, 1000);
-      expect(cache.has(cacheKey)).toBe(true);
-      expect(cache.has('non-existent')).toBe(false);
+    it('should check if key exists and is valid', async () => {
+      await cache.set(cacheKey, testData, 1000);
+      expect(await cache.has(cacheKey)).toBe(true);
+      expect(await cache.has('non-existent')).toBe(false);
     });
 
-    it('should delete entries', () => {
-      cache.set(cacheKey, testData, 1000);
-      expect(cache.has(cacheKey)).toBe(true);
+    it('should delete entries', async () => {
+      await cache.set(cacheKey, testData, 1000);
+      expect(await cache.has(cacheKey)).toBe(true);
 
-      const deleted = cache.delete(cacheKey);
+      const deleted = await cache.delete(cacheKey);
       expect(deleted).toBe(true);
-      expect(cache.has(cacheKey)).toBe(false);
+      expect(await cache.has(cacheKey)).toBe(false);
 
-      expect(cache.delete('non-existent')).toBe(false);
+      expect(await cache.delete('non-existent')).toBe(false);
     });
 
-    it('should clear all entries', () => {
-      cache.set('key1', { data: 1 }, 1000);
-      cache.set('key2', { data: 2 }, 1000);
+    it('should clear all entries', async () => {
+      await cache.set('key1', { data: 1 }, 1000);
+      await cache.set('key2', { data: 2 }, 1000);
       expect(cache.size).toBe(2);
 
-      cache.clear();
+      await cache.clear();
       expect(cache.size).toBe(0);
     });
 
-    it('should enforce maximum size with FIFO eviction', () => {
+    it('should enforce maximum size with FIFO eviction', async () => {
       const smallCache = new MemoryCache({ maxSize: 3, enableLru: false });
 
-      smallCache.set('key1', 'data1', 60000);
-      smallCache.set('key2', 'data2', 60000);
-      smallCache.set('key3', 'data3', 60000);
+      await smallCache.set('key1', 'data1', 60000);
+      await smallCache.set('key2', 'data2', 60000);
+      await smallCache.set('key3', 'data3', 60000);
       expect(smallCache.size).toBe(3);
 
       // This should evict key1 (fifo)
-      smallCache.set('key4', 'data4', 60000);
+      await smallCache.set('key4', 'data4', 60000);
       expect(smallCache.size).toBe(3);
-      expect(smallCache.has('key1')).toBe(false);
-      expect(smallCache.has('key2')).toBe(true);
+      expect(await smallCache.has('key1')).toBe(false);
+      expect(await smallCache.has('key2')).toBe(true);
     });
 
-    it('should provide statistics', () => {
-      expect(cache.getStats()).toEqual({
+    it('should provide statistics', async () => {
+      expect(await cache.getStats()).toEqual({
         size: 0,
         hits: 0,
         misses: 0,
         expiries: 0,
         evictions: 0,
+        backend: 'memory',
       });
 
-      cache.set(cacheKey, testData, 1000);
-      cache.get(cacheKey); // hit
-      cache.get('miss');   // miss
+      await cache.set(cacheKey, testData, 1000);
+      await cache.get(cacheKey); // hit
+      await cache.get('miss');   // miss
 
-      const stats = cache.getStats();
+      const stats = await cache.getStats();
       expect(stats.size).toBe(1);
       expect(stats.hits).toBe(1);
       expect(stats.misses).toBe(1);
     });
 
-    it('should cleanup expired entries', () => {
-      cache.set('expired', testData, 10);
-      cache.set('valid', { data: 'valid' }, 60000);
+    it('should cleanup expired entries', async () => {
+      await cache.set('expired', testData, 10);
+      await cache.set('valid', { data: 'valid' }, 60000);
       expect(cache.size).toBe(2);
 
       // Advance timers to expire the entry
       vi.advanceTimersByTime(15);
 
       // Accessing expired entry should trigger cleanup
-      expect(cache.get('expired')).toBeUndefined();
+      expect(await cache.get('expired')).toBeUndefined();
       expect(cache.size).toBe(1); // only valid entry remains
-      expect(cache.getStats().expiries).toBe(1);
+      expect((await cache.getStats()).expiries).toBe(1);
     });
 
-    it('should manually cleanup expired entries', () => {
-      cache.set('expired1', testData, 10);
-      cache.set('expired2', { data: 2 }, 20);
-      cache.set('valid', { data: 'valid' }, 60000);
+    it('should manually cleanup expired entries', async () => {
+      await cache.set('expired1', testData, 10);
+      await cache.set('expired2', { data: 2 }, 20);
+      await cache.set('valid', { data: 'valid' }, 60000);
       expect(cache.size).toBe(3);
 
       // Advance timers to expire the entries
       vi.advanceTimersByTime(25);
 
-      const removed = cache.cleanupExpired();
+      const removed = await cache.cleanupExpired();
       expect(removed).toBe(2);
       expect(cache.size).toBe(1);
     });
@@ -157,8 +158,8 @@ describe('Memory Cache', () => {
       // Concurrent sets
       for (let i = 0; i < 100; i++) {
         promises.push(
-          Promise.resolve().then(() =>
-            cache.set(`key${i}`, { value: i }, 60000)
+          Promise.resolve().then(async () =>
+            await cache.set(`key${i}`, { value: i }, 60000)
           )
         );
       }
@@ -166,8 +167,8 @@ describe('Memory Cache', () => {
       // Concurrent gets
       for (let i = 0; i < 50; i++) {
         promises.push(
-          Promise.resolve().then(() =>
-            cache.get(`key${Math.floor(Math.random() * 50)}`)
+          Promise.resolve().then(async () =>
+            await cache.get(`key${Math.floor(Math.random() * 50)}`)
           )
         );
       }
@@ -179,43 +180,43 @@ describe('Memory Cache', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle null/undefined data', () => {
-      cache.set('null', null, 1000);
-      cache.set('undefined', undefined, 1000);
+    it('should handle null/undefined data', async () => {
+      await cache.set('null', null, 1000);
+      await cache.set('undefined', undefined, 1000);
 
-      expect(cache.get('null')).toBeNull();
-      expect(cache.get('undefined')).toBeUndefined();
+      expect(await cache.get('null')).toBeNull();
+      expect(await cache.get('undefined')).toBeUndefined();
     });
 
-    it('should handle zero ttl', () => {
-      cache.set(cacheKey, testData, 0);
-      expect(cache.get(cacheKey)).toBeUndefined();
+    it('should handle zero ttl', async () => {
+      await cache.set(cacheKey, testData, 0);
+      expect(await cache.get(cacheKey)).toBeUndefined();
     });
 
-    it('should handle negative ttl', () => {
-      cache.set(cacheKey, testData, -1000);
-      expect(cache.get(cacheKey)).toBeUndefined();
+    it('should handle negative ttl', async () => {
+      await cache.set(cacheKey, testData, -1000);
+      expect(await cache.get(cacheKey)).toBeUndefined();
     });
 
-    it('should handle very large data', () => {
+    it('should handle very large data', async () => {
       const largeData = {
         array: new Array(10000).fill('x'),
         nested: { deep: { value: 'test' } }
       };
-      cache.set('large', largeData, 1000);
-      expect(cache.get('large')).toEqual(largeData);
+      await cache.set('large', largeData, 1000);
+      expect(await cache.get('large')).toEqual(largeData);
     });
 
-    it('should handle non-object data types', () => {
-      cache.set('string', 'text', 1000);
-      cache.set('number', 42, 1000);
-      cache.set('boolean', true, 1000);
-      cache.set('array', [1, 2, 3], 1000);
+    it('should handle non-object data types', async () => {
+      await cache.set('string', 'text', 1000);
+      await cache.set('number', 42, 1000);
+      await cache.set('boolean', true, 1000);
+      await cache.set('array', [1, 2, 3], 1000);
 
-      expect(cache.get('string')).toBe('text');
-      expect(cache.get('number')).toBe(42);
-      expect(cache.get('boolean')).toBe(true);
-      expect(cache.get('array')).toEqual([1, 2, 3]);
+      expect(await cache.get('string')).toBe('text');
+      expect(await cache.get('number')).toBe(42);
+      expect(await cache.get('boolean')).toBe(true);
+      expect(await cache.get('array')).toEqual([1, 2, 3]);
     });
   });
 });

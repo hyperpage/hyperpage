@@ -14,6 +14,7 @@ import {
   clampInterval
 } from "../../../lib/rate-limit-utils";
 import { useMultipleRateLimits, RateLimitStatus } from "./useRateLimit";
+import { defaultJobFactory, defaultMemoryQueue } from "../../../lib/jobs";
 
 interface UseToolQueriesProps {
   enabledTools: Omit<Tool, "handlers">[];
@@ -234,28 +235,90 @@ export function useToolQueries({
     return states;
   }, [queryResults, queryConfigs, enabledTools]);
 
-  // Manual refresh function for a specific tool
+  // Manual refresh function for a specific tool - now creates background jobs
   const refreshToolData = useCallback(async (tool: Omit<Tool, "handlers">) => {
     if (!tool.enabled) return;
 
-    // Find all queries related to this tool
+    // Find all endpoints this tool provides
     const toolQueries = queryConfigs.filter(config =>
       (config.meta as { toolName: string; endpoint: string })?.toolName === tool.name
     );
 
-    // Refresh all queries for this tool
-    await Promise.all(
-      toolQueries.map((config) => queryClient.refetchQueries({ queryKey: config.queryKey }))
-    );
+    const endpoints = toolQueries.map(config =>
+      (config.meta as { toolName: string; endpoint: string })?.endpoint
+    ).filter(Boolean);
+
+    // Create manual refresh job
+    try {
+      const refreshJob = defaultJobFactory.createDataRefreshJob(tool, endpoints);
+
+      // Mark as user-initiated for higher priority processing
+      refreshJob.payload!.data.userInitiated = true;
+      refreshJob.payload!.data.query = 'manual-refresh';
+
+      // Enqueue the job
+      await defaultMemoryQueue.enqueue(refreshJob);
+
+      // Invalidate React Query cache to trigger immediate stale-while-revalidate
+      await Promise.all(
+        toolQueries.map((config) => queryClient.invalidateQueries({ queryKey: config.queryKey }))
+      );
+    } catch (error) {
+      console.error(`Manual refresh job creation failed for ${tool.name}:`, error);
+
+      // Fallback to direct refetch if job creation fails
+      console.warn('Falling back to direct refetch for manual refresh');
+      await Promise.all(
+        toolQueries.map((config) => queryClient.refetchQueries({ queryKey: config.queryKey }))
+      );
+    }
   }, [queryConfigs, queryClient]);
 
-  // Global refresh function
+  // Global refresh function - now creates background jobs for all enabled tools
   const refreshAllData = useCallback(async () => {
-    // Refresh all tool queries
-    await Promise.all(
-      queryConfigs.map((config) => queryClient.refetchQueries({ queryKey: config.queryKey }))
-    );
-  }, [queryConfigs, queryClient]);
+    const refreshPromises: Promise<void>[] = [];
+
+    // Group endpoints by tool for efficient job creation
+    const toolEndpointMap = new Map<string, string[]>();
+
+    queryConfigs.forEach(config => {
+      const { toolName, endpoint } = config.meta as { toolName: string; endpoint: string };
+      if (!toolEndpointMap.has(toolName)) {
+        toolEndpointMap.set(toolName, []);
+      }
+      toolEndpointMap.get(toolName)!.push(endpoint);
+    });
+
+    // Create background refresh jobs for each tool
+    enabledTools.forEach(tool => {
+      if (!tool.enabled) return;
+
+      const endpoints = toolEndpointMap.get(tool.name);
+      if (!endpoints || endpoints.length === 0) return;
+
+      try {
+        const refreshJob = defaultJobFactory.createDataRefreshJob(tool, endpoints);
+
+        // Mark as user-initiated global refresh
+        refreshJob.payload!.data.userInitiated = true;
+        refreshJob.payload!.data.query = 'global-refresh';
+
+        // Enqueue the job and add to promises for error handling
+        const jobPromise = defaultMemoryQueue.enqueue(refreshJob).catch(error => {
+          console.error(`Global refresh job creation failed for ${tool.name}:`, error);
+        });
+
+        refreshPromises.push(jobPromise);
+      } catch (error) {
+        console.error(`Global refresh job creation failed for ${tool.name}:`, error);
+      }
+    });
+
+    await Promise.allSettled(refreshPromises);
+
+    // Invalidate React Query cache for immediate stale-while-revalidate experience
+    await queryClient.invalidateQueries({ queryKey: ['tool-data'] });
+  }, [enabledTools, queryConfigs, queryClient]);
 
   // Initialize polling - cleanup function since React Query handles polling automatically
   const initializePolling = useCallback(() => {
