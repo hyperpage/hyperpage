@@ -1,9 +1,9 @@
 /**
- * In-memory job queue implementation for development and small-scale deployments.
+ * Persistent job queue implementation for production deployments.
  *
- * Provides basic job queuing, prioritization, and execution tracking.
- * Jobs are stored in memory and lost on process restart.
- * Uses priority queue (heap) for efficient job scheduling.
+ * Provides job queuing, prioritization, and execution tracking with SQLite persistence.
+ * Jobs survive process restart and maintain state across deployments.
+ * Uses priority queue (heap) for efficient job scheduling and database for persistence.
  */
 
 import {
@@ -15,6 +15,9 @@ import {
   JobType,
   JobError,
 } from '../types/jobs';
+import { db } from '../database';
+import { jobs, jobHistory, Job, NewJob } from '../database/schema';
+import { eq, and, inArray, lt } from 'drizzle-orm';
 
 /**
  * Priority queue implementation for job scheduling
@@ -184,12 +187,13 @@ export class MemoryJobQueue implements IJobQueue {
       createdAt: now,
       updatedAt: now,
       retryCount: 0,
+      payload: jobSpec.payload || {},
     };
 
     // Validate job has required fields
     this.validateJob(job);
 
-    // Check for duplicate job ID
+    // Check for duplicate job ID (both in memory and database)
     if (this.jobs.has(job.id)) {
       throw new JobError(
         `Job with ID ${job.id} already exists`,
@@ -199,6 +203,40 @@ export class MemoryJobQueue implements IJobQueue {
       );
     }
 
+    // Check for duplicate job ID in database
+    const existingJob = await db.select().from(jobs).where(eq(jobs.id, job.id)).limit(1);
+    if (existingJob.length > 0) {
+      throw new JobError(
+        `Job with ID ${job.id} already exists in database`,
+        'DUPLICATE_JOB_ID',
+        job.id,
+        false
+      );
+    }
+
+    // Persist job to database
+    const dbJob: NewJob = {
+      id: job.id,
+      type: job.type,
+      name: job.name,
+      priority: job.priority,
+      status: job.status,
+      tool: job.tool ? JSON.stringify(job.tool) : undefined,
+      endpoint: job.endpoint,
+      payload: JSON.stringify(job.payload),
+      result: job.result ? JSON.stringify(job.result) : undefined,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      startedAt: undefined,
+      completedAt: undefined,
+      retryCount: job.retryCount,
+      persistedAt: Date.now(),
+      recoveryAttempts: 0,
+    };
+
+    await db.insert(jobs).values(dbJob);
+
+    // Add to in-memory structures
     this.jobs.set(job.id, job);
     this.priorityQueue.enqueue(job, job.priority);
     this.stats.totalJobs++;
@@ -273,29 +311,51 @@ export class MemoryJobQueue implements IJobQueue {
     if (!job) return undefined;
 
     const oldStatus = job.status;
+    const now = Date.now();
     job.status = status;
-    job.updatedAt = Date.now();
+    job.updatedAt = now;
 
     if (result) {
       job.result = result;
     }
 
+    // Persist status update to database
+    const updateData: Partial<Job> = {
+      status,
+      updatedAt: now,
+    };
+
     // Track completion timestamp and execution time for completed jobs
     if (status === JobStatus.COMPLETED) {
-      job.completedAt = Date.now();
+      job.completedAt = now;
+      updateData.completedAt = now;
 
       // Track execution time if job was actually started
       if (job.startedAt) {
-        const executionTime = Date.now() - job.startedAt;
+        const executionTime = now - job.startedAt;
         this.executionTimes.push(executionTime);
         this.stats.avgExecutionTimeMs = this.executionTimes.reduce((a, b) => a + b, 0) / this.executionTimes.length;
       }
     }
 
+    // Persist result for completed/failed jobs
+    if (result && (status === JobStatus.COMPLETED || status === JobStatus.FAILED)) {
+      updateData.result = JSON.stringify(result);
+    }
+
+    // Update database with new status and result
+    await db.update(jobs)
+      .set(updateData)
+      .where(eq(jobs.id, jobId));
+
+    // Record job execution history (simplified for now - will be enhanced later)
+    // TODO: Implement full job history tracking
+    console.info(`Job ${jobId} status changed to ${status}`);
+
     // Update stats based on status change
     this.updateJobStats(oldStatus, status);
 
-    // Add to execution history
+    // Add to in-memory execution history
     if (!job.executionHistory) {
       job.executionHistory = [];
     }
@@ -304,11 +364,115 @@ export class MemoryJobQueue implements IJobQueue {
       attempt: job.retryCount,
       status,
       error: result?.error?.message,
-      timestamp: Date.now(),
+      timestamp: now,
     });
 
-    this.jobs.set(jobId, job);
     return job;
+  }
+
+  /**
+   * Load persisted jobs from database during application startup
+   */
+  async loadPersistedJobs(): Promise<number> {
+    try {
+      // Load all non-completed jobs from database
+      const persistedJobs = await db.select().from(jobs).where(
+        inArray(jobs.status, [JobStatus.PENDING, JobStatus.RUNNING, JobStatus.FAILED])
+      );
+
+      console.info(`Found ${persistedJobs.length} persisted jobs to recover`);
+      let recoveredCount = 0;
+
+      for (const dbJob of persistedJobs) {
+        try {
+          // Skip jobs with invalid data
+          if (!dbJob.id || !dbJob.name) {
+            console.warn('Skipping invalid persisted job:', dbJob.id);
+            continue;
+          }
+
+          // Convert database format to IJob interface with type assertions
+          const job: IJob = {
+            id: dbJob.id,
+            type: dbJob.type as JobType,
+            name: dbJob.name,
+            priority: dbJob.priority as JobPriority,
+            status: dbJob.status as JobStatus,
+            createdAt: Number(dbJob.createdAt),
+            updatedAt: Number(dbJob.updatedAt),
+            tool: dbJob.tool ? JSON.parse(dbJob.tool) : undefined,
+            endpoint: dbJob.endpoint || undefined,
+            payload: JSON.parse(dbJob.payload) as Record<string, any>,
+            result: dbJob.result ? JSON.parse(dbJob.result) as JobResult : undefined,
+            startedAt: dbJob.startedAt ? Number(dbJob.startedAt) : undefined,
+            completedAt: dbJob.completedAt ? Number(dbJob.completedAt) : undefined,
+            retryCount: dbJob.retryCount,
+            executionHistory: [],
+          };
+
+          // Add to in-memory structures
+          this.jobs.set(job.id, job);
+
+          // Re-queue pending jobs
+          if (job.status === JobStatus.PENDING) {
+            this.priorityQueue.enqueue(job, job.priority);
+          }
+
+          // Update recovery stats
+          this.stats.totalJobs++;
+          switch (job.status) {
+            case JobStatus.PENDING:
+              this.stats.pendingJobs++;
+              break;
+            case JobStatus.RUNNING:
+              this.stats.runningJobs++;
+              break;
+            case JobStatus.FAILED:
+              this.stats.failedJobs++;
+              break;
+          }
+
+          recoveredCount++;
+        } catch (error) {
+          console.error(`Failed to load job ${dbJob.id}:`, error);
+          continue;
+        }
+      }
+
+      console.info(`Successfully recovered ${recoveredCount} jobs from database`);
+      return recoveredCount;
+    } catch (error) {
+      console.error('Failed to load persisted jobs:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Cleanup old completed jobs from database to prevent unbounded growth
+   */
+  async cleanupOldJobs(retentionDays: number = 30): Promise<number> {
+    try {
+      const cutoffTime = Date.now() - (retentionDays * 24 * 60 * 60 * 1000);
+
+      // Count jobs to be deleted first
+      const countToDelete = await db.$count(jobs, and(
+        eq(jobs.status, JobStatus.COMPLETED),
+        lt(jobs.completedAt as any, cutoffTime) // Type assertion for now
+      ));
+
+      // Delete completed jobs older than retention period
+      await db.delete(jobs)
+        .where(and(
+          eq(jobs.status, JobStatus.COMPLETED),
+          lt(jobs.completedAt as any, cutoffTime)
+        ));
+
+      console.info(`Cleaned up ${countToDelete} old completed jobs`);
+      return countToDelete;
+    } catch (error) {
+      console.error('Failed to cleanup old jobs:', error);
+      return 0;
+    }
   }
 
   /**

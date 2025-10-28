@@ -51,3 +51,8 @@ logs/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Database files - may contain sensitive user data
+data/hyperpage.db
+data/hyperpage.db-*
+data/backups/
