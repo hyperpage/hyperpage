@@ -103,11 +103,9 @@ Centralized API operations with intelligent rate limiting:
 Frequently re-rendering components are optimized:
 - **PortalSearchResults**: Cached for expensive search operations
 
-#### Smart Loading Strategies
-- **Background Refresh**: Data updates without visual disruption
-- **Virtual Scrolling**: Large data tables use efficient rendering
-- **Request Deduplication**: Identical API calls are batched and cached
-- **Lazy Loading**: Non-critical components load on demand
+#### Loading Strategy
+- **Background Refresh**: Data updates with minimal visual disruption
+- **Request Deduplication**: API calls are cached to prevent redundancy
 
 ## Tool Integration System
 
@@ -226,22 +224,16 @@ const endpointPattern = /^[a-zA-Z0-9_%-]+$/;
 - **Responsibility Focus**: Single purpose per component
 - **Interface Simplification**: Streamlined props interfaces
 
-### Recent Improvements
+### Component Architecture
 
-Following component optimization and daisyUI integration:
+Components are built using shadcn/ui with Tailwind CSS for consistent styling and behavior.
 
-| Component | Implementation | Technologies | Architecture Change |
-|-----------|----------------|--------------|---------------------|
-| `TopBar` | Custom component | DaisyUI + Tailwind CSS | Semantic HTML + component library |
-| `DataTable` | Custom table component | DaisyUI + Tailwind CSS | Flexible data presentation |
-| `Overview` | Main dashboard view | DaisyUI + Tailwind CSS | Enhanced user experience |
-| **All Components** | DaisyUI + custom | Tailwind CSS + component library | **Balanced framework approach** |
-
-#### Key Refactoring Changes
-- **Styling System**: Complete migration from OKLCH color palette to standard Tailwind gray-*, blue-*, etc.
-- **Component Implementation**: Removed all variant systems, using direct HTML elements with utility classes
-- **Bundle Size**: Eliminated shadcn/ui dependencies (clsx, class-variance-authority, tailwind-merge)
-- **Theme Consistency**: Maintained exact visual design while removing framework abstractions
+| Component | Implementation | Technologies | Purpose |
+|-----------|----------------|--------------|---------|
+| `TopBar` | Custom component with shadcn/ui | shadcn/ui + Tailwind CSS | Navigation and tool controls |
+| `DataTable` | shadcn/ui table component | shadcn/ui + Tailwind CSS | Data display and sorting |
+| `Overview` | Dashboard layout | shadcn/ui + Tailwind CSS | Main portal interface |
+| **All Components** | shadcn/ui framework | shadcn/ui + Tailwind CSS | Consistent design system |
 
 ## Rate Limit Monitoring System
 
@@ -332,14 +324,8 @@ Status displayed through visual indicators:
 - **Platform Awareness**: Optimized handling for different rate limit patterns
 - **Error Resilience**: Graceful degradation when rate limit monitoring fails
 
-#### Success Metrics
 
-Monitor these indicators to validate the effectiveness of the rate limiting implementation:
-
-- **API Error Rate**: Target <1% rate limiting errors
-- **Data Freshness**: Average delay <30 seconds for critical data
-- **User Satisfaction**: Reduce manual refresh frequency by 80%
-- **Platform Coverage**: Support intelligent handling for all major platforms
+Rate limit monitoring tracks API usage across all enabled platforms and displays status through the UI.
 
 ## Development Workflow
 
@@ -379,11 +365,10 @@ Following the team-developed workflow:
 - **ESLint Compliance**: Clean code standards maintained
 - **Import Organization**: Dependencies properly sorted and grouped
 
-### Performance Benchmarks
-- **Load Times**: Dashboard loads in under 3 seconds
-- **Responsive Redesign**: Optimized for mobile to desktop experiences
-- **Memory Efficiency**: Component unmounting prevents memory leaks
-- **API Efficiency**: Request deduplication and intelligent caching
+### Performance Considerations
+- **Responsive Design**: Interface adapts from mobile to desktop
+- **Memory Management**: Components clean up on unmount
+- **API Optimization**: Request deduplication and caching
 
 
 For implementation details and API specifications, see [`docs/api.md`](api.md).

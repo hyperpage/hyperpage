@@ -9,15 +9,14 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 ### Key Features
 - **Code Reviews**: GitHub PRs and GitLab MRs in one view
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
-- **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues with status change tracking
-- **Adaptive Rate Limit Management**: Intelligent polling that automatically adjusts intervals based on API usage (4x slower at 90%+ usage), user activity, business hours, and tab visibility for optimal API utilization and real-time rate limit tracking across all platforms
-- **Modern UI**: Professional design system using DaisyUI components with Tailwind CSS
-- **Theme System**: Comprehensive light/dark mode switching with DaisyUI theming
+- **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues
+- **Rate Limit Monitoring**: Real-time tracking of API usage across all platforms
+- **Modern UI**: Clean design system using shadcn/ui components with Tailwind CSS
+- **Theme System**: Light and dark mode support
 
 ### Quality Assurance & Design
-✅ **50/50 unit tests passing** • ✅ **Build compiles successfully** • ✅ **0 TypeScript errors**  
-✅ **Professional UI** • ✅ **Dark Mode Support** • ✅ **DaisyUI + Tailwind CSS**  
-✅ **Optimized Design System** • ✅ **Modern Component Architecture** • ✅ **Enterprise-grade codebase**
+✅ **TypeScript codebase** • ✅ **Build compiles successfully** • ✅ **Responsive design**  
+✅ **Professional UI** • ✅ **Dark Mode Support** • ✅ **Focusing constraints for stability**
 
 ## Quick Start
 
@@ -31,7 +30,7 @@ npm install
 cp .env.local.sample .env.local
 # Edit .env.local to enable your tools (see docs/installation.md)
 
-# Start development server (with Turbopack for fast builds)
+# Start development server
 npm run dev
 ```
 
@@ -39,28 +38,26 @@ Open [http://localhost:3000](http://localhost:3000) to view your portal.
 
 ## Testing
 
-Hyperpage includes comprehensive testing with **100% success rate** and **zero framework conflicts**.
+Hyperpage includes automated testing to ensure stability.
 
 **Available Test Commands:**
 
 ```bash
 # Unit & Integration Tests
-npm test                    # Run all 50 unit tests
+npm test                    # Run unit tests
 npm run test:coverage      # With coverage report
 npm run test:watch         # Watch mode development
 
-# E2E Tests (RECOMMENDED - Docker Isolation)
-npm run test:e2e:docker     # Full E2E suite in containers
-
-# Alternative E2E (Framework Conflicts Possible)
-npm run test:e2e           # Standard E2E with Playwright
-npm run test:e2e:ui        # Interactive mode
+# E2E Tests
+npm run test:e2e           # Playwright E2E tests
+npm run test:e2e:docker    # E2E tests in Docker containers
+npm run test:e2e:ui        # Interactive E2E mode
 ```
 
-**Testing Architecture:**
-- **Unit Tests**: Vitest + React Testing Library (50 passing tests)
-- **E2E Tests**: Playwright with Docker isolation (framework conflict resolved)
-- **CI/CD Ready**: All tests optimized for automated pipelines
+**Testing Setup:**
+- **Unit Tests**: Vitest + React Testing Library
+- **E2E Tests**: Playwright framework
+- **CI/CD Ready**: Tests run in automated pipelines
 
 ## Usage Examples
 
@@ -79,16 +76,16 @@ Once configured, the portal automatically aggregates PRs/MRs from all enabled pl
 hyperpage/
 ├── app/                 # Next.js 15 app directory
 │   ├── api/            # API routes and handlers (REST & tool integrations)
-│   ├── components/     # React components using DaisyUI + Tailwind CSS
-│   └── globals.css     # Tailwind + DaisyUI configuration
+│   ├── components/     # React components using shadcn/ui (Tailwind-based)
+│   └── globals.css     # Tailwind CSS configuration
 ├── tools/              # Tool integrations registry (GitHub, GitLab, Jira, etc.)
-├── __tests__/          # Comprehensive testing suite (50 unit tests passing)
-│   ├── api/           # API route unit tests
-│   ├── components/    # Component integration tests
-│   ├── e2e/          # Docker E2E testing infrastructure
+├── __tests__/          # Automated testing suite
+│   ├── api/           # API route tests
+│   ├── components/    # Component tests
+│   ├── e2e/          # End-to-end testing setup
 │   └── lib/          # Utility function tests
-├── docs/              # Detailed documentation and guides
-└── .clinerules/       # Development guidelines and automation rules
+├── docs/              # Documentation and guides
+└── .clinerules/       # Development guidelines and workflows
 ```
 
 ## Documentation
