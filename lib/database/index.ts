@@ -16,7 +16,7 @@ const { drizzle: db } = getAppDatabase();
 // Export the configured database instance
 export { db };
 
-// Export database types
+// Export database types with proper schema typing
 export type Database = typeof db;
 
 /**

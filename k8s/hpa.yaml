@@ -1,0 +1,152 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hyperpage-hpa
+  labels:
+    app: hyperpage
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hyperpage
+  minReplicas: 3
+  maxReplicas: 50
+
+  # HPA update behavior
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 5 minutes
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 60   # 1 minute for faster scaling up
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 3
+        periodSeconds: 60
+      selectPolicy: Max
+
+  # Metrics for scaling decisions
+  metrics:
+  # Target CPU utilization (primary metric)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+
+  # Target memory utilization
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+  # Custom metric: P95 response time from dashboard API
+  # (Requires custom metrics adapter - commented out for now)
+  # - type: Pods
+  #   pods:
+  #     metric:
+  #       name: hyperpage_response_time_p95
+  #     target:
+  #       type: AverageValue
+  #       averageValue: "500"  # Scale up if P95 > 500ms
+
+  # Custom metric: Error rate (commented out - requires metrics adapter)
+  # - type: Pods
+  #   pods:
+  #     metric:
+  #       name: hyperpage_error_rate
+  #     target:
+  #       type: AverageValue
+  #       averageValue: "5"  # Scale up if error rate > 5%
+
+  # Custom metric: Throughput (commented out - requires metrics adapter)
+  # - type: Pods
+  #   pods:
+  #     metric:
+  #       name: hyperpage_requests_total
+  #     target:
+  #       type: AverageValue
+  #       averageValue: "1000"  # Scale up if handling > 1000 req/min per pod
+---
+# ServiceMonitor for Prometheus metrics collection
+# This enables HPA to use custom metrics from the Hyperpage /api/metrics endpoint
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: hyperpage-servicemonitor
+  labels:
+    app: hyperpage
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: hyperpage
+  endpoints:
+  - port: http
+    path: /api/metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    metricRelabelings:
+    # Only collect performance-critical metrics for HPA
+    - action: keep
+      regex: 'hyperpage_response_time_p95|hyperpage_error_rate|hyperpage_requests_total'
+      sourceLabels: [__name__]
+    # Add metric type labels for HPA
+    - action: labelmap
+      regex: '__name__'
+      replacement: 'metric_type'
+  namespaceSelector:
+    matchNames:
+    - default
+---
+# PrometheusRule for custom alerting based on scaling metrics
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: hyperpage-scaling-rules
+  labels:
+    app: hyperpage
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: hyperpage.scaling
+    rules:
+    # Alert when HPA is scaling up rapidly
+    - alert: HyperpageHPAHighScalingRate
+      expr: rate(kube_horizontalpodautoscaler_spec_max_replicas{horizontalpodautoscaler="hyperpage-hpa"}[5m]) > 2
+      for: 2m
+      labels:
+        severity: warning
+        service: hyperpage
+      annotations:
+        summary: "Hyperpage HPA scaling up rapidly"
+        description: "Hyperpage horizontal pod autoscaler is scaling up at a rate of {{ $value }} replicas per minute"
+
+    # Alert when pods are consistently at high CPU/memory usage
+    - alert: HyperpageHighResourceUsage
+      expr: |
+        (
+          avg_over_time(kube_pod_container_resource_requests{container="hyperpage", resource="cpu"}[10m])
+          / on(pod) avg_over_time(kube_pod_container_resource_limits{container="hyperpage", resource="cpu"}[10m])
+        ) > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        service: hyperpage
+      annotations:
+        summary: "Hyperpage pods at high CPU usage"
+        description: "Hyperpage pods have been at >90% CPU usage for 5 minutes"

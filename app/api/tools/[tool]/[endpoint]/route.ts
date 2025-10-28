@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateInput, validateTool, executeHandler } from "./shared";
+import { performanceMiddleware } from "../../../../../lib/monitoring/performance-middleware";
 
 // Centralized API handler that routes through the tool registry
 export async function GET(
@@ -37,7 +38,8 @@ export async function GET(
       );
     }
 
-    return await executeHandler(request, tool, endpoint);
+    const response = await executeHandler(request, tool, endpoint);
+    return await performanceMiddleware.recordPerformance(request, response);
   } catch (error) {
     console.error(`Error in tool API ${toolName}/${endpoint}:`, error);
     return NextResponse.json(
@@ -82,7 +84,8 @@ export async function POST(
       );
     }
 
-    return await executeHandler(request, tool, endpoint);
+    const response = await executeHandler(request, tool, endpoint);
+    return await performanceMiddleware.recordPerformance(request, response);
   } catch (error) {
     console.error(`Error in tool API ${toolName}/${endpoint}:`, error);
     return NextResponse.json(

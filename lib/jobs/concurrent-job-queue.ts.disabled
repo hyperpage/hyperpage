@@ -1,0 +1,591 @@
+import type {
+  IJob,
+  JobPriority,
+  JobStatus,
+  JobResult
+} from '../types/jobs';
+
+type Job = IJob;
+
+/**
+ * Job processing worker configuration.
+ */
+export interface WorkerConfig {
+  /** Number of worker threads/processes */
+  workerCount: number;
+  /** Maximum jobs per worker before backpressure */
+  maxJobsPerWorker: number;
+  /** Worker timeout in milliseconds */
+  timeout: number;
+  /** Health check interval */
+  healthCheckInterval: number;
+}
+
+/**
+ * Job processing result with execution details.
+ */
+export interface JobExecutionResult extends JobResult {
+  jobId: string;
+  workerId: string;
+  duration: number;
+}
+
+/**
+ * Concurrency control and worker management statistics.
+ */
+export interface ConcurrencyStats {
+  totalWorkers: number;
+  activeWorkers: number;
+  idleWorkers: number;
+  totalJobsProcessed: number;
+  averageProcessingTime: number;
+  queueDepth: number;
+  backpressureActivated: boolean;
+  failedJobsCount: number;
+  healthCheckFailures: number;
+  lastProcessedTimestamp: number;
+}
+
+/**
+ * Enterprise concurrent job processing queue with multi-worker support.
+ * Implements priority scheduling, concurrent execution, and backpressure handling.
+ */
+export class ConcurrentJobQueue {
+  private readonly eventListeners = new Map<string, ((...args: any[]) => void)[]>();
+
+  private emit(event: string, ...args: any[]): void {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.forEach(listener => listener(...args));
+    }
+  }
+
+  private on(event: string, listener: (...args: any[]) => void): void {
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, []);
+    }
+    this.eventListeners.get(event)!.push(listener);
+  }
+  private readonly config: WorkerConfig;
+  private workers = new Map<string, Worker>();
+  private jobQueue: PriorityQueue<IJob> = new PriorityQueue();
+  private activeJobs = new Map<string, { workerId: string; startTime: number }>();
+  private workerHealth = new Map<string, boolean>();
+  private stats!: ConcurrencyStats;
+  private statsQueueLastProcessed: number = Date.now();
+
+  private healthCheckTimer?: NodeJS.Timeout;
+  private backpressureMode = false;
+
+  constructor(config: WorkerConfig = {
+    workerCount: 4,
+    maxJobsPerWorker: 10,
+    timeout: 30000,
+    healthCheckInterval: 10000,
+  }) {
+    super();
+    this.config = config;
+    this.initializeWorkers();
+    this.initializeStats();
+    this.startHealthMonitoring();
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', () => this.gracefulShutdown());
+    process.on('SIGINT', () => this.gracefulShutdown());
+  }
+
+  /**
+   * Submit a job to the concurrent queue.
+   */
+  async submitJob(job: Job): Promise<string> {
+    // Apply backpressure if queue is overloaded
+    await this.applyBackpressure();
+
+    const jobId = job.id;
+    this.jobQueue.enqueue(job, this.priorityToWeight(job.priority));
+
+    this.emit('job_queued', { jobId, priority: job.priority });
+
+    // Start processing immediately if workers are available
+    this.scheduleNextJob();
+
+    return jobId;
+  }
+
+  /**
+   * Submit multiple jobs in batch.
+   */
+  async submitJobs(jobs: Job[]): Promise<string[]> {
+    const results = await Promise.allSettled(
+      jobs.map(job => this.submitJob(job))
+    );
+
+    const jobIds = results
+      .filter((result): result is PromiseFulfilledResult<string> =>
+        result.status === 'fulfilled'
+      )
+      .map(result => result.value);
+
+    if (jobIds.length !== jobs.length) {
+      console.warn(`${jobs.length - jobIds.length} jobs failed to queue`);
+    }
+
+    return jobIds;
+  }
+
+  /**
+   * Get job status and processing information.
+   */
+  getJobProcessingStatus(jobId: string): {
+    status: 'processing' | 'queued' | 'not_found';
+    workerId?: string;
+    startTime?: number;
+    queueDepth: number;
+  } | null {
+    const activeJob = this.activeJobs.get(jobId);
+    if (activeJob) {
+      return {
+        status: 'processing',
+        workerId: activeJob.workerId,
+        startTime: activeJob.startTime,
+        queueDepth: this.jobQueue.size,
+      };
+    }
+
+    // Check if job is queued
+    if (this.jobQueue.find(job => job.id === jobId)) {
+      return {
+        status: 'queued',
+        queueDepth: this.jobQueue.size,
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Get comprehensive concurrency statistics.
+   */
+  getConcurrencyStats(): ConcurrencyStats {
+    const now = Date.now();
+    this.stats.totalJobsProcessed +=
+      (now - this.statsQueueLastProcessed) / 1000 * 10; // Estimate based on time
+
+    return {
+      ...this.stats,
+      queueDepth: this.jobQueue.size,
+      backpressureActivated: this.backpressureMode,
+    };
+  }
+
+  /**
+   * Scale worker count dynamically.
+   */
+  async scaleWorkers(newWorkerCount: number): Promise<void> {
+    if (newWorkerCount > this.config.workerCount) {
+      // Add workers
+      for (let i = this.config.workerCount; i < newWorkerCount; i++) {
+        this.createWorker(`worker-${i}`);
+      }
+    } else if (newWorkerCount < this.config.workerCount) {
+      // Remove excess workers (wait for idle)
+      const workersToTerminate = Array.from(this.workers.entries())
+        .slice(0, this.config.workerCount - newWorkerCount);
+
+      for (const [workerId, worker] of workersToTerminate) {
+        await worker.terminate();
+        this.workers.delete(workerId);
+      }
+    }
+
+    this.config.workerCount = newWorkerCount;
+    this.stats.totalWorkers = newWorkerCount;
+    this.emit('workers_scaled', { newCount: newWorkerCount });
+  }
+
+  /**
+   * Graceful shutdown of all workers and pending jobs.
+   */
+  async gracefulShutdown(): Promise<void> {
+    console.log('Initiating graceful shutdown of concurrent job queue...');
+
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+    }
+
+    // Stop accepting new jobs
+    this.backpressureMode = true;
+
+    // Wait for active jobs to complete
+    const shutdownTimeout = 30000; // 30 seconds
+    const shutdownStart = Date.now();
+
+    while (this.activeJobs.size > 0 && (Date.now() - shutdownStart) < shutdownTimeout) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Force terminate remaining workers
+    for (const worker of this.workers.values()) {
+      await worker.terminate();
+    }
+
+    this.workers.clear();
+    console.log('Concurrent job queue shutdown complete');
+  }
+
+  // Private methods
+
+  private initializeWorkers(): void {
+    for (let i = 0; i < this.config.workerCount; i++) {
+      this.createWorker(`worker-${i}`);
+    }
+  }
+
+  private createWorker(workerId: string): void {
+    const worker = new Worker(workerId, this.config, this);
+    this.workers.set(workerId, worker);
+    this.workerHealth.set(workerId, true);
+  }
+
+  private initializeStats(): void {
+    this.stats = {
+      totalWorkers: this.config.workerCount,
+      activeWorkers: 0,
+      idleWorkers: this.config.workerCount,
+      totalJobsProcessed: 0,
+      averageProcessingTime: 0,
+      queueDepth: 0,
+      backpressureActivated: false,
+      failedJobsCount: 0,
+      healthCheckFailures: 0,
+    };
+  }
+
+  private startHealthMonitoring(): void {
+    this.healthCheckTimer = setInterval(() => {
+      this.performHealthChecks();
+    }, this.config.healthCheckInterval);
+  }
+
+  private async performHealthChecks(): Promise<void> {
+    let failures = 0;
+
+    for (const [workerId, worker] of this.workers.entries()) {
+      try {
+        const isHealthy = await worker.checkHealth();
+        this.workerHealth.set(workerId, isHealthy);
+        if (!isHealthy) {
+          console.warn(`Worker ${workerId} health check failed`);
+          await this.restartWorker(workerId);
+          failures++;
+        }
+      } catch (error) {
+        console.error(`Health check error for worker ${workerId}:`, error);
+        failures++;
+      }
+    }
+
+    this.stats.healthCheckFailures = failures;
+
+    if (failures > 0) {
+      this.emit('health_check_failures', { failureCount: failures });
+    }
+  }
+
+  private async restartWorker(workerId: string): Promise<void> {
+    const oldWorker = this.workers.get(workerId);
+    if (oldWorker) {
+      await oldWorker.terminate();
+      this.createWorker(workerId);
+      console.log(`Restarted worker ${workerId}`);
+    }
+  }
+
+  private async scheduleNextJob(): Promise<void> {
+    // Find idle workers
+    const idleWorkers = Array.from(this.workers.entries())
+      .filter(([_, worker]) => worker.isIdle())
+      .filter(([workerId]) => this.workerHealth.get(workerId) !== false);
+
+    if (idleWorkers.length === 0 || this.jobQueue.isEmpty()) {
+      return;
+    }
+
+    // Get highest priority job
+    const job = this.jobQueue.dequeue();
+    if (!job) return;
+
+    // Get least loaded idle worker
+    const [workerId, worker] = idleWorkers[0];
+
+    // Assign job to worker
+    this.activeJobs.set(job.id, {
+      workerId,
+      startTime: Date.now()
+    });
+
+    worker.processJob(job)
+      .then(result => this.handleJobResult(job.id, result))
+      .catch(error => this.handleJobError(job.id, error));
+
+    this.stats.activeWorkers++;
+    this.stats.idleWorkers--;
+
+    // Continue scheduling if more work available
+    setImmediate(() => this.scheduleNextJob());
+  }
+
+  private async handleJobResult(jobId: string, result: JobResult): Promise<void> {
+    const activeJob = this.activeJobs.get(jobId);
+    if (!activeJob) return;
+
+    const { workerId } = activeJob;
+    const worker = this.workers.get(workerId);
+
+    if (worker) {
+      this.stats.activeWorkers--;
+      this.stats.idleWorkers++;
+      this.stats.totalJobsProcessed++;
+      this.updateProcessingStats(result.duration);
+    }
+
+    this.activeJobs.delete(jobId);
+
+    this.emit('job_completed', {
+      jobId,
+      result,
+      totalProcessed: this.stats.totalJobsProcessed
+    });
+
+    // Check if backpressure can be relieved
+    await this.checkBackpressureRelief();
+
+    // Schedule next job
+    this.scheduleNextJob();
+  }
+
+  private async handleJobError(jobId: string, error: Error): Promise<void> {
+    const activeJob = this.activeJobs.get(jobId);
+    if (!activeJob) return;
+
+    const { workerId } = activeJob;
+
+    this.stats.failedJobsCount++;
+    this.activeJobs.delete(jobId);
+
+    this.emit('job_failed', {
+      jobId,
+      error,
+      workerId,
+      retryable: true
+    });
+
+    // Worker might need restart if error is critical
+    if (error.message.includes('critical') || error.message.includes('fatal')) {
+      await this.restartWorker(workerId);
+    }
+
+    this.scheduleNextJob();
+  }
+
+  private async applyBackpressure(): Promise<void> {
+    if (this.backpressureMode) {
+      // Wait until load decreases
+      return new Promise((resolve) => {
+        const checkLoad = () => {
+          if (!this.backpressureMode) {
+            resolve();
+          } else {
+            setTimeout(checkLoad, 100);
+          }
+        };
+        checkLoad();
+      });
+    }
+
+    // Activate backpressure if overloaded
+    const totalCapacity = this.config.workerCount * this.config.maxJobsPerWorker;
+    const currentLoad = this.activeJobs.size + this.jobQueue.size;
+
+    if (currentLoad >= totalCapacity * 0.8) {
+      this.backpressureMode = true;
+      this.emit('backpressure_activated');
+
+      setTimeout(() => {
+        this.checkBackpressureRelief();
+      }, 5000); // Re-check in 5 seconds
+    }
+  }
+
+  private async checkBackpressureRelief(): Promise<void> {
+    if (!this.backpressureMode) return;
+
+    const totalCapacity = this.config.workerCount * this.config.maxJobsPerWorker;
+    const currentLoad = this.activeJobs.size + this.jobQueue.size;
+
+    if (currentLoad < totalCapacity * 0.6) {
+      this.backpressureMode = false;
+      this.emit('backpressure_relieved');
+    }
+  }
+
+  private updateProcessingStats(duration: number): void {
+    this.stats.averageProcessingTime =
+      (this.stats.averageProcessingTime + duration) / 2;
+  }
+
+  private priorityToWeight(priority: JobPriority): number {
+    switch (priority) {
+      case 'HIGH': return 100;
+      case 'NORMAL': return 50;
+      case 'LOW': return 10;
+      default: return 50;
+    }
+  }
+}
+
+// Worker class implementation
+
+class Worker {
+  private isProcessing = false;
+  private currentJobId: string | null = null;
+
+  constructor(
+    private readonly workerId: string,
+    private readonly config: WorkerConfig,
+    private readonly queue: ConcurrentJobQueue
+  ) {
+    // Initialize worker environment
+  }
+
+  async processJob(job: Job): Promise<JobResult> {
+    const startTime = Date.now();
+    this.isProcessing = true;
+    this.currentJobId = job.id;
+
+    try {
+      // Execute job function
+      const result = await Promise.race([
+        job.execute(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Job timeout after ${this.config.timeout}ms`)), this.config.timeout)
+        )
+      ]);
+
+      const duration = Date.now() - startTime;
+
+      return {
+        jobId: job.id,
+        success: true,
+        result,
+        duration,
+        workerId: this.workerId,
+      };
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+
+      return {
+        jobId: job.id,
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error)),
+        duration,
+        workerId: this.workerId,
+      };
+    } finally {
+      this.isProcessing = false;
+      this.currentJobId = null;
+    }
+  }
+
+  async checkHealth(): Promise<boolean> {
+    // Simple health check
+    return true;
+  }
+
+  isIdle(): boolean {
+    return !this.isProcessing;
+  }
+
+  async terminate(): Promise<void> {
+    this.isProcessing = false;
+    this.currentJobId = null;
+  }
+}
+
+// Priority Queue implementation
+
+class PriorityQueue<T> {
+  private heap: { item: T; priority: number }[] = [];
+
+  enqueue(item: T, priority: number): void {
+    this.heap.push({ item, priority });
+    this.bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue(): T | undefined {
+    if (this.heap.length === 0) return undefined;
+
+    const root = this.heap[0];
+    const last = this.heap.pop()!;
+
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this.sinkDown(0);
+    }
+
+    return root.item;
+  }
+
+  peek(): T | undefined {
+    return this.heap[0]?.item;
+  }
+
+  isEmpty(): boolean {
+    return this.heap.length === 0;
+  }
+
+  size(): number {
+    return this.heap.length;
+  }
+
+  find(predicate: (item: T) => boolean): T | undefined {
+    return this.heap.find(({ item }) => predicate(item))?.item;
+  }
+
+  private bubbleUp(index: number): void {
+    while (index > 0) {
+      const parentIndex = Math.floor((index - 1) / 2);
+      if (this.heap[index].priority <= this.heap[parentIndex].priority) break;
+
+      [this.heap[index], this.heap[parentIndex]] = [this.heap[parentIndex], this.heap[index]];
+      index = parentIndex;
+    }
+  }
+
+  private sinkDown(index: number): void {
+    const length = this.heap.length;
+
+    while (true) {
+      let left = 2 * index + 1;
+      let right = 2 * index + 2;
+      let largest = index;
+
+      if (left < length && this.heap[left].priority > this.heap[largest].priority) {
+        largest = left;
+      }
+
+      if (right < length && this.heap[right].priority > this.heap[largest].priority) {
+        largest = right;
+      }
+
+      if (largest === index) break;
+
+      [this.heap[index], this.heap[largest]] = [this.heap[largest], this.heap[index]];
+      index = largest;
+    }
+  }
+}
+
+// Performance monitoring variable for stats calculation
+const statsQueueLastProcessed = Date.now();

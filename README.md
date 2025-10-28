@@ -21,10 +21,23 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 - **Rate Limit Monitoring**: Real-time tracking of API usage across all platforms
 - **Modern UI**: Clean design system using shadcn/ui components with Tailwind CSS
 - **Theme System**: Light and dark mode support
+- **🆕 Enterprise Deployment**: Kubernetes-native with horizontal pod autoscaling
 
 ### Quality Assurance & Design
-✅ **TypeScript codebase** • ✅ **Build compiles successfully** • ✅ **Responsive design**  
-✅ **Professional UI** • ✅ **Dark Mode Support** • ✅ **Focusing constraints for stability**
+✅ **TypeScript codebase** • ✅ **Build compiles successfully** • ✅ **Responsive design** \
+✅ **Professional UI** • ✅ **Dark Mode Support** • ✅ **Enterprise K8s Ready**
+
+## 🆕 Production Deployment
+
+**Kubernetes Deployment Status**: ✅ **FULLY VALIDATED FOR PRODUCTION**
+
+### Enterprise Capabilities
+- **🔄 Auto-Scaling**: HPA with 3-50 pod scaling based on CPU/memory metrics
+- **🔒 Security Hardening**: Non-root containers, RBAC, network policies, security contexts
+- **📊 Observability**: Prometheus metrics, Grafana dashboards, structured logging
+- **♻️ Zero-Downtime Updates**: Rolling deployments with health probes and database migrations
+- **💾 Persistent Storage**: PVC-backed data and log persistence with backup/recovery
+- **🏗️ Containerized**: Production-ready Docker images with multi-stage builds
 
 ## Quick Start
 
@@ -43,6 +56,26 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view your portal.
+
+## Production Deployment
+
+For enterprise deployments, use the Kubernetes manifests for production-ready deployment:
+
+```bash
+# Quick deploy to Kubernetes (assumes cluster access)
+cd k8s
+kubectl apply -f service.yaml -f deployment.yaml -f hpa.yaml
+
+# Follow the detailed guide for complete setup
+cat docs/kubernetes.md
+```
+
+**Production Features:**
+- Horizontal Pod Auto-Scaling (HPA) with 3-50 replica scaling
+- Security hardened with RBAC and non-root containers
+- Enterprise observability with Prometheus and Grafana integration
+- Zero-downtime rolling deployments
+- Persistent storage with backup/recovery
 
 ## Testing
 
@@ -98,12 +131,20 @@ hyperpage/
 
 ## Documentation
 
-- **[Installation & Setup](docs/installation.md)**: Detailed setup instructions and configuration
+### 🚀 **Getting Started & Deployment**
+- **[Installation & Setup](docs/installation.md)**: Local development setup and configuration
+- **[⚡ Kubernetes Deployment](docs/kubernetes.md)**: Production-ready K8s deployment with HPA
 - **[Usage Guide](docs/usage.md)**: Portal features and navigation
-- **[Testing Guide](docs/testing.md)**: Testing strategy and quality assurance
-- **[Monitoring & Observability](docs/monitoring.md)**: Prometheus metrics, structured logging, and Grafana dashboards
-- **[API Documentation](docs/api.md)**: Technical API reference
+
+### 🧪 **Development & Quality**
+- **[Testing Guide](docs/testing.md)**: Testing strategy and automated quality assurance
+- **[API Documentation](docs/api.md)**: Technical API reference and endpoints
 - **[System Architecture](docs/architecture.md)**: Core design and integration patterns
+
+### 📊 **Operations & Monitoring**
+- **[Monitoring & Observability](docs/monitoring.md)**: Prometheus metrics, structured logging, and dashboards
+- **[Performance Guide](docs/performance.md)**: Caching strategies, optimization, and rate limiting
+- **[CONTRIBUTING.md](docs/CONTRIBUTING.md)**: Development guidelines and workflows
 
 ## Contributing
 

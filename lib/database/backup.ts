@@ -9,6 +9,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { db, closeDatabase } from './index.js';
+import { jobs, jobHistory, rateLimits, toolConfigs } from './schema.js';
 import { loadPersistedRateLimits } from '../rate-limit-monitor.js';
 import { loadToolConfigurations } from '../tool-config-manager.js';
 
@@ -77,10 +78,10 @@ async function getBackupMetadata(backupPath: string): Promise<BackupMetadata> {
     const stats = await fs.stat(backupPath);
 
     // Query record counts from database
-    const jobCount = await db.$count(db.jobs);
-    const rateLimitCount = await db.$count(db.rateLimits);
-    const toolConfigCount = await db.$count(db.toolConfigs);
-    const jobHistoryCount = await db.$count(db.jobHistory);
+    const jobCount = await db.$count(jobs);
+    const rateLimitCount = await db.$count(rateLimits);
+    const toolConfigCount = await db.$count(toolConfigs);
+    const jobHistoryCount = await db.$count(jobHistory);
 
     // Generate checksum (simplified - in production use proper hashing)
     const checksum = `size-${stats.size}-${stats.mtimeMs}`;
@@ -284,7 +285,7 @@ export async function listBackups(): Promise<Array<BackupMetadata & { filename: 
       };
     }));
 
-    return backups.filter(Boolean).sort((a, b) => b.timestamp - a.timestamp);
+    return backups.filter((item): item is BackupMetadata & { filename: string; path: string } => item !== null).sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
     console.error('Failed to list backups:', error);
     return [];

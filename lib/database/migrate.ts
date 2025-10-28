@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { eq } from 'drizzle-orm';
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
-import { databasePath, internalDb } from './connection';
+import { DATABASE_PATH, internalDb } from './connection';
 
 // Migration tracking table (simplified version for internal use)
 const schemaMigrations = sqliteTable('schema_migrations', {
@@ -23,17 +23,19 @@ const schemaMigrations = sqliteTable('schema_migrations', {
 
 import { sql } from 'drizzle-orm';
 
+type InternalDb = typeof internalDb;
+
 // Create migration tracking table if it doesn't exist
 function ensureMigrationTable() {
   try {
-    const createTableSql = sql`
+    const createTableSql = `
       CREATE TABLE IF NOT EXISTS schema_migrations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         migration_name TEXT NOT NULL UNIQUE,
         executed_at INTEGER DEFAULT (unixepoch() * 1000) NOT NULL
       );
     `;
-    internalDb.run(createTableSql);
+    internalDb.exec(createTableSql);
   } catch (error) {
     console.warn('Failed to create migration table:', error);
   }
@@ -94,7 +96,7 @@ async function recordMigrationExecuted(migrationName: string): Promise<void> {
       'INSERT INTO schema_migrations (migration_name) VALUES (?)'
     ).run(migrationName);
   } catch (error) {
-    if (!error.message.includes('UNIQUE constraint failed')) {
+    if (!((error as Error)?.message?.includes('UNIQUE constraint failed'))) {
       console.error(`Error recording migration ${migrationName}:`, error);
       throw error;
     }

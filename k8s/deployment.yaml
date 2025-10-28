@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hyperpage
+  labels:
+    app: hyperpage
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: hyperpage
+  template:
+    metadata:
+      labels:
+        app: hyperpage
+        version: v1
+    spec:
+      # Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+
+      # Service Account for RBAC
+      serviceAccountName: hyperpage-service-account
+
+      # Container specifications
+      containers:
+      - name: hyperpage
+        image: hyperpage:latest
+        imagePullPolicy: Always
+
+        # Resource limits for HPA
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+        # Health checks for Kubernetes
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+
+        # Startup probe
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+
+        # Environment variables
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: NEXT_TELEMETRY_DISABLED
+          value: "1"
+
+        # Environment variables from secrets/configmaps (to be defined separately)
+        envFrom:
+        - configMapRef:
+            name: hyperpage-config
+        - secretRef:
+            name: hyperpage-secrets
+
+        # Ports
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+
+        # Volume mounts for data persistence (disabled for testing)
+        # volumeMounts:
+        # - name: data-storage
+        #   mountPath: /app/data
+        # - name: logs-storage
+        #   mountPath: /app/logs
+
+      # Volumes (disabled for testing)
+      # volumes:
+      # - name: data-storage
+      #   persistentVolumeClaim:
+      #     claimName: hyperpage-data-pvc
+      # - name: logs-storage
+      #   persistentVolumeClaim:
+      #     claimName: hyperpage-logs-pvc
+
+      # Node affinity and tolerations can be added here for production deployments
+      # affinity:
+      #   nodeAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #       nodeSelectorTerms:
+      #       - matchExpressions:
+      #         - key: kubernetes.io/os
+      #           operator: In
+      #           values:
+      #           - linux
+
+      # DNS policy
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always

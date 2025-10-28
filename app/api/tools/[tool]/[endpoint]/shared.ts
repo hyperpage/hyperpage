@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getToolByName, Tool } from "../../../../../tools";
 import { ToolApi } from "../../../../../tools/tool-types";
 import { canExecuteRequest, recordRequestSuccess, recordRequestFailure } from "../../../../../tools/validation";
 import { defaultCache } from "../../../../../lib/cache/cache-factory";
 import { generateCacheKey } from "../../../../../lib/cache/memory-cache";
+import { defaultCompressionMiddleware } from "../../../../../lib/api/compression/compression-middleware";
+import { performanceMiddleware } from "../../../../../lib/monitoring/performance-middleware";
 
 // Input validation helper
 export function validateInput(
@@ -62,7 +64,7 @@ export function validateTool(
 
 // Handler execution helper with caching support
 export async function executeHandler(
-  request: Request,
+  request: NextRequest,
   tool: Tool,
   endpoint: string,
 ): Promise<NextResponse> {
@@ -127,13 +129,17 @@ export async function executeHandler(
       console.debug(`Cached response for ${tool.slug}/${endpoint} (${cacheKey}) with TTL ${ttlMs}ms`);
     }
 
-    return NextResponse.json(data, {
+    // Create response with caching headers
+    const response = NextResponse.json(data, {
       headers: {
         'Cache-Control': 'private, max-age=30', // Brief client-side caching
         'X-Cache-Status': skipCache ? 'BYPASS' : 'MISS',
         'X-Cache-Key': cacheKey,
       },
     });
+
+    // Apply compression based on request capabilities
+    return await defaultCompressionMiddleware.compress(response, request);
   } catch (error) {
     console.error(`Handler error for ${tool.name}/${endpoint}:`, error);
     recordRequestFailure(tool.slug); // Record handler error as a failure

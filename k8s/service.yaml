@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hyperpage-service
+  labels:
+    app: hyperpage
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: hyperpage
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hyperpage-service-account
+  labels:
+    app: hyperpage
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hyperpage-cluster-role
+  labels:
+    app: hyperpage
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "services", "endpoints", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hyperpage-cluster-role-binding
+  labels:
+    app: hyperpage
+subjects:
+- kind: ServiceAccount
+  name: hyperpage-service-account
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: hyperpage-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hyperpage-config
+  labels:
+    app: hyperpage
+data:
+  # Application configuration
+  NODE_ENV: "production"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+  # Performance settings
+  PERFORMANCE_MONITORING_ENABLED: "true"
+  PERFORMANCE_DASHBOARD_RETENTION_MINUTES: "5"
+
+  # Compression settings
+  COMPRESSION_ENABLED: "true"
+  COMPRESSION_LEVEL: "6"
+
+  # Caching settings
+  CACHE_DEFAULT_TTL_SECONDS: "300"
+  CACHE_MAX_SIZE: "1000000000"  # 1GB
+
+  # Rate limiting defaults
+  RATE_LIMIT_DEFAULT_REQUESTS_PER_HOUR: "1000"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hyperpage-secrets
+  labels:
+    app: hyperpage
+type: Opaque
+stringData:
+  # Database configuration (use actual values)
+  DATABASE_URL: "file:./data/hyperpage.db"
+
+  # Redis configuration (if using external Redis)
+  # REDIS_URL: "redis://redis-service:6379"
+
+  # Application secrets
+  NEXTAUTH_SECRET: "your-nextauth-secret-here"
+  NEXTAUTH_URL: "https://your-domain.com"
+
+  # External API keys (replace with actual encrypted values)
+  # GITHUB_TOKEN: "ghp_..."
+  # JIRA_API_TOKEN: "your-jira-token"
+  # GITLAB_TOKEN: "your-gitlab-token"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hyperpage-data-pvc
+  labels:
+    app: hyperpage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard  # Adjust based on your cluster
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hyperpage-logs-pvc
+  labels:
+    app: hyperpage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard  # Adjust based on your cluster
