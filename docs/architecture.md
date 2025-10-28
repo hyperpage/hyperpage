@@ -236,7 +236,7 @@ Following component optimization and daisyUI integration:
 |-----------|----------------|--------------|---------------------|
 | `TopBar` | Custom component | DaisyUI + Tailwind CSS | Semantic HTML + component library |
 | `DataTable` | Custom table component | DaisyUI + Tailwind CSS | Flexible data presentation |
-| `Livefeed` | Rich content feed | DaisyUI + Tailwind CSS | Enhanced user experience |
+| `Overview` | Main dashboard view | DaisyUI + Tailwind CSS | Enhanced user experience |
 | **All Components** | DaisyUI + custom | Tailwind CSS + component library | **Balanced framework approach** |
 
 #### Key Refactoring Changes

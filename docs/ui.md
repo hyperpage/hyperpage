@@ -4,7 +4,7 @@ This document provides comprehensive documentation of Hyperpage's user interface
 
 ## Overview
 
-Hyperpage is a portal application that aggregates activity and data from multiple development tools (GitHub, GitLab, Jira, etc.) into a unified, real-time interface. The UI is built with Next.js 15, Tailwind CSS, and custom component library, featuring a professional design system with full dark/light mode support.
+Hyperpage is a portal application that aggregates data from multiple development tools (GitHub, GitLab, Jira, etc.) into a unified, real-time interface. The UI is built with Next.js 15, Tailwind CSS, and custom component library, featuring a professional design system with full dark/light mode support.
 
 ### Design Philosophy
 
@@ -31,7 +31,7 @@ Hyperpage is a portal application that aggregates activity and data from multipl
 #### Dashboard Container (`app/components/Dashboard.tsx`)
 - Primary container component with fixed header layout
 - Manages global state: dark mode, active tab, search query
-- Coordinates data fetching via custom hooks (`useToolData`, `useActivityData`)
+- Coordinates data fetching via custom hooks (`useToolData`)
 - Implements polling mechanisms for real-time updates
 
 ### Layout Hierarchy
@@ -48,12 +48,12 @@ Hyperpage is a portal application that aggregates activity and data from multipl
 ├─────────────────────────────────────────────────┤
 │ TabNavigation (Fixed, 48px)                   │
 │ ├─ Overview Tab                              │
-│ └─ Livefeed Tab                              │
+│ └─ Discovery Tab                             │
 ├─────────────────────────────────────────────────┤
 │ Main Content (Scrollable, Full Remaining)     │
 │ └─ Conditional Content:                       │
-│    ├─ DashboardOverview (Overview Tab)       │
-│    └─ Livefeed (Livefeed Tab)                 │
+│    ├─ PortalOverview (Overview Tab)       │
+│    └─ ToolConfiguration (Discovery Tab)      │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -70,17 +70,11 @@ This creates a persistent navigation experience while allowing content to scroll
 
 ### Page Components
 
-#### DashboardOverview (`app/components/DashboardOverview.tsx`)
+#### DashboardOverview (`app/components/PortalOverview.tsx`)
 - Renders tool widgets in responsive grid layout
 - Implements real-time search across all widget data
 - Handles loading states and data filtering
 - Coordinates with ToolWidgetGrid for widget rendering
-
-#### Livefeed (`app/components/Livefeed.tsx`)
-- Timeline-based activity display with chronological sorting
-- Rich metadata support (repository, branch, status, labels, assignees)
-- Expandable content blocks for commits, descriptions, and comments
-- Real-time refresh with background data loading
 
 #### ToolWidgetGrid (`app/components/ToolWidgetGrid.tsx`)
 - Responsive grid container for tool widgets
@@ -241,12 +235,12 @@ Tailwind-based responsive design with semantic breakpoints:
 #### Tablet (768px - 1024px)
 - Compact TopBar with reduced spacing
 - 2-column widget grid in overview
-- Stacked activity items with condensed metadata
+- Stacked items with condensed metadata
 
 #### Desktop (1024px+)
 - Full TopBar with all controls visible
 - 3-4 column responsive widget grid
-- Timeline layout for activity feed with expanded metadata
+- Timeline layout for content presentation with expanded metadata
 
 ## Data Visualization
 
@@ -258,13 +252,13 @@ Widget-based data presentation system:
 - **Dynamic Data**: Real-time data loading with fallback to mock data
 - **Search Integration**: Real-time filtering of widget content
 
-### Activity Feed
+### Content Presentation
 
-Rich, timeline-based activity visualization:
-- **Chronological Timeline**: Newest activities at top with relative timestamps
-- **Rich Metadata**: Repository, branch, commit count, status badges
-- **Content Blocks**: Expandable sections for commits, comments, descriptions
-- **Interactive Elements**: Clickable links to external resources
+Rich, timeline-based content visualization:
+- **Chronological Timeline**: Newest content at top with relative timestamps
+- **Rich Metadata**: Repository, branch, tags, and classifications
+- **Content Blocks**: Expandable sections for commits and descriptions
+- **Interactive Elements**: Clickable navigation to external resources
 
 ### Loading & Empty States
 
@@ -295,7 +289,7 @@ Sophisticated state management for all data scenarios:
 ### Performance Optimizations
 
 #### Component Optimization
-- **React.memo**: Applied to frequently re-rendering components (ActivityItem, widgets)
+- **React.memo**: Applied to frequently re-rendering components (widgets)
 - **Hook Dependencies**: Optimized dependency arrays in custom hooks
 - **Conditional Rendering**: Components only render when data is available
 
@@ -347,12 +341,13 @@ const {
 } = useToolData({ enabledTools });
 ```
 
-#### useActivityData Hook
+#### ContentState Hook
+
 ```typescript
 const {
-  refreshActivities,   // Manual activity refresh
-  isRefreshing         // Activity refresh state
-} = useActivityData();
+  refreshContent,      // Manual content refresh
+  isRefreshing         // Content refresh state
+} = useContentState();
 ```
 
 ### Component State Patterns
@@ -384,7 +379,7 @@ const {
 - **Testing**: All components include corresponding test files
 
 ### Code Organization
-- **Feature-based Structure**: Components grouped by domain (portal, activity)
+- **Feature-based Structure**: Components grouped by domain (portal)
 - **Shared Components**: Reusable UI primitives in `components/ui/`
 - **Custom Hooks**: Business logic encapsulated in `hooks/` directory
 - **Configuration Management**: Environment variables in `.env.local.sample`

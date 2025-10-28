@@ -60,20 +60,4 @@ export interface {ToolName}Response {
   }>;
 }
 
-export interface {ToolName}ActivityItem {
-  id: string;
-  type: 'issue' | 'pr' | 'comment' | 'commit';
-  title: string;
-  author: string;
-  url: string;
-  displayId: string; // Ticket key or PR number
-  timestamp: string;
-  status?: 'open' | 'closed' | 'merged';
-  repository?: string;
-  branch?: string;
-  commitCount?: number;
-  assignee?: string;
-  labels?: string[];
-}
-
-export type {ToolName}Capabilities = 'portal' | 'activity';
+export type {ToolName}Capabilities = 'portal';

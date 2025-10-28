@@ -32,7 +32,7 @@ Following "Hook-First Pattern" from coding-principles.md, start with custom hook
 
 ```xml
 <ask_followup_question>
-<question>What data does this component need? Does it require a custom hook following useToolData/useActivityData patterns?</question>
+<question>What data does this component need? Does it require a custom hook following useToolData patterns?</question>
 <options>["Needs custom hook - implements data fetching logic", "Uses existing hooks - direct prop passing", "Stateless component - no data fetching", "Local state only - React hooks sufficient"]</options>
 </ask_followup_question>
 ```

@@ -193,8 +193,8 @@ test.describe('Rate Limit UI Handling E2E Tests', () => {
       await page.goto('/');
 
       // Should still allow navigation
-      await page.getByRole('tab', { name: 'Livefeed' }).click();
-      await expect(page.getByRole('tab', { name: 'Livefeed' })).toHaveAttribute('aria-selected', 'true');
+      await page.getByRole('tab', { name: 'Overview' }).click();
+      await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
 
       await page.getByRole('tab', { name: 'Discovery' }).click();
       await expect(page.getByRole('tab', { name: 'Discovery' })).toHaveAttribute('aria-selected', 'true');

@@ -12,10 +12,7 @@ The Hyperpage portal consolidates data from multiple developer tools into a unif
 - **Theme Toggle**: Switch between light and dark modes with professional Lucide React icons
 
 ### Tab Navigation (48px, Fixed)
-Three main tabs for different views:
 - **Overview**: Real-time widgets showing tool data
-- **Livefeed**: Activity stream from all connected platforms
-- **Communication**: Unified messaging interface (planned)
 
 ### Main Content Area
 Responsive grid layout that adapts from mobile (1 column) to desktop (2+ columns).
@@ -36,7 +33,7 @@ The main portal view displaying real-time data from all enabled tools.
 
 **Individual Tool Widgets:**
 - **GitHub**: Repository list, recent commits, workflow status
-- **GitLab**: Merge requests, pipelines, project activity
+- **GitLab**: Merge requests, pipelines
 - **Jira**: Issues by status, sprint progress, team assignments
 
 **Aggregated Views:**
@@ -50,13 +47,11 @@ The main portal view displaying real-time data from all enabled tools.
 - **Portal**: Main portal container with tab navigation
 - **PortalOverview**: Overview tab with widget grid display
 - **PortalWidgetGrid**: Responsive grid container for tool widgets
-- **TabNavigation**: Tab bar for switching between Overview/Livefeed
+- **TabNavigation**: Tab bar for switching between Overview
 - **TopBar**: Fixed top bar with search, tool status indicators, and theme toggle
 
 **Data Display Components:**
 - **DataTable**: Sortable, paginated table for issues, PRs, and other lists
-- **Livefeed**: Real-time activity stream with rich content display
-- **ActivitySkeleton**: Loading animation for activity feed items
 
 **Specialized Components:**
 - **QueryProvider**: React Query context provider for data management
@@ -69,49 +64,6 @@ The main portal view displaying real-time data from all enabled tools.
 - **Loading States**: Smooth transitions with skeleton loading
 - **Error Handling**: Failed loads show user-friendly messages with retry options
 - **Time Sorting**: All timeline data sorted with newest items first
-
-### Livefeed Tab
-
-Real-time activity aggregation from all connected platforms featuring rich content cards.
-
-#### Activity Features
-- **1-Minute Auto-Refresh**: Activity updates automatically every minute
-- **Cross-Platform Events**: Combines GitHub, GitLab, Jira, and future tools
-- **Rich Content Cards**: Enhanced activity items showing actual content
-- **Contextual Metadata**: Repository, branch, assignees, labels, and status
-- **Navigation Links**: Click to open items in their original platforms
-- **Status Indicators**: Color-coded badges for issue/MR states
-- **Comprehensive Repository Coverage**: Includes activities from owned repositories, collaborator access, and organization memberships
-
-#### Rich Content Enhancement
-The livefeed now displays meaningful content instead of just basic action descriptions:
-
-**Content Types:**
-- **GitHub Commits** 🔵: Individual commit messages with clickable SHA links to GitHub commit pages
-- **GitLab Commits** 🟠: Individual commit messages with clickable SHA links to GitLab commit pages
-- **Jira Status Changes** 🟢: Shows actual status transitions like "To Do → In Progress" extracted from Jira changelog
-- **Jira Issue Updates** 🟣: Displays issue descriptions with rich metadata including assignee and status
-- **Git Comments** 🔴: Future support for code review and issue comments
-- **Change Details** 🟡: Future support for field change summaries
-
-**Visual Design:**
-- **Color-Coded Cards**: Different border colors and icons for each content type
-- **Status Transition Badges**: Special formatting for Jira status changes with transition arrows
-- **Content Truncation**: Smart 150-character limits with ellipsis for readability
-- **Author Attribution**: Shows who made commits, status changes, or comments when available
-- **Progressive Disclosure**: Up to 3 content items per activity with expansion option
-
-#### Activity Types
-- **Code Events**: Commits with message details, PRs/MRs with rich descriptions
-- **Issue Updates**: Status changes with full issue context and descriptions
-- **CI/CD Events**: Pipeline results with commit information linkage
-- **Team Activity**: Member assignments with enhanced issue details
-
-#### Filter & Search
-- **Real-Time Search**: Filter activities by content, author, or tool
-- **Result Counts**: See total matches as you type
-- **Context Preservation**: Filters persist during tab switches
-- **Performance**: Efficient pagination with large activity volumes
 
 ## Navigation & Search
 
@@ -165,7 +117,6 @@ ENABLE_TICKETING=true    # Combined ticketing portal
 
 # Performance Tuning
 DATA_REFRESH_INTERVAL=300000  # 5 minutes (milliseconds)
-ACTIVITY_FEED_LIMIT=50       # Max activity items
 
 # URL Configuration
 JIRA_WEB_URL=https://your-domain.atlassian.net

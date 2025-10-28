@@ -64,7 +64,7 @@ hyperpage/
 
 #### Hook-First Pattern
 - **Business Logic**: Extract complex logic into custom hooks before components
-- **Examples**: `useToolData`, `useActivityData`, `useDarkMode`
+- **Examples**: `useToolData`, `useDarkMode`
 - **Benefits**: Reusable logic, cleaner components, better testability
 
 #### Single Responsibility Pattern
@@ -217,8 +217,6 @@ Hyperpage implements a comprehensive testing strategy with **69 tests** across u
 ├── lib/time-utils.test.ts        # 15/15 passing ✅
 ├── tools/registry.test.ts        # 6/6 passing ✅
 ├── api/enabled.test.ts          # 7/7 passing ✅
-├── api/activity.test.ts         # 11/11 undefined (infrastructure optimizations)
-├── components/hooks/useActivityData.test.ts  # 13/13 undefined (most act() issues resolved)
 └── components/hooks/useToolData.test.ts     # 17/17 undefined (act() wrappers needed)
 
 🌐 E2E Tests (environment configuration needed):
@@ -249,11 +247,9 @@ __tests__/
 ├── components/
 │   └── hooks/             # Custom hook tests (13 tests)
 │       ├── useToolData.test.ts     # Tool data fetching & management
-│       └── useActivityData.test.ts # Activity feed & real-time updates
 ├── api/                   # API route integration tests (25 tests)
 │   ├── tool.test.ts      # Individual tool details endpoint
 │   ├── enabled.test.ts   # Tool enumeration API
-│   └── activity.test.ts  # Activity feed aggregation
 └── tools/
     └── registry.test.ts  # Tool registration system (6 tests)
 

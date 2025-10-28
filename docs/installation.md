@@ -48,7 +48,7 @@ ENABLE_TICKETING=false     # Show unified ticketing widgets
 ```env
 ENABLE_GITHUB=true
 GITHUB_TOKEN=github_pat_...             # Personal access token
-GITHUB_USERNAME=your_github_username    # Your GitHub username for activity feed
+GITHUB_USERNAME=your_github_username
 ```
 
 To create a GitHub Personal Access Token:

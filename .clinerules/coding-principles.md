@@ -13,7 +13,6 @@ This document outlines the core architectural principles and development pattern
 ## Component Architecture Patterns
 
 ### Custom Hooks for State Management (React Query Integration)
-- **useActivities**: React Query-powered activity feed with automatic 15s polling and intelligent caching
 - **useToolQueries**: Dynamic query management for tool widgets with selective refresh intervals and registry-driven data fetching
 - **useDarkMode**: Handles theme switching with localStorage persistence
 - **Hook-First Pattern**: Extract complex stateful logic into reusable custom hooks before component implementation
@@ -31,7 +30,7 @@ This document outlines the core architectural principles and development pattern
 - **Error Handling**: Services include graceful error handling without exposing implementation details
 
 ### Performance Optimizations
-- **React.memo**: Applied to frequently re-rendering components like ActivityItem and DashboardSearchResults
+- **React.memo**: Applied to frequently re-rendering components like DashboardSearchResults
 - **useMemo**: Used for expensive computations like data filtering and widget processing
 - **Error Boundaries**: ErrorBoundary component catches and handles React errors gracefully
 - **Memoization Strategy**: Balance performance benefits with code maintainability
@@ -67,35 +66,6 @@ This document outlines the core architectural principles and development pattern
 - **Tool Addition**: New tools require ONLY 3 steps: create tool definition, import in tools/index.ts, and set environment variables.
 - **UI Filtering**: Only enabled tools appear in the portal UI and sidebar; disabled tools don't register in active UI or API routing. Widgets are only displayed for enabled tools that have both widget definitions and API endpoints configured.
 - **Refresh Configuration**: Tools can configure `refreshInterval` in widget definitions for automatic data polling (e.g., Jira refreshes every 5 minutes). Refresh intervals should be appropriate to data update frequency to balance real-time updates with API rate limits.
-
-## Activity System & Livefeed
-
-- **Realtime Activity Feed**: Activity feed automatically refreshes every 15 seconds with polling intervals, matching widget realtime behavior. Includes tab visibility refresh when returning to portal tab.
-- **Enhanced Context Information**: Activity items now include comprehensive metadata for better understanding:
-  - **Repository/Project Context**: Shows the repository (GitHub/GitLab) or project (Jira) where the activity occurred
-  - **Branch Information**: Displays branch names for code-related activities (pushes, PRs/MRs)
-  - **Commit Counts**: Shows the number of commits in push events
-  - **Status Indicators**: Displays current status of issues/PRs/MRs (open, closed, merged, etc.) with color-coded badges
-  - **Assignee Information**: Shows who items are assigned to (when different from the activity author)
-  - **Labels/Tags**: Displays applicable labels and tags on issues and pull requests
-- **Activity Handlers**: Tools that provide activity data (`capabilities: ['activity']`) should include `url` and `displayId` fields in activity responses for clickable navigation links, plus optional metadata fields (`repository`, `branch`, `commitCount`, `status`, `assignee`, `labels`). When GitLab's events API doesn't provide `target_url` or `project_path` fields, the system automatically constructs URLs using the web URL pattern (`https://gitlab.com/{project_path}/-/issues/{target_iid}` for issues, `/-/merge_requests/{target_iid}` for MRs) by fetching project details via the project ID.
-- **Clean Context Display**: Metadata is displayed as secondary information below activity descriptions using compact badges, ensuring the main activity description remains readable while providing rich context.
-- **Livefeed Navigation**: Activity items display hyperlinks on the right side for:
-  - GitHub PR/issue numbers (**#123**)
-  - GitLab MR/issue numbers (**!456**, **#789**)
-  - Jira ticket keys (**PROJ-123**)
-  Push events show descriptive text only (no hyperlinks) to avoid 404 errors from GitLab URL limitations.
-- **Clean Descriptions**: Activity descriptions should not duplicate item identifiers - ticket keys are displayed as hyperlinks instead of prefixed text (e.g., use "Issue title" + **PROJ-456** hyperlink, not "PROJ-456: Issue title").
-- **Navigation Security**: All activity hyperlinks open in new tabs with `target="_blank"` and `rel="noopener noreferrer"` for security.
-- **Status Color Coding**: Status badges use consistent color schemes across the portal:
-  - Green: open, active, success states
-  - Red: closed, failed states
-  - Purple: merged, special states
-- **Tool-Specific Formatting**:
-  - GitHub: `#` prefix for PR/issue numbers (**#123**)
-  - GitLab: `!` prefix for merge requests, `#` prefix for issues (**!789**, **#123**)
-  - Jira: Bare ticket keys (**PROJ-456**)
-- **Loading Experience**: Livefeed features smooth, professional loading states with shimmer skeleton animations and background refresh functionality. Skeletons are displayed only during initial loading to provide visual feedback. During refresh operations (manual refresh, automatic polling, or tab visibility changes), activities remain fully visible and interactive to prevent jarring visual "flash" - users maintain full interaction capability while new data loads seamlessly in the background.
 
 ## Environment Configuration
 

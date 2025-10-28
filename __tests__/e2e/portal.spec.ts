@@ -13,7 +13,6 @@ test.describe('Hyperpage Portal E2E Tests', () => {
 
     // Check tabs are present
     await expect(page.getByRole('tab', { name: 'Overview' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Livefeed' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Discovery' })).toBeVisible();
 
     // Verify no tools state is shown initially
@@ -26,14 +25,10 @@ test.describe('Hyperpage Portal E2E Tests', () => {
     // Check Overview tab is active by default
     await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
 
-    // Navigate to Livefeed tab
-    await page.getByRole('tab', { name: 'Livefeed' }).click();
-    await expect(page.getByRole('tab', { name: 'Livefeed' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'false');
-
     // Navigate to Discovery tab
     await page.getByRole('tab', { name: 'Discovery' }).click();
     await expect(page.getByRole('tab', { name: 'Discovery' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'false');
 
     // Return to Overview
     await page.getByRole('tab', { name: 'Overview' }).click();
@@ -76,8 +71,8 @@ test.describe('Hyperpage Portal E2E Tests', () => {
   test('should show loading states appropriately', async ({ page }) => {
     await page.goto('/');
 
-    // Check for loading element on Livefeed tab (should show loading animation)
-    await page.getByRole('tab', { name: 'Livefeed' }).click();
+    // Check for loading element on Overview tab (should show loading animation)
+    await page.getByRole('tab', { name: 'Overview' }).click();
 
     // Loading states might vary - check for skeleton animations or loading text
     const loadingContent = page.locator('[class*="animate-shimmer"]').or(page.getByText(/loading|fetching/i));
@@ -109,7 +104,7 @@ test.describe('Hyperpage Portal E2E Tests', () => {
     await page.goto('/');
 
     // Should show error states instead of crashing
-    await page.getByRole('tab', { name: 'Livefeed' }).click();
+    await page.getByRole('tab', { name: 'Overview' }).click();
 
     // Check for error message or fallback content
     const errorContent = page.getByText(/error|failed|no data/i);

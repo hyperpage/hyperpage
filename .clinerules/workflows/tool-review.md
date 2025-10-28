@@ -33,8 +33,8 @@ Verify tool follows registry-driven pattern:
 
 Check type definitions:
 - [ ] Tool-specific interfaces defined in tools/[tool]/types.ts
-- [ ] ApiParams, Response, ActivityItem interfaces present
-- [ ] Capabilities type correctly defined as union of 'portal' | 'activity'
+- [ ] ApiParams, Response interfaces present
+- [ ] Capabilities type correctly defined as 'portal'
 - [ ] Proper TypeScript typing without any
 
 ### Handler Implementation
@@ -68,22 +68,6 @@ Check widget definitions:
 - [ ] refreshInterval configured (reasonable values)
 - [ ] Loading states and error handling
 - [ ] Data binding follows component patterns
-
-### Activity System Integration (If Applicable)
-
-```xml
-<search_files>
-<path>.</path>
-<regex>ActivityItem</regex>
-<file_pattern>tools/{tool-name}/types.ts</file_pattern>
-</search_files>
-```
-
-Validate activity events (if tool supports activity):
-- [ ] Required fields: id, type, title, author, url, displayId, timestamp
-- [ ] Optional metadata: repository, branch, status, labels, assignee
-- [ ] Proper data transformation from API response
-- [ ] URL construction per tool-specific patterns
 
 ### Registration Verification
 

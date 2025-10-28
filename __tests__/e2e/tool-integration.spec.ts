@@ -40,7 +40,7 @@ test.describe('Tool Integration E2E Tests', () => {
 
       await page.goto('/');
 
-      await page.getByRole('tab', { name: 'Livefeed' }).click();
+      await page.getByRole('tab', { name: 'Overview' }).click();
 
       // Should show error state instead of crashing
       const errorIndicator = page.getByText(/error|failed|unable to load/i);
@@ -49,8 +49,8 @@ test.describe('Tool Integration E2E Tests', () => {
       }
 
       // Should still allow navigation
-      await page.getByRole('tab', { name: 'Overview' }).click();
-      await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+      await page.getByRole('tab', { name: 'Tools' }).click();
+      await expect(page.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true');
     });
   });
 
@@ -58,7 +58,7 @@ test.describe('Tool Integration E2E Tests', () => {
     test('should handle tab visibility data refresh', async ({ page }) => {
       await page.goto('/');
 
-      await page.getByRole('tab', { name: 'Livefeed' }).click();
+      await page.getByRole('tab', { name: 'Overview' }).click();
 
       // Simulate switching tabs (bringing page back into focus)
       await page.evaluate(() => {
@@ -72,13 +72,13 @@ test.describe('Tool Integration E2E Tests', () => {
 
       // Content might update (but this depends on implementation)
       // At minimum, page should remain responsive
-      await expect(page.getByRole('tab', { name: 'Livefeed' })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     });
 
     test('should handle automatic refresh intervals', async ({ page }) => {
       await page.goto('/');
 
-      await page.getByRole('tab', { name: 'Livefeed' }).click();
+      await page.getByRole('tab', { name: 'Overview' }).click();
 
       // Wait for initial load
       await page.waitForTimeout(1000);
@@ -87,11 +87,11 @@ test.describe('Tool Integration E2E Tests', () => {
       await page.waitForTimeout(5000);
 
       // Page should still be functional regardless of auto-refresh
-      await expect(page.getByRole('tab', { name: 'Livefeed' })).toBeVisible();
+      await expect(page.getByRole('tab', { name: 'Overview' })).toBeVisible();
 
       // Try navigating to ensure responsiveness
-      await page.getByRole('tab', { name: 'Overview' }).click();
-      await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+      await page.getByRole('tab', { name: 'Tools' }).click();
+      await expect(page.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true');
     });
   });
 
@@ -148,15 +148,15 @@ test.describe('Tool Integration E2E Tests', () => {
       await page.goto('/');
 
       // Click on a different tab
-      await page.getByRole('tab', { name: 'Livefeed' }).click();
-      await expect(page.getByRole('tab', { name: 'Livefeed' })).toHaveAttribute('aria-selected', 'true');
+      await page.getByRole('tab', { name: 'Tools' }).click();
+      await expect(page.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true');
 
       // Browser navigation
       await page.goBack();
       await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
 
       await page.goForward();
-      await expect(page.getByRole('tab', { name: 'Livefeed' })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true');
     });
   });
 
@@ -196,13 +196,13 @@ test.describe('Tool Integration E2E Tests', () => {
       // This test depends on implementation - checks if virtual scrolling or pagination is working
       await page.goto('/');
 
-      await page.getByRole('tab', { name: 'Livefeed' }).click();
+      await page.getByRole('tab', { name: 'Overview' }).click();
 
       // Check that large amounts of data don't break the UI
       // (Implementation-specific - might need data loading simulation)
 
       // At minimum, should maintain responsiveness
-      await expect(page.getByRole('tab', { name: 'Livefeed' })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
 
       // Try scroll to ensure virtual scrolling or pagination works
       await page.mouse.wheel(0, 1000); // Scroll down
@@ -210,7 +210,7 @@ test.describe('Tool Integration E2E Tests', () => {
       await page.mouse.wheel(0, -500); // Scroll up
 
       // Page should still be functional
-      await expect(page.getByRole('tab', { name: 'Livefeed' })).toBeVisible();
+      await expect(page.getByRole('tab', { name: 'Overview' })).toBeVisible();
     });
   });
 });
