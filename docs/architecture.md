@@ -2,6 +2,46 @@
 
 This document describes the core architecture of Hyperpage, including the registry-driven tool integration system, component patterns, and development principles.
 
+## System Overview
+
+```
+                                   ┌─────────────────────────────────────┐
+                   ┌──────────────► │ Hyperpage Portal (Web UI)         │
+                   │               │ - Next.js 15 Application           │
+                   │               │ - React Components + Tailwind     │
+                   │               │ - User Dashboard & Management     │
+                   │               └─────────────────────────────────────┘
+                   │
+┌──────────────────┴──────────────────┐
+│                                     │
+│      Kubernetes Cluster             │
+│                                     │
+├─────────────────┬───────────────────┤
+│                 │                   │
+│   Pod 1         │     Pod N         │ ◄── Horizontal Scaling (HPA 3-50)
+│   • App Server  │     • App Server  │
+│   • Session Mgr │     • Session Mgr │
+│   • Coordinator │     • Coordinator │
+├─────────────────┼───────────────────┤
+│                 │                   │
+│   Shared Redis  │   Coordinator     │ ◄── Auto Failover & Leader Election
+│   ├─ Sessions   │   ├─ Job Balance  │
+│   ├─ Caching    │   ├─ Cache Inval  │
+│   └─ Pub/Sub    │   └─ Rate Sync    │
+│                 │                   │
+└─────────────────┴───────────────────┘
+       ▲            ▲
+       │            │
+       ├────────────┼───────────────────────── External APIs
+       ▼            ▼
+Tool Registry    ┌───────────────────┐
+• GitHub         │  GitHub API       │
+• GitLab         │  ┌─────────────┐  │
+• Jira          ─┼─►│ Rate Limits │  │
+• CI/CD          │  └─────────────┘  │
+                 └───────────────────┘
+```
+
 ## Core Architecture Principles
 
 ### Registry-Driven Design

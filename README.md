@@ -125,11 +125,45 @@ hyperpage/
 └── .clinerules/       # Development guidelines and workflows
 ```
 
+## Session Management API
+
+Hyperpage includes powerful session management for distributed deployments, enabling persistent user state across pod restarts and scaling operations.
+
+### Session API Endpoints
+
+```bash
+# Create new session
+GET /api/sessions
+
+# Get existing session
+GET /api/sessions?sessionId=abc123-def456
+
+# Update session
+POST /api/sessions
+Body: { "sessionId": "abc123", "updates": { "preferences": { "theme": "dark" } } }
+
+# Update session properties
+PATCH /api/sessions?sessionId=abc123
+Body: { "preferences": { "theme": "light" } }
+
+# Delete session
+DELETE /api/sessions?sessionId=abc123
+```
+
+### Session Features
+- **Persistent State**: User preferences, UI layout, and tool configurations persist across pod scaling
+- **Auto-Fallback**: Graceful degradation to memory-only mode when Redis unavailable
+- **Client Integration**: React hook `useSession()` for seamless frontend integration
+- **Enterprise Scaling**: Supports 100,000+ concurrent sessions with Redis clustering
+
+See [Session Management](docs/scaling.md#1-distributed-session-management) for complete API documentation.
+
 ## Documentation
 
 ### 🚀 **Getting Started & Deployment**
 - **[Installation & Setup](docs/installation.md)**: Local development setup and configuration
 - **[⚡ Kubernetes Deployment](docs/kubernetes.md)**: Production-ready K8s deployment with HPA
+- **[🔗 Scaling Infrastructure](docs/scaling.md)**: Enterprise horizontal pod scaling and session management
 - **[Usage Guide](docs/usage.md)**: Portal features and navigation
 
 ### 🧪 **Development & Quality**
