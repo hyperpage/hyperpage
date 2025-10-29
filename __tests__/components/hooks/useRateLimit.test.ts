@@ -11,6 +11,8 @@ import { TEST_BASE_URL } from '../../test-constants';
 
 import { getRateLimitStatus, clearRateLimitCache } from '../../../lib/rate-limit-monitor';
 
+const mockGetRateLimitStatus = vi.mocked(getRateLimitStatus);
+
 describe('useRateLimit Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -55,12 +57,14 @@ describe('useRateLimit Hook', () => {
       status: 'normal' as const,
       limits: {
         github: {
-          core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: Date.now() + 3600000, retryAfter: null }
+          core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: Date.now() + 3600000, retryAfter: null },
+          search: { limit: 30, remaining: 25, used: 5, usagePercent: 17, resetTime: Date.now() + 3600000, retryAfter: null },
+          graphql: { limit: 5000, remaining: 4750, used: 250, usagePercent: 5, resetTime: Date.now() + 3600000, retryAfter: null }
         }
       }
     };
 
-    (getRateLimitStatus as vi.Mock).mockResolvedValue(mockRateLimitStatus);
+    mockGetRateLimitStatus.mockResolvedValue(mockRateLimitStatus);
 
     const { result } = renderHook(() => useRateLimit('github', true));
 
@@ -75,7 +79,7 @@ describe('useRateLimit Hook', () => {
   });
 
   it('should handle rate limit fetch failure', async () => {
-    (getRateLimitStatus as vi.Mock).mockRejectedValue(new Error('API Error'));
+    mockGetRateLimitStatus.mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() => useRateLimit('github', true));
 
@@ -88,7 +92,7 @@ describe('useRateLimit Hook', () => {
   });
 
   it('should handle null rate limit response', async () => {
-    (getRateLimitStatus as vi.Mock).mockResolvedValue(null);
+    mockGetRateLimitStatus.mockResolvedValue(null);
 
     const { result } = renderHook(() => useRateLimit('nonexistent', true));
 
@@ -109,12 +113,14 @@ describe('useRateLimit Hook', () => {
       status: 'normal' as const,
       limits: {
         github: {
-          core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: Date.now() + 3600000, retryAfter: null }
+          core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: Date.now() + 3600000, retryAfter: null },
+          search: { limit: 30, remaining: 25, used: 5, usagePercent: 17, resetTime: Date.now() + 3600000, retryAfter: null },
+          graphql: { limit: 5000, remaining: 4750, used: 250, usagePercent: 5, resetTime: Date.now() + 3600000, retryAfter: null }
         }
       }
     };
 
-    (getRateLimitStatus as vi.Mock).mockResolvedValue(mockRateLimitStatus);
+    mockGetRateLimitStatus.mockResolvedValue(mockRateLimitStatus);
 
     const { result } = renderHook(() => useRateLimit('github', true));
 
@@ -133,7 +139,7 @@ describe('useRateLimit Hook', () => {
       limits: {}
     };
 
-    (getRateLimitStatus as vi.Mock).mockResolvedValue(mockRateLimitStatus);
+    mockGetRateLimitStatus.mockResolvedValue(mockRateLimitStatus);
 
     const { result } = renderHook(() => useRateLimit('github', true));
 
@@ -159,7 +165,7 @@ describe('useRateLimit Hook', () => {
       limits: {}
     };
 
-    (getRateLimitStatus as vi.Mock).mockResolvedValue(mockRateLimitStatus);
+    mockGetRateLimitStatus.mockResolvedValue(mockRateLimitStatus);
 
     const { result, rerender } = renderHook(({ enabled }) => useRateLimit('github', enabled), {
       initialProps: { enabled: true }
@@ -200,7 +206,13 @@ describe('useMultipleRateLimits Hook', () => {
       lastUpdated: Date.now(),
       dataFresh: true,
       status: 'normal' as const,
-      limits: { github: {} }
+      limits: {
+        github: {
+          core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: Date.now() + 3600000, retryAfter: null },
+          search: { limit: 30, remaining: 25, used: 5, usagePercent: 17, resetTime: Date.now() + 3600000, retryAfter: null },
+          graphql: { limit: 5000, remaining: 4750, used: 250, usagePercent: 5, resetTime: Date.now() + 3600000, retryAfter: null }
+        }
+      }
     };
 
     const mockGitLabStatus = {
@@ -208,10 +220,16 @@ describe('useMultipleRateLimits Hook', () => {
       lastUpdated: Date.now(),
       dataFresh: true,
       status: 'warning' as const,
-      limits: { gitlab: { global: {} } }
+      limits: {
+        gitlab: {
+          global: { limit: 2000, remaining: 1800, used: 200, usagePercent: 10, resetTime: Date.now() + 3600000, retryAfter: null },
+          api: { limit: 2000, remaining: 1900, used: 100, usagePercent: 5, resetTime: Date.now() + 3600000, retryAfter: null },
+          web: { limit: 5000, remaining: 4500, used: 500, usagePercent: 10, resetTime: Date.now() + 3600000, retryAfter: null }
+        }
+      }
     };
 
-    (getRateLimitStatus as vi.Mock)
+    mockGetRateLimitStatus
       .mockResolvedValueOnce(mockGitHubStatus)
       .mockResolvedValueOnce(mockGitLabStatus);
 
@@ -229,7 +247,7 @@ describe('useMultipleRateLimits Hook', () => {
   });
 
     it('should handle platform loading errors', async () => {
-      (getRateLimitStatus as vi.Mock)
+      mockGetRateLimitStatus
         .mockRejectedValueOnce(new Error('GitHub API Error'))
         .mockResolvedValueOnce(null);
 
@@ -242,7 +260,7 @@ describe('useMultipleRateLimits Hook', () => {
     });
 
   it('should call refreshAll function', async () => {
-    (getRateLimitStatus as vi.Mock).mockResolvedValue({
+    mockGetRateLimitStatus.mockResolvedValue({
       platform: 'github',
       lastUpdated: Date.now(),
       dataFresh: true,
@@ -274,7 +292,7 @@ describe('useMultipleRateLimits Hook', () => {
       limits: {}
     };
 
-    (getRateLimitStatus as vi.Mock).mockResolvedValue(mockStatus);
+    mockGetRateLimitStatus.mockResolvedValue(mockStatus);
 
     const { result } = renderHook(() => useMultipleRateLimits(['github'], true));
 
