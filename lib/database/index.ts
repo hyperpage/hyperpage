@@ -7,7 +7,7 @@
 
 import { runMigrations } from './migrate';
 import { getAppDatabase, closeAllConnections, getDatabaseStats, checkDatabaseConnectivity } from './connection';
-import { loadPersistedRateLimits } from '../rate-limit-monitor';
+import { loadPersistedRateLimits } from '../rate-limit-service';
 import { loadToolConfigurations } from '../tool-config-manager';
 
 // Get application database instance (singleton)

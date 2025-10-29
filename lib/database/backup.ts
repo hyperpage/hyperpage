@@ -10,7 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { db, closeDatabase } from './index.js';
 import { jobs, jobHistory, rateLimits, toolConfigs } from './schema.js';
-import { loadPersistedRateLimits } from '../rate-limit-monitor.js';
+import { loadPersistedRateLimits } from '../rate-limit-service.js';
 import { loadToolConfigurations } from '../tool-config-manager.js';
 
 // Get project root directory

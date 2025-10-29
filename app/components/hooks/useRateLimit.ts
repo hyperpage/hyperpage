@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { RateLimitStatus, UseRateLimitResult } from '../../../lib/types/rate-limit';
-import { getRateLimitStatus, clearRateLimitCache } from '../../../lib/rate-limit-monitor';
 
 /**
  * Hook for accessing rate limit status for a specific platform
@@ -25,9 +24,15 @@ export function useRateLimit(platform: string, enabled: boolean = true): UseRate
     setError(null);
 
     try {
-      // Use current origin for dynamic port support in development
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-      const rateLimitStatus = await getRateLimitStatus(platform, baseUrl);
+      // Fetch rate limit status from API
+      const response = await fetch(`/api/rate-limit/${platform}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || `Failed to fetch rate limit status: ${response.status}`);
+        return;
+      }
+
+      const rateLimitStatus = await response.json() as RateLimitStatus;
       setStatus(rateLimitStatus);
 
       // If no status returned, it could be because the platform doesn't support rate limiting
@@ -94,14 +99,16 @@ export function useMultipleRateLimits(platforms: string[], enabled: boolean = tr
     errors.delete(platform);
 
     try {
-      // Use current origin for dynamic port support in development
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-      const rateLimitStatus = await getRateLimitStatus(platform, baseUrl);
-      if (rateLimitStatus) {
-        statuses.set(platform, rateLimitStatus);
-      } else {
-        errors.set(platform, `Rate limit monitoring not supported for platform: ${platform}`);
+      // Fetch rate limit status from API
+      const response = await fetch(`/api/rate-limit/${platform}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        errors.set(platform, errorData.error || `Failed to fetch rate limit status: ${response.status}`);
+        return;
       }
+
+      const rateLimitStatus = await response.json() as RateLimitStatus;
+      statuses.set(platform, rateLimitStatus);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       errors.set(platform, `Failed to fetch rate limit status: ${errorMessage}`);
@@ -147,17 +154,7 @@ export function useMultipleRateLimits(platforms: string[], enabled: boolean = tr
   };
 }
 
-/**
- * Utility hook to clear all cached rate limit data
- * Useful for debugging or force refresh
- */
-export function useRateLimitCacheClear() {
-  const clearCache = useCallback(() => {
-    clearRateLimitCache();
-  }, []);
 
-  return { clearCache };
-}
 
 /**
  * Get the color class for rate limit status indicators

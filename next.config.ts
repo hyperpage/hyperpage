@@ -28,11 +28,17 @@ const nextConfig: NextConfig = {
       crypto: false,
     };
 
-    // Mark external packages
+    // Mark external packages (server-side only)
     config.externals = config.externals || [];
     config.externals.push({
       'better-sqlite3': 'commonjs better-sqlite3',
       'ioredis': 'commonjs ioredis',
+    });
+
+    // Ensure fs and path are not bundled for client-side
+    config.externals.push({
+      fs: 'commonjs fs',
+      path: 'commonjs path',
     });
 
     return config;
