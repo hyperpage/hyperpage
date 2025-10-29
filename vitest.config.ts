@@ -13,6 +13,12 @@ export default defineConfig({
       '__tests__/e2e/**', // Exclude E2E tests from Vitest
       'node_modules/**'
     ],
+    typecheck: {
+      enabled: true,
+      checker: 'tsc',
+      include: ['**/*.{test,spec}.ts', '**/*.{test,spec}.tsx'],
+      exclude: ['node_modules', '.next', '__tests__/e2e']
+    },
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [

@@ -11,7 +11,7 @@ vi.mock('../../../lib/monitoring/bottleneck-detector', () => ({
   }
 }));
 
-import { bottleneckDetector } from '../../../lib/monitoring/bottleneck-detector';
+import { bottleneckDetector } from '../../lib/monitoring/bottleneck-detector';
 
 describe('Bottlenecks API - GET /api/bottlenecks', () => {
   const mockBottlenecks = [
