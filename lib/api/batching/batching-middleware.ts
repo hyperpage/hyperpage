@@ -371,8 +371,9 @@ export class BatchingMiddleware {
   }
 }
 
-// Default batching middleware instance
-export const defaultBatchingMiddleware = new BatchingMiddleware('http://localhost:3000');
+// Default batching middleware instance (adjustable via environment)
+const defaultBaseUrl = process.env.BASE_URL || 'http://localhost:3000';
+export const defaultBatchingMiddleware = new BatchingMiddleware(defaultBaseUrl);
 
 /**
  * Helper function to create a batch request

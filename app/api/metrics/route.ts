@@ -315,7 +315,9 @@ async function updateMetrics() {
 
     // Update monitoring system health
     try {
-      const dashboardHealth = await fetch('http://localhost:3000/api/dashboard', {
+      // Get base URL from environment or construct from request in SSR context
+      const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+      const dashboardHealth = await fetch(`${baseUrl}/api/dashboard`, {
         signal: AbortSignal.timeout(1000) // 1 second timeout
       });
       monitoringSystemHealthGauge.set(dashboardHealth.ok ? 1 : 0);
