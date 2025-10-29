@@ -78,7 +78,7 @@ describe('API Client Rate Limiting', () => {
       mockFetch.mockResolvedValueOnce(mockResponse);
 
       const config: ToolRateLimitConfig = createToolConfig();
-      const response = await makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config });
+      const response = await makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config, forceFetch: true });
 
       expect(response).toBe(mockResponse);
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -98,7 +98,7 @@ describe('API Client Rate Limiting', () => {
         maxRetries: 3
       });
 
-      const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config });
+      const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config, forceFetch: true });
 
       // Advance timer to complete the delay
       await vi.advanceTimersByTimeAsync(1000);
@@ -119,7 +119,7 @@ describe('API Client Rate Limiting', () => {
         maxRetries: 3
       });
 
-      const response = await makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config });
+      const response = await makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config, forceFetch: true });
 
       expect(response).toBe(errorResponse);
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -137,7 +137,7 @@ describe('API Client Rate Limiting', () => {
         .mockResolvedValueOnce(createMockResponse(429)) // Initial call
         .mockResolvedValueOnce(createMockResponse(429)); // Only retry
 
-      const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config });
+      const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config, forceFetch: true });
 
       // Wait for retry delay (10ms)
       await vi.advanceTimersByTimeAsync(20);
@@ -160,7 +160,7 @@ describe('API Client Rate Limiting', () => {
         maxRetries: 3
       });
 
-      const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config });
+      const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config, forceFetch: true });
 
       // Wait for the retry delay (calculateBackoffDelay(0) = 1000ms)
       await vi.advanceTimersByTimeAsync(1000);
@@ -184,7 +184,7 @@ describe('API Client Rate Limiting', () => {
         maxRetries: 1
       });
 
-      const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config });
+      const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config, forceFetch: true });
 
       // Advance timer enough for retry delay
       await vi.advanceTimersByTimeAsync(100);
@@ -215,7 +215,7 @@ describe('API Client Rate Limiting', () => {
           maxRetries: 3
         });
 
-        const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config });
+        const responsePromise = makeRetryRequest(mockUrl, mockOptions, { rateLimitConfig: config, forceFetch: true });
 
         await vi.advanceTimersByTimeAsync(2000); // Wait for retry delay
 
