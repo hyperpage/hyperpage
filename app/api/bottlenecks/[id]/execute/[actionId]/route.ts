@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { NextRequest, NextResponse } from 'next/server';
 import { bottleneckDetector } from '../../../../../../../lib/monitoring/bottleneck-detector';
 
