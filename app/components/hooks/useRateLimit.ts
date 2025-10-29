@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { RateLimitStatus, UseRateLimitResult } from '../../../lib/types/rate-limit';
+import { getRateLimitStatus } from '../../../lib/rate-limit-monitor';
 
 /**
  * Hook for accessing rate limit status for a specific platform
@@ -24,15 +25,7 @@ export function useRateLimit(platform: string, enabled: boolean = true): UseRate
     setError(null);
 
     try {
-      // Fetch rate limit status from API
-      const response = await fetch(`/api/rate-limit/${platform}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.error || `Failed to fetch rate limit status: ${response.status}`);
-        return;
-      }
-
-      const rateLimitStatus = await response.json() as RateLimitStatus;
+      const rateLimitStatus = await getRateLimitStatus(platform, window.location.origin);
       setStatus(rateLimitStatus);
 
       // If no status returned, it could be because the platform doesn't support rate limiting
@@ -99,18 +92,14 @@ export function useMultipleRateLimits(platforms: string[], enabled: boolean = tr
     errors.delete(platform);
 
     try {
-      // Fetch rate limit status from API
-      const response = await fetch(`/api/rate-limit/${platform}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        errors.set(platform, errorData.error || `Failed to fetch rate limit status: ${response.status}`);
-        return;
+      const rateLimitStatus = await getRateLimitStatus(platform, window.location.origin);
+      if (rateLimitStatus) {
+        statuses.set(platform, rateLimitStatus);
+      } else {
+        errors.set(platform, `Rate limit monitoring not supported for platform: ${platform}`);
       }
-
-      const rateLimitStatus = await response.json() as RateLimitStatus;
-      statuses.set(platform, rateLimitStatus);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : 'Rate limit monitoring not supported for platform';
       errors.set(platform, `Failed to fetch rate limit status: ${errorMessage}`);
     } finally {
       loading.set(platform, false);

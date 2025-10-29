@@ -1,7 +1,8 @@
 // Rate limit data transformation utilities
 // Pure functions for transforming platform-specific rate limit data to universal format
 
-import type { RateLimitCache, RateLimitUsage, PlatformRateLimits, GitHubRateLimitResponse } from './types/rate-limit';
+import type { RateLimitCache, RateLimitUsage, PlatformRateLimits, GitHubRateLimitResponse, RateLimitStatus } from './types/rate-limit';
+import { toolRegistry } from '../tools/registry';
 
 // In-memory cache with TTL support
 let rateLimitCache: RateLimitCache = {};
@@ -144,4 +145,53 @@ export function transformJiraLimits(jiraResponse: unknown): PlatformRateLimits {
       }
     }
   };
+}
+
+/**
+ * Clear the rate limit cache (for testing purposes)
+ */
+export function clearRateLimitCache(): void {
+  rateLimitCache = {};
+}
+
+/**
+ * Get cache statistics for testing purposes
+ */
+export function getCacheStats(): { totalEntries: number; oldestData: number | null } {
+  const entries = Object.values(rateLimitCache);
+  if (entries.length === 0) {
+    return { totalEntries: 0, oldestData: null };
+  }
+
+  const oldestData = Math.min(...entries.map(entry => entry.data.lastUpdated));
+
+  return {
+    totalEntries: entries.length,
+    oldestData
+  };
+}
+
+/**
+ * Get rate limit status for a platform
+ * This is a client-side function that fetches from the API
+ */
+export async function getRateLimitStatus(platform: string, baseUrl?: string): Promise<RateLimitStatus | null> {
+  // Check if platform supports rate limiting
+  const tool = toolRegistry[platform];
+  if (!tool || !tool.capabilities?.includes('rate-limit')) {
+    return null;
+  }
+
+  try {
+    const url = baseUrl ? `${baseUrl}/api/rate-limit/${platform}` : `/api/rate-limit/${platform}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return null;
+    }
+    const data = await response.json() as RateLimitStatus;
+    return data;
+  } catch (error) {
+    console.error(`Error fetching rate limit status for ${platform}:`, error);
+    return null;
+  }
 }
