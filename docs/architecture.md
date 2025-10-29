@@ -16,11 +16,11 @@ Each tool owns its complete integration:
 - **Capabilities**: What the tool can provide
 - **Configuration**: Environment-based settings
 
-#### Zero Hardcoded Logic
-- **No Switch Cases**: All tool routing uses registry lookup
-- **No Manual Mapping**: Tools self-register capabilities
-- **Automatic Discovery**: Aggregators find compatible tools dynamically
-- **Self-Contained**: Each tool knows how to integrate
+#### Registry-Driven Architecture
+- **Tool Registration**: Tools self-register with the central registry
+- **Capability System**: Tools declare supported features automatically
+- **Dynamic Discovery**: Aggregators find compatible tools by capability matching
+- **Removal of Hardcoded Logic**: Switch cases converted to registry-based lookups where possible
 
 ### Capability-Based Integration
 
