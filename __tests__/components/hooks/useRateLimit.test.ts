@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { useRateLimit, useMultipleRateLimits, getRateLimitStatusColor, getRateLimitStatusBgColor, formatUsagePercent, formatTimeUntilReset } from '../../../app/components/hooks/useRateLimit';
-
-// Mock the rate limit monitor
+// Mock the rate limit monitor before importing
 vi.mock('../../../lib/rate-limit-monitor', () => ({
   getRateLimitStatus: vi.fn(),
   clearRateLimitCache: vi.fn()
 }));
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, waitFor, act } from '@testing-library/react';
+import { useRateLimit, useMultipleRateLimits, getRateLimitStatusColor, getRateLimitStatusBgColor, formatUsagePercent, formatTimeUntilReset } from '../../../app/components/hooks/useRateLimit';
+import { TEST_BASE_URL } from '../../test-constants';
 
 import { getRateLimitStatus, clearRateLimitCache } from '../../../lib/rate-limit-monitor';
 
@@ -15,7 +16,7 @@ describe('useRateLimit Hook', () => {
     vi.clearAllMocks();
     // Mock window.location.origin for CORS testing
     Object.defineProperty(window, 'location', {
-      value: { origin: 'http://localhost:3000' },
+      value: { origin: TEST_BASE_URL },
       writable: true,
     });
   });
@@ -70,7 +71,7 @@ describe('useRateLimit Hook', () => {
       expect(result.current.isStale).toBe(false);
     });
 
-    expect(getRateLimitStatus).toHaveBeenCalledWith('github', 'http://localhost:3000');
+    expect(getRateLimitStatus).toHaveBeenCalledWith('github', TEST_BASE_URL);
   });
 
   it('should handle rate limit fetch failure', async () => {
@@ -180,7 +181,7 @@ describe('useMultipleRateLimits Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.defineProperty(window, 'location', {
-      value: { origin: 'http://localhost:3000' },
+      value: { origin: TEST_BASE_URL },
       writable: true,
     });
   });
@@ -223,8 +224,8 @@ describe('useMultipleRateLimits Hook', () => {
       expect(result.current.hasStaleData).toBe(false);
     });
 
-    expect(getRateLimitStatus).toHaveBeenCalledWith('github', 'http://localhost:3000');
-    expect(getRateLimitStatus).toHaveBeenCalledWith('gitlab', 'http://localhost:3000');
+    expect(getRateLimitStatus).toHaveBeenCalledWith('github', TEST_BASE_URL);
+    expect(getRateLimitStatus).toHaveBeenCalledWith('gitlab', TEST_BASE_URL);
   });
 
     it('should handle platform loading errors', async () => {

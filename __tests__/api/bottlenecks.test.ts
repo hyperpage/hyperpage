@@ -40,7 +40,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
       timestamp: Date.now() - 60000,
       confidence: 75,
       impact: 'moderate' as const,
-      metrics: {},
+      metrics: { 'cache.evictRate': { value: 25, threshold: 20, breached: true } },
       correlations: [],
       recommendations: [],
       resolved: false
@@ -74,13 +74,13 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
     vi.clearAllMocks();
 
     // Setup default mocks
-    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mockBottlenecks);
+    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mockBottlenecks as any);
     vi.mocked(bottleneckDetector.getBottleneckAnalysis).mockReturnValue(mockAnalysis);
     vi.mocked(bottleneckDetector.getHistoricalBottlenecks).mockReturnValue(mockHistoricalBottlenecks);
   });
 
   it('should return active bottlenecks with default parameters', async () => {
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks');
+    const request = new NextRequest('/api/bottlenecks');
     const response = await GET(request);
     const data = await response.json();
 
@@ -94,7 +94,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
   });
 
   it('should include historical bottlenecks when requested', async () => {
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks?history=true');
+    const request = new NextRequest('/api/bottlenecks?history=true');
     const response = await GET(request);
     const data = await response.json();
 
@@ -104,7 +104,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
   });
 
   it('should respect limit parameter for historical data', async () => {
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks?history=true&limit=5');
+    const request = new NextRequest('/api/bottlenecks?history=true&limit=5');
     await GET(request);
 
     expect(bottleneckDetector.getHistoricalBottlenecks).toHaveBeenCalledWith(5);
@@ -112,7 +112,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
 
   it('should respect timeRange parameter', async () => {
     const customTimeRange = 7200000; // 2 hours
-    const request = new NextRequest(`http://localhost:3000/api/bottlenecks?timeRange=${customTimeRange}`);
+    const request = new NextRequest(`/api/bottlenecks?timeRange=${customTimeRange}`);
     await GET(request);
 
     // The timeRange is used in calculateBottleneckTrends helper
@@ -127,7 +127,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
       unresolvedCount: 0
     });
 
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks');
+    const request = new NextRequest('/api/bottlenecks');
     const response = await GET(request);
     const data = await response.json();
 
@@ -144,7 +144,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
       throw new Error('Database connection failed');
     });
 
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks');
+    const request = new NextRequest('/api/bottlenecks');
     const response = await GET(request);
     const data = await response.json();
 
@@ -156,12 +156,12 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
     const mixedBottlenecks = [
       { ...mockBottlenecks[0], impact: 'critical' as const },
       { ...mockBottlenecks[1], impact: 'severe' as const },
-      { impact: 'minor' as const, id: 'minor-bottleneck', patternId: 'test', timestamp: Date.now(), confidence: 50, metrics: {}, correlations: [], recommendations: [], resolved: false }
+      { impact: 'minor' as const, id: 'minor-bottleneck', patternId: 'test', timestamp: Date.now(), confidence: 50, metrics: { 'latency.metric': { value: 10, threshold: 20, breached: false } }, correlations: [], recommendations: [], resolved: false }
     ];
 
-    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mixedBottlenecks);
+    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mixedBottlenecks as any);
 
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks');
+    const request = new NextRequest('/api/bottlenecks');
     const response = await GET(request);
     const data = await response.json();
 
@@ -182,7 +182,7 @@ describe('Bottlenecks API - POST /api/bottlenecks', () => {
       categories: ['performance', 'capacity']
     };
 
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks', {
+    const request = new NextRequest('/api/bottlenecks', {
       method: 'POST',
       body: JSON.stringify(payload),
       headers: {
@@ -201,7 +201,7 @@ describe('Bottlenecks API - POST /api/bottlenecks', () => {
   });
 
   it('should use default timeRange when not provided', async () => {
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks', {
+    const request = new NextRequest('/api/bottlenecks', {
       method: 'POST',
       body: JSON.stringify({}),
       headers: {
@@ -216,7 +216,7 @@ describe('Bottlenecks API - POST /api/bottlenecks', () => {
   });
 
   it('should handle invalid JSON payload', async () => {
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks', {
+    const request = new NextRequest('/api/bottlenecks', {
       method: 'POST',
       body: 'invalid json',
       headers: {
@@ -232,7 +232,7 @@ describe('Bottlenecks API - POST /api/bottlenecks', () => {
   });
 
   it('should handle empty payload', async () => {
-    const request = new NextRequest('http://localhost:3000/api/bottlenecks', {
+    const request = new NextRequest('/api/bottlenecks', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
