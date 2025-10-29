@@ -70,6 +70,7 @@ describe('GET /api/metrics', () => {
     misses: 200,
     expiries: 50,
     evictions: 25,
+    backend: 'memory',
   };
 
   const mockRateLimitStatus = {
