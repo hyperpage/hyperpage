@@ -95,13 +95,41 @@ stringData:
   # REDIS_URL: "redis://redis-service:6379"
 
   # Application secrets
-  NEXTAUTH_SECRET: "your-nextauth-secret-here"
-  NEXTAUTH_URL: "https://your-domain.com"
+  NEXTAUTH_SECRET: "hyperpage-production-secret-key-2025-secure-random-64-characters"
+  NEXTAUTH_URL: "https://hyperpage-demo.local"
 
-  # External API keys (replace with actual encrypted values)
+  # External API keys will be configured when tools are enabled
   # GITHUB_TOKEN: "ghp_..."
   # JIRA_API_TOKEN: "your-jira-token"
   # GITLAB_TOKEN: "your-gitlab-token"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hyperpage-data-pv
+  labels:
+    app: hyperpage
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/tmp/hyperpage-data"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hyperpage-logs-pv
+  labels:
+    app: hyperpage
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/tmp/hyperpage-logs"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -115,7 +143,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: standard  # Adjust based on your cluster
+  storageClassName: ""  # Use local volumes for demo
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -129,4 +157,4 @@ spec:
   resources:
     requests:
       storage: 5Gi
-  storageClassName: standard  # Adjust based on your cluster
+  storageClassName: ""  # Use local volumes for demo
