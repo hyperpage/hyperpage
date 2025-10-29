@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/batch - Get batch processing capabilities and statistics
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   const stats = defaultBatchingMiddleware.getBatchStats();
 
   return NextResponse.json({

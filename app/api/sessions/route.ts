@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sessionManager, SessionData } from '../../../lib/sessions/session-manager';
+import { sessionManager } from '../../../lib/sessions/session-manager';
 import { headers } from 'next/headers';
 
 /**

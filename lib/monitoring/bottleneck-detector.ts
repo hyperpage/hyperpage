@@ -351,60 +351,92 @@ export class BottleneckDetector extends EventEmitter {
   /**
    * Extract metric value from dashboard metrics object
    */
-  private extractMetricValue(metrics: DashboardMetrics | Record<string, any>, path: string): number {
+  private extractMetricValue(metrics: DashboardMetrics, path: string): number {
     try {
-      // Type-safe extraction for known metric paths
+      // Type-safe extraction for known metric paths in DashboardMetrics interface
       switch (path) {
         case 'overall.averageResponseTime':
-          return metrics.overall?.averageResponseTime ?? (metrics as any)['overall.averageResponseTime'] ?? 0;
+          return metrics.overall?.averageResponseTime ?? 0;
         case 'overall.errorRate':
-          return metrics.overall?.errorRate ?? (metrics as any)['overall.errorRate'] ?? 0;
+          return metrics.overall?.errorRate ?? 0;
         case 'caching.hitRate':
-          return metrics.caching?.hitRate ?? (metrics as any)['caching.hitRate'] ?? 0;
+          return metrics.caching?.hitRate ?? 0;
         case 'compression.averageCompressionRatio':
-          return metrics.compression?.averageCompressionRatio ?? (metrics as any)['compression.averageCompressionRatio'] ?? 0;
+          return metrics.compression?.averageCompressionRatio ?? 0;
         case 'overall.totalRequests':
-          return metrics.overall?.totalRequests ?? (metrics as any)['overall.totalRequests'] ?? 0;
+          return metrics.overall?.totalRequests ?? 0;
         case 'overall.p95ResponseTime':
-          return metrics.overall?.p95ResponseTime ?? (metrics as any)['overall.p95ResponseTime'] ?? 0;
+          return metrics.overall?.p95ResponseTime ?? 0;
         case 'overall.p99ResponseTime':
-          return metrics.overall?.p99ResponseTime ?? (metrics as any)['overall.p99ResponseTime'] ?? 0;
+          return metrics.overall?.p99ResponseTime ?? 0;
         case 'overall.throughput':
-          return metrics.overall?.throughput ?? (metrics as any)['overall.throughput'] ?? 0;
-        // Handle caching.evictionRate and other known but potentially missing fields
+          return metrics.overall?.throughput ?? 0;
         case 'caching.evictionRate':
-          return (metrics.caching as any)?.evictionRate ?? (metrics as any)['caching.evictionRate'] ?? 0;
         case 'batching.averageBatchDuration':
-          return (metrics.batching as any)?.averageBatchDuration ?? (metrics as any)['batching.averageBatchDuration'] ?? 0;
         case 'batching.batchSuccessRate':
-          return (metrics.batching as any)?.batchSuccessRate ?? (metrics as any)['batching.batchSuccessRate'] ?? 0;
+          // For fields that may be added to interface later, safely access with type guards
+          // This maintains backward compatibility for properties that exist at runtime
+          // but are not in the current interface definition
+          return this.extractMetricValueFallback(metrics, path);
         default:
-          // For unknown paths (including test-specific flat paths), use flat key lookup first
-          if (typeof metrics === 'object' && path in metrics && typeof (metrics as any)[path] === 'number') {
-            return (metrics as any)[path];
-          }
-
-          // Fall back to generic navigation for nested paths
-          const keys = path.split('.');
-          let current: any = metrics;
-          for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-            if (!current || typeof current !== 'object' || !(key in current)) {
-              return 0;
-            }
-            current = current[key];
-            // Last key must be a number, intermediate keys must be objects
-            if (i === keys.length - 1) {
-              return typeof current === 'number' ? current : 0;
-            } else if (typeof current !== 'object') {
-              return 0;
-            }
-          }
-          return 0; // Should not reach here
+          // For completely unknown paths that test nested access patterns
+          // Enable limited fallback for testing scenarios only
+          return this.extractNestedTestFallback(metrics as unknown as Record<string, unknown>, path);
       }
-    } catch {
+    } catch (error) {
+      logger.warn(`Error extracting metric value for path ${path}`, {
+        error: error instanceof Error ? error.message : String(error)
+      });
       return 0;
     }
+  }
+
+  /**
+   * Safely extract known but not-yet-interfaced metric fields
+   */
+  private extractMetricValueFallback(metrics: DashboardMetrics, path: string): number {
+    switch (path) {
+      case 'caching.evictionRate':
+        return 'evictionRate' in metrics.caching &&
+          typeof (metrics.caching as { evictionRate?: number }).evictionRate === 'number'
+            ? (metrics.caching as { evictionRate?: number }).evictionRate ?? 0
+            : 0;
+      case 'batching.averageBatchDuration':
+        return 'averageBatchDuration' in metrics.batching &&
+          typeof (metrics.batching as { averageBatchDuration?: number }).averageBatchDuration === 'number'
+            ? (metrics.batching as { averageBatchDuration?: number }).averageBatchDuration ?? 0
+            : 0;
+      case 'batching.batchSuccessRate':
+        return 'batchSuccessRate' in metrics.batching &&
+          typeof (metrics.batching as { batchSuccessRate?: number }).batchSuccessRate === 'number'
+            ? (metrics.batching as { batchSuccessRate?: number }).batchSuccessRate ?? 0
+            : 0;
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Limited fallback for testing nested object access patterns
+   * This should only be used for backward-compatible test scenarios
+   */
+  private extractNestedTestFallback(metrics: Record<string, unknown>, path: string): number {
+    const keys = path.split('.');
+    let current: unknown = metrics;
+
+    for (const key of keys) {
+      if (!current || typeof current !== 'object' || !(key in current)) {
+        return 0;
+      }
+      current = (current as Record<string, unknown>)[key];
+      if (typeof current === 'number') {
+        return current; // Return when we find the number
+      } else if (typeof current !== 'object') {
+        return 0; // Not a number and not an object, stop navigation
+      }
+    }
+
+    return 0; // Reached end without finding a number
   }
 
   /**

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   performanceDashboard,
-  PerformanceThresholds,
-  AlertType
+  PerformanceThresholds
 } from '../../../lib/monitoring/performance-dashboard';
 
 /**

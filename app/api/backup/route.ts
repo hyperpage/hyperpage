@@ -5,7 +5,7 @@
  * Supports automated backups, restore from backup, listing backups, and validation.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 // Note: Database backup functions temporarily disabled for containerization
 // import { createBackup, restoreBackup, listBackups, cleanupOldBackups, validateBackup } from '../../../lib/database/backup.js';

@@ -38,7 +38,7 @@ export async function GET(
     const pattern = patterns.find(p => p.id === bottleneck.patternId);
 
     // Get related bottlenecks (same pattern in recent history)
-    const relatedBottlenecks = getRelatedBottlenecks(bottleneck, pattern);
+    const relatedBottlenecks = getRelatedBottlenecks(bottleneck);
 
     // Prepare recommendations with execute actions
     const recommendations = prepareRecommendations(bottleneck);

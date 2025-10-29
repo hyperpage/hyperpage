@@ -5,7 +5,6 @@ import { canExecuteRequest, recordRequestSuccess, recordRequestFailure } from ".
 import { defaultCache } from "../../../../../lib/cache/cache-factory";
 import { generateCacheKey } from "../../../../../lib/cache/memory-cache";
 import { defaultCompressionMiddleware } from "../../../../../lib/api/compression/compression-middleware";
-import { performanceMiddleware } from "../../../../../lib/monitoring/performance-middleware";
 
 // Input validation helper
 export function validateInput(
