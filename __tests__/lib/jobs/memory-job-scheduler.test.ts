@@ -10,9 +10,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { MemoryJobScheduler } from '../memory-job-scheduler';
-import { JobStatus, JobPriority, JobType } from '../../types/jobs';
-import { generateJobId } from '../memory-job-queue';
+import { MemoryJobScheduler } from '../../../lib/jobs/memory-job-scheduler';
+import { JobStatus, JobPriority, JobType } from '../../../lib/types/jobs';
+import { generateJobId } from '../../../lib/jobs/memory-job-queue';
 
 describe('Memory Job Scheduler', () => {
   let scheduler: MemoryJobScheduler;
