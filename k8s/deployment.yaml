@@ -6,7 +6,7 @@ metadata:
     app: hyperpage
     version: v1
 spec:
-  replicas: 3
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -36,8 +36,8 @@ spec:
       # Container specifications
       containers:
       - name: hyperpage
-        image: hyperpage:latest
-        imagePullPolicy: Always
+        image: hyperpage:v0.1.0
+        imagePullPolicy: Never
 
         # Resource limits for HPA
         resources:
@@ -100,14 +100,14 @@ spec:
           name: http
           protocol: TCP
 
-        # Volume mounts for data persistence (disabled for testing)
+        # Volume mounts disabled for demo deployment - would be enabled in production
         # volumeMounts:
         # - name: data-storage
         #   mountPath: /app/data
         # - name: logs-storage
         #   mountPath: /app/logs
 
-      # Volumes (disabled for testing)
+      # Volumes disabled for demo deployment - would be enabled in production
       # volumes:
       # - name: data-storage
       #   persistentVolumeClaim:
