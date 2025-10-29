@@ -105,7 +105,7 @@ describe('GET /api/metrics', () => {
     vi.clearAllMocks();
 
     // Set up default mocks
-    vi.mocked(defaultCache.getStats).mockReturnValue(mockCacheStats);
+    vi.mocked(defaultCache.getStats).mockReturnValue(Promise.resolve(mockCacheStats));
     vi.mocked(getActivePlatforms).mockReturnValue(['github', 'gitlab']);
     vi.mocked(getRateLimitStatus)
       .mockResolvedValueOnce(mockRateLimitStatus) // github

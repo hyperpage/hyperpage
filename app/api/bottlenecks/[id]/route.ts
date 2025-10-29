@@ -1,6 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { bottleneckDetector } from '../../../../lib/monitoring/bottleneck-detector';
+import { DetectedBottleneck, BottleneckRecommendation, Correlation, BottleneckResolution, BottleneckPattern } from '../../../../lib/monitoring/bottleneck-detector';
+import { BOTTLENECK_PATTERNS } from '../../../../lib/monitoring/bottleneck-patterns';
 
 /**
  * GET /api/bottlenecks/[id] - Get detailed information about a specific bottleneck
@@ -34,8 +35,7 @@ export async function GET(
     const correlationData = bottleneckDetector.getCorrelationData(bottleneck);
 
     // Get pattern details for additional context
-    const patterns = (await import('../../../../lib/monitoring/bottleneck-patterns')).BOTTLENECK_PATTERNS;
-    const pattern = patterns.find(p => p.id === bottleneck.patternId);
+    const pattern = BOTTLENECK_PATTERNS.find(p => p.id === bottleneck.patternId);
 
     // Get related bottlenecks (same pattern in recent history)
     const relatedBottlenecks = getRelatedBottlenecks(bottleneck);
@@ -184,7 +184,14 @@ export async function DELETE(
 /**
  * Helper functions for bottleneck details
  */
-function getRelatedBottlenecks(bottleneck: any, pattern?: any): any[] {
+interface RelatedBottleneck {
+  id: string;
+  detectedAt: number;
+  resolvedAt?: number;
+  confidence: number;
+}
+
+function getRelatedBottlenecks(bottleneck: DetectedBottleneck, pattern?: BottleneckPattern): RelatedBottleneck[] {
   // Get historical bottlenecks with same pattern within last 24 hours
   const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
   const historical = bottleneckDetector.getHistoricalBottlenecks(50);
@@ -201,8 +208,25 @@ function getRelatedBottlenecks(bottleneck: any, pattern?: any): any[] {
     }));
 }
 
-function prepareRecommendations(bottleneck: any): any[] {
-  return bottleneck.recommendations.map((rec: any) => ({
+interface PreparedRecommendation {
+  priority: string;
+  category: string;
+  action: string;
+  expectedImpact: string;
+  automated?: boolean;
+  estimatedTime?: number;
+  rolloutStrategy?: string;
+  canExecute: boolean;
+  executeUrl: string | null;
+  metadata: {
+    categoryBadge: { color: string; label: string };
+    priorityBadge: { color: string; label: string };
+    timeEstimate: string;
+  };
+}
+
+function prepareRecommendations(bottleneck: DetectedBottleneck): PreparedRecommendation[] {
+  return bottleneck.recommendations.map((rec: BottleneckRecommendation) => ({
     ...rec,
     canExecute: rec.automated === true,
     executeUrl: rec.automated ? `/api/bottlenecks/${bottleneck.id}/execute/${rec.priority}` : null,
@@ -214,7 +238,7 @@ function prepareRecommendations(bottleneck: any): any[] {
   }));
 }
 
-function calculateTimeToResolve(bottleneck: any): number | null {
+function calculateTimeToResolve(bottleneck: DetectedBottleneck): number | null {
   const resolution = bottleneck.resolution;
   if (!resolution || !resolution.resolutionTime || !bottleneck.timestamp) {
     return null;
@@ -222,39 +246,48 @@ function calculateTimeToResolve(bottleneck: any): number | null {
   return resolution.resolutionTime - bottleneck.timestamp;
 }
 
-function generateConfidenceReasoning(bottleneck: any): string[] {
+function generateConfidenceReasoning(bottleneck: DetectedBottleneck): string[] {
   const reasoning: string[] = [];
 
   // Analyze breached conditions for reasoning
-  const breachedCount = Object.values(bottleneck.metrics).filter((m: any) => m.breached).length;
+  const breachedCount = Object.values(bottleneck.metrics).filter((m) => m.breached).length;
   const totalConditions = Object.values(bottleneck.metrics).length;
 
   reasoning.push(`${breachedCount}/${totalConditions} conditions were breached`);
 
-  // Add trend information if available
+  // Add correlation information if available
   if (bottleneck.correlations && bottleneck.correlations.length > 0) {
-    const trends = bottleneck.correlations
-      .filter((c: any) => c.trend !== 'stable')
-      .map((c: any) => c.trend);
+    const correlationStrengths = bottleneck.correlations
+      .filter((c: Correlation) => c.strength !== 'weak')
+      .map((c: Correlation) => c.strength);
 
-    if (trends.length > 0) {
-      reasoning.push(`Metric trends showing ${trends.join(', ')} patterns`);
+    if (correlationStrengths.length > 0) {
+      reasoning.push(`Strong correlations detected: ${correlationStrengths.join(', ')} patterns`);
     }
   }
 
   return reasoning;
 }
 
-function generateNextSteps(bottleneck: any): any[] {
-  const nextSteps: any[] = [];
+interface NextStep {
+  action: string;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  category: 'immediate' | 'preventative' | 'configuration' | 'monitoring';
+  automated?: boolean;
+  timeEstimate?: string | number;
+  type?: string;
+}
+
+function generateNextSteps(bottleneck: DetectedBottleneck): NextStep[] {
+  const nextSteps: NextStep[] = [];
 
   if (!bottleneck.resolved) {
     // Get highest priority recommendations
     const highPriorityRecs = bottleneck.recommendations
-      .filter((r: any) => r.priority === 'critical' || r.priority === 'high')
+      .filter((r: BottleneckRecommendation) => r.priority === 'critical' || r.priority === 'high')
       .slice(0, 3);
 
-    highPriorityRecs.forEach((rec: any) => {
+    highPriorityRecs.forEach((rec: BottleneckRecommendation) => {
       nextSteps.push({
         action: rec.action,
         priority: rec.priority,

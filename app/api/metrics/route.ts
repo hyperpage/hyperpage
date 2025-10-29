@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import promClient from 'prom-client';
 import { defaultCache } from '../../../lib/cache/memory-cache';
@@ -11,6 +10,9 @@ import { defaultCacheInvalidationMiddleware } from '../../../lib/api/middleware/
 import { performanceDashboard } from '../../../lib/monitoring/performance-dashboard';
 import { alertService } from '../../../lib/alerting/alert-service';
 import { defaultHttpClient } from '../../../lib/connection-pool';
+import { DashboardMetrics } from '../../../lib/monitoring/performance-dashboard';
+import { Tool } from '../../../tools/tool-types';
+import { RateLimitStatus, RateLimitUsage } from '../../../lib/types/rate-limit';
 const register = new promClient.Registry();
 
 // Add default metrics (process, heap, etc.)
@@ -293,14 +295,14 @@ async function updateMetrics() {
 
     // Update performance snapshots count (approximation based on metrics data)
     if (dashboardMetrics && typeof dashboardMetrics === 'object') {
-      const overall = (dashboardMetrics as any).overall;
+      const overall = (dashboardMetrics as DashboardMetrics).overall;
       if (overall) {
         performanceSnapshotsTotal.reset();
         performanceSnapshotsTotal.inc(overall.totalRequests || 0);
       }
 
       // Update alert metrics
-      const alerting = (dashboardMetrics as any).alerting;
+      const alerting = (dashboardMetrics as DashboardMetrics).alerting;
       if (alerting && alerting.activeAlerts) {
         alertsActiveTotal.set({ severity: 'critical' }, alerting.activeAlerts.highResponseTime ? 1 : 0);
         alertsActiveTotal.set({ severity: 'warning' }, (alerting.activeAlerts.highErrorRate ||
@@ -322,11 +324,11 @@ async function updateMetrics() {
     }
 
     // Update rate limit metrics
-    const enabledTools = (Object.values(toolRegistry) as any[])
-      .filter((tool) =>
-        tool &&
+    const enabledTools = (Object.values(toolRegistry) as Tool[])
+      .filter((tool): tool is Tool =>
+        tool !== undefined &&
         tool.enabled === true &&
-        tool.capabilities?.includes('rate-limit')
+        Boolean(tool.capabilities?.includes('rate-limit'))
       );
 
     const activePlatforms = getActivePlatforms(enabledTools);
@@ -339,7 +341,10 @@ async function updateMetrics() {
         // Update platform-level metrics
         const maxUsage = Math.max(
           ...Object.values(status.limits).flatMap(platformLimits =>
-            Object.values(platformLimits || {}).map((usage: any) => usage.usagePercent || 0)
+            Object.values(platformLimits || {}).map((usage) =>
+              (usage && typeof usage === 'object' && 'usagePercent' in usage && typeof usage.usagePercent === 'number')
+                ? usage.usagePercent : 0
+            )
           )
         );
 
@@ -353,10 +358,14 @@ async function updateMetrics() {
         // Update per-endpoint metrics
         const platformLimits = status.limits[platform as keyof typeof status.limits];
         if (platformLimits) {
-          Object.entries(platformLimits).forEach(([endpoint, usage]: [string, any]) => {
-            if (usage?.limit !== null && usage?.remaining !== null) {
-              rateLimitMaxGauge.set({ platform, endpoint }, usage.limit);
-              rateLimitRemainingGauge.set({ platform, endpoint }, usage.remaining);
+          Object.entries(platformLimits).forEach(([endpoint, usage]) => {
+            if (usage && typeof usage === 'object' && 'limit' in usage && 'remaining' in usage) {
+              const limit = usage.limit as number | null;
+              const remaining = usage.remaining as number | null;
+              if (limit !== null && remaining !== null) {
+                rateLimitMaxGauge.set({ platform, endpoint }, limit);
+                rateLimitRemainingGauge.set({ platform, endpoint }, remaining);
+              }
             }
           });
         }
