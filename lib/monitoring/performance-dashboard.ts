@@ -66,6 +66,24 @@ export interface DashboardMetrics {
     };
     alertHistory: AlertEvent[];
   };
+  bottlenecks: {
+    activeBottlenecks: Array<{
+      id: string;
+      patternId: string;
+      confidence: number;
+      impact: string;
+      recommendations: any[];
+      timestamp: number;
+    }>; // Detailed bottleneck information
+    bottleneckAnalysis: {
+      activeCount: number;
+      resolvedCount: number;
+      topBottleneckTypes: Array<{ patternId: string; count: number }>;
+      resolutionRate: number;
+    };  // Analysis and statistics
+    topPatterns: Array<{ patternId: string; count: number }>; // Most common bottleneck patterns
+    resolutionRate: number;   // Percentage of resolved bottlenecks
+  };
 }
 
 export interface AlertEvent {
@@ -204,6 +222,39 @@ export class PerformanceDashboard extends EventEmitter {
       windowSnapshots.some(other => other.endpoint === '/api/batch')
     );
 
+    // Get bottleneck data - if detector not initialized, provide empty data
+    const bottleneckData = (() => {
+      try {
+        // Check if bottleneck detector is initialized (will be undefined if not loaded yet)
+        const { bottleneckDetector } = require('./bottleneck-detector') as { bottleneckDetector: any };
+        const analysis = bottleneckDetector.getBottleneckAnalysis();
+        return {
+          activeBottlenecks: bottleneckDetector.getActiveBottlenecks() || [],
+          bottleneckAnalysis: {
+            activeCount: analysis.activeCount || 0,
+            resolvedCount: analysis.resolvedCount || 0,
+            topBottleneckTypes: analysis.topBottleneckTypes || [],
+            resolutionRate: analysis.resolutionRate || 0
+          },
+          topPatterns: analysis.topBottleneckTypes || [],
+          resolutionRate: analysis.resolutionRate || 0
+        };
+      } catch (error) {
+        // Bottleneck detector not available, use defaults
+        return {
+          activeBottlenecks: [],
+          bottleneckAnalysis: {
+            activeCount: 0,
+            resolvedCount: 0,
+            topBottleneckTypes: [],
+            resolutionRate: 0
+          },
+          topPatterns: [],
+          resolutionRate: 0
+        };
+      }
+    })();
+
     return {
       overall: {
         totalRequests,
@@ -234,6 +285,7 @@ export class PerformanceDashboard extends EventEmitter {
         activeAlerts: this.getActiveAlerts(),
         alertHistory: this.alerts.slice(-20), // Last 20 alerts
       },
+      bottlenecks: bottleneckData,
     };
   }
 
@@ -466,6 +518,17 @@ export class PerformanceDashboard extends EventEmitter {
           batchHighLatency: false,
         },
         alertHistory: [],
+      },
+      bottlenecks: {
+        activeBottlenecks: [],
+        bottleneckAnalysis: {
+          activeCount: 0,
+          resolvedCount: 0,
+          topBottleneckTypes: [],
+          resolutionRate: 0
+        },
+        topPatterns: [],
+        resolutionRate: 0
       },
     };
   }
