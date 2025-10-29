@@ -1,6 +1,6 @@
  
 import { NextRequest, NextResponse } from 'next/server';
-import { bottleneckDetector } from '../../../../../../../lib/monitoring/bottleneck-detector';
+import { bottleneckDetector } from '../../../../../../lib/monitoring/bottleneck-detector';
 
 /**
  * POST /api/bottlenecks/[id]/execute/[actionId] - Execute an automated action for a bottleneck

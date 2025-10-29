@@ -238,8 +238,10 @@ export class PodCoordinator {
         // Someone else is leader, get their info
         const existingLeaderData = await this.redisClient.get(this.leaderKey);
         if (existingLeaderData) {
-          this.leaderInfo = JSON.parse(existingLeaderData);
+          this.leaderInfo = JSON.parse(existingLeaderData) as LeaderElection;
           this.isLeader = this.leaderInfo.leaderId === this.podId;
+        } else {
+          this.isLeader = false;
         }
 
         this.startFollowership();
