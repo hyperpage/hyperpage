@@ -179,18 +179,34 @@ describe('BottleneckDetector', () => {
   describe('Metric Extraction', () => {
     it('should extract numeric metric values from nested objects', () => {
       const metrics = {
-        overall: { averageResponseTime: 150 },
-        caching: { hitRate: 85.5 },
+        overall: { averageResponseTime: 150, totalRequests: 100, p95ResponseTime: 200, p99ResponseTime: 300, errorRate: 5, throughput: 10 },
+        endpoints: {},
+        caching: { hitRate: 85.5, missRate: 14.5, cacheSize: 1000, evictionCount: 10, compressionRate: 60 },
+        compression: { totalCompressedRequests: 50, averageCompressionRatio: 65, compressionSavingsBytes: 1000, compressionSavingsPercent: 30, brotliUsagePercent: 40, gzipUsagePercent: 60 },
+        batching: { totalBatchRequests: 20, averageBatchSize: 5, averageBatchDuration: 200, batchSuccessRate: 95, parallelBatches: 15, sequentialBatches: 5 },
+        alerting: { activeAlerts: { highResponseTime: false, highErrorRate: false, cacheLowHitRate: false, memoryHighUsage: false, compressionLowRatio: false, batchHighLatency: false }, alertHistory: [] },
+        bottlenecks: { activeBottlenecks: [], bottleneckAnalysis: { activeCount: 0, resolvedCount: 0, topBottleneckTypes: [], resolutionRate: 0 }, topPatterns: [], resolutionRate: 0 },
+        // Extra nested object for testing deep paths
         nested: { deeply: { value: 42 } }
       };
 
-      expect(detector['extractMetricValue'](metrics, 'overall.averageResponseTime')).toBe(150);
-      expect(detector['extractMetricValue'](metrics, 'caching.hitRate')).toBe(85.5);
-      expect(detector['extractMetricValue'](metrics, 'nested.deeply.value')).toBe(42);
+      expect(detector['extractMetricValue'](metrics as any, 'overall.averageResponseTime')).toBe(150);
+      expect(detector['extractMetricValue'](metrics as any, 'caching.hitRate')).toBe(85.5);
+      expect(detector['extractMetricValue'](metrics as any, 'nested.deeply.value')).toBe(42);
     });
 
     it('should return 0 for non-existent paths', () => {
-      expect(detector['extractMetricValue']({}, 'nonexistent.path')).toBe(0);
+      const emptyMetrics = {
+        overall: { averageResponseTime: 0, totalRequests: 0, p95ResponseTime: 0, p99ResponseTime: 0, errorRate: 0, throughput: 0 },
+        endpoints: {},
+        caching: { hitRate: 0, missRate: 0, cacheSize: 0, evictionCount: 0, compressionRate: 0 },
+        compression: { totalCompressedRequests: 0, averageCompressionRatio: 0, compressionSavingsBytes: 0, compressionSavingsPercent: 0, brotliUsagePercent: 0, gzipUsagePercent: 0 },
+        batching: { totalBatchRequests: 0, averageBatchSize: 0, averageBatchDuration: 0, batchSuccessRate: 0, parallelBatches: 0, sequentialBatches: 0 },
+        alerting: { activeAlerts: { highResponseTime: false, highErrorRate: false, cacheLowHitRate: false, memoryHighUsage: false, compressionLowRatio: false, batchHighLatency: false }, alertHistory: [] },
+        bottlenecks: { activeBottlenecks: [], bottleneckAnalysis: { activeCount: 0, resolvedCount: 0, topBottleneckTypes: [], resolutionRate: 0 }, topPatterns: [], resolutionRate: 0 }
+      };
+
+      expect(detector['extractMetricValue'](emptyMetrics as any, 'nonexistent.path')).toBe(0);
     });
 
     it('should check condition breaches accurately', () => {
@@ -204,13 +220,68 @@ describe('BottleneckDetector', () => {
 
   describe('Trend Analysis', () => {
     it('should analyze trends from metric history', () => {
-      // Setup metric history
+      // Setup metric history with complete DashboardMetrics objects
       detector['metricHistory'] = [
-        { timestamp: Date.now() - 5000, metrics: { 'overall.averageResponseTime': 100 } as any },
-        { timestamp: Date.now() - 4000, metrics: { 'overall.averageResponseTime': 120 } as any },
-        { timestamp: Date.now() - 3000, metrics: { 'overall.averageResponseTime': 150 } as any },
-        { timestamp: Date.now() - 2000, metrics: { 'overall.averageResponseTime': 180 } as any },
-        { timestamp: Date.now() - 1000, metrics: { 'overall.averageResponseTime': 220 } as any }
+        {
+          timestamp: Date.now() - 5000,
+          metrics: {
+            overall: { averageResponseTime: 100, totalRequests: 50, p95ResponseTime: 120, p99ResponseTime: 150, errorRate: 1, throughput: 10 },
+            endpoints: {},
+            caching: { hitRate: 80, missRate: 20, cacheSize: 1000, evictionCount: 5, compressionRate: 65 },
+            compression: { totalCompressedRequests: 40, averageCompressionRatio: 60, compressionSavingsBytes: 800, compressionSavingsPercent: 25, brotliUsagePercent: 35, gzipUsagePercent: 65 },
+            batching: { totalBatchRequests: 15, averageBatchSize: 5, averageBatchDuration: 180, batchSuccessRate: 95, parallelBatches: 12, sequentialBatches: 3 },
+            alerting: { activeAlerts: { highResponseTime: false, highErrorRate: false, cacheLowHitRate: false, memoryHighUsage: false, compressionLowRatio: false, batchHighLatency: false }, alertHistory: [] },
+            bottlenecks: { activeBottlenecks: [], bottleneckAnalysis: { activeCount: 0, resolvedCount: 0, topBottleneckTypes: [], resolutionRate: 0 }, topPatterns: [], resolutionRate: 0 }
+          }
+        },
+        {
+          timestamp: Date.now() - 4000,
+          metrics: {
+            overall: { averageResponseTime: 120, totalRequests: 55, p95ResponseTime: 140, p99ResponseTime: 170, errorRate: 1.5, throughput: 11 },
+            endpoints: {},
+            caching: { hitRate: 82, missRate: 18, cacheSize: 1000, evictionCount: 4, compressionRate: 68 },
+            compression: { totalCompressedRequests: 45, averageCompressionRatio: 62, compressionSavingsBytes: 900, compressionSavingsPercent: 28, brotliUsagePercent: 38, gzipUsagePercent: 62 },
+            batching: { totalBatchRequests: 18, averageBatchSize: 6, averageBatchDuration: 195, batchSuccessRate: 96, parallelBatches: 14, sequentialBatches: 4 },
+            alerting: { activeAlerts: { highResponseTime: false, highErrorRate: false, cacheLowHitRate: false, memoryHighUsage: false, compressionLowRatio: false, batchHighLatency: false }, alertHistory: [] },
+            bottlenecks: { activeBottlenecks: [], bottleneckAnalysis: { activeCount: 0, resolvedCount: 0, topBottleneckTypes: [], resolutionRate: 0 }, topPatterns: [], resolutionRate: 0 }
+          }
+        },
+        {
+          timestamp: Date.now() - 3000,
+          metrics: {
+            overall: { averageResponseTime: 150, totalRequests: 60, p95ResponseTime: 180, p99ResponseTime: 210, errorRate: 2, throughput: 12 },
+            endpoints: {},
+            caching: { hitRate: 78, missRate: 22, cacheSize: 1000, evictionCount: 7, compressionRate: 72 },
+            compression: { totalCompressedRequests: 50, averageCompressionRatio: 58, compressionSavingsBytes: 1000, compressionSavingsPercent: 30, brotliUsagePercent: 42, gzipUsagePercent: 58 },
+            batching: { totalBatchRequests: 22, averageBatchSize: 7, averageBatchDuration: 210, batchSuccessRate: 94, parallelBatches: 16, sequentialBatches: 6 },
+            alerting: { activeAlerts: { highResponseTime: false, highErrorRate: false, cacheLowHitRate: false, memoryHighUsage: false, compressionLowRatio: false, batchHighLatency: false }, alertHistory: [] },
+            bottlenecks: { activeBottlenecks: [], bottleneckAnalysis: { activeCount: 0, resolvedCount: 0, topBottleneckTypes: [], resolutionRate: 0 }, topPatterns: [], resolutionRate: 0 }
+          }
+        },
+        {
+          timestamp: Date.now() - 2000,
+          metrics: {
+            overall: { averageResponseTime: 180, totalRequests: 65, p95ResponseTime: 220, p99ResponseTime: 260, errorRate: 2.5, throughput: 13 },
+            endpoints: {},
+            caching: { hitRate: 75, missRate: 25, cacheSize: 1000, evictionCount: 9, compressionRate: 76 },
+            compression: { totalCompressedRequests: 55, averageCompressionRatio: 62, compressionSavingsBytes: 1200, compressionSavingsPercent: 35, brotliUsagePercent: 45, gzipUsagePercent: 55 },
+            batching: { totalBatchRequests: 28, averageBatchSize: 8, averageBatchDuration: 225, batchSuccessRate: 93, parallelBatches: 20, sequentialBatches: 8 },
+            alerting: { activeAlerts: { highResponseTime: false, highErrorRate: false, cacheLowHitRate: false, memoryHighUsage: false, compressionLowRatio: false, batchHighLatency: false }, alertHistory: [] },
+            bottlenecks: { activeBottlenecks: [], bottleneckAnalysis: { activeCount: 0, resolvedCount: 0, topBottleneckTypes: [], resolutionRate: 0 }, topPatterns: [], resolutionRate: 0 }
+          }
+        },
+        {
+          timestamp: Date.now() - 1000,
+          metrics: {
+            overall: { averageResponseTime: 220, totalRequests: 70, p95ResponseTime: 280, p99ResponseTime: 330, errorRate: 3, throughput: 14 },
+            endpoints: {},
+            caching: { hitRate: 72, missRate: 28, cacheSize: 1000, evictionCount: 12, compressionRate: 78 },
+            compression: { totalCompressedRequests: 60, averageCompressionRatio: 66, compressionSavingsBytes: 1500, compressionSavingsPercent: 40, brotliUsagePercent: 48, gzipUsagePercent: 52 },
+            batching: { totalBatchRequests: 35, averageBatchSize: 9, averageBatchDuration: 245, batchSuccessRate: 92, parallelBatches: 24, sequentialBatches: 11 },
+            alerting: { activeAlerts: { highResponseTime: false, highErrorRate: false, cacheLowHitRate: false, memoryHighUsage: false, compressionLowRatio: false, batchHighLatency: false }, alertHistory: [] },
+            bottlenecks: { activeBottlenecks: [], bottleneckAnalysis: { activeCount: 0, resolvedCount: 0, topBottleneckTypes: [], resolutionRate: 0 }, topPatterns: [], resolutionRate: 0 }
+          }
+        }
       ];
 
       const trend = detector['analyzeTrend'](['overall.averageResponseTime']);
