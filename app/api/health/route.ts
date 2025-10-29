@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { defaultCache } from '../../../lib/cache/memory-cache';
 import { getActivePlatforms } from '../../../lib/rate-limit-utils';
-import { getRateLimitStatus } from '../../../lib/rate-limit-monitor';
+import { getServerRateLimitStatus } from '../../../lib/rate-limit-service';
 import { toolRegistry } from '../../../tools/registry';
 
 export async function GET() {
@@ -18,7 +18,7 @@ export async function GET() {
 
   const activePlatforms = getActivePlatforms(enabledTools);
   const rateLimitStatuses = await Promise.allSettled(
-    activePlatforms.map(platform => getRateLimitStatus(platform))
+    activePlatforms.map(platform => getServerRateLimitStatus(platform))
   );
 
   // Aggregate rate limit metrics

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import promClient from 'prom-client';
 import { defaultCache } from '../../../lib/cache/memory-cache';
 import { getActivePlatforms } from '../../../lib/rate-limit-utils';
-import { getRateLimitStatus } from '../../../lib/rate-limit-monitor';
+import { getServerRateLimitStatus } from '../../../lib/rate-limit-service';
 import { toolRegistry } from '../../../tools/registry';
 import { defaultCompressionMiddleware } from '../../../lib/api/compression/compression-middleware';
 import { defaultBatchingMiddleware } from '../../../lib/api/batching/batching-middleware';
@@ -271,7 +271,7 @@ async function updateMetrics() {
 
     for (const platform of activePlatforms) {
       try {
-        const status = await getRateLimitStatus(platform);
+        const status = await getServerRateLimitStatus(platform);
         if (!status) continue;
 
         // Update platform-level metrics

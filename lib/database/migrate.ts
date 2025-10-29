@@ -7,11 +7,10 @@
 
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
-import * as fs from 'fs';
-import * as path from 'path';
 import { eq } from 'drizzle-orm';
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { DATABASE_PATH, internalDb } from './connection';
+import { MIGRATIONS_REGISTRY, getMigrationNames } from './migrations';
 
 // Migration tracking table (simplified version for internal use)
 const schemaMigrations = sqliteTable('schema_migrations', {
@@ -41,38 +40,24 @@ function ensureMigrationTable() {
   }
 }
 
-// Get list of migration files
-function getMigrationFiles(): string[] {
-  const migrationsDir = path.join(__dirname, 'migrations');
-
-  try {
-    const files = fs.readdirSync(migrationsDir)
-      .filter(file => file.endsWith('.ts') || file.endsWith('.js'))
-      .filter(file => /^\d+_.+\.(ts|js)$/.test(file))
-      .sort();
-
-    return files;
-  } catch (error) {
-    console.warn('Error reading migrations directory:', error);
-    return [];
-  }
+// Get list of migration names (replaces getMigrationFiles with static registry)
+function getMigrationNamesFromRegistry(): string[] {
+  return getMigrationNames();
 }
 
-// Load migration file dynamically
-async function loadMigration(filename: string): Promise<{ up?: any; down?: any }> {
-  try {
-    const filePath = path.join(__dirname, 'migrations', filename);
-    const migration = await import(filePath);
+// Load migration from static registry (replaces dynamic imports)
+function loadMigrationFromRegistry(migrationName: string): { up?: any; down?: any } {
+  const migration = MIGRATIONS_REGISTRY[migrationName];
 
-    if (migration.up && migration.down) {
-      return { up: migration.up, down: migration.down };
-    } else {
-      throw new Error(`Migration ${filename} must export both 'up' and 'down'`);
-    }
-  } catch (error) {
-    console.error(`Failed to load migration ${filename}:`, error);
-    throw error;
+  if (!migration) {
+    throw new Error(`Migration ${migrationName} not found in registry`);
   }
+
+  if (!migration.up || !migration.down) {
+    throw new Error(`Migration ${migrationName} must export both 'up' and 'down'`);
+  }
+
+  return { up: migration.up, down: migration.down };
 }
 
 // Check if migration has been executed
@@ -185,17 +170,15 @@ export async function runMigrations(isDryRun = false): Promise<void> {
     // Ensure migration table exists
     ensureMigrationTable();
 
-    const migrationFiles = getMigrationFiles();
-    if (migrationFiles.length === 0) {
+    const migrationNames = getMigrationNamesFromRegistry();
+    if (migrationNames.length === 0) {
       console.info('No migration files found');
       return;
     }
 
-    console.info(`Found ${migrationFiles.length} migration files`);
+    console.info(`Found ${migrationNames.length} migration files`);
 
-    for (const filename of migrationFiles) {
-      const migrationName = filename.replace(/\.(ts|js)$/, '');
-
+    for (const migrationName of migrationNames) {
       // Check if already executed
       const executed = await isMigrationExecuted(migrationName);
       if (executed) {
@@ -206,7 +189,7 @@ export async function runMigrations(isDryRun = false): Promise<void> {
       }
 
       // Load and execute migration
-      const { up } = await loadMigration(filename);
+      const { up } = loadMigrationFromRegistry(migrationName);
       await runMigrationUp(migrationName, up, isDryRun);
     }
 
@@ -240,10 +223,9 @@ export async function rollbackMigrations(count = 1, isDryRun = false): Promise<v
 
     for (let i = 0; i < Math.min(count, executedMigrations.length); i++) {
       const migrationName = executedMigrations[i].migration_name;
-      const filename = `${migrationName}.ts`; // Assume .ts files
 
       try {
-        const { down } = await loadMigration(filename);
+        const { down } = loadMigrationFromRegistry(migrationName);
         await runMigrationDown(migrationName, down, isDryRun);
       } catch (error) {
         console.error(`Failed to load migration ${migrationName} for rollback:`, error);
@@ -268,14 +250,13 @@ export async function showMigrationStatus(): Promise<void> {
     console.info('Migration Status:');
     console.info('=================');
 
-    const migrationFiles = getMigrationFiles();
-    if (migrationFiles.length === 0) {
+    const migrationNames = getMigrationNamesFromRegistry();
+    if (migrationNames.length === 0) {
       console.info('No migration files found');
       return;
     }
 
-    for (const filename of migrationFiles) {
-      const migrationName = filename.replace(/\.(ts|js)$/, '');
+    for (const migrationName of migrationNames) {
       const executed = await isMigrationExecuted(migrationName);
       const status = executed ? '✅ Executed' : '⏳ Pending';
       console.info(`${status}: ${migrationName}`);
