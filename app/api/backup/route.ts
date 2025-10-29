@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * GET /api/backup - List all available backups with metadata
  */
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     error: 'Backup functionality temporarily disabled for containerization',
     status: 'maintenance'
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 /**
  * POST /api/backup - Create a new database backup
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(): Promise<NextResponse> {
   return NextResponse.json({
     error: 'Backup functionality temporarily disabled for containerization',
     status: 'maintenance'
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 /**
  * PUT /api/backup?path=/path/to/backup.db - Restore from backup file
  */
-export async function PUT(request: NextRequest): Promise<NextResponse> {
+export async function PUT(): Promise<NextResponse> {
   return NextResponse.json({
     error: 'Backup functionality temporarily disabled for containerization',
     status: 'maintenance'
@@ -43,7 +43,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 /**
  * DELETE /api/backup?cleanup=true&keep=10 - Cleanup old backups
  */
-export async function DELETE(request: NextRequest): Promise<NextResponse> {
+export async function DELETE(): Promise<NextResponse> {
   return NextResponse.json({
     error: 'Backup functionality temporarily disabled for containerization',
     status: 'maintenance'

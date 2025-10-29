@@ -1,12 +1,53 @@
-import { performanceDashboard, AlertEvent, AlertType } from '../monitoring/performance-dashboard';
+import { performanceDashboard, AlertEvent, AlertType, DashboardMetrics } from '../monitoring/performance-dashboard';
 import { EventEmitter } from 'events';
 import logger from '../logger';
 
-export interface AlertChannel {
+export interface SlackAlertChannel {
   name: string;
-  type: 'slack' | 'email' | 'webhook' | 'console';
-  config: Record<string, any>;
+  type: 'slack';
+  config: SlackConfig;
   enabled: boolean;
+}
+
+export interface EmailAlertChannel {
+  name: string;
+  type: 'email';
+  config: EmailConfig;
+  enabled: boolean;
+}
+
+export interface WebhookAlertChannel {
+  name: string;
+  type: 'webhook';
+  config: WebhookConfig;
+  enabled: boolean;
+}
+
+export interface ConsoleAlertChannel {
+  name: string;
+  type: 'console';
+  config: Record<string, never>; // Empty config for console
+  enabled: boolean;
+}
+
+export type AlertChannel = SlackAlertChannel | EmailAlertChannel | WebhookAlertChannel | ConsoleAlertChannel;
+
+export interface EmailConfig {
+  to: string;
+  from?: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  username?: string;
+  password?: string;
+}
+
+export interface SlackConfig {
+  webhookUrl: string;
+}
+
+export interface WebhookConfig {
+  url: string;
+  headers?: Record<string, string>;
 }
 
 export interface AlertTemplate {
@@ -60,12 +101,23 @@ export class AlertService extends EventEmitter {
   registerChannel(channel: AlertChannel): void {
     this.channels.set(channel.name, channel);
 
-    if (channel.type === 'slack' && channel.config.webhookUrl) {
-      // Initialize Slack webhook
-      this.validateSlackWebhook(channel.config.webhookUrl);
-    } else if (channel.type === 'webhook' && channel.config.url) {
-      // Initialize generic webhook
-      this.validateWebhook(channel.config.url);
+    switch (channel.type) {
+      case 'slack':
+        if (channel.config.webhookUrl) {
+          // Initialize Slack webhook
+          this.validateSlackWebhook(channel.config.webhookUrl);
+        }
+        break;
+      case 'webhook':
+        if (channel.config.url) {
+          // Initialize generic webhook
+          this.validateWebhook(channel.config.url);
+        }
+        break;
+      case 'email':
+      case 'console':
+        // No additional validation needed
+        break;
     }
   }
 
@@ -184,10 +236,23 @@ export class AlertService extends EventEmitter {
   /**
    * Extract metric value from dashboard metrics object
    */
-  private extractMetricValue(obj: any, path: string): number | null {
-    return path.split('.').reduce((current, key) => {
-      return current && current[key] !== undefined ? current[key] : null;
-    }, obj);
+  private extractMetricValue(obj: DashboardMetrics, path: string): number | null {
+    try {
+      const keys = path.split('.');
+      let current: Record<string, unknown> | unknown = obj;
+
+      for (const key of keys) {
+        if (current && typeof current === 'object' && key in current) {
+          current = (current as Record<string, unknown>)[key];
+        } else {
+          return null;
+        }
+      }
+
+      return typeof current === 'number' ? current : null;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -250,7 +315,8 @@ export class AlertService extends EventEmitter {
         break;
 
       default:
-        console.warn(`Unsupported channel type: ${channel.type}`);
+        const _exhaustiveCheck: never = channel; // TypeScript exhaustive check
+        console.warn(`Unsupported channel type`);
     }
   }
 
@@ -358,7 +424,7 @@ export class AlertService extends EventEmitter {
    * Send email alert (placeholder - would integrate with email service)
    */
   private async sendEmailAlert(
-    config: any,
+    config: EmailConfig,
     template: AlertTemplate,
     alert: AlertEvent,
     message: string
