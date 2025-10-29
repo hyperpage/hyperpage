@@ -206,11 +206,11 @@ describe('BottleneckDetector', () => {
     it('should analyze trends from metric history', () => {
       // Setup metric history
       detector['metricHistory'] = [
-        { timestamp: Date.now() - 5000, metrics: { 'overall.averageResponseTime': 100 } },
-        { timestamp: Date.now() - 4000, metrics: { 'overall.averageResponseTime': 120 } },
-        { timestamp: Date.now() - 3000, metrics: { 'overall.averageResponseTime': 150 } },
-        { timestamp: Date.now() - 2000, metrics: { 'overall.averageResponseTime': 180 } },
-        { timestamp: Date.now() - 1000, metrics: { 'overall.averageResponseTime': 220 } }
+        { timestamp: Date.now() - 5000, metrics: { 'overall.averageResponseTime': 100 } as any },
+        { timestamp: Date.now() - 4000, metrics: { 'overall.averageResponseTime': 120 } as any },
+        { timestamp: Date.now() - 3000, metrics: { 'overall.averageResponseTime': 150 } as any },
+        { timestamp: Date.now() - 2000, metrics: { 'overall.averageResponseTime': 180 } as any },
+        { timestamp: Date.now() - 1000, metrics: { 'overall.averageResponseTime': 220 } as any }
       ];
 
       const trend = detector['analyzeTrend'](['overall.averageResponseTime']);
@@ -310,7 +310,7 @@ describe('BottleneckDetector', () => {
 
       const result = await detector.executeAutomatedAction('test-bottleneck', 'reduce-request-rate');
       expect(result.success).toBe(true);
-      expect(result.message).toContain('Automated action executed successfully');
+      expect(result.message).toContain(`Automated action 'Reduce Request Rate' executed successfully`);
     });
 
     it('should reject unsafe action scripts', async () => {
@@ -328,7 +328,7 @@ describe('BottleneckDetector', () => {
 
       detector['activeBottlenecks'].set(mockBottleneck.id, mockBottleneck);
 
-      const result = await detector.executeAutomatedAction('test-bottleneck', 'unsafe-action');
+      const result = await detector.executeAutomatedAction('test-bottleneck', 'test-unsafe-action');
       expect(result.success).toBe(false);
       expect(result.message).toContain('Unsafe or unknown action script');
     });

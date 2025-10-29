@@ -351,14 +351,57 @@ export class BottleneckDetector extends EventEmitter {
   /**
    * Extract metric value from dashboard metrics object
    */
-  private extractMetricValue(metrics: any, path: string): number {
+  private extractMetricValue(metrics: DashboardMetrics | Record<string, any>, path: string): number {
     try {
-      return path.split('.').reduce((current, key) => {
-        if (current && current[key] !== undefined && typeof current[key] === 'number') {
-          return Number(current[key]);
-        }
-        return 0;
-      }, metrics);
+      // Type-safe extraction for known metric paths
+      switch (path) {
+        case 'overall.averageResponseTime':
+          return metrics.overall?.averageResponseTime ?? (metrics as any)['overall.averageResponseTime'] ?? 0;
+        case 'overall.errorRate':
+          return metrics.overall?.errorRate ?? (metrics as any)['overall.errorRate'] ?? 0;
+        case 'caching.hitRate':
+          return metrics.caching?.hitRate ?? (metrics as any)['caching.hitRate'] ?? 0;
+        case 'compression.averageCompressionRatio':
+          return metrics.compression?.averageCompressionRatio ?? (metrics as any)['compression.averageCompressionRatio'] ?? 0;
+        case 'overall.totalRequests':
+          return metrics.overall?.totalRequests ?? (metrics as any)['overall.totalRequests'] ?? 0;
+        case 'overall.p95ResponseTime':
+          return metrics.overall?.p95ResponseTime ?? (metrics as any)['overall.p95ResponseTime'] ?? 0;
+        case 'overall.p99ResponseTime':
+          return metrics.overall?.p99ResponseTime ?? (metrics as any)['overall.p99ResponseTime'] ?? 0;
+        case 'overall.throughput':
+          return metrics.overall?.throughput ?? (metrics as any)['overall.throughput'] ?? 0;
+        // Handle caching.evictionRate and other known but potentially missing fields
+        case 'caching.evictionRate':
+          return (metrics.caching as any)?.evictionRate ?? (metrics as any)['caching.evictionRate'] ?? 0;
+        case 'batching.averageBatchDuration':
+          return (metrics.batching as any)?.averageBatchDuration ?? (metrics as any)['batching.averageBatchDuration'] ?? 0;
+        case 'batching.batchSuccessRate':
+          return (metrics.batching as any)?.batchSuccessRate ?? (metrics as any)['batching.batchSuccessRate'] ?? 0;
+        default:
+          // For unknown paths (including test-specific flat paths), use flat key lookup first
+          if (typeof metrics === 'object' && path in metrics && typeof (metrics as any)[path] === 'number') {
+            return (metrics as any)[path];
+          }
+
+          // Fall back to generic navigation for nested paths
+          const keys = path.split('.');
+          let current: any = metrics;
+          for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            if (!current || typeof current !== 'object' || !(key in current)) {
+              return 0;
+            }
+            current = current[key];
+            // Last key must be a number, intermediate keys must be objects
+            if (i === keys.length - 1) {
+              return typeof current === 'number' ? current : 0;
+            } else if (typeof current !== 'object') {
+              return 0;
+            }
+          }
+          return 0; // Should not reach here
+      }
     } catch {
       return 0;
     }
@@ -755,7 +798,8 @@ export class BottleneckDetector extends EventEmitter {
       'reduce-request-rate': this.reduceRequestRate.bind(this),
       'enable-circuit-breaker': this.enableCircuitBreaker.bind(this),
       'increase-cache-memory': this.increaseCacheMemory.bind(this),
-      'clear-cache-evictions': this.clearCacheEvictions.bind(this)
+      'clear-cache-evictions': this.clearCacheEvictions.bind(this),
+      'reduce-batch-size': this.reduceBatchSize.bind(this)
     };
 
     const actionFn = safeActions[script as keyof typeof safeActions];
@@ -816,6 +860,18 @@ export class BottleneckDetector extends EventEmitter {
     return { clearedEntries };
   }
 
+  private async reduceBatchSize(): Promise<{ oldSize: number; newSize: number }> {
+    // Reduce batch processing size to alleviate overload
+    // This would need to interface with the batching system
+
+    const oldSize = 20; // Placeholder
+    const newSize = 10; // 50% reduction
+
+    logger.info('Reducing batch processing size', { oldSize, newSize });
+
+    return { oldSize, newSize };
+  }
+
   /**
    * Get bottleneck insights and AI recommendations
    */
@@ -837,7 +893,7 @@ export class BottleneckDetector extends EventEmitter {
     };
   }
 
-  private getActiveBottleneckInsights(metrics: any): ActiveBottleneckInsight[] {
+  private getActiveBottleneckInsights(metrics: DashboardMetrics): ActiveBottleneckInsight[] {
     const currentBottlenecks = this.activeBottlenecks.values();
 
     return Array.from(currentBottlenecks).map(bottleneck => ({
@@ -854,7 +910,7 @@ export class BottleneckDetector extends EventEmitter {
     }));
   }
 
-  private predictUpcomingBottlenecks(metrics: any): PredictedBottleneck[] {
+  private predictUpcomingBottlenecks(metrics: DashboardMetrics): PredictedBottleneck[] {
     const predictions: PredictedBottleneck[] = [];
     const recentHistory = this.metricHistory.slice(-10); // Last 10 data points
 
@@ -878,7 +934,7 @@ export class BottleneckDetector extends EventEmitter {
     return predictions;
   }
 
-  private generateOptimizations(metrics: any): PerformanceOptimization[] {
+  private generateOptimizations(metrics: DashboardMetrics): PerformanceOptimization[] {
     const optimizations: PerformanceOptimization[] = [];
 
     // Analyze cache efficiency
@@ -910,7 +966,7 @@ export class BottleneckDetector extends EventEmitter {
     return optimizations;
   }
 
-  private assessSystemRisks(metrics: any): RiskAssessment[] {
+  private assessSystemRisks(metrics: DashboardMetrics): RiskAssessment[] {
     const assessments: RiskAssessment[] = [];
 
     // Memory usage risk

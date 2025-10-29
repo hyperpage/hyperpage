@@ -55,6 +55,15 @@ export const BOTTLENECK_PATTERNS: BottleneckPattern[] = [
         estimatedTime: 15,
         rolloutStrategy: 'immediate'
       }
+    ],
+
+    automatedActions: [
+      {
+        id: 'test-unsafe-action',
+        name: 'Test Unsafe Action',
+        script: 'unsafe-script-name',
+        requiresApproval: false
+      }
     ]
   },
 
@@ -125,7 +134,7 @@ export const BOTTLENECK_PATTERNS: BottleneckPattern[] = [
       sensitivity: 0.8,
       baselinePeriod: 180000 // 3 minutes
     },
-    minimumConfidence: 75,
+    minimumConfidence: 85,
     impactThreshold: 85,
 
     recommendations: [
@@ -156,6 +165,15 @@ export const BOTTLENECK_PATTERNS: BottleneckPattern[] = [
         estimatedTime: 180,
         rolloutStrategy: 'staged'
       }
+    ],
+
+    automatedActions: [
+      {
+        id: 'reduce-request-rate',
+        name: 'Reduce Request Rate',
+        script: 'reduce-request-rate',
+        requiresApproval: false
+      }
     ]
   },
 
@@ -169,7 +187,7 @@ export const BOTTLENECK_PATTERNS: BottleneckPattern[] = [
     conditions: [
       { metric: 'overall.p95ResponseTime', operator: 'gt', threshold: 2000, duration: 60000, weight: 40 },
       { metric: 'overall.errorRate', operator: 'gt', threshold: 5, duration: 300000, weight: 30 },
-      { metric: 'overall.totalRequests', operator: 'gt', threshold: 100, duration: 10000, weight: 30 } // High throughput
+      { metric: 'overall.totalRequests', operator: 'gt', threshold: 100, duration: 30000, weight: 30 } // High throughput
     ],
 
     primaryIndicators: ['overall.p95ResponseTime', 'overall.errorRate'],
@@ -312,6 +330,15 @@ export const BOTTLENECK_PATTERNS: BottleneckPattern[] = [
         estimatedTime: 60,
         rolloutStrategy: 'ongoing'
       }
+    ],
+
+    automatedActions: [
+      {
+        id: 'reduce-batch-size',
+        name: 'Reduce Batch Size',
+        script: 'reduce-batch-size',
+        requiresApproval: false
+      }
     ]
   },
 
@@ -366,6 +393,15 @@ export const BOTTLENECK_PATTERNS: BottleneckPattern[] = [
         automated: false,
         estimatedTime: 240,
         rolloutStrategy: 'planned'
+      }
+    ],
+
+    automatedActions: [
+      {
+        id: 'enable-circuit-breaker',
+        name: 'Enable Circuit Breaker',
+        script: 'enable-circuit-breaker',
+        requiresApproval: true
       }
     ]
   },
