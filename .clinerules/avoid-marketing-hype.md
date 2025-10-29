@@ -1,16 +1,16 @@
 ---
-description: Guidelines to prevent marketing hype and false metrics in documentation
+description: Guidelines to prevent marketing hype and false metrics in documentation, commits, and chat
 author: Generated from documentation cleanup task
 version: 1.0
-tags: ["documentation", "marketing", "accuracy", "technical-writing"]
+tags: ["documentation", "commits", "chat", "marketing", "accuracy", "technical-writing"]
 severity: "high"
 ---
 
 # Documentation Accuracy: Avoid Marketing Hype and False Metrics
 
-## Critical Rule: No False Claims in Documentation
+## Critical Rule: No False Claims in Documentation, Commits, or Chat
 
-**MANDATORY INSTRUCTION**: All documentation, README.md, and architectural descriptions **MUST** accurately reflect the current state of the codebase. No marketing hype, aspirational claims, or false metrics are allowed.
+**MANDATORY INSTRUCTION**: All documentation, README.md, architectural descriptions, commit messages, and chat responses **MUST** accurately reflect the current state of the codebase. No marketing hype, aspirational claims, or false metrics are allowed.
 
 ## Prohibited Content Patterns
 
@@ -38,6 +38,18 @@ severity: "high"
 - ~~"ESLint issues reduced by 41%"~~ → **Require actual measurement if including numbers**
 - ~~"Target <1% rate limiting errors"~~ → **No aspirational targets in completed features**
 
+### ❌ **False Claims in Commit Messages**
+- ~~"Fixed critical security vulnerability in authentication"~~ → **Only if actually fixed and verified**
+- ~~"Optimized performance by 300%"~~ → **Require actual measurements**
+- ~~"Added revolutionary new feature"~~ → **Use factual descriptions like "Add user login endpoint"**
+- ~~"Refactored entire codebase for perfection"~~ → **Describe actual changes made**
+
+### ❌ **False Claims in Chat Responses**
+- ~~"This solution is enterprise-grade and battle-tested"~~ → **Describe actual implementation**
+- ~~"I've implemented the most efficient algorithm possible"~~ → **Stick to factual technical details**
+- ~~"This will solve all your scaling problems forever"~~ → **Describe what the change addresses specifically**
+- ~~"Zero downtime guaranteed"~~ → **No absolute guarantees without verification**
+
 ## Approved Content Patterns
 
 ### ✅ **Accurate Documentation**
@@ -57,6 +69,26 @@ severity: "high"
 ### ✅ **Honest Quality Assessments**
 - **Before**: ~~"Production READY ✅" with specific metrics~~
 - **After**: "Project includes automated testing"
+
+### ✅ **Accurate Commit Messages**
+- **Instead of**: ~~"Fixed critical security vulnerability in authentication"~~
+- **Use**: "Fix password validation in login function"
+- **Instead of**: ~~"Optimized performance by 300%"~~ (unmeasured)
+- **Use**: "Improve query performance for user lookups" (measured improvement)
+- **Instead of**: ~~"Added revolutionary new feature"~~
+- **Use**: "Add user registration endpoint with email validation"
+- **Instead of**: ~~"Refactored entire codebase for perfection"~~
+- **Use**: "Refactor authentication middleware to improve error handling"
+
+### ✅ **Factual Chat Responses**
+- **Instead of**: ~~"This solution is enterprise-grade and battle-tested"~~
+- **Use**: "This implementation follows standard authentication patterns"
+- **Instead of**: ~~"I've implemented the most efficient algorithm possible"~~
+- **Use**: "This implementation uses binary search for better performance on sorted data"
+- **Instead of**: ~~"This will solve all your scaling problems forever"~~
+- **Use**: "This caching layer will reduce database load for this specific query pattern"
+- **Instead of**: ~~"Zero downtime guaranteed"~~
+- **Use**: "The deployment process includes health checks to minimize service disruption"
 
 ## Verification Requirements
 
@@ -80,6 +112,12 @@ severity: "high"
 - [ ] Check server/client separation claims
 - [ ] Validate security implementation
 
+### 4. Commit and Chat Verification
+- [ ] Review commit messages for factual accuracy before pushing
+- [ ] Ensure chat responses describe actual implementation without hype
+- [ ] Verify performance claims in commits with actual measurements
+- [ ] Cross-reference chat responses against implemented code
+
 ## Documentation Writing Rules
 
 ### Rule 1: Use Factual Language
@@ -99,10 +137,24 @@ severity: "high"
 - Flag any statements that claim perfect states
 - Require code verification for all quantitative claims
 
+### Rule 5: Use Factual Language in Commits and Chat
+- **Commit Messages**: Focus on what was actually changed, not on impact or importance
+- **Chat Responses**: Describe technical implementations precisely without superlatives
+- **Avoid Hype Phrases**: Terms like "amazing", "incredible", "game-changing" have no place in technical communication
+- **Be Specific**: Use concrete examples and references to code locations when explaining changes
+
+### Rule 6: No Aspirational Claims Anywhere
+- **Commits**: Don't claim fixes or improvements that may be partially implemented or unverified
+- **Chat**: Don't promise outcomes or benefits beyond what's demonstrably true
+- **Documentation**: Keep future goals separated from current capabilities
+- **Verification Required**: Any claim of improvement must be backed by evidence or measurement
+
 ## Documentation File Priorities
 
-### High Risk Files (Must Verify)
-- **README.md** - Always check claims against reality
+### High Risk Areas (Must Verify)
+- **README.md and Docs** - Always check claims against reality
+- **Commit Messages** - Factually describe actual changes made
+- **Chat Responses** - Describe implementation without hype or aspirational claims
 - **docs/architecture.md** - Architecture claims frequently overstate reality
 - **docs/testing.md** - Test metrics and success claims
 - **docs/roadmap.md** - Must not contain false "completed" items
@@ -115,4 +167,4 @@ Consider adding automated checks that:
 
 ---
 
-**Final Rule**: **When writing documentation, always prefer factual accuracy over marketing appeal. Claims that cannot be immediately verified against the codebase are prohibited.**
+**Final Rule**: **When writing documentation, commit messages, or in chat responses, always prefer factual accuracy over marketing appeal. Claims that cannot be immediately verified against the codebase are prohibited.**
