@@ -10,6 +10,7 @@ import { defaultBatchingMiddleware } from '../../../lib/api/batching/batching-mi
 import { defaultCacheInvalidationMiddleware } from '../../../lib/api/middleware/cache-invalidation-middleware';
 import { performanceDashboard } from '../../../lib/monitoring/performance-dashboard';
 import { alertService } from '../../../lib/alerting/alert-service';
+import { defaultHttpClient } from '../../../lib/connection-pool';
 const register = new promClient.Registry();
 
 // Add default metrics (process, heap, etc.)
@@ -210,6 +211,67 @@ const monitoringSystemHealthGauge = new promClient.Gauge({
   registers: [register],
 });
 
+// Connection pool metrics
+const connectionPoolActiveConnectionsGauge = new promClient.Gauge({
+  name: 'http_connection_pool_active_connections',
+  help: 'Number of currently active connections in the HTTP pool',
+  registers: [register],
+});
+
+const connectionPoolIdleConnectionsGauge = new promClient.Gauge({
+  name: 'http_connection_pool_idle_connections',
+  help: 'Number of idle connections in the HTTP pool',
+  registers: [register],
+});
+
+const connectionPoolTotalConnectionsGauge = new promClient.Gauge({
+  name: 'http_connection_pool_total_connections',
+  help: 'Total number of connections ever created by the HTTP pool',
+  registers: [register],
+});
+
+const connectionPoolPendingRequestsGauge = new promClient.Gauge({
+  name: 'http_connection_pool_pending_requests',
+  help: 'Number of requests currently pending in the HTTP pool',
+  registers: [register],
+});
+
+const connectionPoolAverageResponseTimeGauge = new promClient.Gauge({
+  name: 'http_connection_pool_average_response_time_ms',
+  help: 'Average response time for HTTP pool requests in milliseconds',
+  registers: [register],
+});
+
+const connectionPoolSuccessRateGauge = new promClient.Gauge({
+  name: 'http_connection_pool_success_rate_percent',
+  help: 'Percentage of successful HTTP pool requests (0-100)',
+  registers: [register],
+});
+
+const connectionPoolReuseRatioGauge = new promClient.Gauge({
+  name: 'http_connection_pool_reuse_ratio_percent',
+  help: 'Percentage of connections that were reused (0-100)',
+  registers: [register],
+});
+
+const connectionPoolUtilizationGauge = new promClient.Gauge({
+  name: 'http_connection_pool_utilization_percent',
+  help: 'Current HTTP pool utilization percentage (0-100)',
+  registers: [register],
+});
+
+const connectionPoolRequestsTotal = new promClient.Counter({
+  name: 'http_connection_pool_requests_total',
+  help: 'Total number of requests processed by the HTTP pool',
+  registers: [register],
+});
+
+const connectionPoolHealthStatusGauge = new promClient.Gauge({
+  name: 'http_connection_pool_health_status',
+  help: 'Current health status of the HTTP connection pool (0=unhealthy, 1=degraded, 2=healthy)',
+  registers: [register],
+});
+
 // Update metrics from current state
 async function updateMetrics() {
   try {
@@ -303,6 +365,41 @@ async function updateMetrics() {
         // Set status to unknown for failed platforms
         rateLimitStatusGauge.set({ platform }, 3);
       }
+    }
+
+    // Update connection pool metrics
+    try {
+      const poolMetrics = defaultHttpClient.getMetrics();
+      const poolHealth = defaultHttpClient.getHealth();
+
+      connectionPoolActiveConnectionsGauge.set(poolMetrics.activeConnections);
+      connectionPoolIdleConnectionsGauge.set(poolMetrics.idleConnections);
+      connectionPoolTotalConnectionsGauge.set(poolMetrics.totalConnections);
+      connectionPoolPendingRequestsGauge.set(poolMetrics.pendingRequests);
+      connectionPoolAverageResponseTimeGauge.set(poolMetrics.averageConnectionLifetime);
+      connectionPoolSuccessRateGauge.set(poolMetrics.connectionSuccessRate * 100); // Convert to percentage
+      connectionPoolReuseRatioGauge.set(poolMetrics.reuseRatio * 100); // Convert to percentage
+
+      // Calculate utilization (simplified version)
+      const totalConnections = poolMetrics.activeConnections + poolMetrics.idleConnections;
+      const utilization = totalConnections > 0 ? (poolMetrics.activeConnections / totalConnections) * 100 : 0;
+      connectionPoolUtilizationGauge.set(utilization);
+
+      // Set health status as numeric value
+      const healthValue = poolHealth.status === 'healthy' ? 2 :
+                         poolHealth.status === 'degraded' ? 1 : 0;
+      connectionPoolHealthStatusGauge.set(healthValue);
+
+      // Update total requests counter (this is cumulative)
+      connectionPoolRequestsTotal.reset();
+      // We don't have a direct count, so we'll use active connections as approximation
+      // In a real implementation, this would increment per request
+      connectionPoolRequestsTotal.inc(poolMetrics.totalConnections);
+
+    } catch (error) {
+      console.error('Failed to update connection pool metrics:', error);
+      // Set error states
+      connectionPoolHealthStatusGauge.set(0); // Unhealthy
     }
   } catch (error) {
     console.error('Failed to update metrics:', error);
