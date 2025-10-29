@@ -36,7 +36,11 @@ function ensureMigrationTable() {
     `;
     internalDb.exec(createTableSql);
   } catch (error) {
-    console.warn('Failed to create migration table:', error);
+    // Don't treat "table already exists" as an error during initialization
+    const errorMsg = (error as Error).message;
+    if (!errorMsg.includes('already exists') && !errorMsg.includes('already_exists')) {
+      console.warn('Failed to create migration table:', error);
+    }
   }
 }
 

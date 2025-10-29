@@ -27,6 +27,10 @@ try {
   // Continue - the database will be created in the current directory if needed
 }
 
+// Test-safe database path (use in-memory database for tests)
+const IS_TEST_ENV = process.env.NODE_ENV === 'test' || process.env.VITEST === '1';
+const TEST_DB_PATH = IS_TEST_ENV ? ':memory:' : DATABASE_PATH;
+
 // Application database connection (for business logic)
 let _appDb: Database.Database | null = null;
 let _appDrizzleDb: DrizzleInstance | null = null;
@@ -40,20 +44,23 @@ let _internalDb: Database.Database | null = null;
  */
 export function getAppDatabase(): { sqlite: Database.Database; drizzle: DrizzleInstance } {
   if (!_appDb || !_appDrizzleDb) {
-    _appDb = new Database(DATABASE_PATH, {
+    const dbPath = IS_TEST_ENV ? TEST_DB_PATH : DATABASE_PATH;
+    _appDb = new Database(dbPath, {
       verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
     });
 
-    // Enable WAL mode for better concurrency
-    _appDb.pragma('journal_mode = WAL');
-    _appDb.pragma('synchronous = NORMAL');
-    _appDb.pragma('cache_size = 1000000'); // 1GB cache
-    _appDb.pragma('temp_store = memory'); // Temporary tables in memory
+    // Enable WAL mode for better concurrency (skip for in-memory test databases)
+    if (!IS_TEST_ENV) {
+      _appDb.pragma('journal_mode = WAL');
+      _appDb.pragma('synchronous = NORMAL');
+      _appDb.pragma('cache_size = 1000000'); // 1GB cache
+      _appDb.pragma('temp_store = memory'); // Temporary tables in memory
+    }
 
     // Set up Drizzle with schema
     _appDrizzleDb = drizzle(_appDb, { schema });
 
-    console.info(`Application database initialized at ${DATABASE_PATH}`);
+    console.info(`Application database initialized at ${dbPath}`);
   }
 
   return { sqlite: _appDb, drizzle: _appDrizzleDb };
@@ -65,15 +72,18 @@ export function getAppDatabase(): { sqlite: Database.Database; drizzle: DrizzleI
  */
 export function getInternalDatabase(): Database.Database {
   if (!_internalDb) {
-    _internalDb = new Database(DATABASE_PATH, {
+    const dbPath = IS_TEST_ENV ? TEST_DB_PATH : DATABASE_PATH;
+    _internalDb = new Database(dbPath, {
       verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
     });
 
-    // Enable WAL mode for internal operations too
-    _internalDb.pragma('journal_mode = WAL');
-    _internalDb.pragma('synchronous = NORMAL');
+    // Enable WAL mode for internal operations too (skip for in-memory test databases)
+    if (!IS_TEST_ENV) {
+      _internalDb.pragma('journal_mode = WAL');
+      _internalDb.pragma('synchronous = NORMAL');
+    }
 
-    console.info(`Internal database initialized at ${DATABASE_PATH}`);
+    console.info(`Internal database initialized at ${dbPath}`);
   }
 
   return _internalDb;
@@ -178,4 +188,27 @@ export function checkDatabaseConnectivity(): {
       },
     };
   }
+}
+
+/**
+ * Create a fresh in-memory database connection for testing
+ * Each test suite gets its own isolated database instance
+ */
+export function createTestDatabase(): Database.Database {
+  const db = new Database(':memory:', {
+    verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
+  });
+
+  // Set up basic WAL mode for consistency with regular databases
+  db.pragma('journal_mode = MEMORY'); // Use MEMORY mode for in-memory databases
+  db.pragma('synchronous = NORMAL');
+
+  return db;
+}
+
+/**
+ * Create a test Drizzle instance with schema for testing
+ */
+export function createTestDrizzle(db: Database.Database) {
+  return drizzle(db, { schema });
 }
