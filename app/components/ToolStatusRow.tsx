@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { getToolIcon } from "../../tools";
 import { ToolIntegration } from "../../tools/tool-types";
 
-import { Wifi, WifiOff, Zap } from "lucide-react";
+import { Wifi, WifiOff, Zap, UserCheck, UserX } from "lucide-react";
 import { useMultipleRateLimits, getRateLimitStatusColor, getRateLimitStatusBgColor, formatTimeUntilReset } from "./hooks/useRateLimit";
 import { RateLimitStatus } from "../../lib/types/rate-limit";
 
@@ -17,16 +17,30 @@ export default function ToolStatusRow() {
     [],
   );
   const [enabledPlatformSlugs, setEnabledPlatformSlugs] = useState<string[]>([]);
+  const [authStatus, setAuthStatus] = useState<{
+    authenticated: boolean;
+    authenticatedTools: Record<string, { connected: boolean; connectedAt: Date; lastUsed: Date }>;
+  }>({ authenticated: false, authenticatedTools: {} });
 
   // Get rate limit status for all enabled tools that support rate limiting - only when we have slugs
   const { statuses: rateLimitStatuses } = useMultipleRateLimits(
     enabledPlatformSlugs.length > 0 ? enabledPlatformSlugs : ['dummy'] // Use dummy to avoid empty array issues
   );
 
-  // Load tool integrations and health info on component mount
+  // Load tool integrations, auth status, and health info on component mount
   useEffect(() => {
     async function loadIntegrations() {
       try {
+        // Load authentication status first
+        const authResponse = await fetch("/api/auth/status");
+        if (authResponse.ok) {
+          const authData = await authResponse.json();
+          setAuthStatus({
+            authenticated: authData.authenticated,
+            authenticatedTools: authData.authenticatedTools || {},
+          });
+        }
+
         // Load enabled tools with basic status
         const response = await fetch("/api/tools/enabled");
         if (response.ok) {
@@ -89,11 +103,29 @@ export default function ToolStatusRow() {
     }
   };
 
+  const getAuthIcon = (toolSlug: string) => {
+    const authTool = authStatus.authenticatedTools[toolSlug];
+    if (authTool && authTool.connected) {
+      return <UserCheck className="w-3 h-3 text-green-500" />;
+    }
+    return <UserX className="w-3 h-3 text-gray-400" />;
+  };
+
+  const getAuthColor = (toolSlug: string) => {
+    const authTool = authStatus.authenticatedTools[toolSlug];
+    if (authTool && authTool.connected) {
+      return "bg-green-500";
+    }
+    return "bg-gray-400";
+  };
+
   /**
-   * Generate detailed tooltip text with rate limit information
+   * Generate detailed tooltip text with authentication and rate limit information
    */
   const generateTooltipText = (tool: ToolHealthInfo, rateLimitStatus: RateLimitStatus | undefined): string => {
+    const authTool = authStatus.authenticatedTools[tool.slug];
     let tooltip = `${tool.name} - ${tool.status}`;
+    tooltip += `\nAuthentication: ${authTool?.connected ? 'Connected' : 'Not connected'}`;
 
     if (!rateLimitStatus || rateLimitStatus.status === 'unknown') {
       return tooltip;
@@ -210,9 +242,17 @@ export default function ToolStatusRow() {
                     </div>
                   )}
 
+                  {/* OAuth Authentication indicator - left side */}
+                  <div
+                    className={`absolute -top-1 -left-1 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center ${getAuthColor(tool.slug)}`}
+                    title={`${tool.name} - ${authStatus.authenticatedTools[tool.slug]?.connected ? 'Authenticated' : 'Not authenticated'}`}
+                  >
+                    {getAuthIcon(tool.slug)}
+                  </div>
+
                   {/* Rate limit warning/critical indicator */}
                   {rateLimitStatus && (rateLimitStatus.status === 'warning' || rateLimitStatus.status === 'critical') && (
-                    <div className="absolute -top-1 -left-1">
+                    <div className="absolute -top-2 -left-2">
                       <Zap className={`w-3 h-3 ${getRateLimitStatusColor(rateLimitStatus.status)}`} />
                     </div>
                   )}

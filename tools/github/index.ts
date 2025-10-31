@@ -7,6 +7,7 @@ import {
   GitHubWorkflowRun,
 } from "./types";
 import { registerTool } from "../registry";
+import { createIPv4Fetch } from "../../lib/ipv4-fetch";
 
 export const githubTool: Tool = {
   name: "GitHub",
@@ -277,7 +278,7 @@ export const githubTool: Tool = {
 
       const rateLimitUrl = `${apiUrl}/rate_limit`;
 
-      const response = await fetch(rateLimitUrl, {
+      const response = await createIPv4Fetch(rateLimitUrl, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,

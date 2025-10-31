@@ -11,6 +11,7 @@
  */
 
 import * as initialSchema from './001_initial_schema';
+import * as oauthAuthTables from './002_oauth_auth_tables';
 
 /**
  * Migration interface - matches the export structure of migration files
@@ -28,6 +29,10 @@ export const MIGRATIONS_REGISTRY: Record<string, Migration> = {
   '001_initial_schema': {
     up: initialSchema.up,
     down: initialSchema.down,
+  },
+  '002_oauth_auth_tables': {
+    up: oauthAuthTables.up,
+    down: oauthAuthTables.down,
   },
 };
 

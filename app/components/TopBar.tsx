@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Bell, RefreshCw, X } from "lucide-react";
+import { Search, Bell, RefreshCw, X, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import HyperpageLogo from "./HyperpageLogo";
 import ThemeSwitcher from "./ThemeSwitcher";
+import { AuthPanelStandalone } from "./AuthPanel";
 
 interface TopBarProps {
   searchQuery: string;
@@ -68,6 +74,17 @@ export default function TopBar({
         </Button>
 
         <ThemeSwitcher />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" title="Authentication" aria-label="Authentication settings">
+              <Shield className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-96 max-h-[80vh] overflow-y-auto">
+            <AuthPanelStandalone />
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
