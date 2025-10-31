@@ -101,6 +101,56 @@ export const appState = sqliteTable('app_state', {
 });
 
 // ============================================================================
+// AUTHENTICATION TABLES
+// ============================================================================
+
+/**
+ * User authentication table - stores OAuth-authenticated users
+ */
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(), // OAuth provider user ID (e.g., github:12345)
+  provider: text('provider').notNull(), // 'github', 'jira', 'gitlab'
+  providerUserId: text('provider_user_id').notNull(), // Raw provider user ID
+  email: text('email'), // Optional user email
+  username: text('username'), // Optional username
+  displayName: text('display_name'), // Optional display name
+  avatarUrl: text('avatar_url'), // Optional avatar URL
+  createdAt: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer('updated_at').notNull().default(sql`(unixepoch() * 1000)`),
+});
+
+/**
+ * OAuth tokens table - stores encrypted access and refresh tokens
+ */
+export const oauthTokens = sqliteTable('oauth_tokens', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull(),
+  toolName: text('tool_name').notNull(), // 'github', 'jira', 'gitlab'
+  accessToken: text('access_token').notNull(), // Encrypted using AES-256-GCM
+  refreshToken: text('refresh_token'), // Encrypted using AES-256-GCM (when available)
+  tokenType: text('token_type').default('Bearer').notNull(),
+  expiresAt: integer('expires_at'), // Token expiry timestamp (milliseconds)
+  refreshExpiresAt: integer('refresh_expires_at'), // Refresh token expiry (milliseconds)
+  scopes: text('scopes'), // Required scopes granted (space-separated)
+  metadata: text('metadata'), // JSON: additional OAuth response data
+  ivAccess: text('iv_access').notNull(), // Initialization vector for access token
+  ivRefresh: text('iv_refresh'), // Initialization vector for refresh token
+  createdAt: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer('updated_at').notNull().default(sql`(unixepoch() * 1000)`),
+});
+
+/**
+ * User sessions complement table - links sessions to authenticated users
+ */
+export const userSessions = sqliteTable('user_sessions', {
+  sessionId: text('session_id').primaryKey(),
+  userId: text('user_id').notNull(),
+  provider: text('provider').notNull(),
+  createdAt: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
+  lastActivity: integer('last_activity').notNull().default(sql`(unixepoch() * 1000)`),
+});
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
@@ -119,3 +169,12 @@ export type NewToolConfig = typeof toolConfigs.$inferInsert;
 
 export type AppStateEntry = typeof appState.$inferSelect;
 export type NewAppStateEntry = typeof appState.$inferInsert;
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
+export type OAuthToken = typeof oauthTokens.$inferSelect;
+export type NewOAuthToken = typeof oauthTokens.$inferInsert;
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type NewUserSession = typeof userSessions.$inferInsert;

@@ -5,6 +5,7 @@ import { JiraApiIssue } from "./types";
 import { registerTool } from "../registry";
 import { detectJiraInstanceSize } from "../../lib/rate-limit-utils";
 import { MemoryCache } from "../../lib/cache/memory-cache";
+import { createIPv4Fetch } from "../../lib/ipv4-fetch";
 
 // Advisory locking for concurrent requests to prevent API storms
 class RequestDeduper {
@@ -50,6 +51,47 @@ class RequestDeduper {
 
 // Instance-wide deduper for Jira requests
 const jiraRequestDeduper = new RequestDeduper();
+
+/**
+ * Node.js IPv6 connectivity fix for Atlassian Jira API
+ * Forces IPv4 resolution to avoid connection timeouts on IPv6-only networks
+ * Only available server-side where Node.js modules are accessible
+ */
+function createJiraFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+  let enhancedOptions: any = {
+    ...options,
+    signal: controller.signal,
+  };
+
+  // Only configure IPv4 forcing server-side (where Node.js modules are available)
+  if (typeof window === 'undefined') { // Server-side only
+    try {
+      enhancedOptions.agent = new (require('https').Agent)({
+        family: 4, // Force IPv4
+        lookup: require('dns').lookup,
+      });
+    } catch (error) {
+      // Fallback if modules not available - continue with basic options
+      console.warn('IPv4 forcing not available, using standard fetch');
+    }
+  }
+
+  return fetch(url, enhancedOptions)
+    .then(response => {
+      clearTimeout(timeoutId);
+      return response;
+    })
+    .catch(error => {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Jira API request timed out after 30 seconds - likely IPv6 connectivity issue`);
+      }
+      throw error;
+    });
+}
 
 export const jiraTool: Tool = {
   name: "Jira",
@@ -161,7 +203,7 @@ export const jiraTool: Tool = {
       const auth = Buffer.from(`${email}:${apiToken}`).toString("base64");
       const issuesUrl = `${apiUrl}/search/jql`;
 
-      const response = await fetch(issuesUrl, {
+      const response = await createJiraFetch(issuesUrl, {
         method: "POST",
         headers: {
           Authorization: `Basic ${auth}`,
@@ -259,7 +301,7 @@ export const jiraTool: Tool = {
           const changelogPromise = (async () => {
             try {
               const changelogUrl = `${apiUrl}/issue/${issueId}/changelog?maxResults=${maxResults}`;
-              const response = await fetch(changelogUrl, {
+              const response = await createJiraFetch(changelogUrl, {
                 method: "GET",
                 headers: {
                   Authorization: `Basic ${auth}`,
@@ -376,7 +418,7 @@ export const jiraTool: Tool = {
 
         const projectsUrl = `${apiUrl}${apiEndpoint}`;
 
-        const response = await fetch(projectsUrl, {
+        const response = await createJiraFetch(projectsUrl, {
           method: "GET",
           headers: {
             Authorization: `Basic ${auth}`,
@@ -463,40 +505,47 @@ export const jiraTool: Tool = {
       const auth = Buffer.from(`${email}:${apiToken}`).toString("base64");
       const serverInfoUrl = `${apiUrl}/serverInfo`; // Simple endpoint to test API connectivity
 
-      const response = await fetch(serverInfoUrl, {
-        method: "GET",
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
-        },
-      });
+      try {
+        const response = await createIPv4Fetch(serverInfoUrl, {
+          method: "GET",
+          headers: {
+            Authorization: `Basic ${auth}`,
+            "Content-Type": "application/json",
+          },
+        }, 20000); // 20 second timeout
 
-      // Return basic rate limit information for Jira
-      // Since Jira doesn't expose actual rate limits via API, we report status based on response codes
-      if (!response.ok) {
-        if (response.status === 429) {
-          // Rate limited response - report as high usage
-          return {
-            rateLimit: {
-              message: "Jira API rate limit exceeded",
-              statusCode: response.status,
-              retryAfter: response.headers.get('Retry-After')
-            }
-          };
+        // Return basic rate limit information for Jira
+        // Since Jira doesn't expose actual rate limits via API, we report status based on response codes
+        if (!response.ok) {
+          if (response.status === 429) {
+            // Rate limited response - report as high usage
+            return {
+              rateLimit: {
+                message: "Jira API rate limit exceeded",
+                statusCode: response.status,
+                retryAfter: response.headers.get('Retry-After')
+              }
+            };
+          }
+
+          // Other error - might be authentication or server issue
+          throw new Error(`JIRA server info API error: ${response.status}`);
         }
 
-        // Other error - might be authentication or server issue
-        throw new Error(`JIRA server info API error: ${response.status}`);
+        // Success - return basic status information
+        return {
+          rateLimit: {
+            message: "Jira API accessible - rate limiting status unknown (not exposed by API)",
+            statusCode: response.status,
+            serverInfo: "Jira API connection confirmed"
+          }
+        };
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('timeout')) {
+          throw new Error('Jira API request timed out after 20 seconds - possible connectivity issue');
+        }
+        throw error; // Re-throw other errors
       }
-
-      // Success - return basic status information
-      return {
-        rateLimit: {
-          message: "Jira API accessible - rate limiting status unknown (not exposed by API)",
-          statusCode: response.status,
-          serverInfo: "Jira API connection confirmed"
-        }
-      };
     },
   },
   config: {

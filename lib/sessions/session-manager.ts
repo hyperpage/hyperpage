@@ -1,9 +1,18 @@
 import { CacheFactory } from '../cache/cache-factory';
 import { CacheBackend } from '../cache/cache-interface';
+import { MemorySessionStore } from './memory-session-store';
 import logger from '../logger';
 
 export interface SessionData {
   userId?: string;
+  user?: {
+    id: string;
+    provider: string;
+    email?: string;
+    username?: string;
+    displayName?: string;
+    avatarUrl?: string;
+  };
   preferences: {
     theme: 'light' | 'dark' | 'system';
     timezone: string;
@@ -23,6 +32,13 @@ export interface SessionData {
       lastUsed: Date;
     };
   };
+  authenticatedTools: {
+    [toolName: string]: {
+      connected: boolean;
+      connectedAt: Date;
+      lastUsed: Date;
+    };
+  };
   lastActivity: Date;
   metadata: {
     ipAddress: string;
@@ -35,12 +51,16 @@ export interface SessionData {
 export class SessionManager {
   private redisClient: any;
   private connected = false;
+  private memoryStore: MemorySessionStore;
   private readonly sessionPrefix = 'hyperpage:session:';
   private readonly sessionTTL = 24 * 60 * 60; // 24 hours in seconds
   private readonly cleanupInterval = 60 * 60 * 1000; // 1 hour
   private cleanupTimer?: NodeJS.Timeout;
 
   constructor(redisUrl?: string) {
+    // Create fallback memory store for development
+    this.memoryStore = new MemorySessionStore();
+
     // Create a dedicated Redis instance for sessions
     this.initializeRedis(redisUrl);
   }
@@ -100,6 +120,7 @@ export class SessionManager {
         filterSettings: {},
       },
       toolConfigs: {},
+      authenticatedTools: {},
       lastActivity: now,
       metadata: {
         ipAddress: '',
@@ -114,23 +135,23 @@ export class SessionManager {
    * Get session data by ID
    */
   async getSession(sessionId: string): Promise<SessionData | null> {
-    if (!this.connected || !this.redisClient) {
-      logger.warn('Redis not connected, session operations unavailable');
-      return null;
-    }
+    if (this.connected && this.redisClient) {
+      try {
+        const key = this.buildSessionKey(sessionId);
+        const data = await this.redisClient.get(key);
 
-    try {
-      const key = this.buildSessionKey(sessionId);
-      const data = await this.redisClient.get(key);
+        if (!data) {
+          return null;
+        }
 
-      if (!data) {
+        return JSON.parse(data);
+      } catch (error) {
+        logger.error('Failed to get session from Redis:', error);
         return null;
       }
-
-      return JSON.parse(data);
-    } catch (error) {
-      logger.error('Failed to get session:', error);
-      return null;
+    } else {
+      // Fallback to memory store
+      return this.memoryStore.get(sessionId);
     }
   }
 
@@ -138,29 +159,30 @@ export class SessionManager {
    * Save session data
    */
   async setSession(sessionId: string, sessionData: SessionData): Promise<void> {
-    if (!this.connected || !this.redisClient) {
-      logger.warn('Redis not connected, session operations unavailable');
-      return;
-    }
+    if (this.connected && this.redisClient) {
+      try {
+        const key = this.buildSessionKey(sessionId);
+        const data = JSON.stringify({
+          ...sessionData,
+          lastActivity: new Date(),
+          metadata: {
+            ...sessionData.metadata,
+            updated: new Date(),
+          },
+        });
 
-    try {
-      const key = this.buildSessionKey(sessionId);
-      const data = JSON.stringify({
-        ...sessionData,
-        lastActivity: new Date(),
-        metadata: {
-          ...sessionData.metadata,
-          updated: new Date(),
-        },
-      });
+        // Set with TTL in seconds
+        await this.redisClient.set(key, data, 'EX', this.sessionTTL);
 
-      // Set with TTL in seconds
-      await this.redisClient.set(key, data, 'EX', this.sessionTTL);
-
-      logger.debug(`Session ${sessionId} saved`);
-    } catch (error) {
-      logger.error('Failed to save session:', error);
-      throw error;
+        logger.debug(`Session ${sessionId} saved to Redis`);
+      } catch (error) {
+        logger.error('Failed to save session to Redis:', error);
+        throw error;
+      }
+    } else {
+      // Fallback to memory store
+      this.memoryStore.set(sessionId, sessionData);
+      logger.debug(`Session ${sessionId} saved to memory store`);
     }
   }
 
@@ -189,19 +211,20 @@ export class SessionManager {
    * Delete a session
    */
   async deleteSession(sessionId: string): Promise<void> {
-    if (!this.connected || !this.redisClient) {
-      logger.warn('Redis not connected, session operations unavailable');
-      return;
-    }
+    if (this.connected && this.redisClient) {
+      try {
+        const key = this.buildSessionKey(sessionId);
+        await this.redisClient.del(key);
 
-    try {
-      const key = this.buildSessionKey(sessionId);
-      await this.redisClient.del(key);
-
-      logger.debug(`Session ${sessionId} deleted`);
-    } catch (error) {
-      logger.error('Failed to delete session:', error);
-      throw error;
+        logger.debug(`Session ${sessionId} deleted from Redis`);
+      } catch (error) {
+        logger.error('Failed to delete session from Redis:', error);
+        throw error;
+      }
+    } else {
+      // Fallback to memory store
+      this.memoryStore.delete(sessionId);
+      logger.debug(`Session ${sessionId} deleted from memory store`);
     }
   }
 
@@ -261,16 +284,17 @@ export class SessionManager {
    * Check if session exists
    */
   async sessionExists(sessionId: string): Promise<boolean> {
-    if (!this.connected || !this.redisClient) {
-      return false;
-    }
-
-    try {
-      const key = this.buildSessionKey(sessionId);
-      const result = await this.redisClient.exists(key);
-      return result === 1;
-    } catch (error) {
-      return false;
+    if (this.connected && this.redisClient) {
+      try {
+        const key = this.buildSessionKey(sessionId);
+        const result = await this.redisClient.exists(key);
+        return result === 1;
+      } catch (error) {
+        return false;
+      }
+    } else {
+      // Fallback to memory store
+      return this.memoryStore.has(sessionId);
     }
   }
 

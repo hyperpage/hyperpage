@@ -16,6 +16,109 @@ Where:
 
 ## Core Endpoints
 
+### Authentication API
+
+Hyperpage provides OAuth authentication endpoints for secure tool integration. The authentication system supports GitHub, GitLab, and Jira with encrypted token storage and automatic refresh.
+
+#### `GET /api/auth/status`
+Checks the current authentication status for the user session.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "authenticated": true,
+  "user": {
+    "id": "github:12345",
+    "provider": "github",
+    "username": "johndoe",
+    "displayName": "John Doe",
+    "email": "john@example.com",
+    "avatarUrl": "https://avatars.githubusercontent.com/u/12345?v=4"
+  },
+  "authenticatedTools": {
+    "github": { "connected": true, "connectedAt": "2025-10-30T11:00:00.000Z" },
+    "jira": { "connected": false }
+  }
+}
+```
+
+#### `GET /api/auth/config`
+Returns the OAuth configuration status for all supported tools.
+
+**Response (200):**
+```json
+{
+  "tools": {
+    "github": { "configured": true },
+    "gitlab": { "configured": true },
+    "jira": { "configured": false, "reason": "Missing JIRA_OAUTH_CLIENT_SECRET" }
+  }
+}
+```
+
+#### `GET /api/auth/[tool]/initiate`
+Initiates the OAuth flow for the specified tool (GitHub, GitLab, Jira).
+
+**Parameters:**
+- `tool`: The tool to authenticate with (`github`, `gitlab`, `jira`)
+
+**Response (200):**
+- Redirects to provider authorization URL (HTTP 302)
+
+#### `GET /api/auth/[tool]/callback`
+Handles the OAuth callback from the provider and exchanges the authorization code for tokens.
+
+**Query Parameters:**
+- `tool`: The tool being authenticated with
+- `code`: Authorization code from provider
+- `state`: CSRF protection state parameter
+
+**Response (200):**
+- Redirects to dashboard with success authentication
+
+#### `GET /api/auth/[tool]/status`
+Returns detailed authentication status for a specific tool.
+
+**Parameters:**
+- `tool`: The tool to check (`github`, `gitlab`, `jira`)
+
+**Response (200):**
+```json
+{
+  "authenticated": true,
+  "user": {
+    "id": "github:12345",
+    "username": "johndoe",
+    "displayName": "John Doe"
+  },
+  "connectedAt": "2025-10-30T11:00:00.000Z",
+  "scopes": ["user", "repo"],
+  "expiresAt": "2025-11-29T11:00:00.000Z"
+}
+```
+
+#### `POST /api/auth/[tool]/disconnect`
+Disconnects the specified tool for the current user session.
+
+**Parameters:**
+- `tool`: The tool to disconnect (`github`, `gitlab`, `jira`)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Successfully disconnected from GitHub"
+}
+```
+
+**Authentication Features:**
+- **PKCE Support**: Proof Key for Code Exchange for enhanced security
+- **AES-256-GCM Encryption**: All tokens encrypted with military-grade encryption
+- **Automatic Refresh**: Access tokens automatically refreshed before expiration
+- **CSRF Protection**: State parameter validation prevents cross-site request forgery
+- **Secure Storage**: Tokens stored in SQLite database with server-side only access
+
 ### Tool Discovery
 
 #### `GET /api/tools/enabled`

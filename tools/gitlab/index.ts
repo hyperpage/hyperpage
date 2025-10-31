@@ -8,6 +8,7 @@ import {
   GitLabIssue,
 } from "./types";
 import { registerTool } from "../registry";
+import { createIPv4Fetch } from "../../lib/ipv4-fetch";
 
 export const gitlabTool: Tool = {
   name: "GitLab",
@@ -309,7 +310,7 @@ export const gitlabTool: Tool = {
 
       const userUrl = `${apiUrl}/user`; // Simple endpoint to test API connectivity
 
-      const response = await fetch(userUrl, {
+      const response = await createIPv4Fetch(userUrl, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
