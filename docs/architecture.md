@@ -223,38 +223,130 @@ config: {
 
 ## Security Architecture
 
+### OAuth Authentication System
+
+Hyperpage implements comprehensive OAuth authentication for secure tool access:
+
+#### Authentication Flow
+- **PKCE Support**: Proof Key for Code Exchange prevents authorization code interception
+- **AES-256-GCM Encryption**: All stored tokens encrypted with unique initialization vectors
+- **Automatic Token Refresh**: Access tokens refreshed before expiration without user intervention
+- **CSRF Protection**: State parameter validation in all OAuth flows
+- **Secure Storage**: SQLite database with server-side only access to sensitive data
+
+#### Database Schema
+```sql
+-- User authentication data
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  provider TEXT NOT NULL,
+  providerUserId TEXT NOT NULL,
+  email TEXT,
+  username TEXT,
+  displayName TEXT,
+  avatarUrl TEXT,
+  UNIQUE(provider, providerUserId)
+);
+
+-- Encrypted OAuth tokens
+CREATE TABLE oauth_tokens (
+  id INTEGER PRIMARY KEY,
+  userId TEXT NOT NULL,
+  toolName TEXT NOT NULL,
+  accessToken TEXT NOT NULL,
+  refreshToken TEXT,
+  expiresAt INTEGER,
+  scopes TEXT,
+  UNIQUE(userId, toolName)
+);
+```
+
+#### Authentication Middleware
+```typescript
+// Security layer for tool access
+export async function withAuth(
+  handler: NextApiHandler,
+  options: { required?: boolean; tools?: string[] }
+): Promise<NextApiHandler> {
+  return async (req, res) => {
+    const session = await getSessionFromCookie(req);
+
+    if (!session?.userId && options.required) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Check tool-specific authentication
+    if (options.tools?.length) {
+      const missingAuth = options.tools.filter(tool =>
+        !await isUserAuthenticatedForTool(session.userId, tool)
+      );
+
+      if (missingAuth.length > 0) {
+        return res.status(403).json({
+          error: 'Tool authentication required',
+          missingTools: missingAuth
+        });
+      }
+    }
+
+    req.session = session;
+    return handler(req, res);
+  };
+}
+```
+
 ### Server-Side Credential Isolation
 
-**Complete client-server separation:**
+**Triple separation (Client ↔ Server ↔ Tools):**
 ```typescript
-// ✅ Client receives safe data only
-const clientTools = getEnabledClientTools();
-// Result: { name, widgets, ui, capabilities }
+// ✅ Client receives OAuth status only
+const authStatus = await getAuthStatus(sessionId);
+// Result: { authenticated: true, user: {...}, authenticatedTools: {...} }
 
-// ❌ Server maintains sensitive data
-const serverTools = toolRegistry;
-// Contains: { handlers, config, tokens, credentials }
+// 🔒 Server manages authentication state
+const tokenStore = new SecureTokenStorage();
+// Handles encryption/decryption, refresh operations
+
+// ❌ Tools never access client data
+const toolApi = await authenticatedToolRequest(userId, toolName, endpoint);
 ```
 
 ### Input Validation & Sanitization
 
-All API parameters validated with strict regex:
+All parameters validated with strict patterns preventing injection:
 ```typescript
-// Tool/endpoint validation prevents injection
+// Enhanced validation patterns
 const toolPattern = /^[a-zA-Z0-9_%\-\s]+$/;
 const endpointPattern = /^[a-zA-Z0-9_%-]+$/;
+const oauthCodePattern = /^[a-zA-Z0-9_-]+$/;
+const urlPattern = /^https?:\/\/.+$/; // Protocol validation
 ```
 
 ### Error Handling Strategy
 
-**Client-Side:** Generic error messages without sensitive information
-```json
-{ "error": "An error occurred while processing the request" }
+**Authentication-Specific Error Handling:**
+```typescript
+// Client receives safe, generic errors
+{ "error": "Authentication failed" }
+
+// Server logs detailed context for debugging
+[ERROR] OAuth callback failed: Invalid state parameter
+[ERROR] Token refresh failed: Access token expired for user@domain.com
+[ERROR] Tool authentication missing: GitHub access required
 ```
 
-**Server-Side:** Detailed logging for debugging
-```
-[ERROR] Failed to fetch Jira issues: Invalid credentials for user@domain.com
+#### Audit Logging
+All authentication events logged for security monitoring:
+```typescript
+interface AuthAuditEvent {
+  event: 'login' | 'logout' | 'token_refresh' | 'token_revoke';
+  userId: string;
+  toolName: string;
+  ipAddress: string;
+  userAgent: string;
+  success: boolean;
+  timestamp: number;
+}
 ```
 
 ## Component Decomposition Strategy

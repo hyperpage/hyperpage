@@ -25,7 +25,7 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 
 ## 🆕 Production Deployment
 
-**Kubernetes Deployment Status**: ✅ **FULLY VALIDATED FOR PRODUCTION**
+**Kubernetes Deployment Status**: Includes Kubernetes manifests
 
 ### Enterprise Capabilities
 - **🔄 Auto-Scaling**: HPA with 3-50 pod scaling based on CPU/memory metrics
@@ -33,7 +33,7 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 - **📊 Observability**: Prometheus metrics, Grafana dashboards, structured logging
 - **♻️ Zero-Downtime Updates**: Rolling deployments with health probes and database migrations
 - **💾 Persistent Storage**: PVC-backed data and log persistence with backup/recovery
-- **🏗️ Containerized**: Production-ready Docker images with multi-stage builds
+- **🏗️ Containerized**: Docker images with multi-stage builds
 
 ## Quick Start
 
@@ -53,9 +53,96 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) to view your portal.
 
+## Configuration
+
+### Environment Variables
+
+Hyperpage uses environment variables for configuration. Copy `.env.local.sample` to `.env.local` and configure the values you need.
+
+#### Required Variables
+
+**Base Configuration:**
+- `BASE_URL`: Internal API base URL (defaults to `http://localhost:3000`)
+- `NEXT_PUBLIC_BASE_URL`: Public base URL accessible in client components
+
+**Redis Configuration (Production):**
+- `REDIS_URL`: Redis connection URL for persistent caching (optional, falls back to memory-only)
+
+#### Tool Integration Variables
+
+**Tool Enabling:**
+- `ENABLE_CODE_REVIEWS`: Enable code review aggregations (`true`/`false`, default `false`)
+- `ENABLE_CICD`: Enable CI/CD pipeline aggregations (`true`/`false`, default `false`)
+- `ENABLE_TICKETING`: Enable issue/ticket aggregations (`true`/`false`, default `false`)
+
+**Jira Configuration:**
+- `ENABLE_JIRA`: Enable Jira integration (`true`/`false`)
+- `JIRA_WEB_URL`: Jira instance URL (e.g., `https://your-domain.atlassian.net`)
+- `JIRA_EMAIL`: Jira account email address
+- `JIRA_API_TOKEN`: Jira personal access token
+
+**GitHub Configuration:**
+- `ENABLE_GITHUB`: Enable GitHub integration (`true`/`false`)
+- `GITHUB_TOKEN`: GitHub personal access token (PAT)
+- `GITHUB_USERNAME`: GitHub username associated with the token
+
+**GitLab Configuration:**
+- `ENABLE_GITLAB`: Enable GitLab integration (`true`/`false`)
+- `GITLAB_WEB_URL`: GitLab instance URL (e.g., `https://gitlab.com`)
+- `GITLAB_TOKEN`: GitLab personal access token
+
+#### OAuth Authentication Variables
+
+**Authentication Encryption:**
+- `OAUTH_ENCRYPTION_KEY`: 32-character hex key for encrypting stored OAuth tokens (generate with `openssl rand -hex 32`)
+
+**GitHub OAuth Application:**
+- `GITHUB_OAUTH_CLIENT_ID`: GitHub OAuth app client ID
+- `GITHUB_OAUTH_CLIENT_SECRET`: GitHub OAuth app client secret
+
+**GitLab OAuth Application:**
+- `GITLAB_OAUTH_CLIENT_ID`: GitLab OAuth app client ID
+- `GITLAB_OAUTH_CLIENT_SECRET`: GitLab OAuth app client secret
+
+**Jira OAuth Application:**
+- `JIRA_OAUTH_CLIENT_ID`: Jira OAuth app client ID
+- `JIRA_OAUTH_CLIENT_SECRET`: Jira OAuth app client secret
+
+#### Configuration Examples
+
+**Basic Setup (Anonymous Usage):**
+```env
+ENABLE_GITHUB=true
+GITHUB_TOKEN=github_pat_...
+
+ENABLE_JIRA=true
+JIRA_WEB_URL=https://yourcompany.atlassian.net
+JIRA_EMAIL=user@company.com
+JIRA_API_TOKEN=jira_token_...
+```
+
+**With OAuth Authentication:**
+```env
+# Enable tools
+ENABLE_GITHUB=true
+ENABLE_JIRA=true
+
+# OAuth encryption for secure token storage
+OAUTH_ENCRYPTION_KEY=a1b2c3d4e5f678901234567890abcdef1234567890abcdef1234567890abcdef
+
+# GitHub OAuth
+GITHUB_OAUTH_CLIENT_ID=github_client_id_here
+GITHUB_OAUTH_CLIENT_SECRET=github_client_secret_here
+
+# Jira OAuth
+JIRA_WEB_URL=https://yourcompany.atlassian.net
+JIRA_OAUTH_CLIENT_ID=jira_client_id_here
+JIRA_OAUTH_CLIENT_SECRET=jira_client_secret_here
+```
+
 ## Production Deployment
 
-For enterprise deployments, use the Kubernetes manifests for production-ready deployment:
+For enterprise deployments, the project includes Kubernetes manifests:
 
 ```bash
 # Quick deploy to Kubernetes (assumes cluster access)
@@ -162,7 +249,7 @@ See [Session Management](docs/scaling.md#1-distributed-session-management) for c
 
 ### 🚀 **Getting Started & Deployment**
 - **[Installation & Setup](docs/installation.md)**: Local development setup and configuration
-- **[⚡ Kubernetes Deployment](docs/kubernetes.md)**: Production-ready K8s deployment with HPA
+- **[⚡ Kubernetes Deployment](docs/kubernetes.md)**: K8s deployment with HPA
 - **[🔗 Scaling Infrastructure](docs/scaling.md)**: Enterprise horizontal pod scaling and session management
 - **[Usage Guide](docs/usage.md)**: Portal features and navigation
 
