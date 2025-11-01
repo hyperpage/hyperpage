@@ -162,15 +162,26 @@ cat docs/kubernetes.md
 
 ## Testing
 
-Hyperpage includes automated testing to ensure stability.
+Hyperpage includes comprehensive automated testing to ensure stability across OAuth integrations, tool integrations, and cross-tool coordination.
 
 **Available Test Commands:**
 
 ```bash
-# Unit & Integration Tests
+# All Tests
 npm test                    # Run unit tests
 npm run test:coverage      # With coverage report
 npm run test:watch         # Watch mode development
+
+# Integration Tests
+npm test -- --run integration              # All integration tests
+npm test -- --run integration/oauth        # OAuth integration tests
+npm test -- --run integration/tools        # Tool integration tests
+
+# Individual Tool Tests
+npm test -- --run integration/tools/github           # GitHub integration (21 tests)
+npm test -- --run integration/tools/gitlab           # GitLab integration (25 tests)  
+npm test -- --run integration/tools/jira             # Jira integration (15 tests)
+npm test -- --run integration/tools/cross-tool       # Cross-tool aggregation (6 tests)
 
 # E2E Tests
 npm run test:e2e           # Playwright E2E tests
@@ -179,9 +190,19 @@ npm run test:e2e:ui        # Interactive E2E mode
 ```
 
 **Testing Setup:**
-- **Unit Tests**: Vitest + React Testing Library
-- **E2E Tests**: Playwright framework
-- **CI/CD Ready**: Tests run in automated pipelines
+- **Unit Tests**: Vitest + React Testing Library for component isolation
+- **OAuth Integration Tests**: Comprehensive testing for GitHub, GitLab, and Jira OAuth flows
+- **Tool Integration Tests**: API endpoint validation, rate limiting, data transformation
+- **Cross-Tool Aggregation Tests**: Multi-tool coordination and unified data format validation
+- **E2E Tests**: Playwright framework for complete user journey validation
+- **CI/CD Ready**: All tests run in automated pipelines with parallel execution
+
+**Test Coverage:**
+- **67 Integration Tests** across 4 specialized test suites
+- **OAuth Security**: Token handling, session isolation, credential protection
+- **API Integration**: Rate limiting, error handling, data consistency
+- **Cross-Tool Validation**: Unified formats, multi-tool aggregation, security boundaries
+- **Performance**: Concurrent request handling, caching strategies, response optimization
 
 ## Usage Examples
 
@@ -207,6 +228,7 @@ hyperpage/
 │   ├── api/           # API route tests
 │   ├── components/    # Component tests
 │   ├── e2e/          # End-to-end testing setup
+│   ├── integration/   # Integration test suites
 │   └── lib/          # Utility function tests
 ├── docs/              # Documentation and guides
 └── .clinerules/       # Development guidelines and workflows
@@ -214,59 +236,4 @@ hyperpage/
 
 ## Session Management API
 
-Hyperpage includes powerful session management for distributed deployments, enabling persistent user state across pod restarts and scaling operations.
-
-### Session API Endpoints
-
-```bash
-# Create new session
-GET /api/sessions
-
-# Get existing session
-GET /api/sessions?sessionId=abc123-def456
-
-# Update session
-POST /api/sessions
-Body: { "sessionId": "abc123", "updates": { "preferences": { "theme": "dark" } } }
-
-# Update session properties
-PATCH /api/sessions?sessionId=abc123
-Body: { "preferences": { "theme": "light" } }
-
-# Delete session
-DELETE /api/sessions?sessionId=abc123
-```
-
-### Session Features
-- **Persistent State**: User preferences, UI layout, and tool configurations persist across pod scaling
-- **Auto-Fallback**: Graceful degradation to memory-only mode when Redis unavailable
-- **Client Integration**: React hook `useSession()` for seamless frontend integration
-- **Enterprise Scaling**: Supports 100,000+ concurrent sessions with Redis clustering
-
-See [Session Management](docs/scaling.md#1-distributed-session-management) for complete API documentation.
-
-## Documentation
-
-### 🚀 **Getting Started & Deployment**
-- **[Installation & Setup](docs/installation.md)**: Local development setup and configuration
-- **[⚡ Kubernetes Deployment](docs/kubernetes.md)**: K8s deployment with HPA
-- **[🔗 Scaling Infrastructure](docs/scaling.md)**: Enterprise horizontal pod scaling and session management
-- **[Usage Guide](docs/usage.md)**: Portal features and navigation
-
-### 🧪 **Development & Quality**
-- **[Testing Guide](docs/testing.md)**: Testing strategy and automated quality assurance
-- **[API Documentation](docs/api.md)**: Technical API reference and endpoints
-- **[System Architecture](docs/architecture.md)**: Core design and integration patterns
-
-### 📊 **Operations & Monitoring**
-- **[Monitoring & Observability](docs/monitoring.md)**: Prometheus metrics, structured logging, and dashboards
-- **[Performance Guide](docs/performance.md)**: Caching strategies, optimization, and rate limiting
-- **[CONTRIBUTING.md](docs/CONTRIBUTING.md)**: Development guidelines and workflows
-
-## Contributing
-
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development guidelines and workflow.
-
-## Authors
-
-Hyperpage is developed and maintained by data-minded developers who believe in unifying development workflows.
+Hyperpage includes powerful session management for distributed deployments, enabling persistent user state
