@@ -94,7 +94,7 @@ describe('End-to-End User Journey Tests', () => {
       
       // Access setup wizard
       const wizard = await journeySimulator.getSetupWizard();
-      expect(await wizard.isSetupWizard()).toBe(true);
+      expect(await (wizard as any).isSetupWizard()).toBe(true);
 
       // Step 1: Welcome and provider selection
       await wizard.selectProviders(['github']);

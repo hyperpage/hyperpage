@@ -388,7 +388,7 @@ describe('Multi-Tool Orchestration Tests', () => {
         expect(true).toBe(true);
       } catch (error) {
         // Timeout occurred - this is expected
-        expect(error.message).toBe('Workflow timeout');
+        expect((error as Error).message).toBe('Workflow timeout');
       }
     });
   });

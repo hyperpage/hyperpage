@@ -1,6 +1,31 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { IntegrationTestEnvironment, TestUserManager } from '../../lib/test-credentials';
 
+// Helper function for referential integrity validation
+function validateReferentialIntegrity(relationships: any): boolean {
+  if (!relationships?.references || !relationships?.primary) {
+    return false;
+  }
+  
+  // Check primary-references relationship
+  for (const ref of relationships.references) {
+    if (ref.referenceId !== relationships.primary.id) {
+      return false;
+    }
+  }
+  
+  // Check cross-references
+  if (relationships.crossReferences) {
+    for (const crossRef of relationships.crossReferences) {
+      if (!crossRef.linkedTo || !Array.isArray(crossRef.linkedTo)) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
 describe('Database Persistence & Recovery Testing', () => {
   let testEnv: IntegrationTestEnvironment;
 
@@ -634,7 +659,7 @@ describe('Database Persistence & Recovery Testing', () => {
           primaryCreated: !!user?.relationships?.primary,
           referencesCreated: user?.relationships?.references?.length === 3,
           crossReferencesCreated: user?.relationships?.crossReferences?.length === 2,
-          referentialIntegrity: this.validateReferentialIntegrity(user?.relationships)
+          referentialIntegrity: validateReferentialIntegrity(user?.relationships)
         };
       });
 
@@ -717,36 +742,11 @@ describe('Database Persistence & Recovery Testing', () => {
       
       // Verify migration integrity
       migrationResults.forEach(result => {
-        expect(result.canAccess).toBe(true);
+        expect((result as any).canAccess).toBe(true);
         expect(result.migrationSuccessful).toBe(true);
       });
 
       console.log(`Concurrent migration test: ${migrationSessions} concurrent data migrations with access validation`);
     });
   });
-
-  // Helper method for referential integrity validation
-  private validateReferentialIntegrity(relationships: any): boolean {
-    if (!relationships?.references || !relationships?.primary) {
-      return false;
-    }
-    
-    // Check primary-references relationship
-    for (const ref of relationships.references) {
-      if (ref.referenceId !== relationships.primary.id) {
-        return false;
-      }
-    }
-    
-    // Check cross-references
-    if (relationships.crossReferences) {
-      for (const crossRef of relationships.crossReferences) {
-        if (!crossRef.linkedTo || !Array.isArray(crossRef.linkedTo)) {
-          return false;
-        }
-      }
-    }
-    
-    return true;
-  }
 });

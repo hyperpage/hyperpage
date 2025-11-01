@@ -87,12 +87,7 @@ describe('GitLab OAuth Integration', () => {
       // Skip real OAuth in test environment
       if (process.env.SKIP_REAL_OAUTH === 'true') {
         // Test with mock callback
-        await page.goto(`${baseUrl}/api/auth/gitlab/callback`, {
-          params: {
-            code: 'mock_gitlab_auth_code_67890',
-            state: 'mock_gitlab_state_token'
-          }
-        });
+        await page.goto(`${baseUrl}/api/auth/gitlab/callback?code=mock_gitlab_auth_code_67890&state=mock_gitlab_state_token`);
 
         // Should handle mock OAuth gracefully
         await expect(page).toHaveURL(/.*/); // Any valid response
@@ -103,28 +98,19 @@ describe('GitLab OAuth Integration', () => {
     });
 
     test('should handle GitLab OAuth errors', async ({ page }) => {
-      await page.goto(`${baseUrl}/api/auth/gitlab/callback`, {
-        params: {
-          error: 'access_denied',
-          error_description: 'User denied access'
-        }
-      });
+      await page.goto(`${baseUrl}/api/auth/gitlab/callback?error=access_denied&error_description=User denied access`);
 
       // Should show appropriate error message
       await expect(page.locator('text=/error|denied|failed/i')).toBeVisible();
     });
 
     test('should handle invalid authorization code', async ({ page }) => {
-      await page.goto(`${baseUrl}/api/auth/gitlab/callback`, {
-        params: {
-          code: 'invalid_code',
-          state: 'mock_gitlab_state_token'
-        }
-      });
+      await page.goto(`${baseUrl}/api/auth/gitlab/callback?code=invalid_code&state=mock_gitlab_state_token`);
 
       // Should handle invalid code gracefully
-      expect(page.url()).toContain('error') || 
-        expect(page.locator('text=/invalid|error|failed/i')).toBeVisible();
+      if (!page.url().includes('error')) {
+        await expect(page.locator('text=/invalid|error|failed/i')).toBeVisible();
+      }
     });
   });
 

@@ -337,7 +337,9 @@ describe('Concurrent Authentication Flow Testing', () => {
         const iterationStartTime = performance.now();
         
         const stressPromises = Array.from({ length: concurrentStressOperations }, async (_, i) => {
-          const provider = ['github', 'gitlab', 'jira'][i % 3] as const;
+          const providerIndex = i % 3;
+          const providers = ['github', 'gitlab', 'jira'] as const;
+          const provider = providers[providerIndex];
           const session = await testEnv.createTestSession(provider);
           
           const operations = [

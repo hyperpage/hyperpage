@@ -78,12 +78,7 @@ describe('GitHub OAuth Integration', () => {
       // Skip real OAuth in test environment
       if (process.env.SKIP_REAL_OAUTH === 'true') {
         // Test with mock callback
-        await page.goto(`${baseUrl}/api/auth/github/callback`, {
-          params: {
-            code: 'mock_auth_code_12345',
-            state: 'mock_state_token'
-          }
-        });
+        await page.goto(`${baseUrl}/api/auth/github/callback?code=mock_auth_code_12345&state=mock_state_token`);
 
         // Should handle mock OAuth gracefully
         await expect(page).toHaveURL(/.*/); // Any valid response
@@ -94,12 +89,7 @@ describe('GitHub OAuth Integration', () => {
     });
 
     test('should handle OAuth errors gracefully', async ({ page }) => {
-      await page.goto(`${baseUrl}/api/auth/github/callback`, {
-        params: {
-          error: 'access_denied',
-          error_description: 'User denied access'
-        }
-      });
+      await page.goto(`${baseUrl}/api/auth/github/callback?error=access_denied&error_description=User denied access`);
 
       // Should show appropriate error message
       await expect(page.locator('text=/error|denied|failed/i')).toBeVisible();

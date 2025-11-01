@@ -86,12 +86,7 @@ describe('Jira OAuth Integration', () => {
       // Skip real OAuth in test environment
       if (process.env.SKIP_REAL_OAUTH === 'true') {
         // Test with mock callback
-        await page.goto(`${baseUrl}/api/auth/jira/callback`, {
-          params: {
-            code: 'mock_jira_auth_code_54321',
-            state: 'mock_jira_state_token'
-          }
-        });
+        await page.goto(`${baseUrl}/api/auth/jira/callback?code=mock_jira_auth_code_54321&state=mock_jira_state_token`);
 
         // Should handle mock OAuth gracefully
         await expect(page).toHaveURL(/.*/); // Any valid response
@@ -102,28 +97,19 @@ describe('Jira OAuth Integration', () => {
     });
 
     test('should handle Jira OAuth errors', async ({ page }) => {
-      await page.goto(`${baseUrl}/api/auth/jira/callback`, {
-        params: {
-          error: 'access_denied',
-          error_description: 'User denied access'
-        }
-      });
+      await page.goto(`${baseUrl}/api/auth/jira/callback?error=access_denied&error_description=User denied access`);
 
       // Should show appropriate error message
       await expect(page.locator('text=/error|denied|failed/i')).toBeVisible();
     });
 
     test('should handle invalid authorization code', async ({ page }) => {
-      await page.goto(`${baseUrl}/api/auth/jira/callback`, {
-        params: {
-          code: 'invalid_code',
-          state: 'mock_jira_state_token'
-        }
-      });
+      await page.goto(`${baseUrl}/api/auth/jira/callback?code=invalid_code&state=mock_jira_state_token`);
 
       // Should handle invalid code gracefully
-      expect(page.url()).toContain('error') || 
-        expect(page.locator('text=/invalid|error|failed/i')).toBeVisible();
+      if (!page.url().includes('error')) {
+        await expect(page.locator('text=/invalid|error|failed/i')).toBeVisible();
+      }
     });
   });
 
@@ -201,7 +187,7 @@ describe('Jira OAuth Integration', () => {
       });
 
       expect([200, 401, 403]).toContain(response.status);
-      
+
       if (response.status === 200) {
         const data = await response.json();
         expect(data).toHaveProperty('data');
@@ -217,3 +203,12 @@ describe('Jira OAuth Integration', () => {
       });
 
       expect([200, 401, 403]).toContain(response.status);
+
+      if (response.status === 200) {
+        const data = await response.json();
+        expect(data).toHaveProperty('data');
+        expect(Array.isArray(data.data)).toBe(true);
+      }
+    });
+  });
+});

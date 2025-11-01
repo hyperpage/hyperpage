@@ -469,7 +469,15 @@ describe('Cache Performance & Invalidation Testing', () => {
         const cacheKey = cacheKeys[i % cacheKeys.length];
         
         const consistencyData = consistencyMap.get(cacheKey);
-        if (!consistencyData) return;
+        if (!consistencyData) {
+          return {
+            operationId: i,
+            operation,
+            cacheKey,
+            value: null,
+            timestamp: Date.now()
+          };
+        }
         
         switch (operation) {
           case 'read':

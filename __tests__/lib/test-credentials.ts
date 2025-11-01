@@ -222,12 +222,12 @@ export class IntegrationTestEnvironment {
 
   private setupTestEnvironment(): void {
     // Set test-specific environment variables
-    process.env.NODE_ENV = 'test';
-    process.env.ENABLE_INTEGRATION_TESTS = 'true';
-    process.env.TEST_TIMEOUT = '30000';
+    (process.env as any).NODE_ENV = 'test';
+    (process.env as any).ENABLE_INTEGRATION_TESTS = 'true';
+    (process.env as any).TEST_TIMEOUT = '30000';
     
     // Disable real OAuth in test mode
-    process.env.SKIP_REAL_OAUTH = 'true';
+    (process.env as any).SKIP_REAL_OAUTH = 'true';
   }
 
   public async createTestSession(provider: string): Promise<{

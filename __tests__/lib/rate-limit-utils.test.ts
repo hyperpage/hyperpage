@@ -59,11 +59,11 @@ describe("detectBusinessHours", () => {
   const originalDate = global.Date;
   const mockDate = (dateString: string) => {
     const mockClass = class extends originalDate {
-      constructor(...args: any[]) {
+      constructor(...args: [string | number] | []) {
         if (args.length === 0) {
           super(dateString);
         } else {
-          super(...args);
+          super(args[0] as string);
         }
       }
     };
@@ -164,18 +164,27 @@ describe("getActivePlatforms", () => {
 
 describe("getMaxUsageForPlatform", () => {
   test("returns 0 when no rate limit status provided", () => {
-    expect(getMaxUsageForPlatform(null)).toBe(0);
-    expect(getMaxUsageForPlatform({})).toBe(0);
+    expect(getMaxUsageForPlatform(null as any)).toBe(0);
+    expect(getMaxUsageForPlatform({} as any)).toBe(0);
   });
 
   test("returns 0 when platform has no limits", () => {
-    const status = { platform: "github", limits: { github: {} } };
-    expect(getMaxUsageForPlatform(status)).toBe(0);
+    const status = { 
+      platform: "github", 
+      lastUpdated: Date.now(),
+      dataFresh: true,
+      status: 'ok',
+      limits: { github: {} } 
+    };
+    expect(getMaxUsageForPlatform(status as any)).toBe(0);
   });
 
   test("returns maximum usage percentage across all endpoints", () => {
     const status = {
       platform: "github",
+      lastUpdated: Date.now(),
+      dataFresh: true,
+      status: 'ok',
       limits: {
         github: {
           core: { usagePercent: 50 },
@@ -184,12 +193,15 @@ describe("getMaxUsageForPlatform", () => {
         }
       }
     };
-    expect(getMaxUsageForPlatform(status)).toBe(90);
+    expect(getMaxUsageForPlatform(status as any)).toBe(90);
   });
 
   test("ignores null/undefined usage values", () => {
     const status = {
       platform: "gitlab",
+      lastUpdated: Date.now(),
+      dataFresh: true,
+      status: 'ok',
       limits: {
         gitlab: {
           global: { usagePercent: 75 },
@@ -198,12 +210,15 @@ describe("getMaxUsageForPlatform", () => {
         }
       }
     };
-    expect(getMaxUsageForPlatform(status)).toBe(75);
+    expect(getMaxUsageForPlatform(status as any)).toBe(75);
   });
 
   test("returns 0 when all usage values are null/undefined", () => {
     const status = {
       platform: "jira",
+      lastUpdated: Date.now(),
+      dataFresh: true,
+      status: 'ok',
       limits: {
         jira: {
           global: { usagePercent: null },
@@ -211,7 +226,7 @@ describe("getMaxUsageForPlatform", () => {
         }
       }
     };
-    expect(getMaxUsageForPlatform(status)).toBe(0);
+    expect(getMaxUsageForPlatform(status as any)).toBe(0);
   });
 });
 
@@ -312,11 +327,11 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
     const originalDate = global.Date;
     const mockDate = (dateString: string) => {
       global.Date = class extends originalDate {
-        constructor(...args: any[]) {
+        constructor(...args: [string | number] | []) {
           if (args.length === 0) {
             super(dateString);
           } else {
-            super(...args);
+            super(args[0] as string);
           }
         }
       } as typeof global.Date;

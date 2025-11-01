@@ -507,7 +507,7 @@ describe('GitHub Tool Integration', () => {
           const hasPullRequests = response.headers.get('content-type')?.includes('application/json');
           expect(hasPullRequests).toBe(true);
           // Each response should have the expected dataKey structure
-          expect(data => {
+          expect((data: any) => {
             if (data.pullRequests || data.issues || data.workflows) return true;
             return false;
           });
