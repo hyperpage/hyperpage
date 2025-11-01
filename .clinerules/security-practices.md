@@ -34,3 +34,14 @@ Before deploying or modifying security-sensitive features:
 - ✅ No hardcoded credentials in source code
 - ✅ Build artifacts clean with no credential leakage
 - ✅ Environment variables never passed to client components
+
+## Cross-References
+
+### Extends
+- **Core Security**: Implements security best practices within Hyperpage project context
+- **Architecture Patterns**: Integrates security throughout tool integration system
+
+### See Also
+- [Coding Principles](coding-principles.md) - Architectural patterns requiring security considerations
+- [Configuration Guidelines](configuration-guidelines.md) - Environment variable security management
+- [Code Standards](coding-style.md) - Security-aware development practices

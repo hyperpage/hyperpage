@@ -1,65 +1,92 @@
-# Coding Style - Hyperpage
+# Code Standards - Hyperpage
 
-This document outlines the coding standards and style guidelines for the Hyperpage project.
+This document outlines the coding standards, style guidelines, and implementation patterns for the Hyperpage project.
 
 ## Code Standards
 
-- Use TypeScript for all new code
-- Follow React best practices for component structure
-- Implement responsive design with Tailwind CSS
-- Maintain type safety across interfaces and components
-- Use descriptive variable and function names
+- **TypeScript First**: Use TypeScript for all new code with proper type definitions
+- **React Best Practices**: Follow established React patterns for component structure and lifecycle
+- **Tailwind CSS**: Implement responsive design with Tailwind's utility classes
+- **Type Safety**: Maintain strict type safety across interfaces and components
+- **Descriptive Naming**: Use clear, descriptive variable and function names
 
-## Component Development
+## Component Development Standards
 
-- Create reusable, modular components
-- Support dark/light themes using Tailwind's `dark:` classes
-- Ensure responsive behavior for mobile to desktop
-- Include proper TypeScript interfaces for props
-- Add loading and error states where appropriate
+### Component Architecture
+- **Single Responsibility**: Each component should have one clear purpose and responsibility
+- **Component Size Limit**: No component should exceed 100 lines - decompose larger components
+- **Presentation vs Logic**: UI components should focus on presentation; logic goes into custom hooks or services
+- **React.memo Optimization**: Apply React.memo to components that render frequently to prevent unnecessary re-renders
+
+### UI Component Guidelines
+- **shadcn/ui Integration**: Use shadcn/ui components built on Radix UI primitives for consistent design system
+- **Dark Mode Support**: All components must properly support both light and dark themes using CSS custom properties and theme-aware styling
+- **Responsive Design**: Components should adapt from mobile (1 column) to desktop (4+ column) layouts using Tailwind's responsive prefixes
+- **Modular Design**: Widget components should be reusable and configurable with proper TypeScript interfaces
+- **Status Indicators**: Tool status indicators use fixed teal color (bg-teal-600) for consistent visual design across theme switches
+
+### Layout and Spacing Patterns
+- **Encapsulated Padding**: Main content areas (grids, feeds) should be wrapped with `<div className="p-6">` at the portal level
+- **Consistent Tab Spacing**: All tab content should have uniform spacing from the tab bar through portal-level padding
+- **Component Spacing**: Components should not manage their own top padding - handled at container level
 
 ## State Management
 
-- Use React hooks for component-level state
-- Avoid complex global state for simple widgets
-- Design components for easy data source integration
+- **React Hooks**: Use React hooks for component-level state management
+- **Custom Hooks**: Extract complex stateful logic into reusable custom hooks before component implementation
+- **Avoid Global State**: Avoid complex global state for simple widgets
+- **Data Integration**: Design components for easy data source integration
 
-## Testing and Quality
+## Next.js Implementation Patterns
 
-- Test responsive design across devices
-- Verify dark mode compatibility
-- Ensure cross-browser functionality
-- Validate component behavior with real tool API data
-- Test empty state handling when no tools are enabled
-- Verify tool widget loading and error states
+### Hydration and Environment Handling
+- **Environment Variables**: Access `process.env` in server components/pages only, not client components
+- **Props Pattern**: Pass environment-dependent data as props from server components to client components
+- **SSR Consistency**: Ensure server-rendered HTML matches client hydration to prevent recovery errors
 
-## Portal-Specific Rules
-
-### Component Structure
-- **shadcn/ui Components**: Use shadcn/ui components built on Radix UI primitives for consistent design system
-- **Modular Design**: Keep components focused on single responsibilities. Widget components should be reusable and configurable.
-- **Dark Mode Support**: All components must properly support both light and dark themes using CSS custom properties and theme-aware styling.
-- **Responsive Design**: Components should adapt from mobile (1 column) to desktop (4+ column) layouts using Tailwind's responsive prefixes.
-- **TypeScript**: All components and interfaces must be fully typed with proper TypeScript interfaces.
-- **Consistent Styling**: Use the established color palette and design tokens throughout the application.
-- **Integration Status Colors**: Tool status indicators in the sidebar use fixed teal color (bg-teal-600) for connected state to maintain consistent visual design across theme switches, separate from shadcn primary colors that change with themes.
-- **Clean Implementation**: Code compiles successfully with TypeScript and builds without errors. ESLint is configured to ignore build artifacts (`.next/` directory, `next-env.d.ts`) while maintaining source code quality standards, following all TypeScript best practices for const declarations and unused variable removal.
-
-### Layout and Spacing
-- **Encapsulated Padding**: Main content areas (grids, feeds) should be wrapped with `<div className="p-6">` at the portal level instead of applying `pt-6` or padding directly to individual components.
-- **Consistent Tab Spacing**: All tab content (overview, tools, etc.) should have uniform spacing from the tab bar through portal-level padding encapsulation.
-- **Component Spacing**: Components should not manage their own top padding for portal integration - this should be handled at the container level.
-
-## Next.js Patterns
-
-### Hydration Handling
-- **Environment Variables**: Access `process.env` in server components/pages only, not client components.
-- **Props Pattern**: Pass environment-dependent data as props from server components to client components.
-- **No Client-Side Environment Access**: Avoid reading environment variables in `"use client"` components during render.
-- **SSR Consistency**: Ensure server-rendered HTML matches client hydration to prevent recovery errors.
-
-### Route Handler API
-- **Next.js 15 Route Handlers**: Use async parameter destructuring for dynamic routes. Import and use `NextRequest` instead of `Request`.
+### API Route Handlers
+- **Next.js 15 Compatibility**: Use async parameter destructuring for dynamic routes
+- **Type Safety**: Import and use `NextRequest` instead of `Request`
 - **Parameter Access**: Access dynamic params via `context.params` Promise: `const { paramName } = await context.params;`
-- **Function Signature**: Use `(request: NextRequest, context: { params: Promise<{ ... }> }) => ...` instead of interface-based destructuring
-- **Consistency**: All dynamic routes in `/api/tools/` follow this pattern for type safety and Next.js 15 compatibility.
+- **Consistency**: All dynamic routes in `/api/tools/` follow this pattern for type safety
+
+## Quality Assurance
+
+### Code Quality
+- **ESLint Compliance**: Follow established linting rules, ignore build artifacts (`.next/`, `next-env.d.ts`)
+- **Build Success**: Code must compile successfully with TypeScript and build without errors
+- **Type Safety**: Follow TypeScript best practices for const declarations and unused variable removal
+
+### Testing Standards
+- **Responsive Testing**: Test responsive design across devices and breakpoints
+- **Theme Compatibility**: Verify dark mode compatibility across all components
+- **Cross-Browser**: Ensure cross-browser functionality
+- **Component Behavior**: Validate component behavior with real tool API data
+- **Edge Cases**: Test empty state handling and error states
+
+## Cross-References
+
+### Depends On
+- [Coding Principles](coding-principles.md) - Architectural patterns and component systems
+- [Security Practices](security-practices.md) - Security standards and validation
+
+### Extends
+- **Core Standards**: Implements general coding standards for the Hyperpage project context
+- **Component Patterns**: Extends basic coding principles with specific implementation guidelines
+
+### See Also
+- [Documentation Guidelines](documentation-guidelines.md) - Documentation standards and processes
+- [Configuration Guidelines](configuration-guidelines.md) - Environment and setup configuration
+
+## Quality Checklist
+- [ ] TypeScript strict mode compliance
+- [ ] Component size under 100 lines
+- [ ] Proper TypeScript interfaces for all props
+- [ ] Responsive design implementation
+- [ ] Dark mode compatibility
+- [ ] ESLint compliance
+- [ ] Next.js 15 pattern adherence
+- [ ] Test coverage for critical functionality
+
+## Migration Notes
+This document consolidates coding standards and style guidelines into a single authoritative source, replacing scattered style references across multiple files.

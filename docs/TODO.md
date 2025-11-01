@@ -1,9 +1,0 @@
-- [x] Analyze current onboarding barriers in .env.local.sample and documentation
-- [x] Create simplified .env.local.sample with basic API token examples enabled
-- [x] Update README.md Quick Start section with simple setup path
-- [x] Add getting started wizard component for first-time setup
-- [x] Implement configuration detection and inline guidance
-- [x] Create setup status page showing tool connection progress
-- [x] Update documentation flow to separate Simple vs Advanced setup
-- [x] Test the complete onboarding experience
-- [x] Verify no regression in existing functionality

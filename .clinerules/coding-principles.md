@@ -112,3 +112,14 @@ These workflows operationalize the above principles by:
 - Applying the 100-line component size limit with decomposition strategies
 - Ensuring proper Next.js patterns for hydration and routing
 - Maintaining security practices throughout development
+
+## Meta-Governance and Cross-References
+
+### Extends
+- **Core Standards**: Implements general coding standards for the Hyperpage project context
+- **Component Patterns**: Extends basic coding principles with specific implementation guidelines
+
+### See Also
+- [Code Standards](coding-style.md) - Code formatting and style guidelines
+- [Security Practices](security-practices.md) - Security standards and validation
+- [Configuration Guidelines](configuration-guidelines.md) - Environment and setup configuration
