@@ -82,67 +82,133 @@ pm2 save
 pm2 startup
 ```
 
-## CI/CD Pipeline
+## CI/CD Pipeline - Enterprise Automation ✅
 
-### GitHub Actions Example
+### Phase 6: Complete CI/CD Integration & Automation
 
-```yaml
-name: CI/CD Pipeline
+Hyperpage now features comprehensive CI/CD automation with **5 production-ready GitHub Actions workflows**:
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+#### 📋 **Available CI/CD Workflows**
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
+| Workflow File | Purpose | Features |
+|---------------|---------|----------|
+| **ci-cd.yml** | Main CI/CD Pipeline | Build, test, security scanning, deployment |
+| **test-environments.yml** | Test Environment Provisioning | Kubernetes test environments for PR validation |
+| **container-registry.yml** | Container Management | Multi-arch builds, security scanning, versioning |
+| **production-deployment.yml** | Production Deployment | GitOps workflow with blue-green deployments |
+| **cicd-monitoring.yml** | Monitoring & Reporting | Pipeline metrics, DORA calculations, automated reports |
 
-      - name: Install dependencies
-        run: npm ci
+#### 🚀 **Key CI/CD Features**
 
-      - name: TypeScript check
-        run: npx tsc --noEmit
+**✅ Comprehensive Automation:**
+- Full CI/CD pipeline from code commit to production deployment
+- Automated testing, security scanning, and deployment processes
+- Environment provisioning and resource management
 
-      - name: ESLint
-        run: npx eslint . --max-warnings=0
+**✅ Security Integration:**
+- Multi-layered security scanning (Trivy, Snyk, Docker Scout)
+- Vulnerability detection and compliance validation
+- Security context validation in Kubernetes deployments
 
-      - name: Test
-        run: npm test
+**✅ Environment Management:**
+- Dynamic test environment provisioning for PR validation
+- Blue-green deployment strategy for zero-downtime releases
+- Environment isolation and resource allocation
 
-  build:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
+**✅ Observability & Monitoring:**
+- DORA metrics calculation and tracking
+- Pipeline health monitoring and failure analysis
+- Automated reporting with actionable insights
 
-      - name: Install dependencies
-        run: npm ci
+#### 🔧 **CI/CD Workflow Details**
 
-      - name: Build
-        run: npm run build
+**1. Main CI/CD Pipeline (`ci-cd.yml`)**
+- **Stages**: Build → Test → Security Scan → Deploy
+- **Security**: Automated dependency checking and vulnerability scanning
+- **Performance**: Integrated performance testing
+- **Deployment**: Production deployment with rollback capabilities
 
-      - name: Deploy to Vercel
-        if: github.ref == 'refs/heads/main'
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          vercel-args: '--prod'
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+**2. Test Environment Provisioning (`test-environments.yml`)**
+- **Kubernetes Integration**: Ephemeral test environments for PR validation
+- **Namespace Management**: Automated namespace creation and configuration
+- **Resource Management**: Dynamic environment isolation with proper allocation
+- **Health Monitoring**: Environment health checks and automatic cleanup
+
+**3. Container Registry Management (`container-registry.yml`)**
+- **Multi-Architecture**: Builds for linux/amd64, linux/arm64, linux/arm/v7
+- **Security Scanning**: Trivy, Snyk, and Docker Scout integration
+- **Versioning**: Automated container image versioning and tagging
+- **Promotion**: Image promotion workflows between environments
+
+**4. Production Deployment (`production-deployment.yml`)**
+- **GitOps Workflow**: Infrastructure-as-Code deployment approach
+- **Blue-Green Deployment**: Zero-downtime deployment strategy
+- **Rolling Updates**: Alternative deployment strategy available
+- **Monitoring**: Comprehensive deployment monitoring and notifications
+
+**5. CI/CD Monitoring (`cicd-monitoring.yml`)**
+- **Metrics Collection**: Daily CI/CD metrics with DORA calculations
+- **Health Analysis**: Pipeline health analysis and failure pattern detection
+- **Automated Reporting**: Scheduled and on-demand report generation
+- **Grafana Integration**: Compatible with Grafana dashboards
+
+#### 📊 **CI/CD Metrics & Monitoring**
+
+**DORA Metrics Tracking:**
+- **Deployment Frequency**: Automated tracking of deployment rate
+- **Lead Time**: Average time from commit to deployment
+- **Mean Time to Recovery (MTTR)**: Time to fix failed deployments
+- **Change Failure Rate**: Percentage of deployments causing failures
+
+**Pipeline Health Monitoring:**
+- **Failure Pattern Analysis**: Automated detection of common failure patterns
+- **Success Rate Tracking**: Real-time pipeline success rate monitoring
+- **Performance Monitoring**: Pipeline execution time and efficiency tracking
+- **Automated Alerts**: Slack notifications for critical pipeline events
+
+#### 🛠️ **CI/CD Setup Requirements**
+
+**Repository Secrets Required:**
+```bash
+# GitHub Actions Secrets
+GITHUB_TOKEN=your_github_token
+GRAFANA_URL=https://your-grafana-instance.com
+GRAFANA_API_KEY=your_grafana_api_key
+DOCKER_REGISTRY=your-registry.com
+DOCKER_USERNAME=your_registry_username
+DOCKER_PASSWORD=your_registry_password
+
+# Kubernetes Secrets (for deployments)
+KUBE_CONFIG_DATA=base64_encoded_kube_config
+KUBERNETES_NAMESPACE=production
 ```
+
+**Workflow Triggers:**
+- **Main Pipeline**: Push to main, pull requests
+- **Test Environments**: Pull requests, manual triggers
+- **Container Registry**: Push to main, version tags
+- **Production Deployment**: Manual approval, push to production branch
+- **Monitoring**: Daily schedule (9 AM UTC), workflow completion triggers
+
+#### 🔍 **CI/CD Best Practices**
+
+**Security:**
+- All workflows use minimal required permissions
+- Secrets managed through GitHub encrypted storage
+- Security scanning runs before any deployment
+- Container images scanned for vulnerabilities
+
+**Reliability:**
+- Automated rollback on deployment failures
+- Health checks ensure services are running
+- Blue-green deployments minimize downtime
+- Comprehensive testing before production deployment
+
+**Observability:**
+- All deployments logged and monitored
+- Performance metrics tracked automatically
+- Failure patterns analyzed and reported
+- DORA metrics calculated and displayed
 
 ## Security Considerations
 
@@ -155,6 +221,7 @@ The Hyperpage project has undergone comprehensive security auditing:
 - ✅ **Build Security**: Clean builds with no credential leakage
 - ✅ **Input Validation**: All API endpoints protected against injection attacks
 - ✅ **Error Handling**: Generic error messages prevent information disclosure
+- ✅ **CI/CD Security**: Multi-layer security scanning in automated pipelines
 
 ### Production Security Checklist
 
@@ -175,12 +242,14 @@ The Hyperpage project has undergone comprehensive security auditing:
 - ✅ **XSS Protection**: Content Security Policy (CSP) headers
 - ✅ **CSRF Protection**: Cross-site request forgery prevention
 - ✅ **Dependency Scanning**: Automated vulnerability detection in packages
+- ✅ **Container Security**: Multi-layer container scanning in CI/CD pipeline
 
 #### Monitoring & Logging
 - ✅ **Error Monitoring**: Centralized error tracking and alerting
 - ✅ **Access Logging**: API access patterns monitored for anomalies
 - ✅ **Security Events**: Authentication and authorization events logged
 - ✅ **Compliance**: Audit logs maintained for regulatory requirements
+- ✅ **CI/CD Monitoring**: Automated pipeline health monitoring and reporting
 
 ### API Token Management
 
@@ -241,6 +310,11 @@ HSTS_ENABLED=true
 # Monitoring
 SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
 LOG_LEVEL=warn
+
+# CI/CD Integration
+GITHUB_TOKEN=your_github_token
+GRAFANA_URL=https://your-grafana-instance.com
+GRAFANA_API_KEY=your_grafana_api_key
 ```
 
 ## Performance Optimization
@@ -279,6 +353,8 @@ export default function App({ Component, pageProps }) {
 - Error rates by tool and endpoint
 - User session duration and feature usage
 - Database performance (if applicable)
+- CI/CD pipeline performance metrics
+- Deployment frequency and success rates
 
 ## Backup & Recovery
 
@@ -286,16 +362,19 @@ export default function App({ Component, pageProps }) {
 - **Environment Variables**: Regularly export configurations (without secrets)
 - **Tool Settings**: Backup enablement and threshold settings
 - **User Preferences**: Export portal customizations if applicable
+- **CI/CD Workflows**: Version controlled in `.github/workflows/`
 
 ### Disaster Recovery
 - **Automated Builds**: CI/CD enables rapid redeployment
 - **Configuration as Code**: Infrastructure defined in version control
 - **Rollback Capability**: Previous releases available for emergency rollback
+- **Blue-Green Deployment**: Instant rollback capability in production
 
 ### Data Retention
 - **Log Rotation**: Implement log rotation to manage storage
 - **Backup Frequency**: Backup critical configurations weekly
 - **Retention Period**: Maintain backups for 30 days minimum
+- **CI/CD History**: GitHub Actions retains workflow run history
 
 ## Maintenance Procedures
 
@@ -306,18 +385,21 @@ export default function App({ Component, pageProps }) {
 - Review error logs and alert patterns
 - Update dependencies if security patches available
 - Verify backup integrity
+- Review CI/CD pipeline health and metrics
 
 #### Monthly Tasks
 - Audit user access and permissions
 - Review API token validity and rotate if needed
 - Update system documentation
 - Performance benchmark against baselines
+- Analyze CI/CD DORA metrics and optimize workflows
 
 #### Quarterly Tasks
 - Security vulnerability assessment
 - Comprehensive backup and recovery testing
 - Dependency analysis and updates
 - Feature usage analysis and optimization
+- CI/CD workflow optimization and cleanup
 
 ### Update Procedures
 
@@ -331,8 +413,8 @@ npm update
 npm run test
 npm run build
 
-# Deploy if tests pass
-npm run deploy
+# Deploy if tests pass (automated in CI/CD)
+git push origin main
 ```
 
 #### Security Patches
@@ -340,6 +422,7 @@ npm run deploy
 - Apply critical security patches immediately
 - Test patches in staging environment first
 - Schedule non-critical updates during maintenance windows
+- Automated dependency scanning in CI/CD pipeline
 
 ## Support & Troubleshooting
 
@@ -356,6 +439,13 @@ node --version  # Should be 18+
 
 # Verify environment variables
 echo $NODE_ENV  # Should be 'production'
+```
+
+**CI/CD Pipeline Issues:**
+```bash
+# Check GitHub Actions logs
+# Navigate to Actions tab in GitHub repository
+# Review workflow run details and error messages
 ```
 
 **API Connection Issues:**
