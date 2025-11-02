@@ -172,7 +172,7 @@ export const BOTTLENECK_PATTERNS: BottleneckPattern[] = [
         id: 'reduce-request-rate',
         name: 'Reduce Request Rate',
         script: 'reduce-request-rate',
-        requiresApproval: false
+        requiresApproval: true
       }
     ]
   },

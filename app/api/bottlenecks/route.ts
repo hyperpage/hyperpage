@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { bottleneckDetector } from '../../../lib/monitoring/bottleneck-detector';
+import { DetectedBottleneck, BottleneckHistory } from '../../../lib/monitoring/bottleneck-detector';
 
 /**
  * GET /api/bottlenecks - Get all active and recent bottleneck detections
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const trends = calculateBottleneckTrends(activeBottlenecks, historicalBottlenecks, timeRange);
 
     // Get correlation data for active bottlenecks
-    const correlationData = activeBottlenecks.map(bottleneck =>
+    const correlationData = activeBottlenecks.map((bottleneck: DetectedBottleneck) =>
       bottleneckDetector.getCorrelationData(bottleneck)
     );
 
@@ -39,10 +39,10 @@ export async function GET(request: NextRequest) {
       correlationData,
       timestamp: Date.now(),
       summary: {
-        criticalCount: activeBottlenecks.filter(b => b.impact === 'critical').length,
-        warningCount: activeBottlenecks.filter(b => b.impact === 'severe' || b.impact === 'moderate').length,
+        criticalCount: activeBottlenecks.filter((b: DetectedBottleneck) => b.impact === 'critical').length,
+        warningCount: activeBottlenecks.filter((b: DetectedBottleneck) => b.impact === 'severe' || b.impact === 'moderate').length,
         lastDetection: activeBottlenecks.length > 0 ?
-          Math.max(...activeBottlenecks.map(b => b.timestamp)) : null
+          Math.max(...activeBottlenecks.map((b: DetectedBottleneck) => b.timestamp)) : null
       }
     });
 
@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
  * Helper function to calculate bottleneck trends
  */
 function calculateBottleneckTrends(
-  active: any[],
-  historical: any[],
+  active: DetectedBottleneck[],
+  historical: BottleneckHistory[],
   timeRange: number
 ) {
   const windowStart = Date.now() - timeRange;
@@ -97,7 +97,7 @@ function calculateBottleneckTrends(
 
   const patternCounts = new Map<string, { count: number, totalConfidence: number }>();
 
-  [...active, ...recentHistorical].forEach(bottleneck => {
+  [...active, ...recentHistorical].forEach((bottleneck: DetectedBottleneck | BottleneckHistory) => {
     const patternId = bottleneck.patternId;
     const existing = patternCounts.get(patternId) || { count: 0, totalConfidence: 0 };
     patternCounts.set(patternId, {

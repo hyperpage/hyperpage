@@ -379,6 +379,19 @@ describe('BottleneckDetector', () => {
 
       detector['activeBottlenecks'].set(mockBottleneck.id, mockBottleneck);
 
+      // Add the automated action to the pattern
+      const pattern = BOTTLENECK_PATTERNS.find(p => p.id === 'rate-limit-exhaustion');
+      if (pattern) {
+        pattern.automatedActions = [
+          {
+            id: 'reduce-request-rate',
+            name: 'Reduce Request Rate',
+            script: 'reduce-request-rate',
+            requiresApproval: false
+          }
+        ];
+      }
+
       const result = await detector.executeAutomatedAction('test-bottleneck', 'reduce-request-rate');
       expect(result.success).toBe(true);
       expect(result.message).toContain(`Automated action 'Reduce Request Rate' executed successfully`);
@@ -422,6 +435,19 @@ describe('BottleneckDetector', () => {
       };
 
       detector['activeBottlenecks'].set(mockBottleneck.id, mockBottleneck);
+
+      // Add the automated action to the pattern (without requiresApproval to allow execution)
+      const pattern = BOTTLENECK_PATTERNS.find(p => p.id === 'rate-limit-exhaustion');
+      if (pattern) {
+        pattern.automatedActions = [
+          {
+            id: 'reduce-request-rate',
+            name: 'Reduce Request Rate',
+            script: 'reduce-request-rate',
+            requiresApproval: false
+          }
+        ];
+      }
 
       const result = await detector.executeAutomatedAction('test-bottleneck', 'reduce-request-rate');
       expect(result.success).toBe(false);

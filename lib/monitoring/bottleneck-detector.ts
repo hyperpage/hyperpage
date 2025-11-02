@@ -1,4 +1,4 @@
-import { performanceDashboard, DashboardMetrics, AlertType } from '../monitoring/performance-dashboard';
+import { performanceDashboard, DashboardMetrics, AlertType } from './performance-dashboard';
 import { alertService } from '../alerting/alert-service';
 import { EventEmitter } from 'events';
 import logger from '../logger';

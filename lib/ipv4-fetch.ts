@@ -5,15 +5,14 @@
  * This utility forces IPv4 connections to ensure reliable connectivity to external APIs.
  */
 
-import * as https from 'https';
-import * as dns from 'dns';
-
 /**
  * Server-side module cache to avoid repeated imports
  */
 const getNodeModules = () => {
   if (typeof window === 'undefined') {
-    // Server-side - modules already imported
+    // Server-side - import Node.js modules dynamically
+    const https = require('https');
+    const dns = require('dns');
     return { https, dns };
   }
   return null;
@@ -38,7 +37,7 @@ export function createIPv4Fetch(
 
   try {
     // Force IPv4 connections to avoid IPv6 timeout issues on IPv6-only networks
-    const enhancedOptions: RequestInit & { agent?: https.Agent } = {
+    const enhancedOptions: RequestInit & { agent?: any } = {
       ...options,
       signal: controller.signal,
     };

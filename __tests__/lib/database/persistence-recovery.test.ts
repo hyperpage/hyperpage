@@ -27,8 +27,10 @@ describe('Persistence and Recovery System', () => {
   beforeAll(async () => {
     // Clean up any existing test databases before all tests
     try {
+      await closeDatabase(); // Ensure any existing connections are closed
       await fs.unlink(path.join(TEST_DATA_DIR, 'hyperpage.db')).catch(() => {});
       await fs.rm(TEST_BACKUP_DIR, { recursive: true, force: true }).catch(() => {});
+      await fs.mkdir(TEST_BACKUP_DIR, { recursive: true }).catch(() => {});
     } catch (error) {
       // Ignore cleanup errors
     }

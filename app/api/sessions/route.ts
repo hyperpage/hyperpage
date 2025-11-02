@@ -44,9 +44,10 @@ export async function GET(request: NextRequest) {
     // Get existing session
     const session = await sessionManager.getSession(sessionId);
     if (!session) {
+      // Return 401 for invalid/missing sessions (not authenticated)
       return NextResponse.json(
-        { success: false, error: 'Session not found' },
-        { status: 404 }
+        { success: false, error: 'Session not found or expired' },
+        { status: 401 }
       );
     }
 
@@ -75,6 +76,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'sessionId is required' },
         { status: 400 }
+      );
+    }
+
+    // Validate session exists before updating
+    const existingSession = await sessionManager.getSession(sessionId);
+    if (!existingSession && !sessionData) {
+      // Cannot update non-existent session unless providing complete session data
+      return NextResponse.json(
+        { success: false, error: 'Session not found or expired' },
+        { status: 401 }
       );
     }
 
@@ -120,6 +131,15 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Validate session exists before updating
+    const existingSession = await sessionManager.getSession(sessionId);
+    if (!existingSession) {
+      return NextResponse.json(
+        { success: false, error: 'Session not found or expired' },
+        { status: 401 }
+      );
+    }
+
     // Update session with provided data
     await sessionManager.updateSession(sessionId, body);
 
@@ -148,6 +168,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'sessionId required' },
         { status: 400 }
+      );
+    }
+
+    // Check if session exists before deletion
+    const existingSession = await sessionManager.getSession(sessionId);
+    if (!existingSession) {
+      return NextResponse.json(
+        { success: false, error: 'Session not found or expired' },
+        { status: 401 }
       );
     }
 

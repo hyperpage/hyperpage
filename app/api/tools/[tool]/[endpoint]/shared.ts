@@ -61,7 +61,49 @@ export function validateTool(
   return { tool, apiConfig: tool.apis[endpoint] };
 }
 
-// Handler execution helper with caching support
+// Helper to map error types to HTTP status codes
+function getErrorStatusCode(error: Error): number {
+  const message = error.message?.toLowerCase() || '';
+  
+  // Input validation errors -> 400
+  if (message.includes('invalid json') ||
+      message.includes('issueids must be a non-empty array') ||
+      message.includes('maximum 50 issue ids') ||
+      (message.includes('issueids') && message.includes('array')) ||
+      (message.includes('invalid') && message.includes('parameter'))) {
+    return 400;
+  }
+  
+  // Authentication/authorization errors -> 401/403
+  if (message.includes('credentials') ||
+      message.includes('not configured') ||
+      message.includes('access denied') ||
+      message.includes('authentication')) {
+    return 401;
+  }
+  
+  // Rate limiting -> 429
+  if (message.includes('rate limit') || message.includes('rate limited')) {
+    return 429;
+  }
+  
+  // Not found -> 404
+  if (message.includes('not found')) {
+    return 404;
+  }
+  
+  // Service unavailable -> 503
+  if (message.includes('temporarily unavailable') || 
+      message.includes('timeout') ||
+      message.includes('network')) {
+    return 503;
+  }
+  
+  // Default to 500 for other errors
+  return 500;
+}
+
+// Handler execution helper with enhanced error handling
 export async function executeHandler(
   request: NextRequest,
   tool: Tool,
@@ -120,6 +162,20 @@ export async function executeHandler(
     const data = await handler(request, tool.config || {});
     recordRequestSuccess(tool.slug); // Record successful execution
 
+    // Check if the response is an error object (like { error: "message", status: 400 })
+    if (data && typeof data === 'object' && data.error && typeof data.error === 'string') {
+      const errorMessage = data.error || 'Unknown error';
+      const statusCode = typeof data.status === 'number' ? data.status : getErrorStatusCode(new Error(errorMessage));
+      return NextResponse.json(data, {
+        status: statusCode,
+        headers: {
+          'Cache-Control': 'no-store', // Never cache error responses
+          'X-Cache-Status': 'ERROR',
+          'X-Cache-Key': cacheKey,
+        },
+      });
+    }
+
     // Cache successful responses (not bypass and not errors)
     if (!skipCache && data && typeof data === 'object') {
       // Default TTL: 5 minutes for activity endpoints, 10 minutes for others
@@ -143,12 +199,15 @@ export async function executeHandler(
     console.error(`Handler error for ${tool.name}/${endpoint}:`, error);
     recordRequestFailure(tool.slug); // Record handler error as a failure
 
+    const errorMessage = error instanceof Error ? error.message : "An error occurred while processing the request";
+    const statusCode = getErrorStatusCode(error instanceof Error ? error : new Error(errorMessage || "Unknown error"));
+
     // Don't cache error responses - let them go through fresh
     // This ensures rate limit errors can be retried later
     return NextResponse.json(
-      { error: "An error occurred while processing the request" },
+      { error: errorMessage },
       {
-        status: 500,
+        status: statusCode,
         headers: {
           'Cache-Control': 'no-store', // Never cache errors
           'X-Cache-Status': 'ERROR',

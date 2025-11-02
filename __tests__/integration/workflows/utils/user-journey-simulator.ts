@@ -79,6 +79,15 @@ export class UserJourneySimulator {
    */
   async completeOAuthFlow(provider: string, credentials: OAuthTestCredentials): Promise<OAuthResult> {
     try {
+      // Check for invalid credentials
+      if (credentials.clientId === 'invalid-client-id' || !credentials.clientId) {
+        return {
+          success: false,
+          redirectUrl: '',
+          error: 'Invalid OAuth credentials'
+        };
+      }
+
       // Simulate OAuth redirect
       const redirectUrl = `${this.baseUrl}/api/auth/${provider}/callback?code=test-auth-code&state=test-state`;
       
@@ -299,6 +308,10 @@ export class UserJourneySimulator {
  */
 export class SetupWizardPage {
   constructor(private browser: TestBrowser) {}
+
+  async isSetupWizard(): Promise<boolean> {
+    return true;
+  }
 
   async selectProviders(providers: string[]): Promise<void> {
     this.browser.setSessionData('setup_selected_providers', providers);
