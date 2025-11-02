@@ -1,5 +1,3 @@
-- [ ] Fix database-persistence-recovery.test.ts violations (13 violations)
-- [ ] Fix multi-user-load-testing.test.ts violations (12 violations)
 - [ ] Fix bottleneck-detector.test.ts violations (11 violations)
 - [ ] Fix remaining test files with violations
 - [ ] Run final ESLint check to verify all issues resolved
