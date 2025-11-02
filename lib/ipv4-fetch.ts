@@ -8,11 +8,11 @@
 /**
  * Server-side module cache to avoid repeated imports
  */
-const getNodeModules = () => {
+const getNodeModules = async () => {
   if (typeof window === 'undefined') {
     // Server-side - import Node.js modules dynamically
-    const https = require('https');
-    const dns = require('dns');
+    const { default: https } = await import('https');
+    const { default: dns } = await import('dns');
     return { https, dns };
   }
   return null;
@@ -27,7 +27,7 @@ const getNodeModules = () => {
  * @param timeoutMs - Timeout in milliseconds (default: 10000)
  * @returns Promise<Response>
  */
-export function createIPv4Fetch(
+export async function createIPv4Fetch(
   url: string,
   options: RequestInit = {},
   timeoutMs: number = 10000
@@ -37,7 +37,7 @@ export function createIPv4Fetch(
 
   try {
     // Force IPv4 connections to avoid IPv6 timeout issues on IPv6-only networks
-    const enhancedOptions: RequestInit & { agent?: any } = {
+    const enhancedOptions: RequestInit & { agent?: import('https').Agent } = {
       ...options,
       signal: controller.signal,
     };
@@ -45,7 +45,7 @@ export function createIPv4Fetch(
     // Only configure IPv4 forcing server-side where Node.js modules are available
     if (typeof window === 'undefined') {
       try {
-        const modules = getNodeModules();
+        const modules = await getNodeModules();
         if (modules) {
           // Force IPv4 DNS resolution and connection
           // Create an HTTPS agent that forces IPv4 family
