@@ -322,8 +322,8 @@ export class SecureTokenStorage {
         .delete(oauthTokens)
         .where(sql`expiresAt < ${now} AND (refreshExpiresAt IS NULL OR refreshExpiresAt < ${now})`);
 
-      // Cast result to access rowsAffected safely
-      const rowsAffected = (result as any)?.rowsAffected || 0;
+      // Get the number of affected rows from the delete operation
+      const rowsAffected = (result as { rowsAffected?: number })?.rowsAffected || 0;
       logger.info(`Cleaned up ${rowsAffected} expired OAuth tokens`);
       return rowsAffected;
 

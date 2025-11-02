@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { IntegrationTestEnvironment, OAuthTestCredentials } from '../../lib/test-credentials';
+import { IntegrationTestEnvironment } from '../../lib/test-credentials';
 import { TestBrowser } from './utils/test-browser';
 import { UserJourneySimulator } from './utils/user-journey-simulator';
 
@@ -115,7 +115,7 @@ describe('Error Handling and Recovery Scenario Tests', () => {
   /**
    * Simulate API call
    */
-  const simulateAPICall = async (provider: string, endpoint: string, params: any) => {
+  const simulateAPICall = async (provider: string, endpoint: string) => {
     const fallbackData = browser.getSessionData(`${provider}_fallback_${endpoint}`);
     
     if (fallbackData && fallbackData.fallback) {
@@ -227,7 +227,7 @@ describe('Error Handling and Recovery Scenario Tests', () => {
       
       while (attempts < 10 && !success) {
         attempts++;
-        const result = await simulateAPICall('github', 'issues', {});
+        const result = await simulateAPICall('github', 'issues');
         if (result.success) {
           success = true;
         } else {

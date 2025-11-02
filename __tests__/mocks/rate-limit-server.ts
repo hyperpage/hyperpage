@@ -1,4 +1,5 @@
-import type { RateLimitUsage, RateLimitStatus, PlatformRateLimits } from '../../lib/types/rate-limit';
+import type { RateLimitUsage } from '../../lib/types/rate-limit';
+import type { Server } from 'http';
 
 /**
  * Mock rate limit server that simulates API platform behaviors
@@ -8,9 +9,9 @@ export class MockRateLimitServer {
   private serverUrl: string;
   private requestCounts: Map<string, number> = new Map();
   private resetTimes: Map<string, number> = new Map();
-  private server: any = null; // http.Server
+  private server: Server | null = null;
 
-  constructor(port: number = 3001) {
+  constructor(port: number = 3000) {
     this.serverUrl = `http://localhost:${port}`;
   }
 
@@ -23,7 +24,11 @@ export class MockRateLimitServer {
       windowSeconds: number;
       currentUsage: number;
       responseDelay?: number;
-      customResponse?: (count: number) => any;
+      customResponse?: (count: number) => {
+        statusCode?: number;
+        retryAfter?: string | number | null;
+        [key: string]: any;
+      };
     }>
   }> = {
     github: {
@@ -32,7 +37,7 @@ export class MockRateLimitServer {
           limit: 5000,
           windowSeconds: 3600,
           currentUsage: 0,
-          customResponse: (count) => {
+          customResponse: (count: number) => {
             const timestamp = Math.floor(Date.now() / 1000);
             const resetTime = timestamp + 3600; // 1 hour from now
 
@@ -68,7 +73,7 @@ export class MockRateLimitServer {
           limit: 2000,
           windowSeconds: 60,
           currentUsage: 0,
-          customResponse: (count) => {
+          customResponse: (count: number) => {
             const isLimited = count >= 2000;
             const retryAfter = isLimited ? 60 : null;
 
@@ -94,7 +99,7 @@ export class MockRateLimitServer {
           limit: 1000,
           windowSeconds: 3600,
           currentUsage: 0,
-          customResponse: (count) => {
+          customResponse: (count: number) => {
             const isLimited = count >= 1000;
 
             if (isLimited) {
@@ -219,7 +224,11 @@ export class MockRateLimitServer {
   configureEndpoint(platform: string, endpoint: string, config: {
     limit: number;
     responseDelay?: number;
-    customResponse?: (count: number) => any;
+    customResponse?: (count: number) => {
+      statusCode?: number;
+      retryAfter?: string | number | null;
+      [key: string]: any;
+    };
   }): void {
     if (!this.rateLimitScenarios[platform]) {
       this.rateLimitScenarios[platform] = { endpoints: {} };
@@ -264,7 +273,14 @@ export const RateLimitTestUtils = {
     platform: string,
     triggerUsage: number,
     limit: number = 100
-  ): ((count: number) => any) => {
+  ): ((count: number) => {
+    statusCode?: number;
+    retryAfter?: string | number | null;
+    resources?: any;
+    message?: string;
+    data?: string;
+    [key: string]: any;
+  }) => {
     return (count: number) => {
       const used = count % (limit + 1);
       const isLimited = used >= triggerUsage;

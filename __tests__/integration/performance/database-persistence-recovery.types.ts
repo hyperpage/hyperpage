@@ -1,25 +1,26 @@
 // TypeScript interfaces for database-persistence-recovery.test.ts
 // These interfaces replace the extensive 'any' type usage in the test file
 
-export interface TestUser extends Record<string, any> {
+export interface TestUser {
   // Base properties that may exist on test users
   sessionId?: string;
   userId?: string;
   lastAccessed?: string;
+  [key: string]: unknown;
 }
 
 export interface SessionData {
   concurrentUpdate?: number;
   timestamp?: number;
   operationId?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TransactionTest {
   writeOperation: number;
   timestamp: number;
   sessionId: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface RecoveryTestData {
@@ -29,7 +30,7 @@ export interface RecoveryTestData {
   timestamp: number;
   recoveryAttempt?: boolean;
   recoveredTimestamp?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PersistentData {
@@ -39,14 +40,14 @@ export interface PersistentData {
     operation: string;
     timestamp: number;
   }>;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface BatchOperation {
   operationId: number;
   batchId: string;
   timestamp: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SessionActivity {
@@ -64,14 +65,14 @@ export interface TimePersistenceTest {
     checkpoint: number;
   }>;
   duration: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface LifecyclePhase {
   lifecyclePhase: 'active' | 'invalidated';
   lifecycleIndex: number;
   invalidationTime?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface PeakLoadTest {
@@ -79,7 +80,7 @@ export interface PeakLoadTest {
   accessTime: number;
   peakLoadPhase: string;
   updatedTime?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface RelationshipReference {
@@ -130,7 +131,7 @@ export interface MigrationSource {
   version: number;
   legacyData?: LegacyData;
   newData?: NewData;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ConcurrentWriteResult {

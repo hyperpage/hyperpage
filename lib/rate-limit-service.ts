@@ -7,7 +7,7 @@ import { Tool } from '../tools/tool-types';
 import { PlatformRateLimits, RateLimitStatus } from './types/rate-limit';
 import { db } from './database';
 import { rateLimits } from './database/schema';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 // In-memory cache with TTL support for server-side use only
 const rateLimitCache: { [key: string]: { data: RateLimitStatus; expiresAt: number } } = {};

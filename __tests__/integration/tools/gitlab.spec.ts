@@ -33,7 +33,7 @@ describe('GitLab Tool Integration', () => {
         await fetch(`${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`, {
           method: 'DELETE'
         });
-      } catch (error) {
+      } catch {
         // Ignore cleanup errors in tests
       }
     }
@@ -191,11 +191,16 @@ describe('GitLab Tool Integration', () => {
         const data = await response.json();
         if (data.pipelines.length > 0) {
           // Should have pipelines from different projects
-          const projects = new Set(data.pipelines.map((p: any) => p.project));
+          interface Pipeline {
+            project: string;
+            branch: string;
+            status: string;
+          }
+          const projects = new Set(data.pipelines.map((p: Pipeline) => p.project));
           expect(projects.size).toBeGreaterThanOrEqual(1);
           
           // Each pipeline should have consistent structure
-          data.pipelines.forEach((pipeline: any) => {
+          data.pipelines.forEach((pipeline: Pipeline) => {
             expect(pipeline.project).toBeTruthy();
             expect(pipeline.branch).toBeTruthy();
             expect(pipeline.status).toBeTruthy();
@@ -307,7 +312,6 @@ describe('GitLab Tool Integration', () => {
       
       // GitLab uses Retry-After header for rate limiting
       // Should handle both successful and rate-limited responses
-      const hasRetryAfter = response.headers.has('retry-after');
       const hasRateLimitInfo = response.headers.get('content-type')?.includes('application/json');
       
       expect(hasRateLimitInfo).toBe(true);

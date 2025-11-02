@@ -137,8 +137,8 @@ describe('GET /api/metrics', () => {
       const promClient = await import('prom-client');
       const mockRegistry = promClient.Registry;
       
-      // Cast to any to access mockImplementation method
-      const mockRegistryFn = mockRegistry as any;
+      // Cast to proper type to access mockImplementation method
+      const mockRegistryFn = mockRegistry as typeof mockRegistry & { mockImplementation: (impl: () => never) => void };
       mockRegistryFn.mockImplementation(() => {
         throw new Error('Client initialization failed');
       });

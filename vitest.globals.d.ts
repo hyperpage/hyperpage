@@ -1,4 +1,4 @@
-import { expect, describe, it, test, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+import { vi } from 'vitest'
 import type { Browser } from '@playwright/test'
 
 declare global {
