@@ -164,13 +164,13 @@ export class MockRateLimitServer {
       }
 
       // Generate response
-      const responseData = endpointConfig.customResponse(count);
+      const responseData = endpointConfig.customResponse(count) || {};
 
       // Set response headers and status
       res.writeHead(responseData.statusCode || 200, {
         'Content-Type': 'application/json',
         'X-RateLimit-Request-Count': count.toString(),
-        ...(responseData.retryAfter && { 'Retry-After': responseData.retryAfter.toString() })
+        ...(responseData.retryAfter != null && { 'Retry-After': responseData.retryAfter.toString() })
       });
 
       // Remove statusCode from response body
@@ -181,15 +181,19 @@ export class MockRateLimitServer {
     });
 
     const port = parseInt(this.serverUrl.split(':')[2]);
+    const server = this.server;
+    if (!server) {
+      throw new Error('Server is null');
+    }
     await new Promise<void>((resolve, reject) => {
-      this.server.listen(port, () => resolve()).on('error', reject);
+      server.listen(port, () => resolve()).on('error', reject);
     });
   }
 
   async stop(): Promise<void> {
     if (this.server) {
       await new Promise<void>((resolve, reject) => {
-        this.server.close((err?: Error) => {
+        this.server!.close((err?: Error) => {
           if (err) reject(err);
           else resolve();
         });
