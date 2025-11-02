@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sessionManager } from '../../../lib/sessions/session-manager';
+import { sessionManager, SessionData } from '../../../lib/sessions/session-manager';
+
+export interface AuthenticatedTool {
+  connected: boolean;
+  connectedAt?: Date;
+  lastUsed?: Date;
+}
 
 export interface AuthenticatedRequest extends NextRequest {
-  session?: any;
+  session?: SessionData;
   user?: {
     id: string;
     provider: string;
@@ -78,7 +84,7 @@ export async function withAuth(
       // Check if any tool authentication is required
       if (options.toolRequired) {
         const hasAnyAuthenticatedTool = session.authenticatedTools &&
-          Object.values(session.authenticatedTools).some((tool: any) => tool.connected);
+          Object.values(session.authenticatedTools).some((tool: AuthenticatedTool) => tool.connected);
 
         if (!hasAnyAuthenticatedTool) {
           return NextResponse.json({
@@ -202,7 +208,7 @@ export function validateAuthLevel(req: AuthenticatedRequest, level: 'user' | 'to
     case 'tool':
       // Check if user has any authenticated tools
       return !!(req.session?.authenticatedTools &&
-                Object.values(req.session.authenticatedTools).some((tool: any) => tool.connected));
+                Object.values(req.session.authenticatedTools).some((tool: AuthenticatedTool) => tool.connected));
     default:
       return false;
   }

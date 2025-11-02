@@ -5,6 +5,21 @@
  * This utility forces IPv4 connections to ensure reliable connectivity to external APIs.
  */
 
+import type { Agent as HttpsAgent } from 'https';
+
+/**
+ * Server-side module cache to avoid repeated imports
+ */
+const getNodeModules = () => {
+  if (typeof window === 'undefined') {
+    // Server-side - use require to avoid bundling issues
+    const https = require('https');
+    const dns = require('dns');
+    return { https, dns };
+  }
+  return null;
+};
+
 /**
  * Creates a fetch function that forces IPv4 connections to avoid IPv6 timeout issues
  * in IPv6-only network environments.
@@ -24,7 +39,7 @@ export function createIPv4Fetch(
 
   try {
     // Force IPv4 connections to avoid IPv6 timeout issues on IPv6-only networks
-    const enhancedOptions: any = {
+    const enhancedOptions: RequestInit & { agent?: HttpsAgent } = {
       ...options,
       signal: controller.signal,
     };
@@ -32,18 +47,18 @@ export function createIPv4Fetch(
     // Only configure IPv4 forcing server-side where Node.js modules are available
     if (typeof window === 'undefined') {
       try {
-        // Force IPv4 DNS resolution and connection
-        const https = require('https') as typeof import('https');
-        const dns = require('dns') as typeof import('dns');
-
-        // Create an HTTPS agent that forces IPv4 family
-        enhancedOptions.agent = new https.Agent({
-          family: 4, // Force IPv4
-          lookup: dns.lookup, // Explicitly use DNS lookup
-          timeout: timeoutMs, // Set connection timeout at agent level too
-          keepAlive: false, // Disable keep-alive to avoid connection pooling issues
-        });
-        console.log(`IPv4 fetch configured for ${url} - agent with IPv4 family:`, enhancedOptions.agent.constructor.name);
+        const modules = getNodeModules();
+        if (modules) {
+          // Force IPv4 DNS resolution and connection
+          // Create an HTTPS agent that forces IPv4 family
+          enhancedOptions.agent = new modules.https.Agent({
+            family: 4, // Force IPv4
+            lookup: modules.dns.lookup, // Explicitly use DNS lookup
+            timeout: timeoutMs, // Set connection timeout at agent level too
+            keepAlive: false, // Disable keep-alive to avoid connection pooling issues
+          });
+            console.log(`IPv4 fetch configured for ${url} - agent with IPv4 family:`, enhancedOptions.agent?.constructor.name || 'unknown');
+        }
       } catch (error) {
         // If modules aren't available, log but continue with standard fetch
         console.warn(`IPv4 forcing failed for ${url}, using standard fetch:`, error);

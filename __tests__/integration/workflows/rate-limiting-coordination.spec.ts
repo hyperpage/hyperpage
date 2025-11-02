@@ -399,7 +399,7 @@ async function simulateAPICall(provider: string, endpoint: string, params: any):
   message?: string;
 }> {
   const rateLimitKey = `rate_limit_${provider}`;
-  const rateLimit = browser.getSessionData(rateLimitKey) || {
+  const rateLimit = (browser as any).getSessionData(rateLimitKey) || {
     current: 0,
     limit: 1000,
     resetTime: Date.now() + 3600000
@@ -425,7 +425,7 @@ async function simulateAPICall(provider: string, endpoint: string, params: any):
   
   // Make the request
   rateLimit.current++;
-  browser.setSessionData(rateLimitKey, rateLimit);
+  (browser as any).setSessionData(rateLimitKey, rateLimit);
   
   // Simulate random failures
   const success = Math.random() > 0.05; // 95% success rate
@@ -441,7 +441,7 @@ async function simulateAPICall(provider: string, endpoint: string, params: any):
  */
 function setGitHubRateLimit(current: number, limit: number, resetTime: number): void {
   const rateLimit = { current, limit, resetTime };
-  browser.setSessionData('rate_limit_github', rateLimit);
+  (browser as any).setSessionData('rate_limit_github', rateLimit);
 }
 
 /**
@@ -449,7 +449,7 @@ function setGitHubRateLimit(current: number, limit: number, resetTime: number): 
  */
 function setGitLabRateLimit(current: number, limit: number, resetTime: number): void {
   const rateLimit = { current, limit, resetTime };
-  browser.setSessionData('rate_limit_gitlab', rateLimit);
+  (browser as any).setSessionData('rate_limit_gitlab', rateLimit);
 }
 
 /**
@@ -457,5 +457,5 @@ function setGitLabRateLimit(current: number, limit: number, resetTime: number): 
  */
 function setJiraRateLimit(current: number, limit: number, resetTime: number): void {
   const rateLimit = { current, limit, resetTime };
-  browser.setSessionData('rate_limit_jira', rateLimit);
+  (browser as any).setSessionData('rate_limit_jira', rateLimit);
 }

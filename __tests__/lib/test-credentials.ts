@@ -22,6 +22,17 @@ export interface TestEnvironment {
   encryptionKey: string;
 }
 
+export interface TestUserData {
+  id: string;
+  provider: string;
+  username: string;
+  email: string;
+  authenticatedAt: string;
+  tokens: Record<string, unknown>;
+  // Allow additional properties for test-specific data
+  [key: string]: unknown;
+}
+
 export class TestCredentialManager {
   private static instance: TestCredentialManager;
   private credentials: Map<string, OAuthTestCredentials> = new Map();
@@ -154,7 +165,7 @@ export class TestCredentialManager {
  */
 export class TestUserManager {
   private static instance: TestUserManager;
-  private testUsers: Map<string, any> = new Map();
+  private testUsers: Map<string, TestUserData> = new Map();
 
   public static getInstance(): TestUserManager {
     if (!TestUserManager.instance) {
@@ -166,7 +177,7 @@ export class TestUserManager {
   public async createTestUser(provider: string, credentials: OAuthTestCredentials): Promise<string> {
     const userId = `test-user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    const userData = {
+    const userData: TestUserData = {
       id: userId,
       provider,
       username: credentials.username || 'test-user',
@@ -179,7 +190,7 @@ export class TestUserManager {
     return userId;
   }
 
-  public getTestUser(userId: string): any | null {
+  public getTestUser(userId: string): TestUserData | null {
     return this.testUsers.get(userId) || null;
   }
 
@@ -222,12 +233,12 @@ export class IntegrationTestEnvironment {
 
   private setupTestEnvironment(): void {
     // Set test-specific environment variables
-    (process.env as any).NODE_ENV = 'test';
-    (process.env as any).ENABLE_INTEGRATION_TESTS = 'true';
-    (process.env as any).TEST_TIMEOUT = '30000';
+    (process.env as Record<string, string>).NODE_ENV = 'test';
+    (process.env as Record<string, string>).ENABLE_INTEGRATION_TESTS = 'true';
+    (process.env as Record<string, string>).TEST_TIMEOUT = '30000';
     
     // Disable real OAuth in test mode
-    (process.env as any).SKIP_REAL_OAUTH = 'true';
+    (process.env as Record<string, string>).SKIP_REAL_OAUTH = 'true';
   }
 
   public async createTestSession(provider: string): Promise<{
@@ -235,7 +246,7 @@ export class IntegrationTestEnvironment {
     sessionId: string;
     credentials: OAuthTestCredentials;
   }> {
-    const credentials = await TestCredentialManager.getInstance().getTestCredentials(provider as any);
+    const credentials = await TestCredentialManager.getInstance().getTestCredentials(provider as 'github' | 'gitlab' | 'jira');
     const userId = await TestUserManager.getInstance().createTestUser(provider, credentials);
     const sessionId = `session-${userId}-${Date.now()}`;
 

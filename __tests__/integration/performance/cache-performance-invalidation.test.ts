@@ -216,7 +216,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       const cacheTimeout = 100; // 100ms timeout
       
       if (user) {
-        user.cacheData = {
+        (user as any).cacheData = {
           [cacheKey]: {
             data: 'initial_data',
             timestamp: Date.now(),
@@ -229,7 +229,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       
       // First access (should be cache hit)
       const firstAccess = () => {
-        const cacheData = user?.cacheData?.[cacheKey];
+        const cacheData = (user as any)?.cacheData?.[cacheKey];
         const age = Date.now() - (cacheData?.timestamp || 0);
         const isValid = age < (cacheData?.ttl || 0);
         
@@ -267,7 +267,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       
       // Set up multiple cache entries with different TTLs
       if (user) {
-        user.cacheData = {
+        (user as any).cacheData = {
           'short_ttl': {
             data: 'short_lived_data',
             timestamp: Date.now(),
@@ -288,7 +288,7 @@ describe('Cache Performance & Invalidation Testing', () => {
 
       // Check initial state
       const checkCacheStatus = () => {
-        const cacheData = user?.cacheData;
+        const cacheData = (user as any)?.cacheData;
         return {
           short_ttl: cacheData?.['short_ttl'] ? {
             valid: Date.now() - cacheData['short_ttl'].timestamp < cacheData['short_ttl'].ttl,
@@ -337,7 +337,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       // Set up cache with data
       const cacheKey = 'update_invalidation_test';
       if (user) {
-        user.cacheData = {
+        (user as any).cacheData = {
           [cacheKey]: {
             data: { value: 'original', version: 1 },
             timestamp: Date.now(),
@@ -347,25 +347,25 @@ describe('Cache Performance & Invalidation Testing', () => {
       }
 
       // First read (cache hit)
-      const read1 = user?.cacheData?.[cacheKey];
+      const read1 = (user as any)?.cacheData?.[cacheKey];
       expect(read1?.data?.version).toBe(1);
 
       // Update the underlying data
       if (user) {
-        user.cacheData[cacheKey].data = { value: 'updated', version: 2 };
-        user.cacheData[cacheKey].timestamp = Date.now(); // Reset timestamp
+        (user as any).cacheData[cacheKey].data = { value: 'updated', version: 2 };
+        (user as any).cacheData[cacheKey].timestamp = Date.now(); // Reset timestamp
       }
 
       // Second read (should see updated data)
-      const read2 = user?.cacheData?.[cacheKey];
+      const read2 = (user as any)?.cacheData?.[cacheKey];
       expect(read2?.data?.version).toBe(2);
       expect(read2?.data?.value).toBe('updated');
 
       // Invalidate cache manually
-      delete user?.cacheData?.[cacheKey];
+      delete (user as any)?.cacheData?.[cacheKey];
 
       // Third read (should be cache miss)
-      const read3 = user?.cacheData?.[cacheKey];
+      const read3 = (user as any)?.cacheData?.[cacheKey];
       expect(read3).toBeUndefined();
 
       console.log('Cache invalidation on update test: Data updates properly invalidate cache');
@@ -548,7 +548,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       
       // Set up initial cache data
       if (user) {
-        user.cacheData = {
+        (user as any).cacheData = {
           [cacheKey]: {
             data: { value: 'fresh_data', version: 1 },
             timestamp: Date.now(),
@@ -560,7 +560,7 @@ describe('Cache Performance & Invalidation Testing', () => {
 
       // First access - fresh data
       const freshAccess = () => {
-        const cacheData = user?.cacheData?.[cacheKey];
+        const cacheData = (user as any)?.cacheData?.[cacheKey];
         const age = Date.now() - (cacheData?.timestamp || 0);
         const isFresh = age < (cacheData?.ttl || 0);
         const isStale = age >= (cacheData?.ttl || 0) && age < ((cacheData?.ttl || 0) + (cacheData?.staleThreshold || 0));

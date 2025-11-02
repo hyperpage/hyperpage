@@ -51,20 +51,20 @@ describe('Database Persistence & Recovery Testing', () => {
         
         // Simulate concurrent data updates
         if (user) {
-          user.sessionData = {
-            ...user.sessionData,
+          (user as any).sessionData = {
+            ...(user as any).sessionData,
             concurrentUpdate: i,
             timestamp: Date.now(),
             operationId: `op_${i}_${session.sessionId}`
           };
-          user.lastAccessed = new Date().toISOString();
+          (user as any).lastAccessed = new Date().toISOString();
         }
         
         return {
           sessionId: session.sessionId,
           userId: session.userId,
           operationId: i,
-          dataUpdated: !!user?.sessionData,
+          dataUpdated: !!(user as any)?.sessionData,
           timestamp: Date.now()
         };
       });
@@ -88,8 +88,8 @@ describe('Database Persistence & Recovery Testing', () => {
 
       sessions.forEach((user, index) => {
         expect(user).toBeDefined();
-        expect(user?.sessionData).toBeDefined();
-        expect(user?.sessionData?.operationId).toBe(`op_${index}_${user?.sessionId}`);
+        expect((user as any)?.sessionData).toBeDefined();
+        expect((user as any)?.sessionData?.operationId).toBe(`op_${index}_${user?.sessionId}`);
       });
 
       console.log(`Data consistency test: ${concurrentWrites} concurrent writes completed successfully`);
@@ -105,8 +105,8 @@ describe('Database Persistence & Recovery Testing', () => {
         const user = userManager.getTestUser(session.userId);
         const userData = user ? {
           sessionId: session.sessionId,
-          lastAccessed: user.lastAccessed,
-          hasData: !!user.sessionData
+          lastAccessed: (user as any).lastAccessed,
+          hasData: !!(user as any).sessionData
         } : null;
         
         // Simulate some processing time
@@ -157,7 +157,7 @@ describe('Database Persistence & Recovery Testing', () => {
           // Write operation
           const user = userManager.getTestUser(session.userId);
           if (user) {
-            user.transactionTest = {
+            (user as any).transactionTest = {
               writeOperation: i,
               timestamp: Date.now(),
               sessionId: session.sessionId
@@ -168,19 +168,19 @@ describe('Database Persistence & Recovery Testing', () => {
             operationId: i,
             type: 'write',
             sessionId: session.sessionId,
-            success: !!user?.transactionTest,
+            success: !!(user as any)?.transactionTest,
             timestamp: Date.now()
           };
         } else {
           // Read operation
-          const user = userManager.getTestUser(session.userId);
-          const previousWrite = user?.transactionTest;
+          const readUser = userManager.getTestUser(session.userId);
+          const previousWrite = (readUser as any)?.transactionTest;
           
           return {
             operationId: i,
             type: 'read',
             sessionId: session.sessionId,
-            success: !!user,
+            success: !!readUser,
             dataConsistent: !previousWrite || previousWrite.operationId < i,
             timestamp: Date.now()
           };
@@ -231,14 +231,14 @@ describe('Database Persistence & Recovery Testing', () => {
       };
       
       if (user) {
-        user.recoveryTest = originalData;
+        (user as any).recoveryTest = originalData;
       }
 
       // Simulate system failure by clearing internal state
       const recoveryPhase1 = () => {
         // Simulate failure - clear some data
         if (user) {
-          delete user.recoveryTest;
+          delete (user as any).recoveryTest;
         }
       };
 
@@ -247,13 +247,13 @@ describe('Database Persistence & Recovery Testing', () => {
       const stateAfterFailure = userManager.getTestUser(session.userId);
       
       // Verify failure state
-      expect(stateAfterFailure?.recoveryTest).toBeUndefined();
+      expect((stateAfterFailure as any)?.recoveryTest).toBeUndefined();
 
       // Simulate recovery process
       const recoveryPhase2 = () => {
         const recoveredUser = userManager.getTestUser(session.userId);
         if (recoveredUser) {
-          recoveredUser.recoveryTest = {
+          (recoveredUser as any).recoveryTest = {
             ...originalData,
             recoveryAttempt: true,
             recoveredTimestamp: Date.now()
@@ -266,9 +266,9 @@ describe('Database Persistence & Recovery Testing', () => {
       const stateAfterRecovery = userManager.getTestUser(session.userId);
       
       // Verify recovery was successful
-      expect(stateAfterRecovery?.recoveryTest).toBeDefined();
-      expect(stateAfterRecovery?.recoveryTest?.recoveryAttempt).toBe(true);
-      expect(stateAfterRecovery?.recoveryTest?.initialState).toBe('created');
+      expect((stateAfterRecovery as any)?.recoveryTest).toBeDefined();
+      expect((stateAfterRecovery as any)?.recoveryTest?.recoveryAttempt).toBe(true);
+      expect((stateAfterRecovery as any)?.recoveryTest?.initialState).toBe('created');
       
       console.log('Recovery mechanism test: System failure and recovery completed successfully');
     });
@@ -288,7 +288,7 @@ describe('Database Persistence & Recovery Testing', () => {
       
       const originalUser = userManager.getTestUser(originalSession.userId);
       if (originalUser) {
-        originalUser.persistentData = persistentData;
+        (originalUser as any).persistentData = persistentData;
       }
 
       // Simulate session recreation (new session, same user context)
@@ -296,21 +296,21 @@ describe('Database Persistence & Recovery Testing', () => {
       const recreatedUser = userManager.getTestUser(originalSession.userId);
       
       // Verify persistent data survived session recreation
-      expect(recreatedUser?.persistentData).toBeDefined();
-      expect(recreatedUser?.persistentData?.persistentId).toBe(persistentData.persistentId);
-      expect(recreatedUser?.persistentData?.createdAt).toBe(persistentData.createdAt);
-      expect(recreatedUser?.persistentData?.modificationHistory).toHaveLength(1);
+      expect((recreatedUser as any)?.persistentData).toBeDefined();
+      expect((recreatedUser as any)?.persistentData?.persistentId).toBe(persistentData.persistentId);
+      expect((recreatedUser as any)?.persistentData?.createdAt).toBe(persistentData.createdAt);
+      expect((recreatedUser as any)?.persistentData?.modificationHistory).toHaveLength(1);
 
       // Modify data and verify persistence
       if (recreatedUser?.persistentData) {
-        recreatedUser.persistentData.modificationHistory.push({
+        (recreatedUser as any).persistentData.modificationHistory.push({
           operation: 'recreation',
           timestamp: Date.now()
         });
       }
 
       const finalUser = userManager.getTestUser(originalSession.userId);
-      expect(finalUser?.persistentData?.modificationHistory).toHaveLength(2);
+      expect((finalUser as any)?.persistentData?.modificationHistory).toHaveLength(2);
       
       console.log('Session recreation test: Data persistence across session boundaries validated');
     });
@@ -329,7 +329,7 @@ describe('Database Persistence & Recovery Testing', () => {
           }
           
           if (user) {
-            user.batchOperation = {
+            (user as any).batchOperation = {
               operationId: i,
               batchId: `batch_${Date.now()}`,
               timestamp: Date.now()
@@ -392,8 +392,8 @@ describe('Database Persistence & Recovery Testing', () => {
           
           // Simulate session activity
           if (user) {
-            user.sessionActivity = {
-              ...user.sessionActivity,
+            (user as any).sessionActivity = {
+              ...(user as any).sessionActivity,
               [`operation_${opIndex}`]: {
                 timestamp: Date.now(),
                 sessionIndex,
@@ -409,7 +409,7 @@ describe('Database Persistence & Recovery Testing', () => {
             sessionIndex,
             operationIndex: opIndex,
             sessionId: session.sessionId,
-            activityRecorded: !!user?.sessionActivity?.[`operation_${opIndex}`]
+            activityRecorded: !!(user as any)?.sessionActivity?.[`operation_${opIndex}`]
           };
         });
 
@@ -434,8 +434,8 @@ describe('Database Persistence & Recovery Testing', () => {
       const userManager = TestUserManager.getInstance();
       sessionResults.forEach(session => {
         const user = userManager.getTestUser(session.sessionId.split('-')[0]); // Extract userId from sessionId
-        expect(user?.sessionActivity).toBeDefined();
-        expect(Object.keys(user?.sessionActivity || {})).toHaveLength(operationsPerSession);
+        expect((user as any)?.sessionActivity).toBeDefined();
+        expect(Object.keys((user as any)?.sessionActivity || {})).toHaveLength(operationsPerSession);
       });
 
       console.log(`Session integrity test: ${sessionCount} sessions with ${operationsPerSession} operations each`);
@@ -449,7 +449,7 @@ describe('Database Persistence & Recovery Testing', () => {
       const initialTime = Date.now();
       const initialUser = userManager.getTestUser(session.userId);
       if (initialUser) {
-        initialUser.timePersistenceTest = {
+        (initialUser as any).timePersistenceTest = {
           startTime: initialTime,
           checkpoints: [],
           duration: 0
@@ -463,7 +463,7 @@ describe('Database Persistence & Recovery Testing', () => {
         
         const currentUser = userManager.getTestUser(session.userId);
         if (currentUser?.timePersistenceTest) {
-          currentUser.timePersistenceTest.checkpoints.push({
+          (currentUser as any).timePersistenceTest.checkpoints.push({
             timeElapsed: Date.now() - initialTime,
             checkpoint: checkpoints.indexOf(checkpoint) + 1
           });
@@ -472,12 +472,12 @@ describe('Database Persistence & Recovery Testing', () => {
 
       // Final verification
       const finalUser = userManager.getTestUser(session.userId);
-      expect(finalUser?.timePersistenceTest).toBeDefined();
-      expect(finalUser?.timePersistenceTest?.startTime).toBe(initialTime);
-      expect(finalUser?.timePersistenceTest?.checkpoints).toHaveLength(checkpoints.length);
+      expect((finalUser as any)?.timePersistenceTest).toBeDefined();
+      expect((finalUser as any)?.timePersistenceTest?.startTime).toBe(initialTime);
+      expect((finalUser as any)?.timePersistenceTest?.checkpoints).toHaveLength(checkpoints.length);
       
       // Verify checkpoint progression
-      const lastCheckpoint = finalUser?.timePersistenceTest?.checkpoints[finalUser.timePersistenceTest.checkpoints.length - 1];
+      const lastCheckpoint = (finalUser as any)?.timePersistenceTest?.checkpoints[(finalUser as any).timePersistenceTest.checkpoints.length - 1];
       expect(lastCheckpoint?.timeElapsed).toBeGreaterThan(0);
       expect(lastCheckpoint?.checkpoint).toBe(checkpoints.length);
 
@@ -493,8 +493,8 @@ describe('Database Persistence & Recovery Testing', () => {
         // Phase 1: Active session
         const activeUser = userManager.getTestUser(session.userId);
         if (activeUser) {
-          activeUser.lifecyclePhase = 'active';
-          activeUser.lifecycleIndex = i;
+          (activeUser as any).lifecyclePhase = 'active';
+          (activeUser as any).lifecycleIndex = i;
         }
         
         await new Promise(resolve => setTimeout(resolve, Math.random() * 50));
@@ -503,8 +503,8 @@ describe('Database Persistence & Recovery Testing', () => {
         const invalidationResult = () => {
           const userToInvalidate = userManager.getTestUser(session.userId);
           if (userToInvalidate) {
-            userToInvalidate.lifecyclePhase = 'invalidated';
-            userToInvalidate.invalidationTime = Date.now();
+            (userToInvalidate as any).lifecyclePhase = 'invalidated';
+            (userToInvalidate as any).invalidationTime = Date.now();
           }
         };
         
@@ -519,9 +519,9 @@ describe('Database Persistence & Recovery Testing', () => {
         return {
           originalSessionId: session.sessionId,
           newSessionId: newSession.sessionId,
-          originalPhase: activeUser?.lifecyclePhase,
-          recreatedPhase: recreatedUser?.lifecyclePhase,
-          recreationSuccessful: !!recreatedUser && recreatedUser.lifecyclePhase !== 'invalidated'
+          originalPhase: (activeUser as any)?.lifecyclePhase,
+          recreatedPhase: (recreatedUser as any)?.lifecyclePhase,
+          recreationSuccessful: !!recreatedUser && (recreatedUser as any)?.lifecyclePhase !== 'invalidated'
         };
       });
 
@@ -559,7 +559,7 @@ describe('Database Persistence & Recovery Testing', () => {
           () => {
             const user = userManager.getTestUser(session.userId);
             if (user) {
-              user.peakLoadTest = {
+              (user as any).peakLoadTest = {
                 accessIndex: i,
                 accessTime: Date.now(),
                 peakLoadPhase: 'write'
@@ -569,14 +569,14 @@ describe('Database Persistence & Recovery Testing', () => {
           },
           
           // Another read operation
-          () => userManager.getTestUser(session.userId)?.peakLoadTest,
+          () => (userManager.getTestUser(session.userId) as any)?.peakLoadTest,
           
           // Update operation
           () => {
             const user = userManager.getTestUser(session.userId);
             if (user?.peakLoadTest) {
-              user.peakLoadTest.peakLoadPhase = 'updated';
-              user.peakLoadTest.updatedTime = Date.now();
+              (user as any).peakLoadTest.peakLoadPhase = 'updated';
+              (user as any).peakLoadTest.updatedTime = Date.now();
             }
             return user;
           }
@@ -616,9 +616,9 @@ describe('Database Persistence & Recovery Testing', () => {
       });
 
       verifiedUsers.forEach((user, index) => {
-        expect(user?.peakLoadTest).toBeDefined();
-        expect(user?.peakLoadTest?.accessIndex).toBe(index);
-        expect(user?.peakLoadTest?.peakLoadPhase).toBe('updated');
+        expect((user as any)?.peakLoadTest).toBeDefined();
+        expect((user as any)?.peakLoadTest?.accessIndex).toBe(index);
+        expect((user as any)?.peakLoadTest?.peakLoadPhase).toBe('updated');
       });
 
       console.log(`Peak usage integrity test: ${peakLoad} concurrent access operations completed with full integrity`);
@@ -633,7 +633,7 @@ describe('Database Persistence & Recovery Testing', () => {
         
         // Create complex relationships
         if (user) {
-          user.relationships = {
+          (user as any).relationships = {
             primary: {
               id: `primary_${i}`,
               type: 'primary_relationship',
@@ -656,10 +656,10 @@ describe('Database Persistence & Recovery Testing', () => {
         return {
           relationshipId: i,
           sessionId: session.sessionId,
-          primaryCreated: !!user?.relationships?.primary,
-          referencesCreated: user?.relationships?.references?.length === 3,
-          crossReferencesCreated: user?.relationships?.crossReferences?.length === 2,
-          referentialIntegrity: validateReferentialIntegrity(user?.relationships)
+          primaryCreated: !!(user as any)?.relationships?.primary,
+          referencesCreated: (user as any)?.relationships?.references?.length === 3,
+          crossReferencesCreated: (user as any)?.relationships?.crossReferences?.length === 2,
+          referentialIntegrity: validateReferentialIntegrity((user as any)?.relationships)
         };
       });
 
@@ -695,7 +695,7 @@ describe('Database Persistence & Recovery Testing', () => {
         
         const user = userManager.getTestUser(session.userId);
         if (user) {
-          user.migrationSource = sourceData;
+          (user as any).migrationSource = sourceData;
         }
         
         // Simulate migration process
@@ -705,28 +705,28 @@ describe('Database Persistence & Recovery Testing', () => {
         const readAccess = userManager.getTestUser(session.userId);
         const readResult = {
           canRead: !!readAccess,
-          hasLegacyData: !!readAccess?.migrationSource?.legacyData,
-          migrationInProgress: !!readAccess?.migrationSource?.legacyData
+          hasLegacyData: !!(readAccess as any)?.migrationSource?.legacyData,
+          migrationInProgress: !!(readAccess as any)?.migrationSource?.legacyData
         };
         
         // Complete migration
         if (user?.migrationSource) {
-          user.migrationSource.version = 2;
-          user.migrationSource.newData = {
-            migratedField1: user.migrationSource.legacyData.oldField1,
-            migratedField2: user.migrationSource.legacyData.oldField2,
+          (user as any).migrationSource.version = 2;
+          (user as any).migrationSource.newData = {
+            migratedField1: (user as any).migrationSource.legacyData.oldField1,
+            migratedField2: (user as any).migrationSource.legacyData.oldField2,
             migrationTimestamp: Date.now()
           };
-          delete user.migrationSource.legacyData;
+          delete (user as any).migrationSource.legacyData;
         }
         
         // Post-migration access
         const postMigrationAccess = userManager.getTestUser(session.userId);
         const finalResult = {
           canAccess: !!postMigrationAccess,
-          hasNewData: !!postMigrationAccess?.migrationSource?.newData,
-          legacyRemoved: !postMigrationAccess?.migrationSource?.legacyData,
-          migrationCompleted: postMigrationAccess?.migrationSource?.version === 2
+          hasNewData: !!(postMigrationAccess as any)?.migrationSource?.newData,
+          legacyRemoved: !(postMigrationAccess as any)?.migrationSource?.legacyData,
+          migrationCompleted: (postMigrationAccess as any)?.migrationSource?.version === 2
         };
         
         return {

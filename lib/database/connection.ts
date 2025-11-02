@@ -153,7 +153,7 @@ export function getDatabaseStats(): {
  */
 export function checkDatabaseConnectivity(): {
   status: 'healthy' | 'degraded' | 'unhealthy';
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 } {
   try {
     const internal = getInternalDatabase();

@@ -1,5 +1,5 @@
-/// <reference types="vitest" />
 import { expect, describe, it, test, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+import type { Browser } from '@playwright/test'
 
 declare global {
   const describe: typeof import('vitest')['describe']
@@ -12,7 +12,7 @@ declare global {
   const afterEach: typeof import('vitest')['afterEach']
   const vi: typeof import('vitest')['vi']
   const vitest: typeof import('vitest')['vitest']
-  const browser: any
+  const browser: Browser
 }
 
 export {}

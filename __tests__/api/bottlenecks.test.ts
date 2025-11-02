@@ -2,6 +2,61 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { GET, POST } from '../../app/api/bottlenecks/route';
 
+// Type definitions for test data
+interface BottleneckMetrics {
+  [key: string]: {
+    value: number;
+    threshold: number;
+    breached: boolean;
+  };
+}
+
+interface BottleneckRecommendation {
+  priority: 'high' | 'medium' | 'low';
+  category: 'immediate' | 'preventative' | 'configuration' | 'monitoring';
+  action: string;
+  expectedImpact: string;
+  estimatedTime: number;
+}
+
+interface Correlation {
+  metric1: string;
+  metric2: string;
+  correlationCoefficient: number;
+  strength: 'weak' | 'moderate' | 'strong' | 'very_strong';
+  direction: 'positive' | 'negative' | 'neutral';
+}
+
+interface Bottleneck {
+  id: string;
+  patternId: string;
+  timestamp: number;
+  confidence: number;
+  impact: 'critical' | 'severe' | 'moderate' | 'minor';
+  metrics: BottleneckMetrics;
+  correlations: Correlation[];
+  recommendations: BottleneckRecommendation[];
+  resolved: boolean;
+}
+
+interface BottleneckAnalysis {
+  activeCount: number;
+  resolvedCount: number;
+  unresolvedCount: number;
+  averageResolutionTime: number;
+  topBottleneckTypes: Array<{ patternId: string; count: number }>;
+  resolutionRate: number;
+}
+
+interface HistoricalBottleneck {
+  bottleneckId: string;
+  patternId: string;
+  detectedAt: number;
+  resolvedAt: number;
+  confidence: number;
+  actionsTaken: string[];
+}
+
 // Mock the bottleneck detector
 vi.mock('../../../lib/monitoring/bottleneck-detector', () => ({
   bottleneckDetector: {
@@ -14,19 +69,19 @@ vi.mock('../../../lib/monitoring/bottleneck-detector', () => ({
 import { bottleneckDetector } from '../../lib/monitoring/bottleneck-detector';
 
 describe('Bottlenecks API - GET /api/bottlenecks', () => {
-  const mockBottlenecks = [
+  const mockBottlenecks: Bottleneck[] = [
     {
       id: 'test-bottleneck-1',
       patternId: 'memory-leak',
       timestamp: Date.now(),
       confidence: 90,
-      impact: 'severe' as const,
+      impact: 'severe',
       metrics: { 'test.metric': { value: 100, threshold: 80, breached: true } },
       correlations: [],
       recommendations: [
         {
-          priority: 'high' as const,
-          category: 'immediate' as const,
+          priority: 'high',
+          category: 'immediate',
           action: 'Test action',
           expectedImpact: 'Test impact',
           estimatedTime: 30
@@ -39,7 +94,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
       patternId: 'cache-thrashing',
       timestamp: Date.now() - 60000,
       confidence: 75,
-      impact: 'moderate' as const,
+      impact: 'moderate',
       metrics: { 'cache.evictRate': { value: 25, threshold: 20, breached: true } },
       correlations: [],
       recommendations: [],
@@ -47,7 +102,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
     }
   ];
 
-  const mockAnalysis = {
+  const mockAnalysis: BottleneckAnalysis = {
     activeCount: 2,
     resolvedCount: 5,
     unresolvedCount: 1,
@@ -59,7 +114,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
     resolutionRate: 83.3
   };
 
-  const mockHistoricalBottlenecks = [
+  const mockHistoricalBottlenecks: HistoricalBottleneck[] = [
     {
       bottleneckId: 'historical-1',
       patternId: 'memory-leak',
@@ -74,7 +129,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
     vi.clearAllMocks();
 
     // Setup default mocks
-    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mockBottlenecks as any);
+    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mockBottlenecks);
     vi.mocked(bottleneckDetector.getBottleneckAnalysis).mockReturnValue(mockAnalysis);
     vi.mocked(bottleneckDetector.getHistoricalBottlenecks).mockReturnValue(mockHistoricalBottlenecks);
   });
@@ -153,13 +208,23 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
   });
 
   it('should correctly count bottleneck severity categories', async () => {
-    const mixedBottlenecks = [
-      { ...mockBottlenecks[0], impact: 'critical' as const },
-      { ...mockBottlenecks[1], impact: 'severe' as const },
-      { impact: 'minor' as const, id: 'minor-bottleneck', patternId: 'test', timestamp: Date.now(), confidence: 50, metrics: { 'latency.metric': { value: 10, threshold: 20, breached: false } }, correlations: [], recommendations: [], resolved: false }
+    const mixedBottlenecks: Bottleneck[] = [
+      { ...mockBottlenecks[0], impact: 'critical' },
+      { ...mockBottlenecks[1], impact: 'severe' },
+      { 
+        impact: 'minor', 
+        id: 'minor-bottleneck', 
+        patternId: 'test', 
+        timestamp: Date.now(), 
+        confidence: 50, 
+        metrics: { 'latency.metric': { value: 10, threshold: 20, breached: false } }, 
+        correlations: [], 
+        recommendations: [], 
+        resolved: false 
+      }
     ];
 
-    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mixedBottlenecks as any);
+    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mixedBottlenecks);
 
     const request = new NextRequest('/api/bottlenecks');
     const response = await GET(request);

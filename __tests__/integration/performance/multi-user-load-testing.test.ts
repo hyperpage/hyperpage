@@ -188,7 +188,7 @@ describe('Multi-User Load Testing', () => {
           
           if (user) {
             user.lastAccessed = new Date().toISOString();
-            user.accessCount = (user.accessCount || 0) + 1;
+            (user as any).accessCount = ((user as any).accessCount || 0) + 1;
           }
           
           return {
@@ -196,7 +196,7 @@ describe('Multi-User Load Testing', () => {
             provider,
             resourceAcquired: !!user,
             timestamp: Date.now(),
-            accessCount: user?.accessCount || 0
+            accessCount: (user as any)?.accessCount || 0
           };
         };
 

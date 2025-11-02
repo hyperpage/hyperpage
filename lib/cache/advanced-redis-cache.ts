@@ -36,6 +36,15 @@ export interface RedisPoolMetrics {
 }
 
 /**
+ * Performance metrics for cache operations.
+ */
+export interface CachePerformanceMetrics {
+  averageResponseTime: number;
+  hitRate: number;
+  throughput: number;
+}
+
+/**
  * Advanced Redis cache implementation with connection pooling and enterprise features.
  * Supports high-performance Redis operations with connection management, metrics,
  * and advanced caching strategies.
@@ -369,7 +378,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
   /**
    * Get comprehensive statistics including pool metrics.
    */
-  async getStats(): Promise<CacheStats & { pool: RedisPoolMetrics; performance: any }> {
+  async getStats(): Promise<CacheStats & { pool: RedisPoolMetrics; performance: CachePerformanceMetrics }> {
     try {
       if (!this.redisClient.isConnected) {
         await this.ensureConnection();

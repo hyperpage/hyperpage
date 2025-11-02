@@ -50,7 +50,7 @@ function getMigrationNamesFromRegistry(): string[] {
 }
 
 // Load migration from static registry (replaces dynamic imports)
-function loadMigrationFromRegistry(migrationName: string): { up?: any; down?: any } {
+function loadMigrationFromRegistry(migrationName: string): { up?: unknown; down?: unknown } {
   const migration = MIGRATIONS_REGISTRY[migrationName];
 
   if (!migration) {
@@ -105,7 +105,7 @@ async function removeMigrationRecord(migrationName: string): Promise<void> {
 }
 
 // Execute migration up
-async function runMigrationUp(migrationName: string, sqlQuery: any, isDryRun = false): Promise<void> {
+async function runMigrationUp(migrationName: string, sqlQuery: unknown, isDryRun = false): Promise<void> {
   console.info(`${isDryRun ? '[DRY RUN] ' : ''}Running migration up: ${migrationName}`);
 
   if (!isDryRun) {
@@ -116,7 +116,7 @@ async function runMigrationUp(migrationName: string, sqlQuery: any, isDryRun = f
           internalDb.exec(sqlQuery);
         } else if (typeof sqlQuery === 'function') {
           // Handle function-based migrations
-          sqlQuery(internalDb);
+          (sqlQuery as (db: typeof internalDb) => void)(internalDb);
         } else {
           throw new Error(`Unsupported migration format in ${migrationName}`);
         }
@@ -135,7 +135,7 @@ async function runMigrationUp(migrationName: string, sqlQuery: any, isDryRun = f
 }
 
 // Execute migration down
-async function runMigrationDown(migrationName: string, sqlQuery: any, isDryRun = false): Promise<void> {
+async function runMigrationDown(migrationName: string, sqlQuery: unknown, isDryRun = false): Promise<void> {
   console.info(`${isDryRun ? '[DRY RUN] ' : ''}Rolling back migration: ${migrationName}`);
 
   if (!isDryRun) {
@@ -145,7 +145,7 @@ async function runMigrationDown(migrationName: string, sqlQuery: any, isDryRun =
         if (typeof sqlQuery === 'string') {
           internalDb.exec(sqlQuery);
         } else if (typeof sqlQuery === 'function') {
-          sqlQuery(internalDb);
+          (sqlQuery as (db: typeof internalDb) => void)(internalDb);
         } else {
           throw new Error(`Unsupported migration format in ${migrationName}`);
         }

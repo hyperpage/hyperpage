@@ -94,7 +94,7 @@ export class CacheInvalidationMiddleware {
    */
   async checkSmartCache(
     request: NextRequest
-  ): Promise<{ cached: boolean; response?: NextResponse; data?: any }> {
+  ): Promise<{ cached: boolean; response?: NextResponse; data?: unknown }> {
     const url = new URL(request.url);
     const queryParams = Object.fromEntries(url.searchParams);
     const cacheKey = generateCacheKey('api', url.pathname, queryParams);
@@ -373,7 +373,7 @@ export async function applySmartCaching(
 export async function checkSmartCache(
   request: NextRequest,
   options?: Partial<CacheInvalidationOptions>
-): Promise<{ cached: boolean; response?: NextResponse; data?: any }> {
+): Promise<{ cached: boolean; response?: NextResponse; data?: unknown }> {
   const middleware = options ? new CacheInvalidationMiddleware(options) : defaultCacheInvalidationMiddleware;
   return middleware.checkSmartCache(request);
 }

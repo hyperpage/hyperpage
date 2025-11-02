@@ -1,4 +1,4 @@
-import { Agent, Pool, Dispatcher, request } from 'undici';
+import { Agent, Dispatcher, request } from 'undici';
 
 /**
  * Connection pool configuration for HTTP keep-alive optimization
@@ -263,7 +263,7 @@ export class PooledHttpClient {
    */
   getHealth(): {
     status: 'healthy' | 'degraded' | 'unhealthy';
-    details: Record<string, any>;
+    details: Record<string, unknown>;
   } {
     const metrics = this.getMetrics();
     const successRate = metrics.connectionSuccessRate;
@@ -313,7 +313,7 @@ export class PooledHttpClient {
    * Check if connection was reused (best effort)
    * This is a heuristic based on undici's internal behavior
    */
-  private checkConnectionReuse(response: any): boolean {
+  private checkConnectionReuse(response: { headers: Record<string, string | string[] | undefined>; statusCode: number }): boolean {
     // undici doesn't directly expose connection reuse info in the public API
     // This is a heuristic based on response metadata and timing
     return response.headers['connection'] === 'keep-alive' ||

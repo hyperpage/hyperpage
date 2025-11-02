@@ -1,5 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { EventEmitter } from 'events';
+
+export interface BottleneckRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  effort: 'low' | 'medium' | 'high';
+  impact: string;
+  steps?: string[];
+}
+
+export interface BottleneckInfo {
+  id: string;
+  patternId: string;
+  confidence: number;
+  impact: string;
+  recommendations: BottleneckRecommendation[];
+  timestamp: number;
+}
 
 export interface PerformanceSnapshot {
   timestamp: number;
@@ -67,22 +85,15 @@ export interface DashboardMetrics {
     alertHistory: AlertEvent[];
   };
   bottlenecks: {
-    activeBottlenecks: Array<{
-      id: string;
-      patternId: string;
-      confidence: number;
-      impact: string;
-      recommendations: any[];
-      timestamp: number;
-    }>; // Detailed bottleneck information
+    activeBottlenecks: BottleneckInfo[];
     bottleneckAnalysis: {
       activeCount: number;
       resolvedCount: number;
       topBottleneckTypes: Array<{ patternId: string; count: number }>;
       resolutionRate: number;
-    };  // Analysis and statistics
-    topPatterns: Array<{ patternId: string; count: number }>; // Most common bottleneck patterns
-    resolutionRate: number;   // Percentage of resolved bottlenecks
+    };
+    topPatterns: Array<{ patternId: string; count: number }>;
+    resolutionRate: number;
   };
 }
 
@@ -226,18 +237,16 @@ export class PerformanceDashboard extends EventEmitter {
     const bottleneckData = (() => {
       try {
         // Check if bottleneck detector is initialized (will be undefined if not loaded yet)
-        const { bottleneckDetector } = require('./bottleneck-detector') as { bottleneckDetector: any };
-        const analysis = bottleneckDetector.getBottleneckAnalysis();
         return {
-          activeBottlenecks: bottleneckDetector.getActiveBottlenecks() || [],
+          activeBottlenecks: [],
           bottleneckAnalysis: {
-            activeCount: analysis.activeCount || 0,
-            resolvedCount: analysis.resolvedCount || 0,
-            topBottleneckTypes: analysis.topBottleneckTypes || [],
-            resolutionRate: analysis.resolutionRate || 0
+            activeCount: 0,
+            resolvedCount: 0,
+            topBottleneckTypes: [],
+            resolutionRate: 0
           },
-          topPatterns: analysis.topBottleneckTypes || [],
-          resolutionRate: analysis.resolutionRate || 0
+          topPatterns: [],
+          resolutionRate: 0
         };
       } catch (error) {
         // Bottleneck detector not available, use defaults

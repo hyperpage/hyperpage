@@ -11,7 +11,7 @@ export interface BatchRequest {
   /** Request headers */
   headers?: Record<string, string>;
   /** Request body (for POST/PUT/PATCH) */
-  body?: any;
+  body?: unknown;
   /** Optional timeout for this specific request (ms) */
   timeout?: number;
 }
@@ -24,7 +24,7 @@ export interface BatchResponse {
   /** Response headers */
   headers: Record<string, string>;
   /** Response body */
-  body: any;
+  body: unknown;
   /** Error details if request failed */
   error?: string;
   /** Duration in milliseconds */
@@ -241,10 +241,10 @@ export class BatchingMiddleware {
       // Add body for applicable methods
       if (['POST', 'PUT', 'PATCH'].includes(request.method) && request.body) {
         if (typeof request.body === 'object') {
-          fetchOptions.body = JSON.stringify(request.body);
+          fetchOptions.body = JSON.stringify(request.body) as BodyInit;
           headers.set('Content-Type', 'application/json');
         } else {
-          fetchOptions.body = request.body;
+          fetchOptions.body = request.body as BodyInit;
         }
       }
 
@@ -252,7 +252,7 @@ export class BatchingMiddleware {
       const response = await fetch(fullUrl, fetchOptions);
 
       // Parse response
-      let responseBody: any;
+      let responseBody: unknown;
       const contentType = response.headers.get('content-type');
       if (contentType?.includes('application/json')) {
         responseBody = await response.json();
@@ -395,7 +395,7 @@ export function createBatchRequest(
 /**
  * Type guard to check if a request is a batch request
  */
-export function isBatchRequest(body: any): body is BatchRequest[] {
+export function isBatchRequest(body: unknown): body is BatchRequest[] {
   return Array.isArray(body) &&
          body.length > 0 &&
          typeof body[0].id === 'string' &&

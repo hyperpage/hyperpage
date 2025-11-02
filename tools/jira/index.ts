@@ -8,8 +8,8 @@ import { MemoryCache } from "../../lib/cache/memory-cache";
 import { createIPv4Fetch } from "../../lib/ipv4-fetch";
 
 // Advisory locking for concurrent requests to prevent API storms
-class RequestDeduper {
-  private pendingRequests = new Map<string, Promise<any>>();
+class RequestDeduper<T = unknown> {
+  private pendingRequests = new Map<string, Promise<T>>()
 
   /**
    * Execute a request with deduplication - if identical request is already in flight, return that promise instead
@@ -17,7 +17,7 @@ class RequestDeduper {
    * @param executor Function that performs the actual request
    * @returns Promise that resolves to the result
    */
-  async dedupe<T>(key: string, executor: () => Promise<T>): Promise<T> {
+  async dedupe(key: string, executor: () => Promise<T>): Promise<T> {
     const existingRequest = this.pendingRequests.get(key);
     if (existingRequest) {
       // Return existing request promise instead of making new call
@@ -53,44 +53,10 @@ class RequestDeduper {
 const jiraRequestDeduper = new RequestDeduper();
 
 /**
- * Node.js IPv6 connectivity fix for Atlassian Jira API
- * Forces IPv4 resolution to avoid connection timeouts on IPv6-only networks
- * Only available server-side where Node.js modules are accessible
+ * Jira-specific fetch wrapper that uses IPv4 forcing with proper timeouts
  */
 function createJiraFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-  let enhancedOptions: any = {
-    ...options,
-    signal: controller.signal,
-  };
-
-  // Only configure IPv4 forcing server-side (where Node.js modules are available)
-  if (typeof window === 'undefined') { // Server-side only
-    try {
-      enhancedOptions.agent = new (require('https').Agent)({
-        family: 4, // Force IPv4
-        lookup: require('dns').lookup,
-      });
-    } catch (error) {
-      // Fallback if modules not available - continue with basic options
-      console.warn('IPv4 forcing not available, using standard fetch');
-    }
-  }
-
-  return fetch(url, enhancedOptions)
-    .then(response => {
-      clearTimeout(timeoutId);
-      return response;
-    })
-    .catch(error => {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error(`Jira API request timed out after 30 seconds - likely IPv6 connectivity issue`);
-      }
-      throw error;
-    });
+  return createIPv4Fetch(url, options, 30000); // 30 second timeout for Jira API
 }
 
 export const jiraTool: Tool = {
@@ -250,14 +216,14 @@ export const jiraTool: Tool = {
       const auth = Buffer.from(`${email}:${apiToken}`).toString("base64");
 
       // Parse request body for parameters
-      let body: any;
+      let body: { issueIds?: string[]; since?: string; maxResults?: number };
       try {
         body = await request.json();
       } catch {
         throw new Error("Invalid JSON in request body");
       }
 
-      const { issueIds, since, maxResults = 10 } = body;
+      const { issueIds, maxResults = 10 } = body;
 
       if (!Array.isArray(issueIds) || issueIds.length === 0) {
         throw new Error("issueIds must be a non-empty array");
@@ -268,7 +234,7 @@ export const jiraTool: Tool = {
       }
 
       // Filter out invalid issue IDs
-      const validIssueIds = issueIds.filter((id: any) =>
+      const validIssueIds = issueIds.filter((id: string) =>
         typeof id === 'string' && id.trim().length > 0
       );
 
@@ -277,7 +243,6 @@ export const jiraTool: Tool = {
       }
 
       // Batch processing with rate limit awareness
-      // Use adaptive chunking based on instance size
       const instanceSize = detectJiraInstanceSize(
         new Response(null, { status: 200 })
       );
@@ -289,8 +254,16 @@ export const jiraTool: Tool = {
         instanceSize === 'large' ? 15 : 8
       );
 
-      const changelogPromises: Promise<any>[] = [];
-      const allChangelogs: any[] = [];
+      const changelogPromises: Promise<{
+        issueId: string;
+        changelog: Record<string, unknown>[];
+        error?: string;
+      }>[] = [];
+      const allChangelogs: {
+        issueId: string;
+        changelog: Record<string, unknown>[];
+        error?: string;
+      }[] = [];
 
       // Process issues in chunks to avoid overwhelming the API
       for (let i = 0; i < validIssueIds.length; i += chunkSize) {
@@ -324,15 +297,18 @@ export const jiraTool: Tool = {
               }
 
               const data = await response.json();
-              const changelog = (data.values || []).map((entry: any) => ({
+              const changelog = (data.values || []).map((entry: Record<string, unknown>) => ({
                 id: entry.id,
-                author: entry.author?.displayName || entry.author?.name || "Unknown",
+                author: (entry.author as { displayName?: string; name?: string })?.displayName || 
+                        (entry.author as { displayName?: string; name?: string })?.name || "Unknown",
                 created: entry.created,
-                items: entry.items?.map((item: any) => ({
+                items: (entry.items as Record<string, unknown>[])?.map((item: Record<string, unknown>) => ({
                   field: item.field,
                   fieldtype: item.fieldtype,
-                  from: item.fromString || item.from,
-                  to: item.toString || item.to,
+                  from: (item as { fromString?: string; from?: string }).fromString || 
+                        (item as { fromString?: string; from?: string }).from,
+                  to: (item as { toString?: string; to?: string }).toString || 
+                      (item as { toString?: string; to?: string }).to,
                 })) || [],
               }));
 
@@ -371,7 +347,7 @@ export const jiraTool: Tool = {
 
       return { changelogs: allChangelogs };
     },
-    projects: async (request: Request, config: ToolConfig) => {
+    projects: async (request: Request, config: ToolConfig): Promise<Record<string, unknown>> => {
       const webUrl = process.env.JIRA_WEB_URL;
       const apiUrl =
         config.formatApiUrl?.(webUrl || "") || process.env.JIRA_API_URL;
@@ -398,7 +374,7 @@ export const jiraTool: Tool = {
       try {
         const cachedData = cache.get(cacheKey);
         if (cachedData) {
-          return { projects: cachedData };
+          return { projects: cachedData as unknown as Record<string, unknown>[] };
         }
       } catch (cacheError) {
         console.warn('Cache read error:', cacheError);
@@ -406,7 +382,7 @@ export const jiraTool: Tool = {
       }
 
       // Use advisory locking to prevent concurrent requests for same data
-      return jiraRequestDeduper.dedupe(`projects:${cacheKey}`, async () => {
+      return (await jiraRequestDeduper.dedupe(`projects:${cacheKey}`, async () => {
         let apiEndpoint: string;
         if (projectKey) {
           // Single project request
@@ -442,7 +418,7 @@ export const jiraTool: Tool = {
         const data = await response.json();
 
         // Transform project data - handle both single project and project list responses
-        let projects: any[];
+        let projects: Record<string, unknown>[];
         if (projectKey && !Array.isArray(data)) {
           // Single project response
           projects = [{
@@ -450,9 +426,10 @@ export const jiraTool: Tool = {
             name: data.name,
             description: data.description,
             projectTypeKey: data.projectTypeKey,
-            lead: data.lead?.displayName || data.lead?.name || "Unknown",
+            lead: (data.lead as { displayName?: string; name?: string })?.displayName || 
+                  (data.lead as { displayName?: string; name?: string })?.name || "Unknown",
             url: webUrl ? `${webUrl}/projects/${data.key}` : undefined,
-            category: data.projectCategory?.name || null,
+            category: (data.projectCategory as { name?: string })?.name || null,
             // Include additional details if requested
             ...(includeDetails && {
               components: data.components || [],
@@ -463,14 +440,15 @@ export const jiraTool: Tool = {
           }];
         } else {
           // Multiple projects response
-          projects = (Array.isArray(data) ? data : data.values || []).map((project: any) => ({
+          projects = (Array.isArray(data) ? data : data.values || []).map((project: Record<string, unknown>) => ({
             key: project.key,
             name: project.name,
             description: project.description,
             projectTypeKey: project.projectTypeKey,
-            lead: project.lead?.displayName || project.lead?.name || "Unknown",
+            lead: (project.lead as { displayName?: string; name?: string })?.displayName || 
+                  (project.lead as { displayName?: string; name?: string })?.name || "Unknown",
             url: webUrl ? `${webUrl}/projects/${project.key}` : undefined,
-            category: project.projectCategory?.name || null,
+            category: (project.projectCategory as { name?: string })?.name || null,
             // Include additional details if requested (limited for list view)
             ...(includeDetails && {
               roles: project.roles || {},
@@ -486,8 +464,8 @@ export const jiraTool: Tool = {
           // Continue even if caching fails
         }
 
-        return { projects };
-      });
+        return { projects } as Record<string, unknown>;
+      })) as Record<string, unknown>;
     },
     "rate-limit": async (request: Request, config: ToolConfig) => {
       // Jira doesn't have a dedicated rate limit API like GitHub
@@ -567,25 +545,20 @@ export const jiraTool: Tool = {
 
         // Adjust retry behavior based on instance size
         let baseDelay: number;
-        let maxRetries: number;
 
         switch (instanceSize) {
           case 'small':
             baseDelay = 3000; // 3s - more conservative for small instances
-            maxRetries = 3;
             break;
           case 'cloud':
             baseDelay = 1500; // 1.5s - Atlassian Cloud is responsive
-            maxRetries = 6;
             break;
           case 'large':
             baseDelay = 1000; // 1s - large instances can handle more
-            maxRetries = 8;
             break;
           case 'medium':
           default:
             baseDelay = 2000; // 2s - default for medium instances
-            maxRetries = 5;
             break;
         }
 

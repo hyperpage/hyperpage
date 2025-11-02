@@ -174,33 +174,35 @@ export class PerformanceMiddleware {
    * Create Express-style middleware for other frameworks
    */
   createMiddleware() {
-    return async (req: any, res: any, next: any) => {
+    return async (req: unknown, res: unknown, next: () => void) => {
       const startTime = performance.now();
 
       // Hook into response finish event
-      res.on('finish', () => {
-        try {
-          const responseTimeMs = performance.now() - startTime;
+      if (res && typeof res === 'object' && 'on' in res && typeof (res as any).on === 'function') {
+        (res as any).on('finish', () => {
+          try {
+            const responseTimeMs = performance.now() - startTime;
 
-          // Create basic snapshot for Express middleware
-          const snapshot: Omit<PerformanceSnapshot, 'timestamp'> = {
-            responseTimeMs,
-            responseSizeBytes: 0, // Express doesn't provide easy access to response size
-            cacheStatus: 'MISS',
-            endpoint: req.path || req.url,
-            method: req.method,
-            statusCode: res.statusCode,
-          };
+            // Create basic snapshot for Express middleware
+            const snapshot: Omit<PerformanceSnapshot, 'timestamp'> = {
+              responseTimeMs,
+              responseSizeBytes: 0, // Express doesn't provide easy access to response size
+              cacheStatus: 'MISS',
+              endpoint: (req as any)?.path || (req as any)?.url || '/',
+              method: (req as any)?.method || 'GET',
+              statusCode: (res as any)?.statusCode || 200,
+            };
 
-          performanceDashboard.recordSnapshot(snapshot);
+            performanceDashboard.recordSnapshot(snapshot);
 
-          if (this.options.debug) {
-            console.debug(`📊 Performance snapshot recorded:`, snapshot);
+            if (this.options.debug) {
+              console.debug(`📊 Performance snapshot recorded:`, snapshot);
+            }
+          } catch (error) {
+            console.error('Express performance monitoring error:', error);
           }
-        } catch (error) {
-          console.error('Express performance monitoring error:', error);
-        }
-      });
+        });
+      }
 
       next();
     };

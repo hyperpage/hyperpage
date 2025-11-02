@@ -3,6 +3,28 @@ import { GET } from '../../app/api/health/route';
 import { defaultCache } from '../../lib/cache/memory-cache';
 import { toolRegistry } from '../../tools/registry';
 
+// Type definitions for test
+interface CacheStats {
+  size: number;
+  hits: number;
+  misses: number;
+  expiries: number;
+  evictions: number;
+}
+
+interface MockTool {
+  name: string;
+  slug: string;
+  enabled: boolean;
+  capabilities: string[];
+  ui: { color: string; icon: string };
+  widgets: unknown[];
+  apis: Record<string, unknown>;
+  handlers: Record<string, unknown>;
+}
+
+interface ToolRegistry extends Record<string, MockTool> {}
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -16,7 +38,7 @@ vi.mock('../../lib/cache/memory-cache', () => ({
 describe('GET /api/health', () => {
   const mockRateLimitHandler = vi.fn();
 
-  const mockToolGitHub = {
+  const mockToolGitHub: MockTool = {
     name: 'GitHub',
     slug: 'github',
     enabled: true,
@@ -29,7 +51,7 @@ describe('GET /api/health', () => {
     },
   };
 
-  const mockToolGitLab = {
+  const mockToolGitLab: MockTool = {
     name: 'GitLab',
     slug: 'gitlab',
     enabled: true,
@@ -46,16 +68,17 @@ describe('GET /api/health', () => {
     vi.clearAllMocks();
 
     // Set up mock tools in registry
-    (toolRegistry as any).github = mockToolGitHub;
-    (toolRegistry as any).gitlab = mockToolGitLab;
+    (toolRegistry as ToolRegistry).github = mockToolGitHub;
+    (toolRegistry as ToolRegistry).gitlab = mockToolGitLab;
 
     // Mock cache stats
-    (defaultCache.getStats as any).mockReturnValue({
+    vi.mocked(defaultCache.getStats).mockResolvedValue({
       size: 5,
       hits: 100,
       misses: 50,
       expiries: 2,
       evictions: 1,
+      backend: 'memory',
     });
 
     // Mock successful rate limit responses directly on the mock function
@@ -73,8 +96,8 @@ describe('GET /api/health', () => {
   afterEach(() => {
     vi.clearAllTimers();
     // Clean up mock tools after each test
-    delete (toolRegistry as any).github;
-    delete (toolRegistry as any).gitlab;
+    delete (toolRegistry as ToolRegistry).github;
+    delete (toolRegistry as ToolRegistry).gitlab;
   });
 
   it('should return enhanced health status with rate limiting metrics', async () => {

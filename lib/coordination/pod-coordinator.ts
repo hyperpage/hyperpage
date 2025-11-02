@@ -5,7 +5,7 @@ import { CacheBackend } from '../cache/cache-interface';
 export interface CoordinationMessage {
   id: string;
   type: 'cache_invalidate' | 'job_coordination' | 'rate_limit_sync' | 'broadcast';
-  payload: any;
+  payload: Record<string, unknown>;
   timestamp: number;
   sourcePod: string;
   priority: 'low' | 'normal' | 'high';
@@ -22,13 +22,33 @@ export interface CoordinationHandler {
   (message: CoordinationMessage): Promise<void>;
 }
 
+export interface CoordinationData {
+  cacheInvalidation?: {
+    keys: string[];
+  };
+  rateLimitSync?: {
+    platform: string;
+    usage: number;
+  };
+  jobCoordination?: {
+    operation: 'cache_warmup' | 'bg_job_balance' | 'cleanup';
+    data?: unknown;
+    coordinator: string;
+  };
+  broadcast?: {
+    type: string;
+    [key: string]: unknown;
+  };
+}
+
+
 /**
  * Pod Coordinator - Manages inter-pod communication and coordination
  * Uses Redis Pub/Sub for messaging and shared state for leader election
  */
 export class PodCoordinator {
-  private redisClient: any;
-  private subscriberRedisClient: any;
+  private redisClient: any = null;
+  private subscriberRedisClient: any = null;
   private connected = false;
   private podId: string;
   private leaderInfo: LeaderElection | null = null;
@@ -58,7 +78,7 @@ export class PodCoordinator {
         enableFallback: true,
       });
 
-      this.redisClient = (cache as any).redisClient.getClient();
+      this.redisClient = (cache as any).getClient();
 
       // Separate subscriber client for Pub/Sub (required for ioredis)
       const subscriberCache = await CacheFactory.create({
@@ -67,7 +87,7 @@ export class PodCoordinator {
         enableFallback: true,
       });
 
-      this.subscriberRedisClient = (subscriberCache as any).redisClient.getClient();
+      this.subscriberRedisClient = (subscriberCache as any).getClient();
 
       this.connected = true;
       this.setupMessageHandlers();
@@ -140,7 +160,7 @@ export class PodCoordinator {
   /**
    * Broadcast message to all pods
    */
-  async broadcast(type: CoordinationMessage['type'], payload: any, priority: CoordinationMessage['priority'] = 'normal'): Promise<void> {
+  async broadcast(type: CoordinationMessage['type'], payload: CoordinationData[keyof CoordinationData], priority: CoordinationMessage['priority'] = 'normal'): Promise<void> {
     if (!this.connected || !this.redisClient) {
       logger.warn('Pod Coordinator not connected, cannot broadcast');
       return;
@@ -149,7 +169,7 @@ export class PodCoordinator {
     const message: CoordinationMessage = {
       id: this.generateMessageId(),
       type,
-      payload,
+      payload: payload as Record<string, unknown>,
       timestamp: Date.now(),
       sourcePod: this.podId,
       priority,
@@ -168,7 +188,7 @@ export class PodCoordinator {
   /**
    * Send message to specific pod
    */
-  async sendToPod(podId: string, type: CoordinationMessage['type'], payload: any, priority: CoordinationMessage['priority'] = 'normal'): Promise<void> {
+  async sendToPod(podId: string, type: CoordinationMessage['type'], payload: CoordinationData[keyof CoordinationData], priority: CoordinationMessage['priority'] = 'normal'): Promise<void> {
     if (!this.connected || !this.redisClient) {
       logger.warn('Pod Coordinator not connected, cannot send message');
       return;
@@ -177,7 +197,7 @@ export class PodCoordinator {
     const message: CoordinationMessage = {
       id: this.generateMessageId(),
       type,
-      payload,
+      payload: payload as Record<string, unknown>,
       timestamp: Date.now(),
       sourcePod: this.podId,
       priority,
@@ -342,7 +362,7 @@ export class PodCoordinator {
   /**
    * Coordinate operation (leader-only)
    */
-  async coordinate(operation: 'cache_warmup' | 'bg_job_balance' | 'cleanup', data?: any): Promise<boolean> {
+  async coordinate(operation: 'cache_warmup' | 'bg_job_balance' | 'cleanup', data?: Record<string, unknown>): Promise<boolean> {
     if (!this.getIsLeader()) {
       logger.debug('Only leader can coordinate operations');
       return false;
@@ -350,7 +370,7 @@ export class PodCoordinator {
 
     try {
       // Send coordination broadcast
-      await this.broadcast('job_coordination', { operation, data, coordinator: this.podId }, 'high');
+      await this.broadcast('job_coordination', { operation, data, coordinator: this.podId } as CoordinationData['jobCoordination'], 'high');
       return true;
     } catch (error) {
       logger.error(`Failed to coordinate operation ${operation}:`, error);
@@ -363,7 +383,8 @@ export class PodCoordinator {
    */
   private async handleCacheInvalidation(message: CoordinationMessage): Promise<void> {
     // Invalidate local cache entries
-    const keysToInvalidate = message.payload.keys || [];
+    const payload = message.payload as { keys?: string[] };
+    const keysToInvalidate = payload.keys || [];
     logger.info(`Invalidating cache keys: ${keysToInvalidate.join(', ')}`);
 
     // This would integrate with the local cache system
@@ -374,7 +395,8 @@ export class PodCoordinator {
    * Handle rate limit sync messages
    */
   private async handleRateLimitSync(message: CoordinationMessage): Promise<void> {
-    const { platform, usage } = message.payload;
+    const payload = message.payload as { platform: string; usage: number };
+    const { platform, usage } = payload;
     logger.info(`Syncing rate limit for ${platform}: ${usage}`);
 
     // This would update local rate limit tracking
@@ -405,7 +427,8 @@ export class PodCoordinator {
 
     try {
       // Scan for pod heartbeat keys
-      const [cursor, keys] = await this.redisClient.scan(0, 'MATCH', 'hyperpage:pod:*:heartbeat', 'COUNT', 1000);
+      const scanResult = await this.redisClient.scan(0, 'MATCH', 'hyperpage:pod:*:heartbeat', 'COUNT', 1000);
+      const keys = Array.isArray(scanResult) ? scanResult[1] : [];
 
       // Extract pod IDs and check recency
       const activePods: string[] = [];
@@ -413,7 +436,7 @@ export class PodCoordinator {
         try {
           const heartbeatData = await this.redisClient.get(key);
           if (heartbeatData) {
-            const heartbeat = JSON.parse(heartbeatData);
+            const heartbeat = JSON.parse(heartbeatData) as { timestamp: number; podId: string };
             const age = Date.now() - heartbeat.timestamp;
             if (age < this.heartbeatInterval * 3) { // 3x heartbeat interval
               activePods.push(heartbeat.podId);
