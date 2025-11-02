@@ -248,7 +248,7 @@ export class PerformanceDashboard extends EventEmitter {
           topPatterns: [],
           resolutionRate: 0
         };
-      } catch (error) {
+      } catch {
         // Bottleneck detector not available, use defaults
         return {
           activeBottlenecks: [],

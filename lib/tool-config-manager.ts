@@ -6,7 +6,7 @@
  */
 
 import { db } from './database';
-import { toolConfigs, ToolConfig } from './database/schema';
+import { toolConfigs } from './database/schema';
 import { eq } from 'drizzle-orm';
 import { toolRegistry } from '../tools/registry';
 
@@ -17,7 +17,7 @@ export interface UserToolConfig {
   /** Whether the tool is enabled */
   enabled: boolean;
   /** User overrides for tool configuration */
-  config?: Record<string, any>;
+  config?: Record<string, unknown>;
   /** Custom refresh interval (overrides default) */
   refreshInterval?: number;
   /** Whether to show notifications for this tool */

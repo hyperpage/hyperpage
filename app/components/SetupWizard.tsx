@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, XCircle, ExternalLink, Copy, Check, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, ExternalLink, Copy, AlertCircle } from 'lucide-react';
 
 interface SetupStep {
   id: string;
@@ -102,7 +102,6 @@ const initialTools: ToolConfig[] = [
 
 export default function SetupWizard() {
   const [tools, setTools] = useState<ToolConfig[]>(initialTools);
-  const [currentStep, setCurrentStep] = useState(0);
   const [isConfigured, setIsConfigured] = useState(false);
 
   useEffect(() => {
@@ -253,7 +252,7 @@ export default function SetupWizard() {
             </div>
 
             <div className="space-y-3">
-              {tool.setupSteps.map((step, index) => (
+              {tool.setupSteps.map((step) => (
                 <div key={step.id} className="flex items-start gap-3">
                   {getStepIcon(step.status)}
                   <div className="flex-1">
@@ -366,7 +365,7 @@ JIRA_API_TOKEN=your_jira_api_token`;
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold text-foreground">Welcome to Hyperpage</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Let's get you set up in just a few simple steps. Follow the guide below to start aggregating your development data.
+            Let&amp;apos;s get you set up in just a few simple steps. Follow the guide below to start aggregating your development data.
           </p>
         </div>
 

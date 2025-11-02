@@ -84,7 +84,7 @@ export function createOAuthError(
   toolName: string,
   provider: string,
   technicalDetails?: string,
-  originalError?: Error | any
+  originalError?: Error | unknown
 ): OAuthError {
   const messages = ERROR_MESSAGES[type];
 
@@ -92,7 +92,7 @@ export function createOAuthError(
     type,
     message: `OAuth ${type} for ${toolName} (${provider})`,
     userMessage: messages.userMessage,
-    technicalDetails: technicalDetails || originalError?.message,
+    technicalDetails: technicalDetails || (originalError instanceof Error ? originalError.message : undefined),
     suggestedAction: messages.suggestedAction,
     retryable: isRetryableError(type),
     toolName,
@@ -100,13 +100,10 @@ export function createOAuthError(
   };
 }
 
-/**
- * Parse OAuth error responses from providers
- */
 export function parseOAuthProviderError(
   toolName: string,
   provider: string,
-  response: any,
+  response: unknown,
   statusCode?: number
 ): OAuthError {
   // Handle different provider error formats
@@ -120,7 +117,7 @@ export function parseOAuthProviderError(
 
   // Generic error parsing
   return createOAuthError(
-    determineErrorType(statusCode, response),
+    determineErrorType(statusCode),
     toolName,
     provider,
     JSON.stringify(response)
@@ -130,9 +127,10 @@ export function parseOAuthProviderError(
 /**
  * Parse GitHub OAuth error responses
  */
-function parseGitHubError(toolName: string, response: any, statusCode?: number): OAuthError {
-  const error = response.error;
-  const errorDescription = response.error_description;
+function parseGitHubError(toolName: string, response: unknown, statusCode?: number): OAuthError {
+  const responseObj = response as { error?: string; error_description?: string };
+  const error = responseObj.error;
+  const errorDescription = responseObj.error_description;
 
   switch (error) {
     case 'access_denied':
@@ -149,13 +147,13 @@ function parseGitHubError(toolName: string, response: any, statusCode?: number):
         OAuthErrorType.INVALID_REQUEST,
         toolName,
         'github',
-        errorDescription || error
+        errorDescription || error || ''
       );
 
     default:
-      const type = determineErrorType(statusCode, response);
+      const errorType = determineErrorType(statusCode);
       return createOAuthError(
-        type,
+        errorType,
         toolName,
         'github',
         errorDescription || error || 'GitHub OAuth error'
@@ -166,9 +164,10 @@ function parseGitHubError(toolName: string, response: any, statusCode?: number):
 /**
  * Parse GitLab OAuth error responses
  */
-function parseGitLabError(toolName: string, response: any, statusCode?: number): OAuthError {
-  const error = response.error;
-  const errorDescription = response.error_description;
+function parseGitLabError(toolName: string, response: unknown, statusCode?: number): OAuthError {
+  const responseObj = response as { error?: string; error_description?: string };
+  const error = responseObj.error;
+  const errorDescription = responseObj.error_description;
 
   switch (error) {
     case 'access_denied':
@@ -186,13 +185,13 @@ function parseGitLabError(toolName: string, response: any, statusCode?: number):
         OAuthErrorType.INVALID_REQUEST,
         toolName,
         'gitlab',
-        errorDescription || error
+        errorDescription || error || ''
       );
 
     default:
-      const type = determineErrorType(statusCode, response);
+      const errorType = determineErrorType(statusCode);
       return createOAuthError(
-        type,
+        errorType,
         toolName,
         'gitlab',
         errorDescription || error || 'GitLab OAuth error'
@@ -203,8 +202,9 @@ function parseGitLabError(toolName: string, response: any, statusCode?: number):
 /**
  * Parse Jira OAuth error responses
  */
-function parseJiraError(toolName: string, response: any, statusCode?: number): OAuthError {
-  const error = response.error;
+function parseJiraError(toolName: string, response: unknown, statusCode?: number): OAuthError {
+  const responseObj = response as { error?: string; error_description?: string };
+  const error = responseObj.error;
 
   switch (error) {
     case 'access_denied':
@@ -212,7 +212,7 @@ function parseJiraError(toolName: string, response: any, statusCode?: number): O
         OAuthErrorType.AUTHENTICATION_FAILED,
         toolName,
         'jira',
-        response.error_description || 'User denied access'
+        responseObj.error_description || 'User denied access'
       );
 
     case 'invalid_request':
@@ -222,16 +222,16 @@ function parseJiraError(toolName: string, response: any, statusCode?: number): O
         OAuthErrorType.INVALID_REQUEST,
         toolName,
         'jira',
-        response.error_description || error
+        responseObj.error_description || error || ''
       );
 
     default:
-      const type = determineErrorType(statusCode, response);
+      const errorType = determineErrorType(statusCode);
       return createOAuthError(
-        type,
+        errorType,
         toolName,
         'jira',
-        response.error_description || error || 'Jira OAuth error'
+        responseObj.error_description || error || 'Jira OAuth error'
       );
   }
 }
@@ -239,7 +239,7 @@ function parseJiraError(toolName: string, response: any, statusCode?: number): O
 /**
  * Determine error type from HTTP status code
  */
-function determineErrorType(statusCode?: number, response?: any): OAuthErrorType {
+function determineErrorType(statusCode?: number): OAuthErrorType {
   if (!statusCode) return OAuthErrorType.UNKNOWN_ERROR;
 
   switch (statusCode) {

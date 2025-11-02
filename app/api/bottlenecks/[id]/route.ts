@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { bottleneckDetector } from '../../../../lib/monitoring/bottleneck-detector';
-import { DetectedBottleneck, BottleneckRecommendation, Correlation, BottleneckResolution, BottleneckPattern } from '../../../../lib/monitoring/bottleneck-detector';
+import { DetectedBottleneck, BottleneckRecommendation, Correlation } from '../../../../lib/monitoring/bottleneck-detector';
 import { BOTTLENECK_PATTERNS } from '../../../../lib/monitoring/bottleneck-patterns';
 
 /**
@@ -191,7 +191,7 @@ interface RelatedBottleneck {
   confidence: number;
 }
 
-function getRelatedBottlenecks(bottleneck: DetectedBottleneck, pattern?: BottleneckPattern): RelatedBottleneck[] {
+function getRelatedBottlenecks(bottleneck: DetectedBottleneck): RelatedBottleneck[] {
   // Get historical bottlenecks with same pattern within last 24 hours
   const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
   const historical = bottleneckDetector.getHistoricalBottlenecks(50);

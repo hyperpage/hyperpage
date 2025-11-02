@@ -66,7 +66,37 @@ export function AuthProvider({ children, initialTools = ['github', 'gitlab', 'ji
 
     // Check authentication status for all tools
     initialTools.forEach(toolSlug => {
-      checkAuthStatus(toolSlug);
+      // Inline function to avoid dependency issues
+      const checkStatus = async () => {
+        try {
+          const response = await fetch(`/api/auth/${toolSlug}/status`);
+          const result = await response.json();
+          const isAuthenticated = response.ok && result.authenticated;
+          setTools(current =>
+            current.map(tool =>
+              tool.toolSlug === toolSlug
+                ? {
+                    ...tool,
+                    isAuthenticated,
+                    isLoading: false,
+                    error: null,
+                    lastConnectedAt: result.lastConnectedAt ? new Date(result.lastConnectedAt) : undefined,
+                  }
+                : tool
+            )
+          );
+        } catch (error) {
+          console.error(`Failed to check auth status for ${toolSlug}:`, error);
+          setTools(current =>
+            current.map(tool =>
+              tool.toolSlug === toolSlug
+                ? { ...tool, isAuthenticated: false, isLoading: false, error: 'Failed to check authentication status' }
+                : tool
+            )
+          );
+        }
+      };
+      checkStatus();
     });
 
     // Check for OAuth success indicators on page load
@@ -84,7 +114,37 @@ export function AuthProvider({ children, initialTools = ['github', 'gitlab', 'ji
         console.log(`OAuth success detected for ${toolMatch}, refreshing status...`);
         // Refresh authentication status after OAuth success
         setTimeout(() => {
-          checkAuthStatus(toolMatch);
+          // Inline function to avoid dependency issues
+          const checkStatus = async () => {
+            try {
+              const response = await fetch(`/api/auth/${toolMatch}/status`);
+              const result = await response.json();
+              const isAuthenticated = response.ok && result.authenticated;
+              setTools(current =>
+                current.map(tool =>
+                  tool.toolSlug === toolMatch
+                    ? {
+                        ...tool,
+                        isAuthenticated,
+                        isLoading: false,
+                        error: null,
+                        lastConnectedAt: result.lastConnectedAt ? new Date(result.lastConnectedAt) : undefined,
+                      }
+                    : tool
+                )
+              );
+            } catch (error) {
+              console.error(`Failed to check auth status for ${toolMatch}:`, error);
+              setTools(current =>
+                current.map(tool =>
+                  tool.toolSlug === toolMatch
+                    ? { ...tool, isAuthenticated: false, isLoading: false, error: 'Failed to check authentication status' }
+                    : tool
+                )
+              );
+            }
+          };
+          checkStatus();
         }, 100);
 
         // Clean up URL parameters
@@ -97,7 +157,7 @@ export function AuthProvider({ children, initialTools = ['github', 'gitlab', 'ji
 
     // Cleanup (empty for now, reserved for future use)
     return () => {};
-  }, []);
+  }, [initialTools]);
 
   const updateToolState = (toolSlug: string, updates: Partial<AuthToolState>) => {
     setTools(current =>

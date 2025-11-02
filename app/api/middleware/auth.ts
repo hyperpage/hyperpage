@@ -132,7 +132,7 @@ function parseSessionCookies(req: NextRequest): { sessionId?: string } {
  * Create authenticated API response with session extension
  */
 export async function createAuthenticatedResponse(
-  data: any,
+  data: unknown,
   sessionId?: string,
   options: { status?: number, headers?: Record<string, string> } = {}
 ): Promise<NextResponse> {

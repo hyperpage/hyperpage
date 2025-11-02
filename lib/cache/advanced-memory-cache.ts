@@ -153,7 +153,7 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
 
       // Adaptive policy learning
       if (this.options.adaptiveEnabled) {
-        await this.updateAdaptivePolicy(entry);
+        await this.updateAdaptivePolicy();
       }
 
       this.updatePerformanceMetrics(Date.now() - startTime, existing ? 'update' : 'set');
@@ -395,7 +395,7 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
     }
   }
 
-  private async updateAdaptivePolicy(entry: CacheEntry<T>): Promise<void> {
+  private async updateAdaptivePolicy(): Promise<void> {
     // Learning mechanism for adaptive policy
     // Could implement more sophisticated ML-based prediction here
   }

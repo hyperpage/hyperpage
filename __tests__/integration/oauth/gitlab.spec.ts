@@ -5,7 +5,7 @@
  * including token storage, encryption, and API usage validation.
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { IntegrationTestEnvironment, OAuthTestCredentials } from '../../lib/test-credentials';
 
 describe('GitLab OAuth Integration', () => {
@@ -33,7 +33,7 @@ describe('GitLab OAuth Integration', () => {
         await fetch(`${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`, {
           method: 'DELETE'
         });
-      } catch (error) {
+      } catch {
         // Ignore cleanup errors in tests
       }
     }
@@ -360,7 +360,7 @@ describe('GitLab OAuth Integration', () => {
       expect([401, 403]).toContain(response.status);
     });
 
-    test('should handle CSRF protection', async ({ page }) => {
+    test('should handle CSRF protection', async () => {
       // Try to initiate OAuth without proper state
       const response = await fetch(`${baseUrl}/api/auth/gitlab/initiate?state=invalid_state`);
       

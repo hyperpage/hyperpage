@@ -5,7 +5,7 @@
  * including token storage, encryption, and API usage validation.
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { IntegrationTestEnvironment, OAuthTestCredentials } from '../../lib/test-credentials';
 
 describe('GitHub OAuth Integration', () => {
@@ -33,7 +33,7 @@ describe('GitHub OAuth Integration', () => {
         await fetch(`${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`, {
           method: 'DELETE'
         });
-      } catch (error) {
+      } catch {
         // Ignore cleanup errors in tests
       }
     }
@@ -196,7 +196,6 @@ describe('GitHub OAuth Integration', () => {
       );
 
       const responses = await Promise.all(requests);
-      const rateLimitedResponses = responses.filter(r => r.status === 429);
       
       // Should handle rate limiting without complete failure
       const successfulResponses = responses.filter(r => r.status === 200);

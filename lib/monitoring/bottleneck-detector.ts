@@ -172,7 +172,7 @@ export class BottleneckDetector extends EventEmitter {
       this.updateMetricHistory(metrics, currentTime);
 
       // Analyze each pattern for bottlenecks
-      for (const [patternId, pattern] of this.patterns) {
+      for (const [/* patternId */, pattern] of Array.from(this.patterns.entries())) {
         try {
           const analysis = this.analyzePattern(pattern, metrics);
 
@@ -398,17 +398,17 @@ export class BottleneckDetector extends EventEmitter {
     switch (path) {
       case 'caching.evictionRate':
         return 'evictionRate' in metrics.caching &&
-          typeof (metrics.caching as { evictionRate?: number }).evictionRate === 'number'
+          typeof (metrics.caching as { evictionRate?: unknown }).evictionRate === 'number'
             ? (metrics.caching as { evictionRate?: number }).evictionRate ?? 0
             : 0;
       case 'batching.averageBatchDuration':
         return 'averageBatchDuration' in metrics.batching &&
-          typeof (metrics.batching as { averageBatchDuration?: number }).averageBatchDuration === 'number'
+          typeof (metrics.batching as { averageBatchDuration?: unknown }).averageBatchDuration === 'number'
             ? (metrics.batching as { averageBatchDuration?: number }).averageBatchDuration ?? 0
             : 0;
       case 'batching.batchSuccessRate':
         return 'batchSuccessRate' in metrics.batching &&
-          typeof (metrics.batching as { batchSuccessRate?: number }).batchSuccessRate === 'number'
+          typeof (metrics.batching as { batchSuccessRate?: unknown }).batchSuccessRate === 'number'
             ? (metrics.batching as { batchSuccessRate?: number }).batchSuccessRate ?? 0
             : 0;
       default:
@@ -710,7 +710,7 @@ export class BottleneckDetector extends EventEmitter {
   private getTopBottleneckTypes(): { patternId: string; count: number }[] {
     const patternCounts = new Map<string, number>();
 
-    [...this.activeBottlenecks.values(), ...this.historicalBottlenecks]
+    Array.from([...this.activeBottlenecks.values(), ...this.historicalBottlenecks])
       .forEach(b => {
         const count = patternCounts.get(b.patternId) || 0;
         patternCounts.set(b.patternId, count + 1);
@@ -767,7 +767,7 @@ export class BottleneckDetector extends EventEmitter {
   async executeAutomatedAction(
     bottleneckId: string,
     actionId: string
-  ): Promise<{ success: boolean; message: string; result?: any }> {
+  ): Promise<{ success: boolean; message: string; result?: unknown }> {
     const bottleneck = this.activeBottlenecks.get(bottleneckId);
     if (!bottleneck) {
       return { success: false, message: 'Bottleneck not found' };
@@ -824,7 +824,7 @@ export class BottleneckDetector extends EventEmitter {
   /**
    * Execute action script safely
    */
-  private async executeActionScript(script: string): Promise<any> {
+  private async executeActionScript(script: string): Promise<unknown> {
     // For security, only allow predefined safe actions
     const safeActions = {
       'reduce-request-rate': this.reduceRequestRate.bind(this),
@@ -918,14 +918,14 @@ export class BottleneckDetector extends EventEmitter {
     const metrics = performanceDashboard.getDashboardMetrics(timeRangeMs);
 
     return {
-      activeBottlenecks: this.getActiveBottleneckInsights(metrics),
-      predictedBottlenecks: this.predictUpcomingBottlenecks(metrics),
+      activeBottlenecks: this.getActiveBottleneckInsights(),
+      predictedBottlenecks: this.predictUpcomingBottlenecks(),
       performanceOptimizations: this.generateOptimizations(metrics),
       riskAssessments: this.assessSystemRisks(metrics)
     };
   }
 
-  private getActiveBottleneckInsights(metrics: DashboardMetrics): ActiveBottleneckInsight[] {
+  private getActiveBottleneckInsights(): ActiveBottleneckInsight[] {
     const currentBottlenecks = this.activeBottlenecks.values();
 
     return Array.from(currentBottlenecks).map(bottleneck => ({
@@ -942,7 +942,7 @@ export class BottleneckDetector extends EventEmitter {
     }));
   }
 
-  private predictUpcomingBottlenecks(metrics: DashboardMetrics): PredictedBottleneck[] {
+  private predictUpcomingBottlenecks(): PredictedBottleneck[] {
     const predictions: PredictedBottleneck[] = [];
     const recentHistory = this.metricHistory.slice(-10); // Last 10 data points
 
@@ -1050,7 +1050,9 @@ export class BottleneckDetector extends EventEmitter {
         state: 'degraded',
         metrics: {
           confidence: bottleneck.confidence,
-          impact: bottleneck.impact
+          impact: bottleneck.impact === 'critical' ? 4 :
+                 bottleneck.impact === 'severe' ? 3 :
+                 bottleneck.impact === 'moderate' ? 2 : 1
         },
         action: 'bottleneck_detected'
       }
@@ -1126,7 +1128,7 @@ interface RiskAssessment {
 interface BottleneckTimeline {
   timestamp: number;
   state: string;
-  metrics: Record<string, any>;
+  metrics: Record<string, number>;
   action: string;
 }
 

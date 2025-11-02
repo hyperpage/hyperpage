@@ -45,6 +45,14 @@ export interface ConnectionPoolMetrics {
 }
 
 /**
+ * Undici agent internal state interface for metrics
+ */
+interface UndiciAgentState {
+  pending: number;
+  running: number;
+}
+
+/**
  * Pooled HTTP client for connection keep-alive optimization
  * Uses undici Agent for efficient HTTP/1.1 and HTTP/2 connection pooling
  */
@@ -152,7 +160,10 @@ export class PooledHttpClient {
 
       // Update metrics
       this.metrics.successfulRequests++;
-      this.metrics.activeConnections = (this.agent as any).pending + (this.agent as any).running;
+      
+      // Get agent state safely
+      const agentState = this.getAgentState();
+      this.metrics.activeConnections = agentState.pending + agentState.running;
 
       // Check if connection was reused (undici provides this info through internal APIs)
       const connectionReused = this.checkConnectionReuse(response);
@@ -251,7 +262,7 @@ export class PooledHttpClient {
       activeConnections: this.metrics.activeConnections,
       idleConnections: Math.max(0, this.metrics.totalConnections - this.metrics.activeConnections),
       totalConnections: this.metrics.totalConnections,
-      pendingRequests: (this.agent as any).pending || 0,
+      pendingRequests: this.getAgentState().pending,
       averageConnectionLifetime: this.calculateAverageLifetime(),
       connectionSuccessRate: this.calculateSuccessRate(),
       reuseRatio,
@@ -307,6 +318,23 @@ export class PooledHttpClient {
    */
   async close(): Promise<void> {
     await this.agent.close();
+  }
+
+  /**
+   * Safely get undici agent state for metrics
+   */
+  private getAgentState(): UndiciAgentState {
+    try {
+      // Access undici's internal state safely
+      const state = (this.agent as unknown) as UndiciAgentState;
+      return {
+        pending: state.pending || 0,
+        running: state.running || 0,
+      };
+    } catch {
+      // Fallback if internal API is not accessible
+      return { pending: 0, running: 0 };
+    }
   }
 
   /**

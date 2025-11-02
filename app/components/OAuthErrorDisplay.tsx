@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Info, AlertCircle, CheckCircle } from "lucide-react";
+import { AlertTriangle, Info, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
 import { OAuthError, OAuthErrorType } from "../../lib/oauth-errors";

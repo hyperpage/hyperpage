@@ -4,15 +4,10 @@ import { defaultCache } from '../../../lib/cache/memory-cache';
 import { getActivePlatforms } from '../../../lib/rate-limit-utils';
 import { getServerRateLimitStatus } from '../../../lib/rate-limit-service';
 import { toolRegistry } from '../../../tools/registry';
-import { defaultCompressionMiddleware } from '../../../lib/api/compression/compression-middleware';
-import { defaultBatchingMiddleware } from '../../../lib/api/batching/batching-middleware';
-import { defaultCacheInvalidationMiddleware } from '../../../lib/api/middleware/cache-invalidation-middleware';
 import { performanceDashboard } from '../../../lib/monitoring/performance-dashboard';
-import { alertService } from '../../../lib/alerting/alert-service';
 import { defaultHttpClient } from '../../../lib/connection-pool';
 import { DashboardMetrics } from '../../../lib/monitoring/performance-dashboard';
 import { Tool } from '../../../tools/tool-types';
-import { RateLimitStatus, RateLimitUsage } from '../../../lib/types/rate-limit';
 const register = new promClient.Registry();
 
 // Add default metrics (process, heap, etc.)
@@ -47,35 +42,6 @@ const rateLimitMaxGauge = new promClient.Gauge({
   registers: [register],
 });
 
-const apiRequestDuration = new promClient.Histogram({
-  name: 'api_request_duration_seconds',
-  help: 'Duration of API requests to external platforms',
-  labelNames: ['platform', 'endpoint', 'status'],
-  buckets: [0.1, 0.5, 1, 2.5, 5, 10],
-  registers: [register],
-});
-
-const apiRequestTotal = new promClient.Counter({
-  name: 'api_requests_total',
-  help: 'Total number of API requests made',
-  labelNames: ['platform', 'endpoint', 'status'],
-  registers: [register],
-});
-
-const rateLimitHitsTotal = new promClient.Counter({
-  name: 'rate_limit_hits_total',
-  help: 'Total number of rate limit hits encountered',
-  labelNames: ['platform'],
-  registers: [register],
-});
-
-const rateLimitRetriesTotal = new promClient.Counter({
-  name: 'rate_limit_retries_total',
-  help: 'Total number of rate limit retries attempted',
-  labelNames: ['platform', 'attempt_number'],
-  registers: [register],
-});
-
 // Cache metrics
 const cacheSizeGauge = new promClient.Gauge({
   name: 'cache_entries_total',
@@ -107,78 +73,6 @@ const cacheEvictionsTotal = new promClient.Counter({
   registers: [register],
 });
 
-// Compression metrics
-const compressionRatioGauge = new promClient.Gauge({
-  name: 'compression_ratio_percent',
-  help: 'Average compression ratio achieved (0-100)',
-  registers: [register],
-});
-
-const compressionRequestsTotal = new promClient.Counter({
-  name: 'compression_requests_total',
-  help: 'Total number of requests that were compressed',
-  labelNames: ['method'],
-  registers: [register],
-});
-
-// Batching metrics
-const batchRequestsTotal = new promClient.Counter({
-  name: 'batch_requests_total',
-  help: 'Total number of batch requests processed',
-  registers: [register],
-});
-
-const batchRequestDuration = new promClient.Histogram({
-  name: 'batch_request_duration_seconds',
-  help: 'Duration of batch request processing',
-  buckets: [0.1, 0.5, 1, 2.5, 5, 10, 30],
-  registers: [register],
-});
-
-const batchSizeGauge = new promClient.Gauge({
-  name: 'batch_size_average',
-  help: 'Average number of requests per batch',
-  registers: [register],
-});
-
-const batchSuccessRateGauge = new promClient.Gauge({
-  name: 'batch_success_rate_percent',
-  help: 'Percentage of successful individual requests in batches (0-100)',
-  registers: [register],
-});
-
-// Cache invalidation metrics
-const cacheInvalidationsTotal = new promClient.Counter({
-  name: 'cache_invalidations_total',
-  help: 'Total number of cache invalidations performed',
-  labelNames: ['reason'],
-  registers: [register],
-});
-
-const cacheInvalidatedEntriesTotal = new promClient.Counter({
-  name: 'cache_invalidated_entries_total',
-  help: 'Total number of cache entries invalidated',
-  labelNames: ['reason'],
-  registers: [register],
-});
-
-// API performance profiling metrics
-const apiResponseSizeBytes = new promClient.Histogram({
-  name: 'api_response_size_bytes',
-  help: 'Size of API responses in bytes',
-  labelNames: ['endpoint', 'compressed'],
-  buckets: [100, 1000, 10000, 100000, 1000000],
-  registers: [register],
-});
-
-const apiResponseTimeMs = new promClient.Histogram({
-  name: 'api_response_time_ms',
-  help: 'Time taken to generate API responses in milliseconds',
-  labelNames: ['endpoint', 'cached'],
-  buckets: [10, 50, 100, 500, 1000, 5000],
-  registers: [register],
-});
-
 // Monitoring system metrics
 const performanceSnapshotsTotal = new promClient.Counter({
   name: 'hyperpage_performance_snapshots_total',
@@ -190,20 +84,6 @@ const alertsActiveTotal = new promClient.Gauge({
   name: 'hyperpage_alerts_active_total',
   help: 'Total number of currently active alerts',
   labelNames: ['severity'],
-  registers: [register],
-});
-
-const alertsTriggeredTotal = new promClient.Counter({
-  name: 'hyperpage_alerts_triggered_total',
-  help: 'Total number of alerts triggered since startup',
-  labelNames: ['type', 'severity'],
-  registers: [register],
-});
-
-const dashboardRequestsTotal = new promClient.Counter({
-  name: 'hyperpage_dashboard_requests_total',
-  help: 'Total number of dashboard API requests',
-  labelNames: ['format'], // json, prometheus
   registers: [register],
 });
 
@@ -290,7 +170,6 @@ async function updateMetrics() {
     cacheEvictionsTotal.inc(cacheStats.evictions);
 
     // Update monitoring system metrics
-    const alertStats = alertService.getStats();
     const dashboardMetrics = performanceDashboard.exportMetrics('json');
 
     // Update performance snapshots count (approximation based on metrics data)

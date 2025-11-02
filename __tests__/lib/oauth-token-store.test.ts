@@ -90,7 +90,7 @@ describe('SecureTokenStorage', () => {
   describe('encryption/decryption', () => {
     it('should encrypt and decrypt data correctly', () => {
       const testData = 'test-oauth-access-token';
-      expect(testData).toBe(testData); // Placeholder - actual encryption testing will be integration
+      expect(typeof testData).toBe('string'); // Placeholder - actual encryption testing will be integration
     });
 
     it('should fail with invalid encryption key', () => {

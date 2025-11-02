@@ -129,7 +129,7 @@ export class MemoryJobScheduler implements IJobScheduler {
     const now = Date.now();
     const dueJobs: IJob[] = [];
 
-    for (const [jobId, scheduledJob] of this.jobs.entries()) {
+    for (const [, scheduledJob] of this.jobs.entries()) {
       const job = scheduledJob.job;
 
       // Check if job is scheduled and due

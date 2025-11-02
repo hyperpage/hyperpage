@@ -4,14 +4,6 @@ import { defaultCache } from '../../lib/cache/memory-cache';
 import { toolRegistry } from '../../tools/registry';
 
 // Type definitions for test
-interface CacheStats {
-  size: number;
-  hits: number;
-  misses: number;
-  expiries: number;
-  evictions: number;
-}
-
 interface MockTool {
   name: string;
   slug: string;
@@ -22,8 +14,6 @@ interface MockTool {
   apis: Record<string, unknown>;
   handlers: Record<string, unknown>;
 }
-
-interface ToolRegistry extends Record<string, MockTool> {}
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -68,8 +58,8 @@ describe('GET /api/health', () => {
     vi.clearAllMocks();
 
     // Set up mock tools in registry
-    (toolRegistry as ToolRegistry).github = mockToolGitHub;
-    (toolRegistry as ToolRegistry).gitlab = mockToolGitLab;
+    (toolRegistry as Record<string, MockTool>).github = mockToolGitHub;
+    (toolRegistry as Record<string, MockTool>).gitlab = mockToolGitLab;
 
     // Mock cache stats
     vi.mocked(defaultCache.getStats).mockResolvedValue({
@@ -96,8 +86,8 @@ describe('GET /api/health', () => {
   afterEach(() => {
     vi.clearAllTimers();
     // Clean up mock tools after each test
-    delete (toolRegistry as ToolRegistry).github;
-    delete (toolRegistry as ToolRegistry).gitlab;
+    delete (toolRegistry as Record<string, MockTool>).github;
+    delete (toolRegistry as Record<string, MockTool>).gitlab;
   });
 
   it('should return enhanced health status with rate limiting metrics', async () => {

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { isOAuthConfigured } from '@/lib/oauth-config';
 
 /**
  * Get OAuth configuration status for tools
  * Returns which tools are properly configured for OAuth
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const tools = ['github', 'gitlab', 'jira'];
     const configured = {} as Record<string, boolean>;

@@ -3,7 +3,6 @@ import { GET } from '../../app/api/metrics/route';
 import { defaultCache } from '../../lib/cache/memory-cache';
 import { getRateLimitStatus } from '../../lib/rate-limit-monitor';
 import { getActivePlatforms } from '../../lib/rate-limit-utils';
-import { toolRegistry } from '../../tools/registry';
 
 // Mock the rate limit monitor to fix vi.mocked() issues
 vi.mock('../../lib/rate-limit-monitor', () => ({
@@ -87,20 +86,6 @@ describe('GET /api/metrics', () => {
     },
   };
 
-  const mockEnabledTools = [
-    {
-      name: 'GitHub',
-      slug: 'github',
-      enabled: true,
-      capabilities: ['rate-limit'],
-    },
-    {
-      name: 'GitLab',
-      slug: 'gitlab',
-      enabled: true,
-      capabilities: ['rate-limit'],
-    },
-  ];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -150,8 +135,11 @@ describe('GET /api/metrics', () => {
     it('should handle Prometheus client initialization errors', async () => {
       // Mock Registry constructor to throw
       const promClient = await import('prom-client');
-      const mockRegistry = promClient.Registry as any;
-      mockRegistry.mockImplementation(() => {
+      const mockRegistry = promClient.Registry;
+      
+      // Cast to any to access mockImplementation method
+      const mockRegistryFn = mockRegistry as any;
+      mockRegistryFn.mockImplementation(() => {
         throw new Error('Client initialization failed');
       });
 

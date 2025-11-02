@@ -6,8 +6,6 @@ import { toolRegistry } from '../tools/registry';
 
 // In-memory cache with TTL support
 let rateLimitCache: RateLimitCache = {};
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const FRESHNESS_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes for "fresh" data
 
 /**
  * Calculate rate limit usage percentage and status

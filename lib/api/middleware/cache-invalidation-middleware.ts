@@ -148,7 +148,7 @@ export class CacheInvalidationMiddleware {
     // Apply each invalidation rule
     for (const rule of this.options.invalidationRules || []) {
       if (this.matchesInvalidationRule(rule, method, path)) {
-        const promise = this.invalidateByRule(rule, request);
+        const promise = this.invalidateByRule(rule);
         invalidationPromises.push(promise);
       }
     }
@@ -191,8 +191,7 @@ export class CacheInvalidationMiddleware {
    * Invalidate cache entries based on a rule
    */
   private async invalidateByRule(
-    rule: InvalidationRule,
-    request: NextRequest
+    rule: InvalidationRule
   ): Promise<void> {
     try {
       // Get all cache keys (this is a simplified approach - in production you'd want a more efficient method)

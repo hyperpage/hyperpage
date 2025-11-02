@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOAuthConfig, buildAuthorizationUrl } from '@/lib/oauth-config';
-import { createOAuthStateCookie } from '@/lib/oauth-state-cookies';
 
 /**
  * Jira OAuth 2.0 Initiate Handler

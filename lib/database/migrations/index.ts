@@ -14,11 +14,21 @@ import * as initialSchema from './001_initial_schema';
 import * as oauthAuthTables from './002_oauth_auth_tables';
 
 /**
+ * Database type for migration operations
+ */
+export interface Database {
+  // Define database connection type
+  exec: (query: string) => void;
+  run: (query: string, params?: unknown[]) => void;
+  all: (query: string, params?: unknown[]) => Promise<unknown[]>;
+}
+
+/**
  * Migration interface - matches the export structure of migration files
  */
 export interface Migration {
-  up: string | ((db: any) => void);
-  down: string | ((db: any) => void);
+  up: string | ((db: Database) => void);
+  down: string | ((db: Database) => void);
 }
 
 /**

@@ -16,7 +16,7 @@ import {
   JobError,
 } from '../types/jobs';
 import { db } from '../database';
-import { jobs, jobHistory, Job, NewJob } from '../database/schema';
+import { jobs, Job, NewJob } from '../database/schema';
 import { eq, and, inArray, lt } from 'drizzle-orm';
 
 /**
@@ -402,7 +402,7 @@ export class MemoryJobQueue implements IJobQueue {
             updatedAt: Number(dbJob.updatedAt),
             tool: dbJob.tool ? JSON.parse(dbJob.tool) : undefined,
             endpoint: dbJob.endpoint || undefined,
-            payload: JSON.parse(dbJob.payload) as Record<string, any>,
+            payload: JSON.parse(dbJob.payload) as Record<string, unknown>,
             result: dbJob.result ? JSON.parse(dbJob.result) as JobResult : undefined,
             startedAt: dbJob.startedAt ? Number(dbJob.startedAt) : undefined,
             completedAt: dbJob.completedAt ? Number(dbJob.completedAt) : undefined,
@@ -457,14 +457,14 @@ export class MemoryJobQueue implements IJobQueue {
       // Count jobs to be deleted first
       const countToDelete = await db.$count(jobs, and(
         eq(jobs.status, JobStatus.COMPLETED),
-        lt(jobs.completedAt as any, cutoffTime) // Type assertion for now
+        lt(jobs.completedAt, cutoffTime)
       ));
 
       // Delete completed jobs older than retention period
       await db.delete(jobs)
         .where(and(
           eq(jobs.status, JobStatus.COMPLETED),
-          lt(jobs.completedAt as any, cutoffTime)
+          lt(jobs.completedAt, cutoffTime)
         ));
 
       console.info(`Cleaned up ${countToDelete} old completed jobs`);

@@ -36,7 +36,6 @@ describe('API Client Rate Limiting', () => {
 
     it('should work with custom base delay', () => {
       const customBaseDelay = 2000; // 2 seconds
-      const result = customBaseDelay * Math.pow(2, 2); // 2000 * 4 = 8000ms
       expect(customBaseDelay * Math.pow(2, 2)).toBe(8000);
     });
   });

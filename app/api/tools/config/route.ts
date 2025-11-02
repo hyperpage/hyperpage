@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { saveToolConfiguration, getToolConfiguration, deleteToolConfiguration, getAllToolConfigurations, toggleToolState, updateToolRefreshInterval } from '../../../../lib/tool-config-manager';
+import { saveToolConfiguration, getToolConfiguration, deleteToolConfiguration, getAllToolConfigurations, toggleToolState } from '../../../../lib/tool-config-manager';
 import { toolRegistry } from '../../../../tools/registry';
 
 /**

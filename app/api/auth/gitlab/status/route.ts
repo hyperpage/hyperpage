@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import { sessionManager } from '@/lib/sessions/session-manager';
 import { SecureTokenStorage } from '@/lib/oauth-token-store';
 
@@ -52,7 +51,6 @@ export async function GET(request: NextRequest) {
       }
 
       // Check if tokens are expired
-      const now = Date.now();
       const isExpired = tokenStorage.areExpired(tokens);
       const isRefreshExpired = tokens.refreshToken && tokenStorage.isRefreshExpired(tokens);
 
@@ -60,9 +58,14 @@ export async function GET(request: NextRequest) {
       // (having expired access token but valid refresh token is still partially authenticated)
       const authenticated = !isExpired || (!isRefreshExpired && tokens.refreshToken !== undefined);
 
+      // Handle lastConnectedAt safely for Date constructor - ensure it's always a valid timestamp
+      const lastConnectedAt = tokens.metadata?.lastConnectedAt && typeof tokens.metadata.lastConnectedAt === 'number'
+        ? tokens.metadata.lastConnectedAt 
+        : Date.now();
+
       return NextResponse.json({
         authenticated,
-        lastConnectedAt: new Date(tokens.metadata?.lastConnectedAt || 0).toISOString(),
+        lastConnectedAt: new Date(lastConnectedAt).toISOString(),
         expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt).toISOString() : null,
         isExpired,
         hasRefreshToken: !!tokens.refreshToken && !isRefreshExpired,

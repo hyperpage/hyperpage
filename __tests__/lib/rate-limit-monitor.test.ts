@@ -14,16 +14,6 @@ import { PlatformRateLimits } from '../../lib/types/rate-limit';
 import { toolRegistry } from '../../tools/registry';
 import { Tool } from '../../tools/tool-types';
 
-// Type-safe mock tool registry
-type MockToolRegistry = { [key: string]: Tool | undefined };
-
-// Mock tool for testing with minimal required properties
-type MockTool = Tool & {
-  handlers: {
-    'rate-limit': ReturnType<typeof vi.fn>;
-  };
-};
-
 describe('Rate Limit Monitor Library', () => {
   beforeEach(() => {
     vi.clearAllMocks();

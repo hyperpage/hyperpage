@@ -1,4 +1,4 @@
-import { BottleneckPattern, AnomalyDetector } from './bottleneck-detector';
+import { BottleneckPattern } from './bottleneck-detector';
 
 /**
  * Predefined bottleneck detection patterns for enterprise performance monitoring

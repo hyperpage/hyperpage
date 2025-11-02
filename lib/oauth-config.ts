@@ -13,6 +13,21 @@ export interface OAuthConfig {
   provider: 'github' | 'gitlab' | 'jira';
 }
 
+/**
+ * OAuth token response interface
+ */
+export interface OAuthTokenResponse {
+  access_token: string;
+  token_type: string;
+  scope?: string;
+  expires_in?: number;
+  refresh_token?: string;
+  refresh_token_expires_in?: number;
+  id_token?: string;
+  error?: string;
+  error_description?: string;
+}
+
 // Environment variable keys for OAuth
 const OAUTH_ENV_VARS = {
   GITHUB_CLIENT_ID: 'GITHUB_OAUTH_CLIENT_ID',
@@ -149,7 +164,7 @@ export function buildAuthorizationUrl(config: OAuthConfig, state: string): strin
 export async function exchangeCodeForTokens(
   config: OAuthConfig,
   code: string
-): Promise<any> {
+): Promise<OAuthTokenResponse> {
   const tokenUrl = config.tokenUrl;
   const params = new URLSearchParams({
     client_id: config.clientId,
@@ -185,7 +200,7 @@ export async function exchangeCodeForTokens(
     throw new Error(`Token response error: ${tokenData.error}`);
   }
 
-  return tokenData;
+  return tokenData as OAuthTokenResponse;
 }
 
 /**

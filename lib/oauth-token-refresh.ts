@@ -1,5 +1,5 @@
 import { SecureTokenStorage, OAuthTokens } from './oauth-token-store';
-import { getOAuthConfig, exchangeCodeForTokens } from './oauth-config';
+import { getOAuthConfig } from './oauth-config';
 import logger from './logger';
 
 /**
@@ -128,7 +128,7 @@ export class OAuthTokenRefresh {
   /**
    * Perform the actual token refresh API call
    */
-  private async performTokenRefresh(config: any, refreshToken: string): Promise<OAuthTokens | null> {
+  private async performTokenRefresh(config: { clientId: string; clientSecret: string; tokenUrl: string; provider: string }, refreshToken: string): Promise<OAuthTokens | null> {
     try {
       // Prepare refresh request
       const params = new URLSearchParams({

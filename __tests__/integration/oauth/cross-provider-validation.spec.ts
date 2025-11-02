@@ -48,7 +48,7 @@ describe('Cross-Provider OAuth Validation', () => {
           await fetch(`${baseUrl}/api/sessions?sessionId=${session.sessionId}`, {
             method: 'DELETE'
           });
-        } catch (error) {
+        } catch {
           // Ignore cleanup errors in tests
         }
       }

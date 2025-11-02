@@ -136,15 +136,14 @@ export async function createBackup(): Promise<BackupResult> {
     await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
 
     const duration = Date.now() - startTime;
-    const stats = await fs.stat(backupPath);
 
-    console.info(`Database backup created successfully: ${backupPath} (${stats.size} bytes)`);
+    console.info(`Database backup created successfully: ${backupPath} (${(await fs.stat(backupPath)).size} bytes)`);
 
     return {
       success: true,
       backupPath,
       metadata,
-      size: stats.size,
+      size: (await fs.stat(backupPath)).size,
       duration
     };
 
@@ -170,7 +169,7 @@ export async function restoreBackup(backupPath: string): Promise<{ success: bool
 
   try {
     // Validate backup file exists and is readable
-    const stats = await fs.stat(backupPath);
+    await fs.stat(backupPath);
     if (!backupPath.endsWith('.db')) {
       throw new Error('Invalid backup file format');
     }

@@ -6,13 +6,12 @@ import { transformGitHubLimits, transformGitLabLimits, transformJiraLimits, calc
 import { Tool } from '../tools/tool-types';
 import { PlatformRateLimits, RateLimitStatus } from './types/rate-limit';
 import { db } from './database';
-import { rateLimits, RateLimit } from './database/schema';
-import { eq } from 'drizzle-orm';
+import { rateLimits } from './database/schema';
+import { eq, sql } from 'drizzle-orm';
 
 // In-memory cache with TTL support for server-side use only
 const rateLimitCache: { [key: string]: { data: RateLimitStatus; expiresAt: number } } = {};
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const FRESHNESS_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes for "fresh" data
 
 /**
  * Server-only function to get rate limit status for a platform
@@ -119,7 +118,25 @@ export async function loadPersistedRateLimits(): Promise<number> {
         const limitsObject: PlatformRateLimits = {};
         if (platform === 'github') {
           limitsObject.github = {
-            global: {
+            core: {
+              limit: limitTotal,
+              remaining: limitRemaining,
+              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
+              usagePercent: limitTotal && limitRemaining ?
+                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              resetTime,
+              retryAfter: null
+            },
+            search: {
+              limit: limitTotal,
+              remaining: limitRemaining,
+              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
+              usagePercent: limitTotal && limitRemaining ?
+                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              resetTime,
+              retryAfter: null
+            },
+            graphql: {
               limit: limitTotal,
               remaining: limitRemaining,
               used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
@@ -128,7 +145,7 @@ export async function loadPersistedRateLimits(): Promise<number> {
               resetTime,
               retryAfter: null
             }
-          } as any; // GitHub has global limit as approximation
+          };
         } else if (platform === 'gitlab') {
           limitsObject.gitlab = {
             global: {
@@ -192,18 +209,16 @@ export async function saveRateLimitStatus(rateLimitStatus: RateLimitStatus): Pro
     const platform = rateLimitStatus.platform;
 
     // Extract limit data by checking known platform types
-    let platformLimits: any;
+    let platformLimits: { remaining?: number | null; limit?: number | null; resetTime?: number | null };
 
     if (platform === 'github' && rateLimitStatus.limits.github) {
       // For GitHub, use core limits as primary (most restrictive)
-      platformLimits = rateLimitStatus.limits.github.core;
+      platformLimits = rateLimitStatus.limits.github.core || {};
     } else if (platform === 'gitlab' && rateLimitStatus.limits.gitlab) {
-      platformLimits = rateLimitStatus.limits.gitlab.global;
+      platformLimits = rateLimitStatus.limits.gitlab.global || {};
     } else if (platform === 'jira' && rateLimitStatus.limits.jira) {
-      platformLimits = rateLimitStatus.limits.jira.global;
-    }
-
-    if (!platformLimits) {
+      platformLimits = rateLimitStatus.limits.jira.global || {};
+    } else {
       console.warn(`No rate limit data found for platform ${platform}, skipping persistence`);
       return;
     }
@@ -211,9 +226,9 @@ export async function saveRateLimitStatus(rateLimitStatus: RateLimitStatus): Pro
     const limitRecord = {
       id: `${platform}:global`, // Use consistent format: platform:resource_type
       platform,
-      limitRemaining: platformLimits.remaining,
-      limitTotal: platformLimits.limit,
-      resetTime: platformLimits.resetTime,
+      limitRemaining: platformLimits.remaining ?? null,
+      limitTotal: platformLimits.limit ?? null,
+      resetTime: platformLimits.resetTime ?? null,
       lastUpdated: rateLimitStatus.lastUpdated,
     };
 
@@ -233,7 +248,8 @@ export async function saveRateLimitStatus(rateLimitStatus: RateLimitStatus): Pro
     // Also clean up old rate limit records (older than 7 days)
     const cutoffTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
     await db.delete(rateLimits).where(
-      eq(rateLimits.lastUpdated as any, cutoffTime) // Simplified comparison
+      // Use a proper comparison for cleanup - records older than cutoff time
+      sql`${rateLimits.lastUpdated} < ${cutoffTime}`
     );
 
   } catch (error) {

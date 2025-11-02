@@ -65,7 +65,7 @@ export async function initializeDatabase(): Promise<void> {
  */
 export async function checkDatabaseHealth(): Promise<{
   status: 'healthy' | 'degraded' | 'unhealthy';
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 }> {
   try {
     // First check connectivity

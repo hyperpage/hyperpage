@@ -33,7 +33,7 @@ describe('Jira OAuth Integration', () => {
         await fetch(`${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`, {
           method: 'DELETE'
         });
-      } catch (error) {
+      } catch {
         // Ignore cleanup errors in tests
       }
     }

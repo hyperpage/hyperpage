@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import { sessionManager } from '@/lib/sessions/session-manager';
 import { SecureTokenStorage } from '@/lib/oauth-token-store';
 

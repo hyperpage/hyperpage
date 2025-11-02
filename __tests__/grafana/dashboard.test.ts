@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import dashboardJson from '../../grafana/hyperpage-rate-limiting-dashboard.json';
 
+// Type definitions for test
+interface GrafanaVariable {
+  name: string;
+  definition?: string;
+  [key: string]: unknown;
+}
+
 describe('Grafana Dashboard Configuration', () => {
   it('should be valid JSON', () => {
     expect(typeof dashboardJson).toBe('object');
@@ -32,7 +39,7 @@ describe('Grafana Dashboard Configuration', () => {
     const templating = dashboardJson.dashboard.templating;
     expect(templating).toHaveProperty('list');
 
-    const platformVar = templating.list.find((variable: any) => variable.name === 'platform');
+    const platformVar = templating.list.find((variable: GrafanaVariable) => variable.name === 'platform');
     expect(platformVar).toBeDefined();
     expect(platformVar!.definition).toBe('label_values(rate_limit_usage_percent, platform)');
   });

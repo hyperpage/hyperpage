@@ -1,8 +1,33 @@
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import { IntegrationTestEnvironment, TestUserManager } from '../../lib/test-credentials';
+import {
+  TestUser,
+  SessionData,
+  TransactionTest,
+  RecoveryTestData,
+  PersistentData,
+  BatchOperation,
+  SessionActivity,
+  TimePersistenceTest,
+  LifecyclePhase,
+  PeakLoadTest,
+  RelationshipData,
+  MigrationSource,
+  ConcurrentWriteResult,
+  UserData,
+  ConcurrentReadResult,
+  TransactionOperationResult,
+  RecoveryResult,
+  SessionOperationResult,
+  SessionLoadResult,
+  LifecycleResult,
+  PeakAccessResult,
+  RelationshipResult,
+  MigrationResult
+} from './database-persistence-recovery.types';
 
 // Helper function for referential integrity validation
-function validateReferentialIntegrity(relationships: any): boolean {
+function validateReferentialIntegrity(relationships: RelationshipData): boolean {
   if (!relationships?.references || !relationships?.primary) {
     return false;
   }
@@ -51,22 +76,23 @@ describe('Database Persistence & Recovery Testing', () => {
         
         // Simulate concurrent data updates
         if (user) {
-          (user as any).sessionData = {
-            ...(user as any).sessionData,
+          const currentSessionData = (user as TestUser).sessionData || {};
+          (user as TestUser).sessionData = {
+            ...currentSessionData,
             concurrentUpdate: i,
             timestamp: Date.now(),
             operationId: `op_${i}_${session.sessionId}`
           };
-          (user as any).lastAccessed = new Date().toISOString();
+          (user as TestUser).lastAccessed = new Date().toISOString();
         }
         
         return {
           sessionId: session.sessionId,
           userId: session.userId,
           operationId: i,
-          dataUpdated: !!(user as any)?.sessionData,
+          dataUpdated: !!user && !!(user as TestUser).sessionData,
           timestamp: Date.now()
-        };
+        } as ConcurrentWriteResult;
       });
 
       const writeResults = await Promise.all(writePromises);
@@ -88,8 +114,9 @@ describe('Database Persistence & Recovery Testing', () => {
 
       sessions.forEach((user, index) => {
         expect(user).toBeDefined();
-        expect((user as any)?.sessionData).toBeDefined();
-        expect((user as any)?.sessionData?.operationId).toBe(`op_${index}_${user?.sessionId}`);
+        const sessionData = user && (user as TestUser).sessionData;
+        expect(sessionData).toBeDefined();
+        expect(sessionData?.operationId).toBe(`op_${index}_${user?.sessionId}`);
       });
 
       console.log(`Data consistency test: ${concurrentWrites} concurrent writes completed successfully`);
@@ -105,8 +132,8 @@ describe('Database Persistence & Recovery Testing', () => {
         const user = userManager.getTestUser(session.userId);
         const userData = user ? {
           sessionId: session.sessionId,
-          lastAccessed: (user as any).lastAccessed,
-          hasData: !!(user as any).sessionData
+          lastAccessed: (user as TestUser).lastAccessed || '',
+          hasData: !!(user as TestUser).sessionData
         } : null;
         
         // Simulate some processing time
@@ -118,7 +145,7 @@ describe('Database Persistence & Recovery Testing', () => {
           userId: session.userId,
           data: userData,
           readTimestamp: Date.now()
-        };
+        } as ConcurrentReadResult;
       });
 
       const readResults = await Promise.all(readPromises);
@@ -157,7 +184,7 @@ describe('Database Persistence & Recovery Testing', () => {
           // Write operation
           const user = userManager.getTestUser(session.userId);
           if (user) {
-            (user as any).transactionTest = {
+            (user as TestUser).transactionTest = {
               writeOperation: i,
               timestamp: Date.now(),
               sessionId: session.sessionId
@@ -168,13 +195,13 @@ describe('Database Persistence & Recovery Testing', () => {
             operationId: i,
             type: 'write',
             sessionId: session.sessionId,
-            success: !!(user as any)?.transactionTest,
+            success: !!(user as TestUser)?.transactionTest,
             timestamp: Date.now()
-          };
+          } as TransactionOperationResult;
         } else {
           // Read operation
           const readUser = userManager.getTestUser(session.userId);
-          const previousWrite = (readUser as any)?.transactionTest;
+          const previousWrite = (readUser as TestUser)?.transactionTest;
           
           return {
             operationId: i,
@@ -183,7 +210,7 @@ describe('Database Persistence & Recovery Testing', () => {
             success: !!readUser,
             dataConsistent: !previousWrite || previousWrite.operationId < i,
             timestamp: Date.now()
-          };
+          } as TransactionOperationResult;
         }
       });
 
@@ -231,7 +258,7 @@ describe('Database Persistence & Recovery Testing', () => {
       };
       
       if (user) {
-        (user as any).recoveryTest = originalData;
+        (user as TestUser).recoveryTest = originalData as RecoveryTestData;
       }
 
       // Simulate system failure by clearing internal state
@@ -247,7 +274,8 @@ describe('Database Persistence & Recovery Testing', () => {
       const stateAfterFailure = userManager.getTestUser(session.userId);
       
       // Verify failure state
-      expect((stateAfterFailure as any)?.recoveryTest).toBeUndefined();
+      const failureTestData = stateAfterFailure && (stateAfterFailure as TestUser).recoveryTest;
+      expect(failureTestData).toBeUndefined();
 
       // Simulate recovery process
       const recoveryPhase2 = () => {
@@ -266,9 +294,11 @@ describe('Database Persistence & Recovery Testing', () => {
       const stateAfterRecovery = userManager.getTestUser(session.userId);
       
       // Verify recovery was successful
-      expect((stateAfterRecovery as any)?.recoveryTest).toBeDefined();
-      expect((stateAfterRecovery as any)?.recoveryTest?.recoveryAttempt).toBe(true);
-      expect((stateAfterRecovery as any)?.recoveryTest?.initialState).toBe('created');
+      const recoveredTestData = stateAfterRecovery && (stateAfterRecovery as TestUser).recoveryTest;
+      expect(recoveredTestData).toBeDefined();
+      const recoveredData = recoveredTestData as RecoveryTestData;
+      expect(recoveredData?.recoveryAttempt).toBe(true);
+      expect(recoveredData?.initialState).toBe('created');
       
       console.log('Recovery mechanism test: System failure and recovery completed successfully');
     });
@@ -288,7 +318,7 @@ describe('Database Persistence & Recovery Testing', () => {
       
       const originalUser = userManager.getTestUser(originalSession.userId);
       if (originalUser) {
-        (originalUser as any).persistentData = persistentData;
+        (originalUser as TestUser).persistentData = persistentData as PersistentData;
       }
 
       // Simulate session recreation (new session, same user context)
@@ -296,21 +326,24 @@ describe('Database Persistence & Recovery Testing', () => {
       const recreatedUser = userManager.getTestUser(originalSession.userId);
       
       // Verify persistent data survived session recreation
-      expect((recreatedUser as any)?.persistentData).toBeDefined();
-      expect((recreatedUser as any)?.persistentData?.persistentId).toBe(persistentData.persistentId);
-      expect((recreatedUser as any)?.persistentData?.createdAt).toBe(persistentData.createdAt);
-      expect((recreatedUser as any)?.persistentData?.modificationHistory).toHaveLength(1);
+      const recreatedData = recreatedUser && (recreatedUser as TestUser).persistentData;
+      expect(recreatedData).toBeDefined();
+      expect(recreatedData?.persistentId).toBe(persistentData.persistentId);
+      expect(recreatedData?.createdAt).toBe(persistentData.createdAt);
+      expect(recreatedData?.modificationHistory).toHaveLength(1);
 
       // Modify data and verify persistence
-      if (recreatedUser?.persistentData) {
-        (recreatedUser as any).persistentData.modificationHistory.push({
+      const recreatedPersistentData = recreatedUser && (recreatedUser as TestUser).persistentData;
+      if (recreatedPersistentData) {
+        recreatedPersistentData.modificationHistory.push({
           operation: 'recreation',
           timestamp: Date.now()
         });
       }
 
       const finalUser = userManager.getTestUser(originalSession.userId);
-      expect((finalUser as any)?.persistentData?.modificationHistory).toHaveLength(2);
+      const finalData = finalUser && (finalUser as TestUser).persistentData;
+      expect(finalData?.modificationHistory).toHaveLength(2);
       
       console.log('Session recreation test: Data persistence across session boundaries validated');
     });

@@ -136,7 +136,7 @@ export function getDatabaseStats(): {
   try {
     const stats = fs.statSync(DATABASE_PATH);
     databaseSize = stats.size;
-  } catch (error) {
+  } catch {
     // File might not exist yet, that's fine
   }
 

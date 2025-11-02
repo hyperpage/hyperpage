@@ -45,7 +45,7 @@ export enum JobType {
 /**
  * Result of job execution
  */
-export interface JobResult<T = any> {
+export interface JobResult<T = unknown> {
   /** Whether the job execution was successful */
   success: boolean;
   /** Result data from successful execution */
@@ -68,7 +68,7 @@ export interface JobResult<T = any> {
 /**
  * Job specification and configuration
  */
-export interface IJob<T = any> {
+export interface IJob<T = unknown> {
   /** Unique job identifier */
   id: string;
   /** Job category type */
@@ -144,6 +144,7 @@ export interface IJobQueue {
    * @param job - Job specification
    * @returns Promise resolving to the queued job
    */
+  enqueue(job: Omit<IJob<unknown>, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>): Promise<IJob<unknown>>;
   enqueue(job: Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>): Promise<IJob>;
 
   /**
@@ -179,7 +180,7 @@ export interface IJobQueue {
    * @param result - Optional execution result
    * @returns Promise resolving to updated job
    */
-  updateJobStatus(jobId: string, status: JobStatus, result?: JobResult): Promise<IJob | undefined>;
+  updateJobStatus(jobId: string, status: JobStatus, result?: JobResult<unknown>): Promise<IJob | undefined>;
 
   /**
    * Get queue statistics
@@ -213,7 +214,7 @@ export interface IJobScheduler {
    * @param job - Job specification with schedule configuration
    * @returns Promise resolving to scheduled job
    */
-  schedule(job: Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>): Promise<IJob>;
+  schedule(job: Omit<IJob<unknown>, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>): Promise<IJob<unknown>>;
 
   /**
    * Cancel a scheduled job
@@ -255,11 +256,11 @@ export interface JobExecutionContext {
   /** Shared resources and utilities */
   resources: {
     /** Cache instance for data storage */
-    cache?: any; // Will be typed with ICache once imported
+    cache?: unknown;
     /** Logger for job execution tracking */
-    logger?: any;
+    logger?: unknown;
     /** Rate limit monitor for API compliance */
-    rateLimitMonitor?: any;
+    rateLimitMonitor?: unknown;
   };
   /** Execution timeout handle */
   timeout?: NodeJS.Timeout;
@@ -268,7 +269,7 @@ export interface JobExecutionContext {
 /**
  * Job processor function signature
  */
-export type JobProcessor<T = any> = (
+export type JobProcessor<T = unknown> = (
   context: JobExecutionContext
 ) => Promise<JobResult<T>>;
 
@@ -282,7 +283,7 @@ export interface IJobFactory {
    * @param endpoints - Specific endpoints to warm
    * @returns Job specification
    */
-  createCacheWarmJob(tool: Omit<Tool, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
+  createCacheWarmJob(tool: Omit<Tool, 'handlers'>, endpoints?: string[]): Omit<IJob<unknown>, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
 
   /**
    * Create a data refresh job for a tool
@@ -290,14 +291,14 @@ export interface IJobFactory {
    * @param endpoints - Specific endpoints to refresh
    * @returns Job specification
    */
-  createDataRefreshJob(tool: Omit<Tool, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
+  createDataRefreshJob(tool: Omit<Tool, 'handlers'>, endpoints?: string[]): Omit<IJob<unknown>, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
 
   /**
    * Create a rate limit update job
    * @param platforms - Platforms to update
    * @returns Job specification
    */
-  createRateLimitUpdateJob(platforms?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
+  createRateLimitUpdateJob(platforms?: string[]): Omit<IJob<unknown>, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { getRateLimitStatus, clearRateLimitCache } from '../../../lib/rate-limit-monitor';
+import { clearRateLimitCache } from '../../../lib/rate-limit-monitor';
 import { toolRegistry } from '../../../tools/registry';
 
 describe('API Response Time Validation Suite', () => {
@@ -193,7 +193,7 @@ describe('API Response Time Validation Suite', () => {
   afterAll(() => {
     // Clean up mock tools
     Object.keys(mockTools).forEach(key => {
-      delete (toolRegistry as any)[key];
+      delete (toolRegistry as Record<string, unknown>)[key];
     });
   });
 

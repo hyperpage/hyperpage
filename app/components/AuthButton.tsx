@@ -45,12 +45,6 @@ export default function AuthButton({
     }
   };
 
-  const buildAuthorizationUrl = () => {
-    // TODO: Implement authorization URL building using OAuth config
-    // For now, this is a placeholder that would redirect to the OAuth flow
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/api/auth/${toolSlug}/initiate`;
-  };
 
   if (!isConfigured) {
     return (

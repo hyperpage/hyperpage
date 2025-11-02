@@ -187,7 +187,6 @@ export class RedisCache<T = unknown> implements ICache<T> {
       }
 
       const client = this.redisClient.getClient();
-      const info = await client.info('stats');
 
       // Parse Redis stats to extract relevant metrics
       // Note: In a real implementation, parse the info string for detailed metrics

@@ -5,14 +5,12 @@
  * This utility forces IPv4 connections to ensure reliable connectivity to external APIs.
  */
 
-import type { Agent as HttpsAgent } from 'https';
-
 /**
  * Server-side module cache to avoid repeated imports
  */
 const getNodeModules = () => {
   if (typeof window === 'undefined') {
-    // Server-side - use require to avoid bundling issues
+    // Server-side - dynamic imports to avoid webpack bundling
     const https = require('https');
     const dns = require('dns');
     return { https, dns };
@@ -39,7 +37,7 @@ export function createIPv4Fetch(
 
   try {
     // Force IPv4 connections to avoid IPv6 timeout issues on IPv6-only networks
-    const enhancedOptions: RequestInit & { agent?: HttpsAgent } = {
+    const enhancedOptions: RequestInit & { agent?: any } = {
       ...options,
       signal: controller.signal,
     };
@@ -109,9 +107,9 @@ export const ipv4Fetch = (url: string, options?: RequestInit): Promise<Response>
  * @param url - The API URL
  * @param options - Fetch options
  * @param timeoutMs - Timeout in milliseconds
- * @returns Promise<any> - Parsed JSON response
+ * @returns Promise<unknown> - Parsed JSON response
  */
-export async function ipv4FetchJson<T = any>(
+export async function ipv4FetchJson<T = unknown>(
   url: string,
   options: RequestInit = {},
   timeoutMs: number = 10000

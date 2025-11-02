@@ -1,8 +1,8 @@
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
 import crypto from 'crypto';
-import { users, oauthTokens, userSessions } from './database/schema';
-import { eq, and } from 'drizzle-orm';
+import { oauthTokens } from './database/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import logger from './logger';
 
 export interface OAuthTokens {
@@ -12,7 +12,7 @@ export interface OAuthTokens {
   expiresAt?: number; // milliseconds timestamp
   refreshExpiresAt?: number; // refresh token expiry
   scopes?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface StoredTokens extends OAuthTokens {
@@ -27,7 +27,7 @@ export interface StoredTokens extends OAuthTokens {
  * Secure OAuth token storage with AES-256-GCM encryption
  */
 export class SecureTokenStorage {
-  private db: any;
+  private db: ReturnType<typeof drizzle>;
   private encryptionKey: string;
 
   constructor(databasePath: string = './data/hyperpage.db') {
@@ -301,7 +301,7 @@ export class SecureTokenStorage {
           toolName: oauthTokens.toolName,
         })
         .from(oauthTokens)
-        .where(`expiresAt < ${now}`);
+        .where(sql`expiresAt < ${now}`);
 
       return results;
 
@@ -320,10 +320,12 @@ export class SecureTokenStorage {
 
       const result = await this.db
         .delete(oauthTokens)
-        .where(`expiresAt < ${now} AND (refreshExpiresAt IS NULL OR refreshExpiresAt < ${now})`);
+        .where(sql`expiresAt < ${now} AND (refreshExpiresAt IS NULL OR refreshExpiresAt < ${now})`);
 
-      logger.info(`Cleaned up ${result.rowsAffected || 0} expired OAuth tokens`);
-      return result.rowsAffected || 0;
+      // Cast result to access rowsAffected safely
+      const rowsAffected = (result as any)?.rowsAffected || 0;
+      logger.info(`Cleaned up ${rowsAffected} expired OAuth tokens`);
+      return rowsAffected;
 
     } catch (error) {
       logger.error('Failed to cleanup expired tokens:', error);

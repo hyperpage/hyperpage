@@ -534,7 +534,7 @@ export const jiraTool: Tool = {
     rateLimit: {
       // Instance-aware rate limiting for Jira
       instanceAware: true,
-      detectHeaders: (response: Response) => ({
+      detectHeaders: () => ({
         remaining: null, // Jira doesn't provide remaining count headers
         resetTime: null, // Jira doesn't provide reset time headers
         retryAfter: null  // Jira uses 429 status, not Retry-After header typically

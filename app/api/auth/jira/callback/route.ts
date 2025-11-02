@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getOAuthConfig, exchangeCodeForTokens } from '@/lib/oauth-config';
 import { sessionManager } from '@/lib/sessions/session-manager';
-import { validateOAuthState, getOAuthStateClearCookieOptions, getOAuthStateCookie } from '@/lib/oauth-state-cookies';
+import { getOAuthStateClearCookieOptions, getOAuthStateCookie } from '@/lib/oauth-state-cookies';
 import { getAppDatabase } from '@/lib/database/connection';
 import { SecureTokenStorage } from '@/lib/oauth-token-store';
 import { users } from '@/lib/database/schema';

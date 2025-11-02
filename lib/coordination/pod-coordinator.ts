@@ -42,13 +42,24 @@ export interface CoordinationData {
 }
 
 
+// Define Redis client types
+interface RedisClient {
+  publish: (channel: string, message: string) => Promise<number>;
+  subscribe: (channel: string) => Promise<void>;
+  unsubscribe: () => Promise<void>;
+  on: (event: 'message' | 'error' | string, callback: (channel: string, message: string) => void) => void;
+  set: (key: string, value: string, ...args: (string | number)[]) => Promise<string | null>;
+  get: (key: string) => Promise<string | null>;
+  scan: (cursor: number, ...args: (string | number)[]) => Promise<[string, string[]]>;
+}
+
 /**
  * Pod Coordinator - Manages inter-pod communication and coordination
  * Uses Redis Pub/Sub for messaging and shared state for leader election
  */
 export class PodCoordinator {
-  private redisClient: any = null;
-  private subscriberRedisClient: any = null;
+  private redisClient: RedisClient | null = null;
+  private subscriberRedisClient: RedisClient | null = null;
   private connected = false;
   private podId: string;
   private leaderInfo: LeaderElection | null = null;
@@ -78,7 +89,7 @@ export class PodCoordinator {
         enableFallback: true,
       });
 
-      this.redisClient = (cache as any).getClient();
+      this.redisClient = (cache as unknown as { getClient: () => RedisClient }).getClient();
 
       // Separate subscriber client for Pub/Sub (required for ioredis)
       const subscriberCache = await CacheFactory.create({
@@ -87,7 +98,7 @@ export class PodCoordinator {
         enableFallback: true,
       });
 
-      this.subscriberRedisClient = (subscriberCache as any).getClient();
+      this.subscriberRedisClient = (subscriberCache as unknown as { getClient: () => RedisClient }).getClient();
 
       this.connected = true;
       this.setupMessageHandlers();
@@ -224,7 +235,7 @@ export class PodCoordinator {
    * Start leader election process
    */
   private async startLeaderElection(): Promise<void> {
-    if (!this.connected) return;
+    if (!this.connected || !this.redisClient) return;
 
     try {
       // Try to become leader
@@ -258,10 +269,17 @@ export class PodCoordinator {
         // Someone else is leader, get their info
         const existingLeaderData = await this.redisClient.get(this.leaderKey);
         if (existingLeaderData) {
-          this.leaderInfo = JSON.parse(existingLeaderData) as LeaderElection;
-          this.isLeader = this.leaderInfo.leaderId === this.podId;
+          try {
+            this.leaderInfo = JSON.parse(existingLeaderData) as LeaderElection;
+            this.isLeader = this.leaderInfo.leaderId === this.podId;
+          } catch (parseError) {
+            logger.error('Failed to parse existing leader data:', parseError);
+            this.leaderInfo = null;
+            this.isLeader = false;
+          }
         } else {
           this.isLeader = false;
+          this.leaderInfo = null;
         }
 
         this.startFollowership();
@@ -310,7 +328,7 @@ export class PodCoordinator {
    * Send leadership heartbeat
    */
   private async sendHeartbeat(): Promise<void> {
-    if (!this.isLeader || !this.leaderInfo) return;
+    if (!this.isLeader || !this.leaderInfo || !this.redisClient) return;
 
     try {
       const updatedLeaderData = {
@@ -341,7 +359,7 @@ export class PodCoordinator {
    * Get current leader info
    */
   async getLeader(): Promise<LeaderElection | null> {
-    if (!this.connected) return null;
+    if (!this.connected || !this.redisClient) return null;
 
     try {
       const leaderData = await this.redisClient.get(this.leaderKey);
@@ -423,7 +441,7 @@ export class PodCoordinator {
    * Get list of active pods (based on recent heartbeats)
    */
   async getActivePods(): Promise<string[]> {
-    if (!this.connected) return [];
+    if (!this.connected || !this.redisClient) return [];
 
     try {
       // Scan for pod heartbeat keys
@@ -442,7 +460,7 @@ export class PodCoordinator {
               activePods.push(heartbeat.podId);
             }
           }
-        } catch (error) {
+        } catch {
           // Skip invalid entries
         }
       }
@@ -469,7 +487,7 @@ export class PodCoordinator {
     if (this.subscriberRedisClient) {
       try {
         await this.subscriberRedisClient.unsubscribe();
-      } catch (error) {
+      } catch {
         // Ignore
       }
     }

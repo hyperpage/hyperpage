@@ -1,5 +1,19 @@
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import { IntegrationTestEnvironment, TestUserManager } from '../../lib/test-credentials';
+
+// Test-specific type definitions to avoid 'any' usage
+interface CacheData {
+  [key: string]: {
+    data: unknown;
+    timestamp: number;
+    ttl: number;
+    staleThreshold?: number;
+  };
+}
+
+interface TestUser extends Record<string, unknown> {
+  cacheData?: CacheData;
+}
 
 describe('Cache Performance & Invalidation Testing', () => {
   let testEnv: IntegrationTestEnvironment;
@@ -27,9 +41,9 @@ describe('Cache Performance & Invalidation Testing', () => {
         cacheStats.set(key, { hits: 0, misses: 0 });
       });
 
-      const cacheOperations = Array.from({ length: accessCount }, async (_, i) => {
+      // Simulate cache operations
+      for (let i = 0; i < accessCount; i++) {
         const key = cacheKeys[i % cacheKeys.length];
-        const userManager = TestUserManager.getInstance();
         
         // Simulate cache access
         const cacheResult = key.startsWith('sequential_key_') && Math.random() > 0.1; // 90% hit rate
@@ -41,26 +55,17 @@ describe('Cache Performance & Invalidation Testing', () => {
           const stats = cacheStats.get(key);
           if (stats) stats.misses++;
         }
+      }
 
-        return {
-          operationId: i,
-          key,
-          cacheHit: cacheResult,
-          timestamp: Date.now()
-        };
-      });
-
-      const results = await Promise.all(cacheOperations);
-      
       // Verify cache hit rate calculations
       cacheStats.forEach((stats, key) => {
         const totalAccess = stats.hits + stats.misses;
-        const hitRate = totalAccess > 0 ? stats.hits / totalAccess : 0;
+        const calculatedHitRate = totalAccess > 0 ? stats.hits / totalAccess : 0;
         
         expect(totalAccess).toBeGreaterThan(0);
-        expect(hitRate).toBeGreaterThanOrEqual(0.7); // Minimum 70% hit rate expected
+        expect(calculatedHitRate).toBeGreaterThanOrEqual(0.7); // Minimum 70% hit rate expected
         
-        console.log(`Cache key ${key}: ${stats.hits}/${totalAccess} hits (${(hitRate * 100).toFixed(1)}% hit rate)`);
+        console.log(`Cache key ${key}: ${stats.hits}/${totalAccess} hits (${(calculatedHitRate * 100).toFixed(1)}% hit rate)`);
       });
 
       const totalHits = Array.from(cacheStats.values()).reduce((sum, stats) => sum + stats.hits, 0);
@@ -84,9 +89,9 @@ describe('Cache Performance & Invalidation Testing', () => {
         cacheStats.set(key, { hits: 0, misses: 0, responseTime: [] });
       });
 
-      const cacheOperations = accessPattern.map(async (key, i) => {
+      for (let i = 0; i < accessPattern.length; i++) {
+        const key = accessPattern[i];
         const startTime = performance.now();
-        const userManager = TestUserManager.getInstance();
         
         // Simulate cache operation
         const isCacheHit = Math.random() > 0.2; // 80% hit rate for random access
@@ -104,22 +109,11 @@ describe('Cache Performance & Invalidation Testing', () => {
             stats.misses++;
           }
         }
-
-        return {
-          operationId: i,
-          key,
-          cacheHit: isCacheHit,
-          responseTime,
-          timestamp: Date.now()
-        };
-      });
-
-      const results = await Promise.all(cacheOperations);
+      }
       
       // Analyze cache performance
       cacheStats.forEach((stats, key) => {
         const totalAccess = stats.hits + stats.misses;
-        const hitRate = totalAccess > 0 ? stats.hits / totalAccess : 0;
         const avgResponseTime = stats.responseTime.length > 0 
           ? stats.responseTime.reduce((sum, time) => sum + time, 0) / stats.responseTime.length 
           : 0;
@@ -158,7 +152,7 @@ describe('Cache Performance & Invalidation Testing', () => {
 
       for (let burstIndex = 0; burstIndex < burstCount; burstIndex++) {
         const burstKey = cacheKeys[burstIndex % cacheKeys.length];
-        const burstOperations = Array.from({ length: burstSize }, async (_, opIndex) => {
+        const burstOperations = Array.from({ length: burstSize }, async () => {
           const startTime = performance.now();
           
           // Simulate burst access - high probability of cache hits within burst
@@ -216,7 +210,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       const cacheTimeout = 100; // 100ms timeout
       
       if (user) {
-        (user as any).cacheData = {
+        (user as TestUser).cacheData = {
           [cacheKey]: {
             data: 'initial_data',
             timestamp: Date.now(),
@@ -229,7 +223,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       
       // First access (should be cache hit)
       const firstAccess = () => {
-        const cacheData = (user as any)?.cacheData?.[cacheKey];
+        const cacheData = (user as TestUser)?.cacheData?.[cacheKey];
         const age = Date.now() - (cacheData?.timestamp || 0);
         const isValid = age < (cacheData?.ttl || 0);
         
@@ -267,7 +261,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       
       // Set up multiple cache entries with different TTLs
       if (user) {
-        (user as any).cacheData = {
+        (user as TestUser).cacheData = {
           'short_ttl': {
             data: 'short_lived_data',
             timestamp: Date.now(),
@@ -288,7 +282,7 @@ describe('Cache Performance & Invalidation Testing', () => {
 
       // Check initial state
       const checkCacheStatus = () => {
-        const cacheData = (user as any)?.cacheData;
+        const cacheData = (user as TestUser)?.cacheData;
         return {
           short_ttl: cacheData?.['short_ttl'] ? {
             valid: Date.now() - cacheData['short_ttl'].timestamp < cacheData['short_ttl'].ttl,
@@ -337,7 +331,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       // Set up cache with data
       const cacheKey = 'update_invalidation_test';
       if (user) {
-        (user as any).cacheData = {
+        (user as TestUser).cacheData = {
           [cacheKey]: {
             data: { value: 'original', version: 1 },
             timestamp: Date.now(),
@@ -347,25 +341,25 @@ describe('Cache Performance & Invalidation Testing', () => {
       }
 
       // First read (cache hit)
-      const read1 = (user as any)?.cacheData?.[cacheKey];
-      expect(read1?.data?.version).toBe(1);
+      const read1 = (user as TestUser)?.cacheData?.[cacheKey];
+      expect((read1?.data as { version: number })?.version).toBe(1);
 
       // Update the underlying data
       if (user) {
-        (user as any).cacheData[cacheKey].data = { value: 'updated', version: 2 };
-        (user as any).cacheData[cacheKey].timestamp = Date.now(); // Reset timestamp
+        (user as TestUser).cacheData![cacheKey].data = { value: 'updated', version: 2 };
+        (user as TestUser).cacheData![cacheKey].timestamp = Date.now(); // Reset timestamp
       }
 
       // Second read (should see updated data)
-      const read2 = (user as any)?.cacheData?.[cacheKey];
-      expect(read2?.data?.version).toBe(2);
-      expect(read2?.data?.value).toBe('updated');
+      const read2 = (user as TestUser)?.cacheData?.[cacheKey];
+      expect((read2?.data as { version: number })?.version).toBe(2);
+      expect((read2?.data as { value: string })?.value).toBe('updated');
 
       // Invalidate cache manually
-      delete (user as any)?.cacheData?.[cacheKey];
+      delete (user as TestUser)?.cacheData?.[cacheKey];
 
       // Third read (should be cache miss)
-      const read3 = (user as any)?.cacheData?.[cacheKey];
+      const read3 = (user as TestUser)?.cacheData?.[cacheKey];
       expect(read3).toBeUndefined();
 
       console.log('Cache invalidation on update test: Data updates properly invalidate cache');
@@ -375,11 +369,9 @@ describe('Cache Performance & Invalidation Testing', () => {
   describe('Cache Performance Under Concurrent Access', () => {
     it('maintains performance under concurrent cache access', async () => {
       const concurrentAccesses = 20;
-      const cacheKey = 'concurrent_access_test';
       
       const accessPromises = Array.from({ length: concurrentAccesses }, async (_, i) => {
         const startTime = performance.now();
-        const userManager = TestUserManager.getInstance();
         
         // Simulate cache access with potential contention
         const isCacheHit = Math.random() > 0.15; // 85% hit rate
@@ -396,12 +388,11 @@ describe('Cache Performance & Invalidation Testing', () => {
         };
       });
 
-      const results = await Promise.all(accessPromises);
+      const concurrentResults = await Promise.all(accessPromises);
       
       // Analyze concurrent performance
-      const cacheHits = results.filter(r => r.cacheHit);
-      const cacheMisses = results.filter(r => !r.cacheHit);
-      const avgResponseTime = results.reduce((sum, r) => sum + r.responseTime, 0) / results.length;
+      const cacheHits = concurrentResults.filter(r => r.cacheHit);
+      const avgResponseTime = concurrentResults.reduce((sum, r) => sum + r.responseTime, 0) / concurrentResults.length;
       
       expect(cacheHits.length).toBeGreaterThan(concurrentAccesses * 0.8); // 80%+ hit rate
       expect(avgResponseTime).toBeLessThan(10); // Fast average response time
@@ -459,21 +450,21 @@ describe('Cache Performance & Invalidation Testing', () => {
     it('validates cache consistency under high concurrent load', async () => {
       const highLoadOperations = 30;
       const operationTypes = ['read', 'write', 'delete', 'update'] as const;
-      const cacheKeys = ['consistency_key_1', 'consistency_key_2', 'consistency_key_3'];
+      const consistencyKeys = ['consistency_key_1', 'consistency_key_2', 'consistency_key_3'];
       
-      const consistencyMap = new Map<string, { operations: any[]; finalValue: any }>();
-      cacheKeys.forEach(key => consistencyMap.set(key, { operations: [], finalValue: null }));
+      const consistencyMap = new Map<string, { operations: Array<{ type: string; value: unknown; timestamp: number }>; finalValue: unknown }>();
+      consistencyKeys.forEach(key => consistencyMap.set(key, { operations: [], finalValue: null }));
       
       const loadPromises = Array.from({ length: highLoadOperations }, async (_, i) => {
         const operation = operationTypes[i % operationTypes.length];
-        const cacheKey = cacheKeys[i % cacheKeys.length];
+        const consistencyKey = consistencyKeys[i % consistencyKeys.length];
         
-        const consistencyData = consistencyMap.get(cacheKey);
+        const consistencyData = consistencyMap.get(consistencyKey);
         if (!consistencyData) {
           return {
             operationId: i,
             operation,
-            cacheKey,
+            consistencyKey,
             value: null,
             timestamp: Date.now()
           };
@@ -481,7 +472,7 @@ describe('Cache Performance & Invalidation Testing', () => {
         
         switch (operation) {
           case 'read':
-            const readValue = consistencyData.finalValue || `initial_${cacheKey}`;
+            const readValue = consistencyData.finalValue || `initial_${consistencyKey}`;
             consistencyData.operations.push({ type: 'read', value: readValue, timestamp: Date.now() });
             break;
             
@@ -493,7 +484,7 @@ describe('Cache Performance & Invalidation Testing', () => {
             
           case 'update':
             if (consistencyData.finalValue) {
-              const updatedValue = `${consistencyData.finalValue}_updated_${i}`;
+              const updatedValue = `${consistencyData.finalValue as string}_updated_${i}`;
               consistencyData.finalValue = updatedValue;
               consistencyData.operations.push({ type: 'update', value: updatedValue, timestamp: Date.now() });
             }
@@ -508,7 +499,7 @@ describe('Cache Performance & Invalidation Testing', () => {
         return {
           operationId: i,
           operation,
-          cacheKey,
+          consistencyKey,
           value: consistencyData.finalValue,
           timestamp: Date.now()
         };
@@ -517,7 +508,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       const loadResults = await Promise.all(loadPromises);
       
       // Verify consistency across all operations
-      consistencyMap.forEach((data, key) => {
+      consistencyMap.forEach((data) => {
         expect(data.operations.length).toBeGreaterThan(0);
         
         // All operations should have valid timestamps
@@ -529,7 +520,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       // Verify final state is consistent
       loadResults.forEach(result => {
         expect(result.operationId).toBeLessThan(highLoadOperations);
-        expect(result.cacheKey).toBeDefined();
+        expect(result.consistencyKey).toBeDefined();
         expect(result.timestamp).toBeDefined();
       });
 
@@ -548,7 +539,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       
       // Set up initial cache data
       if (user) {
-        (user as any).cacheData = {
+        (user as TestUser).cacheData = {
           [cacheKey]: {
             data: { value: 'fresh_data', version: 1 },
             timestamp: Date.now(),
@@ -560,7 +551,7 @@ describe('Cache Performance & Invalidation Testing', () => {
 
       // First access - fresh data
       const freshAccess = () => {
-        const cacheData = (user as any)?.cacheData?.[cacheKey];
+        const cacheData = (user as TestUser)?.cacheData?.[cacheKey];
         const age = Date.now() - (cacheData?.timestamp || 0);
         const isFresh = age < (cacheData?.ttl || 0);
         const isStale = age >= (cacheData?.ttl || 0) && age < ((cacheData?.ttl || 0) + (cacheData?.staleThreshold || 0));
@@ -584,7 +575,7 @@ describe('Cache Performance & Invalidation Testing', () => {
       const result2 = freshAccess();
       expect(result2.status).toBe('stale');
       expect(result2.shouldRevalidate).toBe(true);
-      expect(result2.data?.version).toBe(1);
+      expect((result2.data as { version: number })?.version).toBe(1);
 
       // Wait for data to become expired
       await new Promise(resolve => setTimeout(resolve, 300)); // Past stale threshold
@@ -592,13 +583,12 @@ describe('Cache Performance & Invalidation Testing', () => {
       const result3 = freshAccess();
       expect(result3.status).toBe('expired');
       expect(result3.shouldRevalidate).toBe(false);
-      expect(result3.data?.version).toBe(1);
+      expect((result3.data as { version: number })?.version).toBe(1);
 
       console.log('Stale-while-revalidate test: Correct state transitions from fresh → stale → expired');
     });
 
     it('handles concurrent revalidation requests properly', async () => {
-      const staleKey = 'concurrent_revalidation_test';
       const revalidationRequests = 10;
       
       let isRevalidating = false;

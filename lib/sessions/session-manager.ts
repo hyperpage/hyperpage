@@ -3,6 +3,19 @@ import { CacheBackend } from '../cache/cache-interface';
 import { MemorySessionStore } from './memory-session-store';
 import logger from '../logger';
 
+/**
+ * Redis client interface for type safety
+ */
+interface RedisClient {
+  get: (key: string) => Promise<string | null>;
+  set: (key: string, value: string, mode: string, ttlSeconds: number) => Promise<'OK'>;
+  del: (key: string) => Promise<number>;
+  exists: (key: string) => Promise<number>;
+  expire: (key: string, seconds: number) => Promise<number>;
+  scan: (cursor: number, ...args: string[]) => Promise<[number, string[]]>;
+  getClient: () => RedisClient;
+}
+
 export interface SessionData {
   userId?: string;
   user?: {
@@ -23,12 +36,12 @@ export interface SessionData {
     expandedWidgets: string[];
     lastVisitedTools: string[];
     dashboardLayout: string;
-    filterSettings: Record<string, any>;
+    filterSettings: Record<string, unknown>;
   };
   toolConfigs: {
     [toolId: string]: {
       enabled: boolean;
-      settings: Record<string, any>;
+      settings: Record<string, unknown>;
       lastUsed: Date;
     };
   };
@@ -49,7 +62,7 @@ export interface SessionData {
 }
 
 export class SessionManager {
-  private redisClient: any;
+  private redisClient: RedisClient | null = null;
   private connected = false;
   private memoryStore: MemorySessionStore;
   private readonly sessionPrefix = 'hyperpage:session:';
@@ -62,7 +75,7 @@ export class SessionManager {
     this.memoryStore = new MemorySessionStore();
 
     // Create a dedicated Redis instance for sessions
-    this.initializeRedis(redisUrl);
+    void this.initializeRedis(redisUrl);
   }
 
   private async initializeRedis(redisUrl?: string) {
@@ -75,7 +88,7 @@ export class SessionManager {
 
       // Get the underlying Redis client - this is a bit hacky but necessary
       // for direct Redis operations like SCAN, DEL, etc.
-      this.redisClient = (cache as any).redisClient.getClient();
+      this.redisClient = (cache as unknown as { getClient: () => RedisClient }).getClient();
       this.connected = true;
 
       // Start cleanup interval
@@ -102,8 +115,7 @@ export class SessionManager {
   /**
    * Create a new session with default values
    */
-  createSession(sessionId?: string): SessionData {
-    const id = sessionId || this.generateSessionId();
+  createSession(): SessionData {
     const now = new Date();
 
     return {
@@ -144,7 +156,7 @@ export class SessionManager {
           return null;
         }
 
-        return JSON.parse(data);
+        return JSON.parse(data) as SessionData;
       } catch (error) {
         logger.error('Failed to get session from Redis:', error);
         return null;
@@ -191,7 +203,7 @@ export class SessionManager {
    */
   async updateSession(sessionId: string, updates: Partial<SessionData>): Promise<void> {
     const existingSession = await this.getSession(sessionId) ||
-      this.createSession(sessionId);
+      this.createSession();
 
     const updatedSession = {
       ...existingSession,
@@ -238,7 +250,7 @@ export class SessionManager {
 
     try {
       // SCAN returns array of [cursor, keys[]]
-      const [cursor, keys] = await this.redisClient.scan(0, 'MATCH', `${this.buildSessionKey('*')}`, 'COUNT', 1000);
+      const [, keys] = await this.redisClient.scan(0, 'MATCH', `${this.buildSessionKey('*')}`, 'COUNT', '1000');
       return keys.length;
     } catch (error) {
       logger.error('Failed to count active sessions:', error);
@@ -254,8 +266,8 @@ export class SessionManager {
       // Redis handles TTL automatically, but we can log expired sessions
       const activeCount = await this.getActiveSessionsCount();
       logger.info(`Active sessions after cleanup: ${activeCount}`);
-    } catch (error) {
-      logger.error('Session cleanup failed:', error);
+    } catch {
+      logger.error('Session cleanup failed');
     }
   }
 
@@ -274,9 +286,9 @@ export class SessionManager {
 
       await this.redisClient.expire(key, extendBy);
       logger.debug(`Session ${sessionId} extended by ${extendBy} seconds`);
-    } catch (error) {
-      logger.error('Failed to extend session:', error);
-      throw error;
+    } catch (err) {
+      logger.error('Failed to extend session:', err);
+      throw err;
     }
   }
 
@@ -289,7 +301,7 @@ export class SessionManager {
         const key = this.buildSessionKey(sessionId);
         const result = await this.redisClient.exists(key);
         return result === 1;
-      } catch (error) {
+      } catch {
         return false;
       }
     } else {
@@ -310,8 +322,8 @@ export class SessionManager {
    */
   private startCleanupInterval(): void {
     this.cleanupTimer = setInterval(() => {
-      this.cleanupExpiredSessions().catch(error => {
-        logger.error('Cleanup interval failed:', error);
+      void this.cleanupExpiredSessions().catch(() => {
+        logger.error('Cleanup interval failed');
       });
     }, this.cleanupInterval);
   }

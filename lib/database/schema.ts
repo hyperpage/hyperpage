@@ -5,7 +5,7 @@
  * Includes jobs, rate limits, configurations, and audit trails.
  */
 
-import { sqliteTable, text, integer, blob } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 // ============================================================================
@@ -79,7 +79,7 @@ export const rateLimits = sqliteTable('rate_limits', {
 export const toolConfigs = sqliteTable('tool_configs', {
   toolName: text('tool_name').primaryKey(),
   enabled: integer('enabled', { mode: 'boolean' }).default(true).notNull(),
-  config: text('config', { mode: 'json' }).$type<Record<string, any>>(), // User configuration overrides
+  config: text('config', { mode: 'json' }).$type<Record<string, unknown>>(), // User configuration overrides
   refreshInterval: integer('refresh_interval'), // Override default refresh interval
   notifications: integer('notifications', { mode: 'boolean' }).default(true).notNull(),
   updatedAt: integer('updated_at')

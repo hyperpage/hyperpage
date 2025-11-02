@@ -37,7 +37,6 @@ export class PerformanceMiddleware {
     response: NextResponse
   ): Promise<NextResponse> {
     const url = new URL(request.url);
-    const startTime = Date.now();
 
     // Check if this endpoint should be excluded from monitoring
     if (this.shouldExcludeEndpoint(url.pathname)) {
@@ -177,9 +176,18 @@ export class PerformanceMiddleware {
     return async (req: unknown, res: unknown, next: () => void) => {
       const startTime = performance.now();
 
+      // Define safe type guards for Express objects
+      const isExpressResponse = (obj: unknown): obj is { on: (event: string, callback: () => void) => void; statusCode?: number } => {
+        return typeof obj === 'object' && obj !== null && 'on' in obj && typeof (obj as { on: unknown }).on === 'function';
+      };
+
+      const getSafeString = (obj: unknown, property: string): string => {
+        return (obj as Record<string, unknown>)?.[property] as string || '/';
+      };
+
       // Hook into response finish event
-      if (res && typeof res === 'object' && 'on' in res && typeof (res as any).on === 'function') {
-        (res as any).on('finish', () => {
+      if (isExpressResponse(res)) {
+        res.on('finish', () => {
           try {
             const responseTimeMs = performance.now() - startTime;
 
@@ -188,9 +196,9 @@ export class PerformanceMiddleware {
               responseTimeMs,
               responseSizeBytes: 0, // Express doesn't provide easy access to response size
               cacheStatus: 'MISS',
-              endpoint: (req as any)?.path || (req as any)?.url || '/',
-              method: (req as any)?.method || 'GET',
-              statusCode: (res as any)?.statusCode || 200,
+              endpoint: getSafeString(req, 'path') || getSafeString(req, 'url') || '/',
+              method: getSafeString(req, 'method') || 'GET',
+              statusCode: (res as Record<string, unknown>)?.statusCode as number || 200,
             };
 
             performanceDashboard.recordSnapshot(snapshot);

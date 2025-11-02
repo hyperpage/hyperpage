@@ -244,7 +244,7 @@ test.describe('Rate Limit UI Handling E2E Tests', () => {
   });
 
   test.describe('Cross-Browser Compatibility', () => {
-    test('should display consistently across browsers', async ({ page, browserName }) => {
+    test('should display consistently across browsers', async ({ page }) => {
       mockServer.setUsage('github', '/rate_limit', 2000); // 40%
 
       await page.goto('/');

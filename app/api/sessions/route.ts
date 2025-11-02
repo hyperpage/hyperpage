@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         'unknown';
 
       const newSessionId = sessionManager.generateSessionId();
-      const session = sessionManager.createSession(newSessionId);
+      const session = sessionManager.createSession();
       session.metadata = {
         ...session.metadata,
         ipAddress: ip,

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { IntegrationTestEnvironment, OAuthTestCredentials, TestUserManager } from '../../lib/test-credentials';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
+import { IntegrationTestEnvironment, TestUserManager } from '../../lib/test-credentials';
 
 describe('Concurrent Authentication Flow Testing', () => {
   let testEnv: IntegrationTestEnvironment;
@@ -261,7 +261,7 @@ describe('Concurrent Authentication Flow Testing', () => {
 
       const sequenceResults = await Promise.all(
         authenticationSequence.map(async (step, index) => {
-          const session = await testEnv.createTestSession(step.provider as any);
+          const session = await testEnv.createTestSession(step.provider as 'github' | 'gitlab' | 'jira');
           
           return {
             stepIndex: index,
@@ -334,8 +334,6 @@ describe('Concurrent Authentication Flow Testing', () => {
       const stressStartTime = performance.now();
 
       for (let iteration = 0; iteration < stressTestIterations; iteration++) {
-        const iterationStartTime = performance.now();
-        
         const stressPromises = Array.from({ length: concurrentStressOperations }, async (_, i) => {
           const providerIndex = i % 3;
           const providers = ['github', 'gitlab', 'jira'] as const;

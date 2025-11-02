@@ -5,24 +5,8 @@
  * Supports up/down migrations with transaction safety and rollback capabilities.
  */
 
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import { eq } from 'drizzle-orm';
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
-import { DATABASE_PATH, internalDb } from './connection';
+import { internalDb } from './connection';
 import { MIGRATIONS_REGISTRY, getMigrationNames } from './migrations';
-
-// Migration tracking table (simplified version for internal use)
-const schemaMigrations = sqliteTable('schema_migrations', {
-  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
-  migrationName: text('migration_name').notNull().unique(),
-  executedAt: integer('executed_at', { mode: 'timestamp_ms' })
-    .default(sql`(unixepoch() * 1000)`).notNull(),
-});
-
-import { sql } from 'drizzle-orm';
-
-type InternalDb = typeof internalDb;
 
 // Create migration tracking table if it doesn't exist
 function ensureMigrationTable() {

@@ -218,16 +218,16 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
 
       keys.forEach((key, index) => {
         const result = results?.[index]?.[1]; // Redis pipeline result format
-        if (result && typeof result === 'string') {
-          try {
-            const entry: CacheEntry<T> = JSON.parse(result);
-            if (Date.now() <= entry.expiresAt) {
-              resultMap.set(key, entry.data);
+            if (result && typeof result === 'string') {
+              try {
+                const entry: CacheEntry<T> = JSON.parse(result);
+                if (Date.now() <= entry.expiresAt) {
+                  resultMap.set(key, entry.data);
+                }
+              } catch {
+                // Skip invalid entries
+              }
             }
-          } catch (parseError) {
-            // Skip invalid entries
-          }
-        }
       });
 
       this.stats.hits += resultMap.size;
@@ -385,7 +385,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       }
 
       const client = this.redisClient.getClient();
-      const info = await client.info('stats');
+      await client.info('stats');
       const totalKeys = await client.dbsize();
 
       return {

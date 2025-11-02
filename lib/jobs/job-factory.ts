@@ -16,7 +16,7 @@ export class JobFactory implements IJobFactory {
   /**
    * Create a cache warming job for a tool
    */
-  createCacheWarmJob(tool: Omit<any, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'> {
+  createCacheWarmJob(tool: Omit<Tool, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'> {
     return {
       id: generateJobId('cache-warm'),
       type: JobType.CACHE_WARM,
@@ -35,7 +35,7 @@ export class JobFactory implements IJobFactory {
   /**
    * Create a data refresh job for a tool
    */
-  createDataRefreshJob(tool: Omit<any, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'> {
+  createDataRefreshJob(tool: Omit<Tool, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'> {
     return {
       id: generateJobId('data-refresh'),
       type: JobType.DATA_REFRESH,
