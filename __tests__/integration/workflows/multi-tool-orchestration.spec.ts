@@ -6,24 +6,30 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { IntegrationTestEnvironment, OAuthTestCredentials } from '../../lib/test-credentials';
+import { IntegrationTestEnvironment } from '../../lib/test-credentials';
 import { TestBrowser } from './utils/test-browser';
 import { UserJourneySimulator } from './utils/user-journey-simulator';
+
+export interface ToolData {
+  items?: unknown[];
+  total?: number;
+  [key: string]: unknown;
+}
 
 export interface CrossToolWorkflowResult {
   github: {
     success: boolean;
-    data: any;
+    data: ToolData | null;
     linked: boolean;
   };
   gitlab: {
     success: boolean;
-    data: any;
+    data: ToolData | null;
     linked: boolean;
   };
   jira: {
     success: boolean;
-    data: any;
+    data: ToolData | null;
     linked: boolean;
   };
   workflowCompleted: boolean;
@@ -37,6 +43,38 @@ export interface WorkflowLink {
   type: 'issue_to_pr' | 'pr_to_issue' | 'branch_to_issue' | 'commit_to_issue';
   bidirectional: boolean;
   dataMapped: boolean;
+}
+
+export interface GitHubPR {
+  id: number;
+  number: number;
+  title: string;
+  branch: string;
+  status: string;
+}
+
+export interface JiraIssue {
+  key: string;
+  summary: string;
+  status: string;
+}
+
+export interface WorkflowRun {
+  id: string;
+  name: string;
+  status: string;
+  head_branch: string;
+}
+
+export interface JiraIssueData {
+  summary: string;
+  description: string;
+  issueType: string;
+  labels: string[];
+}
+
+export interface APIParams {
+  [key: string]: unknown;
 }
 
 describe('Multi-Tool Orchestration Tests', () => {
@@ -55,7 +93,7 @@ describe('Multi-Tool Orchestration Tests', () => {
   /**
    * Simulate GitHub to Jira workflow linking
    */
-  const simulateGitHubJiraLink = async (githubPR: any, jiraIssue: any): Promise<WorkflowLink> => {
+  const simulateGitHubJiraLink = async (githubPR: GitHubPR): Promise<WorkflowLink> => {
     // Simulate creating/updating Jira issue from GitHub PR
     const jiraIssueKey = `TEST-${Math.floor(Math.random() * 1000)}`;
     
@@ -81,9 +119,9 @@ describe('Multi-Tool Orchestration Tests', () => {
     const startTime = Date.now();
     
     // Simulate parallel data fetching
-    const githubData = await simulateAPICall('github', 'pulls', {});
-    const gitlabData = await simulateAPICall('gitlab', 'merge_requests', {});
-    const jiraData = await simulateAPICall('jira', 'issues', {});
+    const githubData = await simulateAPICall('github');
+    const gitlabData = await simulateAPICall('gitlab');
+    const jiraData = await simulateAPICall('jira');
 
     // Simulate workflow links
     const workflowLinks = browser.getSessionData('workflow_links') || [];
@@ -105,17 +143,17 @@ describe('Multi-Tool Orchestration Tests', () => {
       github: {
         success: githubData.success,
         data: githubData.data,
-        linked: workflowLinks.some((link: any) => link.source.includes('GitHub'))
+        linked: workflowLinks.some((link: WorkflowLink) => link.source.includes('GitHub'))
       },
       gitlab: {
         success: gitlabData.success,
         data: gitlabData.data,
-        linked: workflowLinks.some((link: any) => link.source.includes('GitLab'))
+        linked: workflowLinks.some((link: WorkflowLink) => link.source.includes('GitLab'))
       },
       jira: {
         success: jiraData.success,
         data: jiraData.data,
-        linked: workflowLinks.some((link: any) => link.target.includes('Jira'))
+        linked: workflowLinks.some((link: WorkflowLink) => link.target.includes('Jira'))
       },
       workflowCompleted: dataConsistency,
       dataConsistency,
@@ -123,37 +161,12 @@ describe('Multi-Tool Orchestration Tests', () => {
     };
   };
 
-  /**
-   * Simulate GitHub workflow to Jira issue mapping
-   */
-  const simulateGitHubWorkflowToJira = async (workflowRun: any): Promise<any> => {
-    // Extract workflow details
-    const workflowName = workflowRun.name;
-    const status = workflowRun.status;
-    const branch = workflowRun.head_branch;
 
-    // Create Jira issue from workflow result
-    const jiraIssue = {
-      summary: `[CI] ${workflowName} ${status} on ${branch}`,
-      description: `GitHub Actions workflow '${workflowName}' ${status} for branch ${branch}`,
-      issueType: 'Bug', // or 'Task' depending on failure type
-      labels: ['ci-cd', 'github-actions', branch]
-    };
-
-    // Store the mapping
-    browser.setSessionData(`workflow_mapping_${workflowRun.id}`, {
-      jiraIssue,
-      status,
-      created: true
-    });
-
-    return jiraIssue;
-  };
 
   /**
    * Simulate API call
    */
-  const simulateAPICall = async (provider: string, endpoint: string, params: any) => {
+  const simulateAPICall = async (provider: string) => {
     // Check for forced success mode
     const forceSuccess = browser.getSessionData('force_success_mode');
     if (forceSuccess) {
@@ -202,15 +215,8 @@ describe('Multi-Tool Orchestration Tests', () => {
         status: 'open'
       };
 
-      // Simulate Jira issue
-      const jiraIssue = {
-        key: 'TEST-456',
-        summary: 'Authentication issue',
-        status: 'Open'
-      };
-
       // Create workflow link
-      const workflowLink = await simulateGitHubJiraLink(githubPR, jiraIssue);
+      const workflowLink = await simulateGitHubJiraLink(githubPR);
       
       expect(workflowLink.source).toContain('GitHub PR #123');
       expect(workflowLink.target).toContain('TEST-');
@@ -410,7 +416,7 @@ describe('Multi-Tool Orchestration Tests', () => {
         });
 
         // Create a slow operation that will timeout
-        const slowOperation = new Promise<{ success: boolean; data: any }>((resolve) => {
+        const slowOperation = new Promise<{ success: boolean; data: ToolData }>((resolve) => {
           setTimeout(() => {
             resolve({ success: true, data: {} });
           }, 1000); // 1 second delay

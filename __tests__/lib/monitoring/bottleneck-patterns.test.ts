@@ -283,7 +283,7 @@ describe('Bottleneck Patterns', () => {
       });
 
       it('should return empty array for unknown severity', () => {
-        const unknownPatterns = getPatternsBySeverity('unknown' as any);
+        const unknownPatterns = getPatternsBySeverity('unknown' as 'critical' | 'warning' | 'info');
         expect(unknownPatterns).toHaveLength(0);
       });
     });
