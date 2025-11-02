@@ -12,94 +12,12 @@ import {
   ConcurrentReadResult,
   TransactionOperationResult,
   RecoveryResult,
-  MigrationResult
+  MigrationResult,
+  SessionActivity,
+  TimePersistenceTest,
+  PeakLoadTest,
+  MigrationSource
 } from './database-persistence-recovery.types';
-
-// Additional interfaces for test-specific data structures
-interface SessionActivity {
-  [operation: string]: {
-    timestamp: number;
-    sessionIndex: number;
-    operationIndex: number;
-  };
-}
-
-interface TimePersistenceTest {
-  startTime: number;
-  checkpoints: Array<{
-    timeElapsed: number;
-    checkpoint: number;
-  }>;
-  duration: number;
-}
-
-interface LifecyclePhase {
-  phase: string;
-  index: number;
-  invalidationTime?: number;
-}
-
-interface PeakLoadTest {
-  accessIndex: number;
-  accessTime: number;
-  peakLoadPhase: string;
-  updatedTime?: number;
-}
-
-interface MigrationSource {
-  migrationId: string;
-  version: number;
-  legacyData?: {
-    oldField1: string;
-    oldField2: string;
-    oldTimestamp: number;
-  };
-  newData?: {
-    migratedField1: string;
-    migratedField2: string;
-    migrationTimestamp: number;
-  };
-}
-
-interface SessionOperationResult {
-  sessionId: string;
-  success: boolean;
-  operationId: number;
-  timestamp: number;
-}
-
-interface SessionLoadResult {
-  sessionId: string;
-  operations: any[];
-  allOperationsSuccessful: boolean;
-}
-
-interface LifecycleResult {
-  originalSessionId: string;
-  newSessionId: string;
-  originalPhase: string;
-  recreationSuccessful: boolean;
-}
-
-interface PeakAccessResult {
-  accessIndex: number;
-  sessionId: string;
-  userId?: string;
-  read1: boolean;
-  write: boolean;
-  read2: boolean;
-  update: boolean;
-  finalData: PeakLoadTest | undefined;
-}
-
-interface RelationshipResult {
-  relationshipId: number;
-  sessionId: string;
-  primaryCreated: boolean;
-  referencesCreated: boolean;
-  crossReferencesCreated: boolean;
-  referentialIntegrity: boolean;
-}
 
 // Helper function for referential integrity validation
 function validateReferentialIntegrity(relationships: RelationshipData): boolean {
@@ -285,7 +203,7 @@ describe('Database Persistence & Recovery Testing', () => {
           if (previousWrite) {
             // Type assertion to access operationId safely
             const writeOp = previousWrite as TransactionTest;
-            dataConsistent = (writeOp as any).operationId < i;
+            dataConsistent = writeOp.writeOperation < i;
           }
           
           return {
@@ -407,7 +325,7 @@ describe('Database Persistence & Recovery Testing', () => {
       }
 
       // Simulate session recreation (new session, same user context)
-      const recreatedSession = await testEnv.createTestSession('gitlab');
+      await testEnv.createTestSession('gitlab');
       const recreatedUser = userManager.getTestUser(originalSession.userId);
       
       // Verify persistent data survived session recreation
@@ -553,10 +471,10 @@ describe('Database Persistence & Recovery Testing', () => {
       // Verify no session data corruption - fix data extraction logic
       const userManager = TestUserManager.getInstance();
       sessionResults.forEach(session => {
-        const user = userManager.getTestUser((session as any).userId); // Use stored userId
+        const user = userManager.getTestUser(session.userId); // Use stored userId
         // Fix: Check both possible storage locations for sessionActivity
-        const userSessionActivity = (user as TestUser & { sessionActivity?: SessionActivity })?.sessionActivity || 
-                                    (user as any)?.sessionActivity;
+        const userSessionActivity = (user as TestUser & { sessionActivity?: SessionActivity })?.sessionActivity ||
+                                    (user as TestUser & { sessionActivity?: SessionActivity })?.sessionActivity;
         expect(userSessionActivity).toBeDefined();
         expect(Object.keys(userSessionActivity || {})).toHaveLength(operationsPerSession);
       });
@@ -741,7 +659,7 @@ describe('Database Persistence & Recovery Testing', () => {
       // Verify data integrity across all operations
       const userManager = TestUserManager.getInstance();
       const verifiedUsers = peakResults.map(result => {
-        const userId = (result as any).userId; // Use stored userId
+        const userId = result.userId; // Use stored userId
         return userManager.getTestUser(userId);
       });
 
@@ -836,24 +754,20 @@ describe('Database Persistence & Recovery Testing', () => {
         
         // Concurrent access during migration
         const readAccess = userManager.getTestUser(session.userId);
-        const readUserMigrationSource = (readAccess as TestUser & { migrationSource?: MigrationSource })?.migrationSource;
-        const readResult = {
-          canRead: !!readAccess,
-          hasLegacyData: !!readUserMigrationSource?.legacyData,
-          migrationInProgress: !!readUserMigrationSource?.legacyData
-        };
         
         // Complete migration
         if (user?.migrationSource) {
-          const migrationSource = (user as any).migrationSource;
-          migrationSource.version = 2;
-          if (migrationSource.legacyData) {
-            migrationSource.newData = {
-              migratedField1: migrationSource.legacyData.oldField1,
-              migratedField2: migrationSource.legacyData.oldField2,
-              migrationTimestamp: Date.now()
-            };
-            delete migrationSource.legacyData;
+          const migrationSource = (user as TestUser & { migrationSource?: MigrationSource }).migrationSource;
+          if (migrationSource) {
+            migrationSource.version = 2;
+            if (migrationSource.legacyData) {
+              migrationSource.newData = {
+                migratedField1: migrationSource.legacyData.oldField1,
+                migratedField2: migrationSource.legacyData.oldField2,
+                migrationTimestamp: Date.now()
+              };
+              delete migrationSource.legacyData;
+            }
           }
         }
         
