@@ -14,12 +14,15 @@ import { PlatformRateLimits } from '../../lib/types/rate-limit';
 import { toolRegistry } from '../../tools/registry';
 import { Tool } from '../../tools/tool-types';
 
+// TypeScript-safe global fetch access
+const safeGlobal = globalThis as unknown as { fetch?: unknown };
+
 describe('Rate Limit Monitor Library', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearRateLimitCache();
     // Ensure global.fetch is not mocked by previous tests
-    delete (global as any).fetch;
+    safeGlobal.fetch = undefined;
   });
 
   afterEach(() => {
@@ -397,7 +400,7 @@ describe('Rate Limit Monitor Library', () => {
         ok: true,
         json: vi.fn().mockResolvedValue(mockResponseData)
       });
-      global.fetch = fetchMock;
+      safeGlobal.fetch = fetchMock;
 
       const result = await getRateLimitStatus('github');
 
@@ -426,7 +429,7 @@ describe('Rate Limit Monitor Library', () => {
       };
 
       // First call to populate cache
-      global.fetch = vi.fn().mockResolvedValue({
+      safeGlobal.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue(mockResponseData)
       });
@@ -440,11 +443,11 @@ describe('Rate Limit Monitor Library', () => {
       // Should still be fresh (less than 5 minutes)
       expect(result!.dataFresh).toBe(true);
       // fetch should only be called once
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(safeGlobal.fetch).toHaveBeenCalledTimes(1);
     });
 
     it('should handle API errors gracefully', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      safeGlobal.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500
       });
@@ -455,7 +458,7 @@ describe('Rate Limit Monitor Library', () => {
     });
 
     it('should handle network errors gracefully', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+      safeGlobal.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
       const result = await getRateLimitStatus('github');
 
@@ -498,7 +501,7 @@ describe('Rate Limit Monitor Library', () => {
         })
       });
 
-      global.fetch = fetchSpy;
+      safeGlobal.fetch = fetchSpy;
 
       await getRateLimitStatus('github', customBaseUrl);
 

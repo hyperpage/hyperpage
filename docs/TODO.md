@@ -1,4 +1,3 @@
-- [ ] Run npm test for bottleneck-detector.test.ts to identify issues
-- [ ] Analyze test failures and root causes  
-- [ ] Fix identified issues while maintaining code quality
-- [ ] Verify test passes without creating lint/typescript issues
+- [ ] Create proper global type interface for fetch property
+- [ ] Replace "global as any" with typed global object
+- [ ] Run tests to verify the fix works correctly
