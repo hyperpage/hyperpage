@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { CacheFactory } from '../../../lib/cache/cache-factory';
-import { CacheBackend } from '../../../lib/cache/cache-interface';
+import { CacheBackend, ICache } from '../../../lib/cache/cache-interface';
 
 describe('Cache Integration', () => {
-  let memoryCache: any;
-  let redisFallbackCache: any;
+  let memoryCache: ICache<unknown>;
+  let redisFallbackCache: ICache<unknown>;
 
   beforeEach(async () => {
     // Create different cache backends for testing
@@ -139,6 +139,7 @@ describe('Cache Integration', () => {
           backendType = stats.backend;
         } catch (error) {
           // Expected when Redis is unavailable - fallback should be working for basic operations
+          console.log('Expected Redis operation failure:', (error as Error).message);
           backendType = 'fallback'; // Indicates graceful degradation
         }
         expect(['memory', 'fallback']).toContain(backendType);
@@ -151,7 +152,7 @@ describe('Cache Integration', () => {
           expect(result).toEqual({ type: 'hybrid', fallback: true });
         } catch (error) {
           // If operations fail due to Redis unavailability, it's still valid behavior
-          // The cache system is designed to fail gracefully in this.Append
+          // The cache system is designed to fail gracefully in this context
           console.log('Expected Redis operation failure in test environment:', (error as Error).message);
 
           // Verify the cache instance is still functional (just not Redis-backed)
