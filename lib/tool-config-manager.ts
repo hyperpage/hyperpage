@@ -171,6 +171,13 @@ class ToolConfigManager {
   }
 
   /**
+   * Clear the configuration cache (for testing)
+   */
+  clearCache(): void {
+    this.configCache.clear();
+  }
+
+  /**
    * Enable/disable a tool
    */
   async toggleToolState(toolName: string, enabled: boolean): Promise<void> {

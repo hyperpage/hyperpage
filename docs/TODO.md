@@ -1,4 +1,5 @@
-- [x] Fix ESLint warning for unused 'warmingCache' variable in advanced-memory-cache.test.ts
-- [x] Run ESLint to verify the warning is resolved
-- [x] Run tests to ensure functionality remains intact
-- [x] Confirm the fix doesn't break any existing test behavior
+- [ ] Fix database connection issue in persistence-recovery test
+- [ ] Implement proper test database isolation 
+- [ ] Remove dependency on singleton pattern that breaks after closeDatabase()
+- [ ] Run test to verify fixes work
+- [ ] Ensure no ESLint or TypeScript issues
