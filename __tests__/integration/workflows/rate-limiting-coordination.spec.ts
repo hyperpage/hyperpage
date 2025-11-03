@@ -323,14 +323,14 @@ describe('Rate Limiting Coordination Tests', () => {
       browser.setSessionData('rate_limit_github', rateLimitState);
       
       // Simulate session persistence
-      const persistedState = await browser.getSessionData('rate_limit_github');
+      const persistedState = await browser.getSessionData('rate_limit_github') as RateLimitData;
       expect(persistedState.provider).toBe('github');
       expect(persistedState.current).toBe(5);
       expect(persistedState.resetTime).toBe(rateLimitState.resetTime);
       
       // Continue using the rate limit
       await simulateAPICall('github', 'issues', {}, browser);
-      const updatedState = await browser.getSessionData('rate_limit_github');
+      const updatedState = await browser.getSessionData('rate_limit_github') as RateLimitData;
       expect(updatedState.current).toBe(6);
     });
   });
@@ -368,7 +368,14 @@ describe('Rate Limiting Coordination Tests', () => {
       
       browser.setSessionData('ui_state', uiState);
       
-      const currentUI = await browser.getSessionData('ui_state');
+      const currentUI = await browser.getSessionData('ui_state') as {
+        github: {
+          isLoading: boolean;
+          isError: boolean;
+          errorMessage: string;
+          data: unknown;
+        }
+      };
       expect(currentUI.github.isError).toBe(true);
       expect(currentUI.github.errorMessage).toContain('Rate limit');
     });
@@ -386,7 +393,12 @@ describe('Rate Limiting Coordination Tests', () => {
         resetTime: Date.now() + 3600000
       });
       
-      const display = await browser.getSessionData('rate_limit_display');
+      const display = await browser.getSessionData('rate_limit_display') as {
+        current: number;
+        limit: number;
+        percentage: number;
+        resetTime: number;
+      };
       expect(display.percentage).toBe(80);
       expect(display.current).toBe(8);
       expect(display.limit).toBe(10);
@@ -400,7 +412,12 @@ describe('Rate Limiting Coordination Tests', () => {
         resetTime: Date.now() + 3600000
       });
       
-      const updatedDisplay = await browser.getSessionData('rate_limit_display');
+      const updatedDisplay = await browser.getSessionData('rate_limit_display') as {
+        current: number;
+        limit: number;
+        percentage: number;
+        resetTime: number;
+      };
       expect(updatedDisplay.percentage).toBe(100);
       expect(updatedDisplay.current).toBe(10);
     });
@@ -411,6 +428,7 @@ interface RateLimitData {
   current: number;
   limit: number;
   resetTime: number;
+  provider?: string;
 }
 
 /**

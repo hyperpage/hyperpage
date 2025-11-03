@@ -53,28 +53,48 @@ export interface GitHubPR {
   status: string;
 }
 
-export interface JiraIssue {
-  key: string;
-  summary: string;
-  status: string;
+export interface FailureScenario {
+  github?: {
+    success: boolean;
+    data: ToolData | null;
+    error: string | null;
+  };
+  gitlab?: {
+    success: boolean;
+    data: ToolData | null;
+    error: string | null;
+  };
+  jira?: {
+    success: boolean;
+    data: ToolData | null;
+    error: string | null;
+  };
 }
 
-export interface WorkflowRun {
-  id: string;
-  name: string;
-  status: string;
-  head_branch: string;
+export interface BidirectionalMapping {
+  jiraToGithub: {
+    issueKey: string;
+    status: string;
+    assignee?: string;
+  };
+  githubToJira: {
+    number: number;
+    title: string;
+    labels?: string[];
+  };
+  lastSync: number;
 }
 
-export interface JiraIssueData {
-  summary: string;
-  description: string;
-  issueType: string;
-  labels: string[];
+export interface StoredOrchestrationResult extends CrossToolWorkflowResult {
+  workflowId: string;
 }
 
-export interface APIParams {
-  [key: string]: unknown;
+export interface AggregatedData {
+  github: ToolData | null;
+  gitlab: ToolData | null;
+  jira: ToolData | null;
+  links: WorkflowLink[];
+  timestamp: number;
 }
 
 describe('Multi-Tool Orchestration Tests', () => {
@@ -124,20 +144,21 @@ describe('Multi-Tool Orchestration Tests', () => {
     const jiraData = await simulateAPICall('jira');
 
     // Simulate workflow links
-    const workflowLinks = browser.getSessionData('workflow_links') || [];
+    const workflowLinks = (browser.getSessionData('workflow_links') as WorkflowLink[]) || [];
     
     // Check data consistency across tools - be more lenient for partial failures
     const successfulCalls = [githubData.success, gitlabData.success, jiraData.success].filter(Boolean).length;
     const dataConsistency = successfulCalls >= 2; // At least 2 out of 3 should succeed
 
     // Store aggregated data
-    browser.setSessionData('aggregated_data', {
+    const aggregatedData: AggregatedData = {
       github: githubData.data,
       gitlab: gitlabData.data,
       jira: jiraData.data,
       links: workflowLinks,
       timestamp: Date.now()
-    });
+    };
+    browser.setSessionData('aggregated_data', aggregatedData);
 
     return {
       github: {
@@ -161,8 +182,6 @@ describe('Multi-Tool Orchestration Tests', () => {
     };
   };
 
-
-
   /**
    * Simulate API call
    */
@@ -179,10 +198,10 @@ describe('Multi-Tool Orchestration Tests', () => {
 
     // Check for simulated failures
     const simulateFailures = browser.getSessionData('simulate_api_failures');
-    const failureScenario = browser.getSessionData('failure_scenario');
+    const failureScenario = browser.getSessionData('failure_scenario') as FailureScenario | null;
     
     if (simulateFailures && failureScenario) {
-      const providerResult = failureScenario[provider];
+      const providerResult = failureScenario[provider as keyof FailureScenario];
       if (providerResult) {
         return {
           success: providerResult.success,
@@ -290,7 +309,7 @@ describe('Multi-Tool Orchestration Tests', () => {
       browser.setSessionData('workflow_links', [workflowLink1, workflowLink2]);
 
       // Verify consistency
-      const links = browser.getSessionData('workflow_links');
+      const links = (browser.getSessionData('workflow_links') as WorkflowLink[]) || [];
       expect(links).toHaveLength(2);
       expect(links[0].target).toBe(workflowLink2.target); // Target should remain consistent
       expect(links[1].source).toBe('GitHub PR #1 (Updated)'); // Source should be updated
@@ -315,16 +334,17 @@ describe('Multi-Tool Orchestration Tests', () => {
       };
 
       // Store bidirectional mapping
-      browser.setSessionData('bidirectional_mapping', {
+      const mapping: BidirectionalMapping = {
         jiraToGithub: jiraUpdate,
         githubToJira: prUpdate,
         lastSync: Date.now()
-      });
+      };
+      browser.setSessionData('bidirectional_mapping', mapping);
 
-      const mapping = browser.getSessionData('bidirectional_mapping');
-      expect(mapping.jiraToGithub.issueKey).toBe('TEST-789');
-      expect(mapping.githubToJira.number).toBe(456);
-      expect(mapping.jiraToGithub.status).toBe('In Progress');
+      const storedMapping = browser.getSessionData('bidirectional_mapping') as BidirectionalMapping | null;
+      expect(storedMapping?.jiraToGithub.issueKey).toBe('TEST-789');
+      expect(storedMapping?.githubToJira.number).toBe(456);
+      expect(storedMapping?.jiraToGithub.status).toBe('In Progress');
     });
   });
 
@@ -356,10 +376,11 @@ describe('Multi-Tool Orchestration Tests', () => {
       // Run orchestrations concurrently
       const orchestrationPromises = workflows.map(async (workflow) => {
         const workflowResult = await simulateCrossToolAggregation();
-        browser.setSessionData(`orchestration_${workflow.id}`, {
+        const storedResult: StoredOrchestrationResult = {
           ...workflowResult,
           workflowId: workflow.id
-        });
+        };
+        browser.setSessionData(`orchestration_${workflow.id}`, storedResult);
         return workflowResult;
       });
 
@@ -371,7 +392,7 @@ describe('Multi-Tool Orchestration Tests', () => {
       
       // Verify all stored properly
       const storedResults = workflows.map(w => 
-        browser.getSessionData(`orchestration_${w.id}`)
+        browser.getSessionData(`orchestration_${w.id}`) as StoredOrchestrationResult | null
       );
       expect(storedResults.every(r => r && r.workflowId)).toBe(true);
     });

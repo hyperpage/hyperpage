@@ -18,7 +18,7 @@ export interface ToolConfiguration {
   username?: string;
   repository?: string;
   project?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface DataVerificationResult {
@@ -44,19 +44,22 @@ export interface UserPreferences {
   dashboardLayout: 'grid' | 'list';
 }
 
+export interface ToolDataItem {
+  id: string;
+  title: string;
+  created_at: string;
+  [key: string]: string | number | boolean;
+}
+
+export interface ToolData {
+  items: ToolDataItem[];
+  lastUpdate: number;
+}
+
 export interface OverviewData {
-  github: {
-    items: any[];
-    lastUpdate: number;
-  };
-  gitlab: {
-    items: any[];
-    lastUpdate: number;
-  };
-  jira: {
-    items: any[];
-    lastUpdate: number;
-  };
+  github: ToolData;
+  gitlab: ToolData;
+  jira: ToolData;
 }
 
 export class UserJourneySimulator {
@@ -171,14 +174,16 @@ export class UserJourneySimulator {
     const dataItems = Math.floor(Math.random() * 10); // 0-9 items
     const lastUpdate = Date.now();
 
-    this.browser.setSessionData(`tool_${tool}_data`, {
+    const mockData: ToolData = {
       items: Array.from({ length: dataItems }, (_, i) => ({
         id: `${tool}-item-${i}`,
         title: `${tool} Item ${i}`,
         created_at: new Date(Date.now() - i * 3600000).toISOString()
       })),
       lastUpdate
-    });
+    };
+    
+    this.browser.setSessionData(`tool_${tool}_data`, mockData);
 
     return {
       hasData: dataItems > 0,
@@ -230,7 +235,7 @@ export class UserJourneySimulator {
    * Get user preferences
    */
   async getUserPreferences(): Promise<UserPreferences> {
-    const stored = this.browser.getSessionData('user_preferences');
+    const stored = this.browser.getSessionData('user_preferences') as UserPreferences | null;
     return stored || this.userPreferences;
   }
 
@@ -247,12 +252,9 @@ export class UserJourneySimulator {
 
     for (const provider of providers) {
       if (this.connectedProviders.has(provider)) {
-        const toolData = this.browser.getSessionData(`tool_${provider}_data`);
+        const toolData = this.browser.getSessionData(`tool_${provider}_data`) as ToolData | null;
         if (toolData) {
-          overview[provider as keyof OverviewData] = {
-            items: toolData.items || [],
-            lastUpdate: toolData.lastUpdate || Date.now()
-          };
+          overview[provider as keyof OverviewData] = toolData;
         }
       }
     }
@@ -263,8 +265,8 @@ export class UserJourneySimulator {
   /**
    * Get tool-specific data
    */
-  async getToolData(tool: string): Promise<any> {
-    const toolData = this.browser.getSessionData(`tool_${tool}_data`);
+  async getToolData(tool: string): Promise<ToolData> {
+    const toolData = this.browser.getSessionData(`tool_${tool}_data`) as ToolData | null;
     return toolData || { items: [], lastUpdate: 0 };
   }
 
@@ -290,7 +292,7 @@ export class UserJourneySimulator {
       this.browser.setSessionData('setup_redirect', `${this.baseUrl}/dashboard`);
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -318,8 +320,8 @@ export class SetupWizardPage {
   }
 
   async continue(): Promise<void> {
-    const selectedProviders = this.browser.getSessionData('setup_selected_providers') || [];
-    if (selectedProviders.length === 0) {
+    const selectedProviders = this.browser.getSessionData('setup_selected_providers') as string[] | null;
+    if (!selectedProviders || selectedProviders.length === 0) {
       throw new Error('No providers selected');
     }
   }

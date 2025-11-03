@@ -15,13 +15,13 @@ export interface PageState {
 export interface WidgetData {
   loaded: boolean;
   lastRefresh: number;
-  items: any[];
+  items: unknown[];
 }
 
 export class TestBrowser {
   private baseUrl: string;
   private currentPage: PageState | null = null;
-  private sessionData: Map<string, any> = new Map();
+  private sessionData: Map<string, unknown> = new Map();
   private refreshIntervals: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
@@ -82,14 +82,14 @@ export class TestBrowser {
   /**
    * Get session data
    */
-  getSessionData(key: string): any {
+  getSessionData(key: string): unknown {
     return this.sessionData.get(key);
   }
 
   /**
    * Set session data
    */
-  setSessionData(key: string, value: any): void {
+  setSessionData(key: string, value: unknown): void {
     this.sessionData.set(key, value);
   }
 
@@ -130,15 +130,18 @@ export class TestPage {
   constructor(private browser: TestBrowser) {}
 
   title(): string {
-    return this.browser.getSessionData('pageTitle') || 'Hyperpage';
+    const title = this.browser.getSessionData('pageTitle');
+    return (typeof title === 'string' ? title : 'Hyperpage');
   }
 
   url(): string {
-    return this.browser.getSessionData('currentUrl') || 'http://localhost:3000';
+    const url = this.browser.getSessionData('currentUrl');
+    return (typeof url === 'string' ? url : 'http://localhost:3000');
   }
 
   async isAuthenticated(): Promise<boolean> {
-    return this.browser.getSessionData('authenticated') || false;
+    const auth = this.browser.getSessionData('authenticated');
+    return (typeof auth === 'boolean' ? auth : false);
   }
 
   async isSetupWizard(): Promise<boolean> {
@@ -156,13 +159,13 @@ export class TestPage {
   }
 
   async getWidgetData(widgetId: string): Promise<WidgetData> {
-    const lastRefresh = this.browser.getSessionData(`widget_${widgetId}_lastRefresh`) || Date.now();
-    const items = this.browser.getSessionData(`widget_${widgetId}_items`) || [];
+    const lastRefresh = this.browser.getSessionData(`widget_${widgetId}_lastRefresh`);
+    const items = this.browser.getSessionData(`widget_${widgetId}_items`);
     
     return {
       loaded: true,
-      lastRefresh,
-      items
+      lastRefresh: (typeof lastRefresh === 'number' ? lastRefresh : Date.now()),
+      items: (Array.isArray(items) ? items : [])
     };
   }
 

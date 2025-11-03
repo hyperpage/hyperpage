@@ -61,10 +61,10 @@ describe('Session Management and Persistence Tests', () => {
       const createdAt = browser.getSessionData('session_created_at');
       const lastActivity = browser.getSessionData('session_last_activity');
       
-      expect(sessionId).toBe(testSession.sessionId);
-      expect(userId).toBe(testSession.userId);
-      expect(createdAt).toBeGreaterThan(0);
-      expect(lastActivity).toBeGreaterThanOrEqual(createdAt);
+      expect(typeof sessionId === 'string' ? sessionId : undefined).toBe(testSession.sessionId);
+      expect(typeof userId === 'string' ? userId : undefined).toBe(testSession.userId);
+      expect(typeof createdAt === 'number' ? createdAt : 0).toBeGreaterThan(0);
+      expect(typeof lastActivity === 'number' ? lastActivity : 0).toBeGreaterThanOrEqual(typeof createdAt === 'number' ? createdAt : 0);
     });
 
     it('should validate session integrity across requests', async () => {
@@ -106,8 +106,9 @@ describe('Session Management and Persistence Tests', () => {
       expect(isExpired).toBe(true);
       
       // Should redirect to re-authentication
+      const sessionExpiresAt = browser.getSessionData('session_expires_at');
       const requiresReAuth = !browser.getSessionData('authenticated') || 
-                           Date.now() > browser.getSessionData('session_expires_at');
+                           (typeof sessionExpiresAt === 'number' ? Date.now() > sessionExpiresAt : false);
       expect(requiresReAuth).toBe(true);
     });
   });
@@ -268,7 +269,8 @@ describe('Session Management and Persistence Tests', () => {
       
       // Verify persistence
       expect(browser.getSessionData('session_id')).toBe(persistedSession.sessionId);
-      expect(browser.getSessionData('user_preferences').theme).toBe('dark');
+      const userPreferences = browser.getSessionData('user_preferences') as { theme: string };
+      expect(userPreferences.theme).toBe('dark');
     });
 
     it('should handle session restoration after explicit logout', async () => {
@@ -334,9 +336,9 @@ describe('Session Management and Persistence Tests', () => {
       
       // Simulate session tampering detection
       const sessionData: SessionData = {
-        id: browser.getSessionData('session_id'),
-        userId: browser.getSessionData('user_id'),
-        createdAt: browser.getSessionData('session_created_at')
+        id: typeof browser.getSessionData('session_id') === 'string' ? browser.getSessionData('session_id') as string : '',
+        userId: typeof browser.getSessionData('user_id') === 'string' ? browser.getSessionData('user_id') as string : '',
+        createdAt: typeof browser.getSessionData('session_created_at') === 'number' ? browser.getSessionData('session_created_at') as number : 0
       };
       
       // Create session hash for integrity checking

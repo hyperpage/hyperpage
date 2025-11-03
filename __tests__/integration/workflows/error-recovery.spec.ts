@@ -19,6 +19,13 @@ export interface RecoveryResult {
   dataIntegrityMaintained: boolean;
 }
 
+export interface FallbackData {
+  items: unknown[];
+  total: number;
+  fallback: boolean;
+  message: string;
+}
+
 describe('Error Handling and Recovery Scenario Tests', () => {
   let testEnv: IntegrationTestEnvironment;
   let baseUrl: string;
@@ -72,7 +79,7 @@ describe('Error Handling and Recovery Scenario Tests', () => {
    * Simulate graceful degradation
    */
   const simulateGracefulDegradation = async (provider: string, endpoint: string): Promise<RecoveryResult> => {
-    const fallbackData = {
+    const fallbackData: FallbackData = {
       items: [],
       total: 0,
       fallback: true,
@@ -116,7 +123,7 @@ describe('Error Handling and Recovery Scenario Tests', () => {
    * Simulate API call
    */
   const simulateAPICall = async (provider: string, endpoint: string) => {
-    const fallbackData = browser.getSessionData(`${provider}_fallback_${endpoint}`);
+    const fallbackData = browser.getSessionData(`${provider}_fallback_${endpoint}`) as FallbackData | null;
     
     if (fallbackData && fallbackData.fallback) {
       return {
