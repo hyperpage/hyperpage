@@ -1,5 +1,44 @@
-import type { RateLimitUsage } from '../../lib/types/rate-limit';
 import type { Server } from 'http';
+
+interface RateLimitResource {
+  limit: number;
+  used: number;
+  remaining: number;
+  reset: number;
+}
+
+interface RateLimitResponse {
+  statusCode?: number;
+  retryAfter?: string | number | null;
+  resources?: RateLimitResource | {
+    core?: RateLimitResource;
+    search?: RateLimitResource;
+    graphql?: RateLimitResource;
+  } | {
+    core: RateLimitResource;
+    search: RateLimitResource;
+    graphql: RateLimitResource;
+  };
+  message?: string;
+  data?: string;
+  [key: string]: unknown;
+}
+
+interface EndpointConfig {
+  limit: number;
+  windowSeconds: number;
+  currentUsage: number;
+  responseDelay?: number;
+  customResponse?: (count: number) => RateLimitResponse;
+}
+
+interface RateLimitScenario {
+  endpoints: Record<string, EndpointConfig>;
+}
+
+interface CustomResponseGenerator {
+  (count: number): RateLimitResponse;
+}
 
 /**
  * Mock rate limit server that simulates API platform behaviors
@@ -18,19 +57,7 @@ export class MockRateLimitServer {
   /**
    * Configure rate limit scenarios for different platforms
    */
-  private rateLimitScenarios: Record<string, {
-    endpoints: Record<string, {
-      limit: number;
-      windowSeconds: number;
-      currentUsage: number;
-      responseDelay?: number;
-      customResponse?: (count: number) => {
-        statusCode?: number;
-        retryAfter?: string | number | null;
-        [key: string]: any;
-      };
-    }>
-  }> = {
+  private rateLimitScenarios: Record<string, RateLimitScenario> = {
     github: {
       endpoints: {
         '/rate_limit': {
@@ -225,15 +252,7 @@ export class MockRateLimitServer {
   }
 
   // Configure a custom endpoint for testing
-  configureEndpoint(platform: string, endpoint: string, config: {
-    limit: number;
-    responseDelay?: number;
-    customResponse?: (count: number) => {
-      statusCode?: number;
-      retryAfter?: string | number | null;
-      [key: string]: any;
-    };
-  }): void {
+  configureEndpoint(platform: string, endpoint: string, config: EndpointConfig): void {
     if (!this.rateLimitScenarios[platform]) {
       this.rateLimitScenarios[platform] = { endpoints: {} };
     }
@@ -277,14 +296,7 @@ export const RateLimitTestUtils = {
     platform: string,
     triggerUsage: number,
     limit: number = 100
-  ): ((count: number) => {
-    statusCode?: number;
-    retryAfter?: string | number | null;
-    resources?: any;
-    message?: string;
-    data?: string;
-    [key: string]: any;
-  }) => {
+  ): CustomResponseGenerator => {
     return (count: number) => {
       const used = count % (limit + 1);
       const isLimited = used >= triggerUsage;
