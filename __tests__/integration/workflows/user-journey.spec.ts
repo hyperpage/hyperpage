@@ -5,7 +5,7 @@
  * through data display across all integrated tools (GitHub, GitLab, Jira).
  */
 
-import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { IntegrationTestEnvironment, OAuthTestCredentials } from '../../lib/test-credentials';
 import { TestBrowser } from './utils/test-browser';
 import { UserJourneySimulator } from './utils/user-journey-simulator';
@@ -94,7 +94,7 @@ describe('End-to-End User Journey Tests', () => {
       
       // Access setup wizard
       const wizard = await journeySimulator.getSetupWizard();
-      expect(await (wizard as any).isSetupWizard()).toBe(true);
+      expect(await wizard.isSetupWizard?.()).toBe(true);
 
       // Step 1: Welcome and provider selection
       await wizard.selectProviders(['github']);
@@ -130,7 +130,7 @@ describe('End-to-End User Journey Tests', () => {
       
       // Simulate user leaving and returning
       await browser.clearSession();
-      const loginPage = await browser.goto(`${baseUrl}/`);
+      await browser.goto(`${baseUrl}/`);
       
       // Should redirect to login/auth
       const loginRequired = await browser.isAuthenticationRequired();
