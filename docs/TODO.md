@@ -1,5 +1,4 @@
-- [ ] Fix database connection issue in persistence-recovery test
-- [ ] Implement proper test database isolation 
-- [ ] Remove dependency on singleton pattern that breaks after closeDatabase()
-- [ ] Run test to verify fixes work
-- [ ] Ensure no ESLint or TypeScript issues
+- [ ] Run npm test for bottleneck-detector.test.ts to identify issues
+- [ ] Analyze test failures and root causes  
+- [ ] Fix identified issues while maintaining code quality
+- [ ] Verify test passes without creating lint/typescript issues

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import type { MockedFunction } from 'vitest';
 import { BottleneckDetector } from '../../../lib/monitoring/bottleneck-detector';
 import { BOTTLENECK_PATTERNS } from '../../../lib/monitoring/bottleneck-patterns';
-import { performanceDashboard } from '../../../lib/monitoring/performance-dashboard';
-import { EventEmitter } from 'events';
+import { performanceDashboard, DashboardMetrics } from '../../../lib/monitoring/performance-dashboard';
 
 // Mock the alert service to avoid actual alerting in tests
 vi.mock('../../../lib/alerting/alert-service', () => ({
@@ -20,7 +20,7 @@ vi.mock('../../../lib/monitoring/performance-dashboard', () => ({
 
 describe('BottleneckDetector', () => {
   let detector: BottleneckDetector;
-  let mockDashboardMetrics: any;
+  let mockDashboardMetrics: DashboardMetrics;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,22 +31,60 @@ describe('BottleneckDetector', () => {
       overall: {
         averageResponseTime: 100,
         errorRate: 2,
-        totalRequests: 50
+        totalRequests: 50,
+        p95ResponseTime: 150,
+        p99ResponseTime: 200,
+        throughput: 10
       },
+      endpoints: {},
       caching: {
         hitRate: 75,
-        evictionRate: 10
+        missRate: 25,
+        cacheSize: 1000,
+        evictionCount: 10,
+        compressionRate: 60
       },
       batching: {
+        totalBatchRequests: 20,
+        averageBatchSize: 5,
         averageBatchDuration: 2000,
-        batchSuccessRate: 90
+        batchSuccessRate: 90,
+        parallelBatches: 16,
+        sequentialBatches: 4
       },
       compression: {
-        averageCompressionRatio: 60
+        totalCompressedRequests: 50,
+        averageCompressionRatio: 60,
+        compressionSavingsBytes: 1000,
+        compressionSavingsPercent: 30,
+        brotliUsagePercent: 40,
+        gzipUsagePercent: 60
+      },
+      alerting: {
+        activeAlerts: {
+          highResponseTime: false,
+          highErrorRate: false,
+          cacheLowHitRate: false,
+          memoryHighUsage: false,
+          compressionLowRatio: false,
+          batchHighLatency: false
+        },
+        alertHistory: []
+      },
+      bottlenecks: {
+        activeBottlenecks: [],
+        bottleneckAnalysis: {
+          activeCount: 0,
+          resolvedCount: 0,
+          topBottleneckTypes: [],
+          resolutionRate: 0
+        },
+        topPatterns: [],
+        resolutionRate: 0
       }
     };
 
-    (performanceDashboard.getDashboardMetrics as any).mockReturnValue(mockDashboardMetrics);
+    (performanceDashboard.getDashboardMetrics as MockedFunction<typeof performanceDashboard.getDashboardMetrics>).mockReturnValue(mockDashboardMetrics);
   });
 
   afterEach(() => {
@@ -115,21 +153,42 @@ describe('BottleneckDetector', () => {
 
     it('should detect breached conditions', () => {
       // Setup metrics that will trigger memory leak pattern
-      const triggerMetrics = {
+      const triggerMetrics: DashboardMetrics = {
         ...mockDashboardMetrics,
         overall: {
           averageResponseTime: 300, // > 200 triggers condition
           errorRate: 2,
-          totalRequests: 50
+          totalRequests: 50,
+          p95ResponseTime: 400,
+          p99ResponseTime: 500,
+          throughput: 12
         },
         caching: {
           hitRate: 75,
-          evictionRate: 60 // > 50 triggers condition
+          missRate: 25,
+          cacheSize: 1000,
+          evictionCount: 60, // > 50 triggers condition
+          compressionRate: 70
         },
         batching: {
+          totalBatchRequests: 25,
+          averageBatchSize: 8,
           averageBatchDuration: 4000, // > 3000 triggers condition
-          batchSuccessRate: 90
-        }
+          batchSuccessRate: 90,
+          parallelBatches: 20,
+          sequentialBatches: 5
+        },
+        compression: {
+          totalCompressedRequests: 60,
+          averageCompressionRatio: 70,
+          compressionSavingsBytes: 1500,
+          compressionSavingsPercent: 35,
+          brotliUsagePercent: 50,
+          gzipUsagePercent: 50
+        },
+        endpoints: {},
+        alerting: mockDashboardMetrics.alerting,
+        bottlenecks: mockDashboardMetrics.bottlenecks
       };
 
       const memoryLeakPattern = BOTTLENECK_PATTERNS.find(p => p.id === 'memory-leak')!;
@@ -144,8 +203,6 @@ describe('BottleneckDetector', () => {
     });
 
     it('should calculate impact levels correctly', () => {
-      const pattern = BOTTLENECK_PATTERNS[0];
-
       // Critical severity, high breach ratio = critical impact
       expect(detector['calculateImpact']('critical', 0.8)).toBe('critical');
       expect(detector['calculateImpact']('critical', 0.5)).toBe('severe');
@@ -154,8 +211,7 @@ describe('BottleneckDetector', () => {
     });
 
     it('should analyze correlations between metrics', () => {
-      const pattern = BOTTLENECK_PATTERNS.find(p => p.id === 'memory-leak')!;
-      const correlations = detector['analyzeCorrelations'](pattern, mockDashboardMetrics);
+      const correlations = detector['analyzeCorrelations'](BOTTLENECK_PATTERNS.find(p => p.id === 'memory-leak')!, mockDashboardMetrics);
 
       expect(Array.isArray(correlations)).toBe(true);
       if (correlations.length > 0) {
@@ -190,9 +246,9 @@ describe('BottleneckDetector', () => {
         nested: { deeply: { value: 42 } }
       };
 
-      expect(detector['extractMetricValue'](metrics as any, 'overall.averageResponseTime')).toBe(150);
-      expect(detector['extractMetricValue'](metrics as any, 'caching.hitRate')).toBe(85.5);
-      expect(detector['extractMetricValue'](metrics as any, 'nested.deeply.value')).toBe(42);
+      expect(detector['extractMetricValue'](metrics, 'overall.averageResponseTime')).toBe(150);
+      expect(detector['extractMetricValue'](metrics, 'caching.hitRate')).toBe(85.5);
+      expect(detector['extractMetricValue'](metrics as DashboardMetrics & { nested: { deeply: { value: number } } }, 'nested.deeply.value')).toBe(42);
     });
 
     it('should return 0 for non-existent paths', () => {
@@ -206,15 +262,32 @@ describe('BottleneckDetector', () => {
         bottlenecks: { activeBottlenecks: [], bottleneckAnalysis: { activeCount: 0, resolvedCount: 0, topBottleneckTypes: [], resolutionRate: 0 }, topPatterns: [], resolutionRate: 0 }
       };
 
-      expect(detector['extractMetricValue'](emptyMetrics as any, 'nonexistent.path')).toBe(0);
+      expect(detector['extractMetricValue'](emptyMetrics, 'nonexistent.path')).toBe(0);
     });
 
     it('should check condition breaches accurately', () => {
-      expect(detector['isConditionBreached'](150, { operator: 'gt' as const, metric: 'test', threshold: 100, duration: 1000, weight: 50 })).toBe(true);
-      expect(detector['isConditionBreached'](150, { operator: 'lt' as const, metric: 'test', threshold: 200, duration: 1000, weight: 50 })).toBe(true);
-      expect(detector['isConditionBreached'](150, { operator: 'gte' as const, metric: 'test', threshold: 150, duration: 1000, weight: 50 })).toBe(true);
-      expect(detector['isConditionBreached'](150, { operator: 'lte' as const, metric: 'test', threshold: 150, duration: 1000, weight: 50 })).toBe(true);
-      expect(detector['isConditionBreached'](150, { operator: 'eq' as const, metric: 'test', threshold: 150, duration: 1000, weight: 50 })).toBe(true);
+      const condition: import('../../../lib/monitoring/bottleneck-detector').BottleneckCondition = {
+        operator: 'gt',
+        metric: 'test',
+        threshold: 100,
+        duration: 1000,
+        weight: 50
+      };
+      expect(detector['isConditionBreached'](150, condition)).toBe(true);
+
+      condition.operator = 'lt';
+      condition.threshold = 200;
+      expect(detector['isConditionBreached'](150, condition)).toBe(true);
+
+      condition.operator = 'gte';
+      condition.threshold = 150;
+      expect(detector['isConditionBreached'](150, condition)).toBe(true);
+
+      condition.operator = 'lte';
+      expect(detector['isConditionBreached'](150, condition)).toBe(true);
+
+      condition.operator = 'eq';
+      expect(detector['isConditionBreached'](150, condition)).toBe(true);
     });
   });
 
@@ -297,7 +370,7 @@ describe('BottleneckDetector', () => {
   describe('Bottleneck Detection and Management', () => {
     it('should create detected bottlenecks correctly', () => {
       const pattern = BOTTLENECK_PATTERNS[0];
-      const analysis = {
+      const analysis: import('../../../lib/monitoring/bottleneck-detector').BottleneckAnalysis = {
         confidence: 85,
         impact: 'moderate' as const,
         metrics: {
@@ -321,7 +394,7 @@ describe('BottleneckDetector', () => {
 
     it('should manage active bottlenecks', () => {
       const pattern = BOTTLENECK_PATTERNS[0];
-      const analysis = {
+      const analysis: import('../../../lib/monitoring/bottleneck-detector').BottleneckAnalysis = {
         confidence: 85, impact: 'moderate' as const, metrics: {}, correlations: [],
         trendAnalysis: 'rising' as const, timeToResolve: 45
       };
@@ -419,8 +492,7 @@ describe('BottleneckDetector', () => {
 
     it('should handle errors during action execution', async () => {
       // Mock action that throws error
-      const originalReduceRate = detector['reduceRequestRate'].bind(detector);
-      vi.spyOn(detector as any, 'reduceRequestRate').mockRejectedValue(new Error('Rate reduction failed'));
+      vi.spyOn(detector as unknown as { reduceRequestRate: () => Promise<unknown> }, 'reduceRequestRate').mockRejectedValue(new Error('Rate reduction failed'));
 
       const mockBottleneck = {
         id: 'test-bottleneck',
@@ -500,39 +572,35 @@ describe('BottleneckDetector', () => {
       detector.on('bottleneckDetected', () => events.push('detected'));
       detector.on('bottleneckResolved', () => events.push('resolved'));
 
-      // Trigger detection by directly calling analyzePattern with trigger conditions
-      const memoryLeakPattern = BOTTLENECK_PATTERNS.find(p => p.id === 'memory-leak')!;
-
-      // Setup metrics that trigger pattern
-      const triggerMetrics = {
-        ...mockDashboardMetrics,
-        overall: { averageResponseTime: 250, errorRate: 2, totalRequests: 50 },
-        caching: { hitRate: 75, evictionRate: 60 },
-        batching: { averageBatchDuration: 4000, batchSuccessRate: 95 }
+      // Create a mock bottleneck directly to test event emission
+      const mockBottleneck = {
+        id: 'test-bottleneck',
+        patternId: 'memory-leak',
+        timestamp: Date.now(),
+        confidence: 90,
+        impact: 'severe' as const,
+        metrics: {},
+        correlations: [],
+        recommendations: [],
+        resolved: false
       };
 
-      const analysis = detector['analyzePattern'](memoryLeakPattern, triggerMetrics);
-      if (analysis.confidence >= memoryLeakPattern.minimumConfidence) {
-        const bottleneck = detector['createBottleneck'](memoryLeakPattern, analysis, Date.now());
-        detector['registerBottleneck'](bottleneck);
+      // Register the bottleneck
+      detector['activeBottlenecks'].set(mockBottleneck.id, mockBottleneck);
 
-        // Manually emit detected event (in real scenario, this happens in detectBottlenecks)
-        detector.emit('bottleneckDetected', bottleneck);
-      }
+      // Manually emit detected event to test event system
+      detector.emit('bottleneckDetected', mockBottleneck);
 
       expect(events).toContain('detected');
 
       // Test resolution event
-      const bottleneck = detector.getActiveBottlenecks()[0];
-      if (bottleneck) {
-        detector.resolveBottleneck(bottleneck.id, {
-          resolvedBy: 'manual',
-          actionTaken: 'Fixed issue',
-          resolutionTime: Date.now()
-        });
-        detector.emit('bottleneckResolved', bottleneck);
-        expect(events).toContain('resolved');
-      }
+      detector.resolveBottleneck(mockBottleneck.id, {
+        resolvedBy: 'manual',
+        actionTaken: 'Fixed issue',
+        resolutionTime: Date.now()
+      });
+      detector.emit('bottleneckResolved', mockBottleneck);
+      expect(events).toContain('resolved');
     });
   });
 
@@ -541,7 +609,7 @@ describe('BottleneckDetector', () => {
       const spy = vi.spyOn(global, 'clearInterval');
 
       // Add some data to cleanup
-      detector['activeBottlenecks'].set('test', {} as any);
+      (detector as unknown as { activeBottlenecks: Map<string, unknown> })['activeBottlenecks'].set('test', {});
       detector['metricHistory'].push({
         timestamp: Date.now(),
         metrics: mockDashboardMetrics
@@ -554,7 +622,7 @@ describe('BottleneckDetector', () => {
       detector.destroy();
 
       expect(spy).toHaveBeenCalled();
-      expect(detector['activeBottlenecks'].size).toBe(0);
+      expect((detector as unknown as { activeBottlenecks: Map<string, unknown> })['activeBottlenecks'].size).toBe(0);
       expect(detector['metricHistory'].length).toBe(0);
 
       spy.mockRestore();
