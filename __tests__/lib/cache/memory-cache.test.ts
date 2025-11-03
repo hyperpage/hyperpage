@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryCache, generateCacheKey, defaultCache } from '../../../lib/cache/memory-cache';
 
 describe('Memory Cache', () => {
