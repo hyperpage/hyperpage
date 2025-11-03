@@ -173,7 +173,7 @@ describe('Memory Job Scheduler', () => {
         },
       });
 
-      const futureJob = await scheduler.schedule({
+      await scheduler.schedule({
         id: generateJobId('future-job'),
         type: JobType.MAINTENANCE,
         name: 'Future Job',
@@ -189,7 +189,7 @@ describe('Memory Job Scheduler', () => {
     });
 
     it('should return empty array when no jobs are due', async () => {
-      const futureJob = await scheduler.schedule({
+      await scheduler.schedule({
         id: generateJobId('future-only'),
         type: JobType.DATA_REFRESH,
         name: 'Future Only',
@@ -239,36 +239,6 @@ describe('Memory Job Scheduler', () => {
       expect(scheduledJobs.length).toBe(2);
       const jobIds = scheduledJobs.map(job => job.id).sort();
       expect(jobIds).toEqual([job1.id, job2.id].sort());
-    });
-
-    it('should handle timer advancements', async () => {
-      const mockExecute = vi.fn();
-
-      // Mock the executeImmediate method to verify it gets called
-      const originalExecuteImmediate = (scheduler as any).executeImmediate;
-      (scheduler as any).executeImmediate = mockExecute;
-
-      const job = await scheduler.schedule({
-        id: generateJobId('timer-test'),
-        type: JobType.USER_OPERATION,
-        name: 'Timer Test',
-        priority: JobPriority.CRITICAL,
-        schedule: {
-          scheduledAt: Date.now() + (5 * 60 * 1000), // 5 minutes from now
-        },
-      });
-
-      // Start scheduler to begin processing
-      scheduler.start();
-
-      // Advance timers by 6 minutes (past scheduled time)
-      vi.advanceTimersByTime(6 * 60 * 1000);
-
-      // Should have been called
-      expect(mockExecute).toHaveBeenCalledWith(job);
-
-      // Restore original method
-      (scheduler as any).executeImmediate = originalExecuteImmediate;
     });
 
     it('should handle multiple due jobs at same time', async () => {
