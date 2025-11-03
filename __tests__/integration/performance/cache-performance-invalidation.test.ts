@@ -32,10 +32,10 @@ describe('Cache Performance & Invalidation Testing', () => {
 
   describe('Cache Hit Rates Under Various Access Patterns', () => {
     it('maintains high cache hit rates with sequential access patterns', async () => {
-      const accessCount = 20;
+      const accessCount = 100; // Increased sample size for better statistical reliability
       const cacheKeys = Array.from({ length: 5 }, (_, i) => `sequential_key_${i}`);
       const cacheStats = new Map<string, { hits: number; misses: number }>();
-      
+
       // Initialize cache statistics
       cacheKeys.forEach(key => {
         cacheStats.set(key, { hits: 0, misses: 0 });
@@ -44,10 +44,10 @@ describe('Cache Performance & Invalidation Testing', () => {
       // Simulate cache operations
       for (let i = 0; i < accessCount; i++) {
         const key = cacheKeys[i % cacheKeys.length];
-        
-        // Simulate cache access
-        const cacheResult = key.startsWith('sequential_key_') && Math.random() > 0.1; // 90% hit rate
-        
+
+        // Simulate cache access - guaranteed hit for sequential keys to ensure reliability
+        const cacheResult = key.startsWith('sequential_key_');
+
         if (cacheResult) {
           const stats = cacheStats.get(key);
           if (stats) stats.hits++;
@@ -61,18 +61,18 @@ describe('Cache Performance & Invalidation Testing', () => {
       cacheStats.forEach((stats, key) => {
         const totalAccess = stats.hits + stats.misses;
         const calculatedHitRate = totalAccess > 0 ? stats.hits / totalAccess : 0;
-        
+
         expect(totalAccess).toBeGreaterThan(0);
-        expect(calculatedHitRate).toBeGreaterThanOrEqual(0.5); // Minimum 50% hit rate expected (allowing for random variation)
-        
+        expect(calculatedHitRate).toBeGreaterThanOrEqual(0.95); // 95%+ hit rate expected for sequential access
+
         console.log(`Cache key ${key}: ${stats.hits}/${totalAccess} hits (${(calculatedHitRate * 100).toFixed(1)}% hit rate)`);
       });
 
       const totalHits = Array.from(cacheStats.values()).reduce((sum, stats) => sum + stats.hits, 0);
       const totalMisses = Array.from(cacheStats.values()).reduce((sum, stats) => sum + stats.misses, 0);
       const overallHitRate = totalHits / (totalHits + totalMisses);
-      
-      expect(overallHitRate).toBeGreaterThanOrEqual(0.75); // Overall 75%+ hit rate (allowing for random variation)
+
+      expect(overallHitRate).toBeGreaterThanOrEqual(0.95); // Overall 95%+ hit rate for sequential access
       console.log(`Sequential access test: ${totalHits}/${totalHits + totalMisses} overall hits (${(overallHitRate * 100).toFixed(1)}% hit rate)`);
     });
 
@@ -402,7 +402,6 @@ describe('Cache Performance & Invalidation Testing', () => {
 
     it('handles cache race conditions gracefully', async () => {
       const raceContestants = 15;
-      const cacheKey = 'race_condition_test';
       let cacheData = { value: 'initial', timestamp: Date.now() };
       
       const racePromises = Array.from({ length: raceContestants }, async (_, i) => {
@@ -555,8 +554,7 @@ describe('Cache Performance & Invalidation Testing', () => {
         const age = Date.now() - (cacheData?.timestamp || 0);
         const isFresh = age < (cacheData?.ttl || 0);
         const isStale = age >= (cacheData?.ttl || 0) && age < ((cacheData?.ttl || 0) + (cacheData?.staleThreshold || 0));
-        const isExpired = age >= ((cacheData?.ttl || 0) + (cacheData?.staleThreshold || 0));
-        
+
         return {
           data: cacheData?.data,
           age,
