@@ -3,6 +3,26 @@ import { getRateLimitStatus, clearRateLimitCache } from '../../lib/rate-limit-mo
 import { getDynamicInterval } from '../../lib/rate-limit-utils';
 import { toolRegistry } from '../../tools/registry';
 
+// Type definitions to replace 'any' types
+interface MockToolHandlers {
+  [key: string]: ReturnType<typeof vi.fn>;
+}
+
+interface MockToolConfig {
+  name: string;
+  slug: string;
+  enabled: boolean;
+  capabilities: string[];
+  ui: { color: string; icon: string };
+  widgets: unknown[];
+  apis: Record<string, unknown>;
+  handlers: MockToolHandlers;
+}
+
+interface MockToolRegistry {
+  [key: string]: MockToolConfig;
+}
+
 describe('Rate Limiting Performance Tests', () => {
   // Create spy for global.fetch
   const mockFetch = vi.fn();
@@ -81,7 +101,7 @@ describe('Rate Limiting Performance Tests', () => {
     clearRateLimitCache();
 
     // Set up mock tools in registry
-    Object.assign(toolRegistry, mockTools);
+    Object.assign(toolRegistry as MockToolRegistry, mockTools);
 
     // Mock fetch to return successful rate limit data
     mockFetch.mockResolvedValue({
@@ -105,7 +125,7 @@ describe('Rate Limiting Performance Tests', () => {
   afterEach(() => {
     // Clean up mock tools
     Object.keys(mockTools).forEach(key => {
-      delete (toolRegistry as any)[key];
+      delete toolRegistry[key as keyof typeof toolRegistry];
     });
   });
 
@@ -142,7 +162,7 @@ describe('Rate Limiting Performance Tests', () => {
       const usageLevels = [10, 50, 75, 90, 95];
       const timings: number[] = [];
 
-      for (const usage of usageLevels) {
+      for (let i = 0; i < usageLevels.length; i++) {
         clearRateLimitCache(); // Force fresh data for each test
         mockFetch.mockClear();
 
