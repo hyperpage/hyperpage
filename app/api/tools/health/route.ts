@@ -38,8 +38,7 @@ export async function GET(request: Request) {
         try {
           const result = await testToolConnectivity(tool, 3000); // 3 second timeout
           return { slug: tool.slug, connectivity: result };
-        } catch (_error) {
-          // eslint-disable-line @typescript-eslint/no-unused-vars
+        } catch {
           return {
             slug: tool.slug,
             connectivity: {
