@@ -247,7 +247,7 @@ describe('AdvancedMemoryCache', () => {
     it('should initialize cache warming when enabled', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      const warmingCache = new AdvancedMemoryCache({
+      new AdvancedMemoryCache({
         maxSize: 10,
         enableLru: true,
         evictionPolicy: EvictionPolicy.LRU,
