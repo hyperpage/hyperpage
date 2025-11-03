@@ -1,6 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+
+// Mock the bottleneck detector
+vi.mock('../../lib/monitoring/bottleneck-detector', () => ({
+  bottleneckDetector: {
+    getActiveBottlenecks: vi.fn(),
+    getBottleneckAnalysis: vi.fn(),
+    getHistoricalBottlenecks: vi.fn(),
+    getCorrelationData: vi.fn()
+  }
+}));
+
 import { GET, POST } from '../../app/api/bottlenecks/route';
+import { bottleneckDetector } from '../../lib/monitoring/bottleneck-detector';
 
 // Type definitions for test data
 interface BottleneckMetrics {
@@ -56,21 +68,6 @@ interface HistoricalBottleneck {
   confidence: number;
   actionsTaken: string[];
 }
-
-// Mock the bottleneck detector
-const mockGetActiveBottlenecks = vi.fn();
-const mockGetBottleneckAnalysis = vi.fn();
-const mockGetHistoricalBottlenecks = vi.fn();
-
-vi.mock('../../lib/monitoring/bottleneck-detector', () => ({
-  bottleneckDetector: {
-    getActiveBottlenecks: mockGetActiveBottlenecks,
-    getBottleneckAnalysis: mockGetBottleneckAnalysis,
-    getHistoricalBottlenecks: mockGetHistoricalBottlenecks
-  }
-}));
-
-import { bottleneckDetector } from '../../lib/monitoring/bottleneck-detector';
 
 describe('Bottlenecks API - GET /api/bottlenecks', () => {
   const mockBottlenecks: Bottleneck[] = [
@@ -133,9 +130,10 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
     vi.clearAllMocks();
 
     // Setup default mocks
-    mockGetActiveBottlenecks.mockReturnValue(mockBottlenecks);
-    mockGetBottleneckAnalysis.mockReturnValue(mockAnalysis);
-    mockGetHistoricalBottlenecks.mockReturnValue(mockHistoricalBottlenecks);
+    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mockBottlenecks);
+    vi.mocked(bottleneckDetector.getBottleneckAnalysis).mockReturnValue(mockAnalysis);
+    vi.mocked(bottleneckDetector.getHistoricalBottlenecks).mockReturnValue(mockHistoricalBottlenecks);
+    vi.mocked(bottleneckDetector.getCorrelationData).mockReturnValue({ correlations: [] });
   });
 
   it('should return active bottlenecks with default parameters', async () => {
@@ -159,14 +157,14 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
 
     expect(response.status).toBe(200);
     expect(data.historicalBottlenecks).toEqual(mockHistoricalBottlenecks);
-    expect(mockGetHistoricalBottlenecks).toHaveBeenCalledWith(20); // Default limit
+    expect(vi.mocked(bottleneckDetector.getHistoricalBottlenecks)).toHaveBeenCalledWith(20); // Default limit
   });
 
   it('should respect limit parameter for historical data', async () => {
     const request = new NextRequest('http://localhost:3000/api/bottlenecks?history=true&limit=5');
     await GET(request);
 
-    expect(mockGetHistoricalBottlenecks).toHaveBeenCalledWith(5);
+    expect(vi.mocked(bottleneckDetector.getHistoricalBottlenecks)).toHaveBeenCalledWith(5);
   });
 
   it('should respect timeRange parameter', async () => {
@@ -178,8 +176,8 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
   });
 
   it('should handle empty results', async () => {
-    mockGetActiveBottlenecks.mockReturnValue([]);
-    mockGetBottleneckAnalysis.mockReturnValue({
+    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue([]);
+    vi.mocked(bottleneckDetector.getBottleneckAnalysis).mockReturnValue({
       ...mockAnalysis,
       activeCount: 0,
       resolvedCount: 0,
@@ -199,7 +197,7 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
   });
 
   it('should handle error conditions', async () => {
-    mockGetActiveBottlenecks.mockImplementation(() => {
+    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockImplementation(() => {
       throw new Error('Database connection failed');
     });
 
@@ -215,20 +213,20 @@ describe('Bottlenecks API - GET /api/bottlenecks', () => {
     const mixedBottlenecks: Bottleneck[] = [
       { ...mockBottlenecks[0], impact: 'critical' },
       { ...mockBottlenecks[1], impact: 'severe' },
-      { 
-        impact: 'minor', 
-        id: 'minor-bottleneck', 
-        patternId: 'test', 
-        timestamp: Date.now(), 
-        confidence: 50, 
-        metrics: { 'latency.metric': { value: 10, threshold: 20, breached: false } }, 
-        correlations: [], 
-        recommendations: [], 
-        resolved: false 
+      {
+        impact: 'minor',
+        id: 'minor-bottleneck',
+        patternId: 'test',
+        timestamp: Date.now(),
+        confidence: 50,
+        metrics: { 'latency.metric': { value: 10, threshold: 20, breached: false } },
+        correlations: [],
+        recommendations: [],
+        resolved: false
       }
     ];
 
-    mockGetActiveBottlenecks.mockReturnValue(mixedBottlenecks);
+    vi.mocked(bottleneckDetector.getActiveBottlenecks).mockReturnValue(mixedBottlenecks);
 
     const request = new NextRequest('http://localhost:3000/api/bottlenecks');
     const response = await GET(request);
