@@ -225,7 +225,7 @@ export const jiraTool: Tool = {
 
       const { issueIds, maxResults = 10 } = body;
 
-      if (!Array.isArray(issueIds) || issueIds.length === 0) {
+      if (!issueIds || !Array.isArray(issueIds) || issueIds.length === 0) {
         throw new Error("issueIds must be a non-empty array");
       }
 
@@ -299,15 +299,15 @@ export const jiraTool: Tool = {
               const data = await response.json();
               const changelog = (data.values || []).map((entry: Record<string, unknown>) => ({
                 id: entry.id,
-                author: (entry.author as { displayName?: string; name?: string })?.displayName || 
+                author: (entry.author as { displayName?: string; name?: string })?.displayName ||
                         (entry.author as { displayName?: string; name?: string })?.name || "Unknown",
                 created: entry.created,
                 items: (entry.items as Record<string, unknown>[])?.map((item: Record<string, unknown>) => ({
                   field: item.field,
                   fieldtype: item.fieldtype,
-                  from: (item as { fromString?: string; from?: string }).fromString || 
+                  from: (item as { fromString?: string; from?: string }).fromString ||
                         (item as { fromString?: string; from?: string }).from,
-                  to: (item as { toString?: string; to?: string }).toString || 
+                  to: (item as { toString?: string; to?: string }).toString ||
                       (item as { toString?: string; to?: string }).to,
                 })) || [],
               }));

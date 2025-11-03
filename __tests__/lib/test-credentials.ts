@@ -1,9 +1,31 @@
 /**
  * Test Credential Management for Integration Testing
- * 
+ *
  * This module provides secure management of test OAuth credentials
  * for integration testing across GitHub, GitLab, and Jira.
  */
+
+/**
+ * Check if the test server is available
+ */
+export async function isServerAvailable(baseUrl: string): Promise<boolean> {
+  try {
+    // Simple timeout using Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), 2000)
+    );
+
+    const fetchPromise = fetch(`${baseUrl}/api/health`, {
+      method: 'GET'
+    });
+
+    const response = await Promise.race([fetchPromise, timeoutPromise]);
+    return response.ok;
+  } catch (error) {
+    console.log(`Server not available at ${baseUrl}:`, error instanceof Error ? error.message : String(error));
+    return false;
+  }
+}
 
 export interface OAuthTestCredentials {
   clientId: string;
@@ -239,7 +261,17 @@ export class IntegrationTestEnvironment {
     (process.env as Record<string, string>).NODE_ENV = 'test';
     (process.env as Record<string, string>).ENABLE_INTEGRATION_TESTS = 'true';
     (process.env as Record<string, string>).TEST_TIMEOUT = '30000';
-    
+
+    // Enable tools for testing
+    (process.env as Record<string, string>).ENABLE_GITHUB = 'true';
+    (process.env as Record<string, string>).ENABLE_GITLAB = 'true';
+    (process.env as Record<string, string>).ENABLE_JIRA = 'true';
+
+    // Set mock Jira credentials for testing
+    (process.env as Record<string, string>).JIRA_WEB_URL = 'https://test-jira.atlassian.net';
+    (process.env as Record<string, string>).JIRA_API_TOKEN = 'test-api-token';
+    (process.env as Record<string, string>).JIRA_EMAIL = 'test@example.com';
+
     // Disable real OAuth in test mode
     (process.env as Record<string, string>).SKIP_REAL_OAUTH = 'true';
   }
@@ -275,9 +307,7 @@ export class IntegrationTestEnvironment {
           throw new Error('No session ID returned from sessions API');
         }
 
-        // Enhanced verification: wait and check session exists
-        await new Promise(resolve => setTimeout(resolve, 200 + attempts * 100));
-        
+        // Optimized verification: immediate session check without artificial delays
         const verifyResponse = await fetch(`${baseUrl}/api/sessions?sessionId=${sessionId}`);
         if (!verifyResponse.ok) {
           console.warn(`Session verification attempt ${attempts + 1} failed for ${sessionId}`);

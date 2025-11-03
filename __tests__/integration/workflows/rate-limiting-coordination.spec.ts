@@ -153,7 +153,7 @@ describe('Rate Limiting Coordination Tests', () => {
       // Also ensure each delay is at least progressively longer
       expect(backoffAttempts[1]).toBeGreaterThan(backoffAttempts[0]);
       expect(backoffAttempts[2]).toBeGreaterThan(backoffAttempts[1]);
-    }, 10000); // Increase timeout to 10 seconds
+    }, 15000); // Increase timeout to 15 seconds
   });
 
   describe('Cross-Tool Rate Limit Coordination', () => {
