@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import type { Browser } from '@playwright/test'
 
 declare global {
