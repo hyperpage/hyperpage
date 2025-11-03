@@ -141,7 +141,7 @@ describe('API Client Rate Limiting', () => {
       // Wait for retry delay (10ms)
       await vi.advanceTimersByTimeAsync(20);
 
-      const response = await responsePromise;
+      await responsePromise;
 
       expect(mockFetch).toHaveBeenCalledTimes(2); // Initial + 1 retry (maxRetries = 1)
       expect(config.shouldRetry).toHaveBeenCalledTimes(2); // Called for each failure
@@ -188,7 +188,7 @@ describe('API Client Rate Limiting', () => {
       // Advance timer enough for retry delay
       await vi.advanceTimersByTimeAsync(100);
 
-      const response = await responsePromise;
+      await responsePromise;
 
       expect(config.shouldRetry).toHaveBeenCalledTimes(2); // Called for each failed response
       expect(mockFetch).toHaveBeenCalledTimes(2);
