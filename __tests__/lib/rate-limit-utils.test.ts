@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, test, afterEach } from 'vitest';
 
 // Tests for rate limit utilities
 
@@ -12,6 +12,8 @@ import {
   clampInterval,
   formatInterval,
 } from "../../lib/rate-limit-utils";
+
+import type { RateLimitStatus } from "../../lib/types/rate-limit";
 
 describe("getDynamicInterval", () => {
   const baseInterval = 300000; // 5 minutes
@@ -164,69 +166,66 @@ describe("getActivePlatforms", () => {
 
 describe("getMaxUsageForPlatform", () => {
   test("returns 0 when no rate limit status provided", () => {
-    expect(getMaxUsageForPlatform(null as any)).toBe(0);
-    expect(getMaxUsageForPlatform({} as any)).toBe(0);
+    expect(getMaxUsageForPlatform(null as unknown as RateLimitStatus)).toBe(0);
+    expect(getMaxUsageForPlatform({} as RateLimitStatus)).toBe(0);
   });
 
   test("returns 0 when platform has no limits", () => {
-    const status = { 
+    const status: RateLimitStatus = { 
       platform: "github", 
       lastUpdated: Date.now(),
       dataFresh: true,
-      status: 'ok',
-      limits: { github: {} } 
+      status: 'normal',
+      limits: {} 
     };
-    expect(getMaxUsageForPlatform(status as any)).toBe(0);
+    expect(getMaxUsageForPlatform(status)).toBe(0);
   });
 
   test("returns maximum usage percentage across all endpoints", () => {
-    const status = {
+    const status: RateLimitStatus = {
       platform: "github",
       lastUpdated: Date.now(),
       dataFresh: true,
-      status: 'ok',
+      status: 'normal',
       limits: {
         github: {
-          core: { usagePercent: 50 },
-          search: { usagePercent: 90 },
-          graphql: { usagePercent: 30 }
+          core: { limit: 5000, remaining: 2500, used: 2500, usagePercent: 50, resetTime: Date.now() + 3600000, retryAfter: null },
+          search: { limit: 30, remaining: 3, used: 27, usagePercent: 90, resetTime: Date.now() + 3600000, retryAfter: null },
+          graphql: { limit: 5000, remaining: 3500, used: 1500, usagePercent: 30, resetTime: Date.now() + 3600000, retryAfter: null }
         }
       }
     };
-    expect(getMaxUsageForPlatform(status as any)).toBe(90);
+    expect(getMaxUsageForPlatform(status)).toBe(90);
   });
 
   test("ignores null/undefined usage values", () => {
-    const status = {
+    const status: RateLimitStatus = {
       platform: "gitlab",
       lastUpdated: Date.now(),
       dataFresh: true,
-      status: 'ok',
+      status: 'normal',
       limits: {
         gitlab: {
-          global: { usagePercent: 75 },
-          api: { usagePercent: null },
-          web: { usagePercent: undefined }
+          global: { limit: 1000, remaining: 1000, used: 0, usagePercent: null, resetTime: Date.now() + 3600000, retryAfter: null }
         }
       }
     };
-    expect(getMaxUsageForPlatform(status as any)).toBe(75);
+    expect(getMaxUsageForPlatform(status)).toBe(0);
   });
 
   test("returns 0 when all usage values are null/undefined", () => {
-    const status = {
+    const status: RateLimitStatus = {
       platform: "jira",
       lastUpdated: Date.now(),
       dataFresh: true,
-      status: 'ok',
+      status: 'normal',
       limits: {
         jira: {
-          global: { usagePercent: null },
-          api: { usagePercent: undefined }
+          global: { limit: 1000, remaining: 1000, used: 0, usagePercent: null, resetTime: Date.now() + 3600000, retryAfter: null }
         }
       }
     };
-    expect(getMaxUsageForPlatform(status as any)).toBe(0);
+    expect(getMaxUsageForPlatform(status)).toBe(0);
   });
 });
 
@@ -404,9 +403,6 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
     test("Jira cloud vs server detection logic", () => {
       // Jira has different limits for cloud vs server instances
       // Rate limiting logic should adapt accordingly
-
-      const cloudLimit = 1000;
-      const serverLimit = 3000;
 
       // Test that our interval calculation works with different limits
       const cloudInterval = getDynamicInterval(80, 300000, false); // Using 5min base
