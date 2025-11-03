@@ -205,6 +205,7 @@ export class TestUserManager {
 export class IntegrationTestEnvironment {
   private static instance: IntegrationTestEnvironment;
   private isInitialized = false;
+  private environment: TestEnvironment | null = null;
 
   public static async setup(): Promise<IntegrationTestEnvironment> {
     if (!IntegrationTestEnvironment.instance) {
@@ -221,12 +222,14 @@ export class IntegrationTestEnvironment {
     this.setupTestEnvironment();
     
     // Initialize credential manager
-    await TestCredentialManager.getInstance().initialize({
+    this.environment = {
       baseUrl: process.env.HYPERPAGE_TEST_BASE_URL || 'http://localhost:3000',
       databaseUrl: process.env.TEST_DATABASE_URL || 'sqlite:./test.db',
       redisUrl: process.env.TEST_REDIS_URL || 'redis://localhost:6379',
       encryptionKey: process.env.OAUTH_ENCRYPTION_KEY || 'test-encryption-key-32-chars-long!!'
-    });
+    };
+
+    await TestCredentialManager.getInstance().initialize(this.environment);
 
     this.isInitialized = true;
   }
@@ -248,7 +251,51 @@ export class IntegrationTestEnvironment {
   }> {
     const credentials = await TestCredentialManager.getInstance().getTestCredentials(provider as 'github' | 'gitlab' | 'jira');
     const userId = await TestUserManager.getInstance().createTestUser(provider, credentials);
-    const sessionId = `session-${userId}-${Date.now()}`;
+    
+    // Use the sessions API with enhanced timing and verification
+    const baseUrl = this.environment?.baseUrl || 'http://localhost:3000';
+    
+    // Create session with retry logic for reliability
+    let sessionId: string | null = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts && !sessionId) {
+      try {
+        const sessionResponse = await fetch(`${baseUrl}/api/sessions`);
+        
+        if (!sessionResponse.ok) {
+          throw new Error(`Failed to create test session: ${sessionResponse.status}`);
+        }
+        
+        const sessionData = await sessionResponse.json();
+        sessionId = sessionData.sessionId;
+        
+        if (!sessionId) {
+          throw new Error('No session ID returned from sessions API');
+        }
+
+        // Enhanced verification: wait and check session exists
+        await new Promise(resolve => setTimeout(resolve, 200 + attempts * 100));
+        
+        const verifyResponse = await fetch(`${baseUrl}/api/sessions?sessionId=${sessionId}`);
+        if (!verifyResponse.ok) {
+          console.warn(`Session verification attempt ${attempts + 1} failed for ${sessionId}`);
+          sessionId = null; // Retry
+        } else {
+          console.log(`Successfully created and verified test session ${sessionId} for provider ${provider}`);
+        }
+      } catch (error) {
+        console.warn(`Session creation attempt ${attempts + 1} failed:`, error);
+        sessionId = null; // Retry
+      }
+      
+      attempts++;
+    }
+
+    if (!sessionId) {
+      throw new Error(`Failed to create test session after ${maxAttempts} attempts`);
+    }
 
     return {
       userId,

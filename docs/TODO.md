@@ -1,3 +1,5 @@
-- [ ] Fix bottleneck-detector.test.ts violations (11 violations)
-- [ ] Fix remaining test files with violations
-- [ ] Run final ESLint check to verify all issues resolved
+- [x] Analyze the ESLint errors in GitHub integration test file
+- [x] Fix line 36:16 - Remove unused 'error' variable
+- [x] Fix line 510:25 - Replace 'any' type with proper TypeScript type
+- [x] Run ESLint to verify fixes
+- [x] Test the file compiles correctly

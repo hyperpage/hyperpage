@@ -64,18 +64,20 @@ export interface SessionData {
 export class SessionManager {
   private redisClient: RedisClient | null = null;
   private connected = false;
+  private initializing = true;
   private memoryStore: MemorySessionStore;
   private readonly sessionPrefix = 'hyperpage:session:';
   private readonly sessionTTL = 24 * 60 * 60; // 24 hours in seconds
   private readonly cleanupInterval = 60 * 60 * 1000; // 1 hour
   private cleanupTimer?: NodeJS.Timeout;
+  private initPromise: Promise<void> | null = null;
 
   constructor(redisUrl?: string) {
     // Create fallback memory store for development
     this.memoryStore = new MemorySessionStore();
 
     // Create a dedicated Redis instance for sessions
-    void this.initializeRedis(redisUrl);
+    this.initPromise = this.initializeRedis(redisUrl);
   }
 
   private async initializeRedis(redisUrl?: string) {
@@ -100,6 +102,17 @@ export class SessionManager {
       // Fallback to in-memory implementation
       this.redisClient = null;
       this.connected = false;
+    } finally {
+      this.initializing = false;
+    }
+  }
+
+  /**
+   * Wait for initialization to complete
+   */
+  private async waitForInitialization(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise;
     }
   }
 
@@ -147,6 +160,9 @@ export class SessionManager {
    * Get session data by ID
    */
   async getSession(sessionId: string): Promise<SessionData | null> {
+    // Wait for initialization to complete
+    await this.waitForInitialization();
+
     if (this.connected && this.redisClient) {
       try {
         const key = this.buildSessionKey(sessionId);
@@ -162,7 +178,8 @@ export class SessionManager {
         return null;
       }
     } else {
-      // Fallback to memory store
+      // Fallback to memory store with debug info
+      logger.debug(`Session Manager not connected to Redis, using memory store. Connected: ${this.connected}, RedisClient: ${!!this.redisClient}`);
       return this.memoryStore.get(sessionId);
     }
   }
@@ -171,6 +188,9 @@ export class SessionManager {
    * Save session data
    */
   async setSession(sessionId: string, sessionData: SessionData): Promise<void> {
+    // Wait for initialization to complete
+    await this.waitForInitialization();
+
     if (this.connected && this.redisClient) {
       try {
         const key = this.buildSessionKey(sessionId);

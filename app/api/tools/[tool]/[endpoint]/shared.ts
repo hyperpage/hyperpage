@@ -5,6 +5,37 @@ import { canExecuteRequest, recordRequestSuccess, recordRequestFailure } from ".
 import { defaultCache } from "../../../../../lib/cache/cache-factory";
 import { generateCacheKey } from "../../../../../lib/cache/memory-cache";
 import { defaultCompressionMiddleware } from "../../../../../lib/api/compression/compression-middleware";
+import { sessionManager } from "../../../../../lib/sessions/session-manager";
+
+// Session validation helper
+async function validateSession(request: NextRequest): Promise<NextResponse | null> {
+  const sessionId = request.headers.get('cookie')?.match(/sessionId=([^;]+)/)?.[1];
+  
+  if (!sessionId) {
+    console.log('Session validation: No session ID found in cookie');
+    return NextResponse.json(
+      { error: "Session ID required" },
+      { status: 401 }
+    );
+  }
+
+  console.log(`Session validation: Checking session ${sessionId}`);
+
+  // Check if session actually exists in session manager
+  const session = await sessionManager.getSession(sessionId);
+  if (!session) {
+    console.log(`Session validation: Session ${sessionId} not found in session manager`);
+    return NextResponse.json(
+      { error: "Invalid or expired session" },
+      { status: 401 }
+    );
+  }
+
+  console.log(`Session validation: Session ${sessionId} found and valid`);
+  return null; // Session exists and is valid
+}
+
+
 
 // Input validation helper
 export function validateInput(
@@ -78,7 +109,8 @@ function getErrorStatusCode(error: Error): number {
   if (message.includes('credentials') ||
       message.includes('not configured') ||
       message.includes('access denied') ||
-      message.includes('authentication')) {
+      message.includes('authentication') ||
+      message.includes('session')) {
     return 401;
   }
   
@@ -116,6 +148,12 @@ export async function executeHandler(
       { error: "Service temporarily unavailable", circuitBreaker: "open" },
       { status: 503 },
     );
+  }
+
+  // Validate session exists and is valid
+  const sessionValidation = await validateSession(request);
+  if (sessionValidation) {
+    return sessionValidation;
   }
 
   // Check for cache bypass headers
@@ -184,14 +222,25 @@ export async function executeHandler(
       console.debug(`Cached response for ${tool.slug}/${endpoint} (${cacheKey}) with TTL ${ttlMs}ms`);
     }
 
-    // Create response with caching headers
-    const response = NextResponse.json(data, {
-      headers: {
-        'Cache-Control': 'private, max-age=30', // Brief client-side caching
-        'X-Cache-Status': skipCache ? 'BYPASS' : 'MISS',
-        'X-Cache-Key': cacheKey,
-      },
-    });
+    // Create response with caching headers and rate limit headers for GitHub
+    const headers: Record<string, string> = {
+      'Cache-Control': 'private, max-age=30', // Brief client-side caching
+      'X-Cache-Status': skipCache ? 'BYPASS' : 'MISS',
+      'X-Cache-Key': cacheKey,
+    };
+
+    // Add rate limit headers for GitHub tool rate-limit endpoint
+    if (tool.slug === 'github' && endpoint === 'rate-limit' && data && typeof data === 'object' && 'headers' in data) {
+      // Extract headers returned by the GitHub handler
+      const toolHeaders = (data as { headers?: Record<string, string> }).headers;
+      if (toolHeaders) {
+        Object.assign(headers, toolHeaders);
+      }
+      // Remove headers from the response data
+      delete (data as { headers?: Record<string, string> }).headers;
+    }
+
+    const response = NextResponse.json(data, { headers });
 
     // Apply compression based on request capabilities
     return await defaultCompressionMiddleware.compress(response, request);

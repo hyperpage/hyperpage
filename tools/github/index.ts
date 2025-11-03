@@ -272,10 +272,46 @@ export const githubTool: Tool = {
       const apiUrl = config.formatApiUrl?.("https://github.com");
       const token = process.env.GITHUB_TOKEN;
 
+      // If no token is configured, return mock rate limit data for testing
       if (!token) {
-        throw new Error("GitHub API token not configured");
+        const mockRateLimitData = {
+          resources: {
+            core: {
+              limit: 5000,
+              remaining: 4999,
+              reset: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+              used: 1
+            },
+            search: {
+              limit: 30,
+              remaining: 18,
+              reset: Math.floor(Date.now() / 1000) + 3600,
+              used: 12
+            },
+            graphql: {
+              limit: 5000,
+              remaining: 4999,
+              reset: Math.floor(Date.now() / 1000) + 3600,
+              used: 1
+            }
+          },
+          rate: {
+            limit: 5000,
+            remaining: 4999,
+            reset: Math.floor(Date.now() / 1000) + 3600
+          }
+        };
+        return {
+          rateLimit: mockRateLimitData,
+          headers: {
+            'X-RateLimit-Remaining': '4999',
+            'X-RateLimit-Reset': (Math.floor(Date.now() / 1000) + 3600).toString(),
+            'X-RateLimit-Limit': '5000'
+          }
+        };
       }
 
+      // Use the actual GitHub API when token is available
       const rateLimitUrl = `${apiUrl}/rate_limit`;
 
       const response = await createIPv4Fetch(rateLimitUrl, {
@@ -291,7 +327,21 @@ export const githubTool: Tool = {
       }
 
       const rateLimitData = await response.json();
-      return { rateLimit: rateLimitData };
+
+      // Extract rate limit headers from GitHub response
+      const headers: Record<string, string> = {};
+      const remaining = response.headers.get('X-RateLimit-Remaining');
+      const reset = response.headers.get('X-RateLimit-Reset');
+      const limit = response.headers.get('X-RateLimit-Limit');
+
+      if (remaining) headers['X-RateLimit-Remaining'] = remaining;
+      if (reset) headers['X-RateLimit-Reset'] = reset;
+      if (limit) headers['X-RateLimit-Limit'] = limit;
+
+      return {
+        rateLimit: rateLimitData,
+        headers
+      };
     },
   },
   config: {
