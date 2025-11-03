@@ -1,9 +1,9 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import crypto from 'crypto';
-import { oauthTokens } from './database/schema';
-import { eq, and, sql } from 'drizzle-orm';
-import logger from './logger';
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import crypto from "crypto";
+import { oauthTokens } from "./database/schema";
+import { eq, and, sql } from "drizzle-orm";
+import logger from "./logger";
 
 export interface OAuthTokens {
   accessToken: string;
@@ -30,7 +30,7 @@ export class SecureTokenStorage {
   private db: ReturnType<typeof drizzle>;
   private encryptionKey: string;
 
-  constructor(databasePath: string = './data/hyperpage.db') {
+  constructor(databasePath: string = "./data/hyperpage.db") {
     try {
       const sqlite = new Database(databasePath);
       this.db = drizzle(sqlite);
@@ -41,13 +41,13 @@ export class SecureTokenStorage {
       // Get encryption key from environment
       const encryptionKey = process.env.OAUTH_ENCRYPTION_KEY;
       if (!encryptionKey || encryptionKey.length < 32) {
-        throw new Error('OAUTH_ENCRYPTION_KEY must be at least 32 characters');
+        throw new Error("OAUTH_ENCRYPTION_KEY must be at least 32 characters");
       }
       this.encryptionKey = encryptionKey;
 
-      logger.info('Secure token storage initialized');
+      logger.info("Secure token storage initialized");
     } catch (error) {
-      logger.error('Failed to initialize secure token storage:', error);
+      logger.error("Failed to initialize secure token storage:", error);
       throw error;
     }
   }
@@ -58,7 +58,7 @@ export class SecureTokenStorage {
   private async initializeDatabase() {
     // Tables are created by migrations in database/migrate.ts
     // This method ensures they're available
-    logger.info('Database tables ready for token storage');
+    logger.info("Database tables ready for token storage");
   }
 
   /**
@@ -66,26 +66,30 @@ export class SecureTokenStorage {
    */
   private encrypt(plaintext: string): { encrypted: string; iv: string } {
     try {
-      const algorithm = 'aes-256-gcm';
+      const algorithm = "aes-256-gcm";
       const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv(algorithm, Buffer.from(this.encryptionKey, 'hex'), iv);
+      const cipher = crypto.createCipheriv(
+        algorithm,
+        Buffer.from(this.encryptionKey, "hex"),
+        iv,
+      );
 
-      let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
+      let encrypted = cipher.update(plaintext, "utf8", "hex");
+      encrypted += cipher.final("hex");
 
       const authTag = cipher.getAuthTag();
 
       // Combine IV and auth tag with encrypted data
-      const ivHex = iv.toString('hex');
-      const tagHex = authTag.toString('hex');
+      const ivHex = iv.toString("hex");
+      const tagHex = authTag.toString("hex");
 
       return {
         encrypted: encrypted,
-        iv: ivHex + ':' + tagHex,
+        iv: ivHex + ":" + tagHex,
       };
     } catch (error) {
-      logger.error('Encryption failed:', error);
-      throw new Error('Encryption failed');
+      logger.error("Encryption failed:", error);
+      throw new Error("Encryption failed");
     }
   }
 
@@ -94,27 +98,35 @@ export class SecureTokenStorage {
    */
   private decrypt(encrypted: string, ivAndTag: string): string {
     try {
-      const [ivHex, tagHex] = ivAndTag.split(':');
-      const iv = Buffer.from(ivHex, 'hex');
-      const authTag = Buffer.from(tagHex, 'hex');
+      const [ivHex, tagHex] = ivAndTag.split(":");
+      const iv = Buffer.from(ivHex, "hex");
+      const authTag = Buffer.from(tagHex, "hex");
 
-      const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(this.encryptionKey, 'hex'), iv);
+      const decipher = crypto.createDecipheriv(
+        "aes-256-gcm",
+        Buffer.from(this.encryptionKey, "hex"),
+        iv,
+      );
       decipher.setAuthTag(authTag);
 
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
+      let decrypted = decipher.update(encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
 
       return decrypted;
     } catch (error) {
-      logger.error('Decryption failed:', error);
-      throw new Error('Decryption failed');
+      logger.error("Decryption failed:", error);
+      throw new Error("Decryption failed");
     }
   }
 
   /**
    * Store encrypted OAuth tokens for a user-tool pair
    */
-  async storeTokens(userId: string, toolName: string, tokens: OAuthTokens): Promise<void> {
+  async storeTokens(
+    userId: string,
+    toolName: string,
+    tokens: OAuthTokens,
+  ): Promise<void> {
     try {
       const now = Date.now();
 
@@ -132,7 +144,7 @@ export class SecureTokenStorage {
         tokenType: tokens.tokenType,
         expiresAt: tokens.expiresAt || null,
         refreshExpiresAt: tokens.refreshExpiresAt || null,
-        scopes: tokens.scopes ? tokens.scopes.join(' ') : null,
+        scopes: tokens.scopes ? tokens.scopes.join(" ") : null,
         metadata: tokens.metadata ? JSON.stringify(tokens.metadata) : null,
         // IVs are stored as metadata for decryption
         ivAccess: encryptedAccessToken.iv,
@@ -142,7 +154,9 @@ export class SecureTokenStorage {
       };
 
       // Insert or replace existing tokens
-      await this.db.insert(oauthTokens).values(tokenData)
+      await this.db
+        .insert(oauthTokens)
+        .values(tokenData)
         .onConflictDoUpdate({
           target: [oauthTokens.userId, oauthTokens.toolName],
           set: {
@@ -152,25 +166,29 @@ export class SecureTokenStorage {
         });
 
       logger.info(`Stored OAuth tokens for user ${userId}, tool ${toolName}`);
-
     } catch (error) {
-      logger.error('Failed to store OAuth tokens:', error);
-      throw new Error('Token storage failed');
+      logger.error("Failed to store OAuth tokens:", error);
+      throw new Error("Token storage failed");
     }
   }
 
   /**
    * Retrieve and decrypt OAuth tokens for a user-tool pair
    */
-  async getTokens(userId: string, toolName: string): Promise<OAuthTokens | null> {
+  async getTokens(
+    userId: string,
+    toolName: string,
+  ): Promise<OAuthTokens | null> {
     try {
       const result = await this.db
         .select()
         .from(oauthTokens)
-        .where(and(
-          eq(oauthTokens.userId, userId),
-          eq(oauthTokens.toolName, toolName)
-        ))
+        .where(
+          and(
+            eq(oauthTokens.userId, userId),
+            eq(oauthTokens.toolName, toolName),
+          ),
+        )
         .limit(1);
 
       if (result.length === 0) {
@@ -182,14 +200,14 @@ export class SecureTokenStorage {
       // Decrypt tokens
       const accessToken = this.decrypt(
         tokenRecord.accessToken,
-        tokenRecord.ivAccess
+        tokenRecord.ivAccess,
       );
 
       let refreshToken: string | undefined;
       if (tokenRecord.refreshToken && tokenRecord.ivRefresh) {
         refreshToken = this.decrypt(
           tokenRecord.refreshToken,
-          tokenRecord.ivRefresh
+          tokenRecord.ivRefresh,
         );
       }
 
@@ -199,14 +217,15 @@ export class SecureTokenStorage {
         tokenType: tokenRecord.tokenType,
         expiresAt: tokenRecord.expiresAt || undefined,
         refreshExpiresAt: tokenRecord.refreshExpiresAt || undefined,
-        scopes: tokenRecord.scopes ? tokenRecord.scopes.split(' ') : undefined,
-        metadata: tokenRecord.metadata ? JSON.parse(tokenRecord.metadata) : undefined,
+        scopes: tokenRecord.scopes ? tokenRecord.scopes.split(" ") : undefined,
+        metadata: tokenRecord.metadata
+          ? JSON.parse(tokenRecord.metadata)
+          : undefined,
       };
 
       return tokens;
-
     } catch (error) {
-      logger.error('Failed to retrieve OAuth tokens:', error);
+      logger.error("Failed to retrieve OAuth tokens:", error);
       return null;
     }
   }
@@ -219,7 +238,7 @@ export class SecureTokenStorage {
 
     // Refresh if token expires within 5 minutes
     const refreshThreshold = 5 * 60 * 1000; // 5 minutes
-    return (tokens.expiresAt - Date.now()) < refreshThreshold;
+    return tokens.expiresAt - Date.now() < refreshThreshold;
   }
 
   /**
@@ -245,16 +264,17 @@ export class SecureTokenStorage {
     try {
       await this.db
         .delete(oauthTokens)
-        .where(and(
-          eq(oauthTokens.userId, userId),
-          eq(oauthTokens.toolName, toolName)
-        ));
+        .where(
+          and(
+            eq(oauthTokens.userId, userId),
+            eq(oauthTokens.toolName, toolName),
+          ),
+        );
 
       logger.info(`Removed OAuth tokens for user ${userId}, tool ${toolName}`);
-
     } catch (error) {
-      logger.error('Failed to remove OAuth tokens:', error);
-      throw new Error('Token removal failed');
+      logger.error("Failed to remove OAuth tokens:", error);
+      throw new Error("Token removal failed");
     }
   }
 
@@ -265,7 +285,7 @@ export class SecureTokenStorage {
     userId: string,
     toolName: string,
     expiresAt: number,
-    refreshExpiresAt?: number
+    refreshExpiresAt?: number,
   ): Promise<void> {
     try {
       await this.db
@@ -275,23 +295,26 @@ export class SecureTokenStorage {
           refreshExpiresAt,
           updatedAt: Date.now(),
         })
-        .where(and(
-          eq(oauthTokens.userId, userId),
-          eq(oauthTokens.toolName, toolName)
-        ));
+        .where(
+          and(
+            eq(oauthTokens.userId, userId),
+            eq(oauthTokens.toolName, toolName),
+          ),
+        );
 
       logger.debug(`Updated token expiry for user ${userId}, tool ${toolName}`);
-
     } catch (error) {
-      logger.error('Failed to update token expiry:', error);
-      throw new Error('Token expiry update failed');
+      logger.error("Failed to update token expiry:", error);
+      throw new Error("Token expiry update failed");
     }
   }
 
   /**
    * Get all expired tokens for refresh processing
    */
-  async getExpiredTokens(): Promise<Array<{userId: string, toolName: string}>> {
+  async getExpiredTokens(): Promise<
+    Array<{ userId: string; toolName: string }>
+  > {
     try {
       const now = Date.now();
 
@@ -304,9 +327,8 @@ export class SecureTokenStorage {
         .where(sql`expiresAt < ${now}`);
 
       return results;
-
     } catch (error) {
-      logger.error('Failed to get expired tokens:', error);
+      logger.error("Failed to get expired tokens:", error);
       return [];
     }
   }
@@ -320,15 +342,17 @@ export class SecureTokenStorage {
 
       const result = await this.db
         .delete(oauthTokens)
-        .where(sql`expiresAt < ${now} AND (refreshExpiresAt IS NULL OR refreshExpiresAt < ${now})`);
+        .where(
+          sql`expiresAt < ${now} AND (refreshExpiresAt IS NULL OR refreshExpiresAt < ${now})`,
+        );
 
       // Get the number of affected rows from the delete operation
-      const rowsAffected = (result as { rowsAffected?: number })?.rowsAffected || 0;
+      const rowsAffected =
+        (result as { rowsAffected?: number })?.rowsAffected || 0;
       logger.info(`Cleaned up ${rowsAffected} expired OAuth tokens`);
       return rowsAffected;
-
     } catch (error) {
-      logger.error('Failed to cleanup expired tokens:', error);
+      logger.error("Failed to cleanup expired tokens:", error);
       return 0;
     }
   }

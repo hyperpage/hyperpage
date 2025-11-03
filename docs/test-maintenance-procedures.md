@@ -9,16 +9,19 @@ The integration test suite requires ongoing maintenance to ensure reliability, p
 ## Regular Maintenance Tasks
 
 ### Daily Maintenance
+
 - **Test Execution Monitoring**: Verify all integration tests run successfully
 - **Performance Baseline Tracking**: Monitor test execution times
 - **Error Pattern Analysis**: Review and categorize any recurring test failures
 
 ### Weekly Maintenance
+
 - **Coverage Analysis**: Assess test coverage across all integration points
 - **Mock Data Validation**: Ensure mock data remains representative of real API responses
 - **Dependency Updates**: Review and update any outdated test dependencies
 
 ### Monthly Maintenance
+
 - **Test Suite Performance Review**: Analyze execution trends and optimization opportunities
 - **API Change Impact Assessment**: Evaluate recent API changes on test coverage
 - **Documentation Updates**: Ensure test documentation stays current with implementation
@@ -28,16 +31,20 @@ The integration test suite requires ongoing maintenance to ensure reliability, p
 ### When APIs Change
 
 #### 1. Impact Assessment
+
 When an external API changes (GitHub, GitLab, Jira):
+
 ```bash
 # Run affected test suites to identify failures
 npm run test:integration:tools/github
-npm run test:integration:tools/gitlab  
+npm run test:integration:tools/gitlab
 npm run test:integration:tools/jira
 ```
 
 #### 2. Mock Data Updates
+
 Update mock data structures to reflect API changes:
+
 ```typescript
 // Update in __tests__/lib/test-credentials.ts
 const updatedMockGitHubPR = {
@@ -50,24 +57,28 @@ const updatedMockGitHubPR = {
   draft: false,
   // Updated field example:
   created_at: "2023-01-01T00:00:00Z",
-  merged_at: "2023-01-03T00:00:00Z"  // New field
+  merged_at: "2023-01-03T00:00:00Z", // New field
 };
 ```
 
 #### 3. Test Suite Updates
+
 Update corresponding test expectations:
+
 ```typescript
 // Update test assertions in github.spec.ts
 const response = await fetch(`${baseUrl}/api/tools/github/pull-requests`);
 const data = await response.json();
 
 // Update expectations to match new API structure
-expect(data.data[0]).toHaveProperty('merged_at');
+expect(data.data[0]).toHaveProperty("merged_at");
 expect(data.data[0].draft).toBeDefined();
 ```
 
 #### 4. Documentation Updates
+
 Update documentation to reflect changes:
+
 - Update API integration patterns guide
 - Revise troubleshooting sections
 - Update test coverage documentation
@@ -75,34 +86,37 @@ Update documentation to reflect changes:
 ### Adding New Test Cases
 
 #### 1. Follow Established Patterns
+
 ```typescript
 // Use existing test structure as template
-describe('GitHub New Feature Tests', () => {
+describe("GitHub New Feature Tests", () => {
   let testEnv: IntegrationTestEnvironment;
   let baseUrl: string;
 
   beforeAll(async () => {
     testEnv = await IntegrationTestEnvironment.setup();
-    baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || 'http://localhost:3000';
+    baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
   });
 
   afterAll(async () => {
     await testEnv.cleanup();
   });
 
-  it('should handle new GitHub API feature', async () => {
-    const session = await testEnv.createTestSession('github');
+  it("should handle new GitHub API feature", async () => {
+    const session = await testEnv.createTestSession("github");
     // Test implementation
   });
 });
 ```
 
 #### 2. Naming Conventions
+
 - Use descriptive test names that explain the scenario
 - Follow pattern: `should [expected behavior] when [condition]`
 - Include provider name for clarity: `should fetch GitHub pull requests with filtering`
 
 #### 3. Coverage Guidelines
+
 - Aim for 80%+ coverage for critical paths
 - Include both positive and negative test scenarios
 - Test edge cases and error conditions
@@ -112,6 +126,7 @@ describe('GitHub New Feature Tests', () => {
 ### Session Cleanup Procedures
 
 #### Proper Cleanup Pattern
+
 ```typescript
 afterEach(async () => {
   // Clean up created sessions to prevent memory leaks
@@ -131,6 +146,7 @@ afterAll(async () => {
 ```
 
 #### Memory Leak Prevention
+
 - Always cleanup test sessions after each test
 - Close network connections and clean up controllers
 - Reset global state between test runs
@@ -139,15 +155,17 @@ afterAll(async () => {
 ### Test Environment Isolation
 
 #### Database Management
+
 ```typescript
 // Ensure isolated test environments
 const testEnv = await IntegrationTestEnvironment.setup({
-  database: 'test',
-  clearData: true
+  database: "test",
+  clearData: true,
 });
 ```
 
 #### Session Isolation
+
 - Each test creates its own session
 - No shared session state between tests
 - Use unique identifiers for test data
@@ -158,7 +176,9 @@ const testEnv = await IntegrationTestEnvironment.setup({
 ### Test Execution Speed
 
 #### Parallel Execution
+
 Tests are designed to run in parallel where possible:
+
 ```typescript
 // Enable parallel execution in vitest.config.ts
 export default defineConfig({
@@ -167,12 +187,13 @@ export default defineConfig({
     testTimeout: 10000,
     hookTimeout: 10000,
     threads: true,
-    maxWorkers: 4
-  }
+    maxWorkers: 4,
+  },
 });
 ```
 
 #### Selective Test Running
+
 ```bash
 # Run only changed tests during development
 npm run test:integration -- --run --reporter=verbose
@@ -182,6 +203,7 @@ npm run test:integration -- --grep "GitHub.*pull.*request"
 ```
 
 ### Resource Optimization
+
 - Use appropriate timeout values
 - Minimize external API calls in tests
 - Optimize mock data structures
@@ -192,6 +214,7 @@ npm run test:integration -- --grep "GitHub.*pull.*request"
 ### Test Validation Checklist
 
 #### Before Committing Changes
+
 - [ ] All tests pass locally
 - [ ] No memory leaks detected
 - [ ] Test coverage maintained or improved
@@ -200,6 +223,7 @@ npm run test:integration -- --grep "GitHub.*pull.*request"
 - [ ] Performance impact assessed
 
 #### Code Review Requirements
+
 - [ ] Test follows established patterns
 - [ ] Adequate error handling implemented
 - [ ] Proper cleanup procedures included
@@ -209,12 +233,14 @@ npm run test:integration -- --grep "GitHub.*pull.*request"
 ### Automated Quality Checks
 
 #### Pre-commit Hooks
+
 ```bash
 # Run tests before commit
 npm run test:integration -- --run --reporter=verbose
 ```
 
 #### CI/CD Integration
+
 ```yaml
 # .github/workflows/test-integration.yml
 - name: Run Integration Tests
@@ -224,12 +250,14 @@ npm run test:integration -- --run --reporter=verbose
 ## Monitoring and Alerting
 
 ### Test Health Metrics
+
 - **Execution Time**: Track average test duration
 - **Success Rate**: Monitor pass/fail ratios
 - **Flaky Test Detection**: Identify inconsistent tests
 - **Resource Usage**: Monitor memory and CPU consumption
 
 ### Alerting Thresholds
+
 - Test execution time > 30 seconds
 - Failure rate > 10%
 - Memory usage growth > 100MB
@@ -238,18 +266,21 @@ npm run test:integration -- --run --reporter=verbose
 ## Troubleshooting Common Issues
 
 ### Slow Test Execution
+
 1. **Identify Bottlenecks**: Use `--reporter=verbose` to identify slow tests
 2. **Optimize Database Operations**: Cache mock data where appropriate
 3. **Reduce Network Calls**: Minimize external API interactions
 4. **Parallel Execution**: Ensure tests can run concurrently
 
 ### Memory Leaks
+
 1. **Session Cleanup**: Verify all sessions are properly cleaned up
 2. **Event Listener Removal**: Remove all event listeners in teardown
 3. **Controller Cleanup**: Abort and cleanup controllers
 4. **Global State Reset**: Reset any global state between tests
 
 ### Flaky Tests
+
 1. **Isolation Issues**: Ensure test independence
 2. **Race Conditions**: Add appropriate waits and delays
 3. **External Dependencies**: Mock unreliable external services
@@ -258,12 +289,14 @@ npm run test:integration -- --run --reporter=verbose
 ## Documentation Maintenance
 
 ### Test Documentation Updates
+
 - Update test descriptions when functionality changes
 - Maintain API integration patterns guide
 - Keep troubleshooting documentation current
 - Document new test patterns and practices
 
 ### Change Management
+
 - Version control for all test changes
 - Peer review for significant test modifications
 - Migration guides for breaking changes
@@ -272,18 +305,21 @@ npm run test:integration -- --run --reporter=verbose
 ## Team Responsibilities
 
 ### Test Maintainers
+
 - Monitor test suite health
 - Respond to test failures
 - Update tests for API changes
 - Maintain test documentation
 
 ### Developers
+
 - Follow test maintenance procedures
 - Write maintainable test code
 - Report test issues promptly
 - Participate in test reviews
 
 ### Reviewers
+
 - Validate test quality during reviews
 - Ensure proper cleanup procedures
 - Check for performance impacts
@@ -292,12 +328,14 @@ npm run test:integration -- --run --reporter=verbose
 ## Continuous Improvement
 
 ### Process Review
+
 - Quarterly review of maintenance procedures
 - Incorporate feedback from team members
 - Update procedures based on lessons learned
 - Benchmark against industry best practices
 
 ### Tool Updates
+
 - Regular updates to testing frameworks
 - Monitor for security vulnerabilities
 - Evaluate new testing tools and patterns

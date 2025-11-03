@@ -2,21 +2,21 @@ name: Test Environment Provisioning
 
 on:
   pull_request:
-    branches: [ main, develop ]
-    types: [ opened, synchronize, reopened ]
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to provision'
+        description: "Environment to provision"
         required: true
-        default: 'preview'
+        default: "preview"
         type: choice
         options:
-        - preview
-        - testing
-        - staging
+          - preview
+          - testing
+          - staging
       force_recreate:
-        description: 'Force recreate environment'
+        description: "Force recreate environment"
         required: false
         default: false
         type: boolean
@@ -33,152 +33,152 @@ jobs:
     name: Provision Ephemeral Test Environment
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-    
+
     outputs:
       environment-name: ${{ steps.environment-info.outputs.name }}
       environment-url: ${{ steps.environment-info.outputs.url }}
       namespace: ${{ steps.environment-info.outputs.namespace }}
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup kubectl
-      uses: azure/setup-kubectl@v4
-      with:
-        version: 'latest'
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
 
-    - name: Setup Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Configure kubectl for test cluster
-      run: |
-        echo "${{ secrets.KUBE_CONFIG_TEST }}" | base64 -d > kubeconfig
-        export KUBECONFIG=kubeconfig
-      env:
-        KUBECONFIG: kubeconfig
+      - name: Configure kubectl for test cluster
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_TEST }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+        env:
+          KUBECONFIG: kubeconfig
 
-    - name: Generate environment metadata
-      id: environment-info
-      run: |
-        PR_NUMBER="${{ github.event.pull_request.number }}"
-        BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
-        COMMIT_SHA="${{ github.sha }}"
-        
-        # Sanitize branch name for use as identifier
-        SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//' | tr '[:upper:]' '[:lower:]' | cut -c1-50)
-        ENVIRONMENT_NAME="pr-${PR_NUMBER}-${SANITIZED_BRANCH}"
-        NAMESPACE="hyperpage-test-${PR_NUMBER}-${SANITIZED_BRANCH}"
-        
-        echo "name=${ENVIRONMENT_NAME}" >> $GITHUB_OUTPUT
-        echo "namespace=${NAMESPACE}" >> $GITHUB_OUTPUT
-        echo "url=https://${ENVIRONMENT_NAME}.test-hyperpage.dev" >> $GITHUB_OUTPUT
-        
-        echo "Generated environment name: ${ENVIRONMENT_NAME}"
-        echo "Generated namespace: ${NAMESPACE}"
-        echo "Generated URL: https://${ENVIRONMENT_NAME}.test-hyperpage.dev"
+      - name: Generate environment metadata
+        id: environment-info
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          COMMIT_SHA="${{ github.sha }}"
 
-    - name: Check if environment already exists
-      id: check-existing
-      run: |
-        export KUBECONFIG=kubeconfig
-        
-        # Check if namespace already exists
-        if kubectl get namespace ${{ steps.environment-info.outputs.namespace }} &>/dev/null; then
-          echo "Environment already exists"
-          echo "exists=true" >> $GITHUB_OUTPUT
-        else
-          echo "Environment does not exist"
-          echo "exists=false" >> $GITHUB_OUTPUT
-        fi
+          # Sanitize branch name for use as identifier
+          SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//' | tr '[:upper:]' '[:lower:]' | cut -c1-50)
+          ENVIRONMENT_NAME="pr-${PR_NUMBER}-${SANITIZED_BRANCH}"
+          NAMESPACE="hyperpage-test-${PR_NUMBER}-${SANITIZED_BRANCH}"
 
-    - name: Create test environment namespace
-      if: steps.check-existing.outputs.exists == 'false'
-      run: |
-        export KUBECONFIG=kubeconfig
-        
-        # Create namespace with labels
-        kubectl create namespace ${{ steps.environment-info.outputs.namespace }} \
-          --dry-run=client -o yaml | \
-        kubectl apply -f -
-        
-        # Add labels for tracking
-        kubectl label namespace ${{ steps.environment-info.outputs.namespace }} \
-          app.kubernetes.io/name=hyperpage \
-          app.kubernetes.io/instance=test \
-          app.kubernetes.io/version=${{ github.sha }} \
-          app.kubernetes.io/branch=${{ github.head_ref || github.ref_name }} \
-          github.com/pr-number=${{ github.event.pull_request.number }} \
-          github.com/sha=${{ github.sha }} \
-          hyperpage.dev/type=test \
-          hyperpage.dev/created-by=github-actions \
-          hyperpage.dev/ttl=8h
+          echo "name=${ENVIRONMENT_NAME}" >> $GITHUB_OUTPUT
+          echo "namespace=${NAMESPACE}" >> $GITHUB_OUTPUT
+          echo "url=https://${ENVIRONMENT_NAME}.test-hyperpage.dev" >> $GITHUB_OUTPUT
 
-    - name: Setup environment configuration
-      run: |
-        export KUBECONFIG=kubeconfig
-        
-        # Create ConfigMap for test environment
-        cat <<EOF | kubectl apply -f -
-        apiVersion: v1
-        kind: ConfigMap
-        metadata:
-          name: hyperpage-config
-          namespace: ${{ steps.environment-info.outputs.namespace }}
-        data:
-          NODE_ENV: "test"
-          NEXT_TELEMETRY_DISABLED: "1"
-          DATABASE_URL: "file:./data/hyperpage-test.db"
-          CACHE_TYPE: "memory"
-          REDIS_URL: ""
-          ENABLE_GITHUB: "false"
-          ENABLE_GITLAB: "false"
-          ENABLE_JIRA: "false"
-          RATE_LIMIT_ENABLED: "false"
-          PERFORMACE_MONITORING_ENABLED: "true"
-          PERFORMACE_DASHBOARD_RETENTION_MINUTES: "5"
-        EOF
+          echo "Generated environment name: ${ENVIRONMENT_NAME}"
+          echo "Generated namespace: ${NAMESPACE}"
+          echo "Generated URL: https://${ENVIRONMENT_NAME}.test-hyperpage.dev"
 
-        # Create Secret for test environment
-        cat <<EOF | kubectl apply -f -
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: hyperpage-secrets
-          namespace: ${{ steps.environment-info.outputs.namespace }}
-        type: Opaque
-        stringData:
-          NEXTAUTH_SECRET: "test-secret-key-for-pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
-          NEXTAUTH_URL: "https://${{ steps.environment-info.outputs.name }}.test-hyperpage.dev"
-          DATABASE_URL: "file:./data/hyperpage-test.db"
-        EOF
+      - name: Check if environment already exists
+        id: check-existing
+        run: |
+          export KUBECONFIG=kubeconfig
 
-        # Create ServiceAccount
-        cat <<EOF | kubectl apply -f -
-        apiVersion: v1
-        kind: ServiceAccount
-        metadata:
-          name: hyperpage-service-account
-          namespace: ${{ steps.environment-info.outputs.namespace }}
-          automountServiceAccountToken: false
-        EOF
+          # Check if namespace already exists
+          if kubectl get namespace ${{ steps.environment-info.outputs.namespace }} &>/dev/null; then
+            echo "Environment already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Environment does not exist"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
-        # Create PersistentVolumeClaims for test data
-        cat <<EOF | kubectl apply -f -
-        apiVersion: v1
-        kind: PersistentVolumeClaim
-        metadata:
-          name: hyperpage-data-pvc
-          namespace: ${{ steps.environment-info.outputs.namespace }}
-        spec:
-          accessModes: [ReadWriteOnce]
-          resources:
-            requests:
-              storage: 1Gi
-          storageClassName: ""
-        EOF
+      - name: Create test environment namespace
+        if: steps.check-existing.outputs.exists == 'false'
+        run: |
+          export KUBECONFIG=kubeconfig
+
+          # Create namespace with labels
+          kubectl create namespace ${{ steps.environment-info.outputs.namespace }} \
+            --dry-run=client -o yaml | \
+          kubectl apply -f -
+
+          # Add labels for tracking
+          kubectl label namespace ${{ steps.environment-info.outputs.namespace }} \
+            app.kubernetes.io/name=hyperpage \
+            app.kubernetes.io/instance=test \
+            app.kubernetes.io/version=${{ github.sha }} \
+            app.kubernetes.io/branch=${{ github.head_ref || github.ref_name }} \
+            github.com/pr-number=${{ github.event.pull_request.number }} \
+            github.com/sha=${{ github.sha }} \
+            hyperpage.dev/type=test \
+            hyperpage.dev/created-by=github-actions \
+            hyperpage.dev/ttl=8h
+
+      - name: Setup environment configuration
+        run: |
+          export KUBECONFIG=kubeconfig
+
+          # Create ConfigMap for test environment
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: hyperpage-config
+            namespace: ${{ steps.environment-info.outputs.namespace }}
+          data:
+            NODE_ENV: "test"
+            NEXT_TELEMETRY_DISABLED: "1"
+            DATABASE_URL: "file:./data/hyperpage-test.db"
+            CACHE_TYPE: "memory"
+            REDIS_URL: ""
+            ENABLE_GITHUB: "false"
+            ENABLE_GITLAB: "false"
+            ENABLE_JIRA: "false"
+            RATE_LIMIT_ENABLED: "false"
+            PERFORMACE_MONITORING_ENABLED: "true"
+            PERFORMACE_DASHBOARD_RETENTION_MINUTES: "5"
+          EOF
+
+          # Create Secret for test environment
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: hyperpage-secrets
+            namespace: ${{ steps.environment-info.outputs.namespace }}
+          type: Opaque
+          stringData:
+            NEXTAUTH_SECRET: "test-secret-key-for-pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
+            NEXTAUTH_URL: "https://${{ steps.environment-info.outputs.name }}.test-hyperpage.dev"
+            DATABASE_URL: "file:./data/hyperpage-test.db"
+          EOF
+
+          # Create ServiceAccount
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: hyperpage-service-account
+            namespace: ${{ steps.environment-info.outputs.namespace }}
+            automountServiceAccountToken: false
+          EOF
+
+          # Create PersistentVolumeClaims for test data
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: hyperpage-data-pvc
+            namespace: ${{ steps.environment-info.outputs.namespace }}
+          spec:
+            accessModes: [ReadWriteOnce]
+            resources:
+              requests:
+                storage: 1Gi
+            storageClassName: ""
+          EOF
 
   # ==============================================
   # BUILD TEST CONTAINER
@@ -187,46 +187,46 @@ jobs:
     name: Build Test Container
     runs-on: ubuntu-latest
     needs: [provision-test-environment]
-    
+
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata for test build
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=pr
-          type=sha,prefix=pr-${{ github.event.pull_request.number }}-
+      - name: Extract metadata for test build
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=pr
+            type=sha,prefix=pr-${{ github.event.pull_request.number }}-
 
-    - name: Build and push test container
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64
-        build-args: |
-          NODE_ENV=test
-          BUILD_ENV=test
+      - name: Build and push test container
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          build-args: |
+            NODE_ENV=test
+            BUILD_ENV=test
 
   # ==============================================
   # DEPLOY TO TEST ENVIRONMENT
@@ -235,157 +235,157 @@ jobs:
     name: Deploy to Test Environment
     runs-on: ubuntu-latest
     needs: [provision-test-environment, build-test-container]
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup kubectl
-      uses: azure/setup-kubectl@v4
-      with:
-        version: 'latest'
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
 
-    - name: Configure kubectl for test cluster
-      run: |
-        echo "${{ secrets.KUBE_CONFIG_TEST }}" | base64 -d > kubeconfig
-        export KUBECONFIG=kubeconfig
-      env:
-        KUBECONFIG: kubeconfig
+      - name: Configure kubectl for test cluster
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_TEST }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+        env:
+          KUBECONFIG: kubeconfig
 
-    - name: Deploy Hyperpage to test environment
-      run: |
-        export KUBECONFIG=kubeconfig
-        NAMESPACE="${{ needs.provision-test-environment.outputs.namespace }}"
-        
-        # Create deployment
-        envsubst <<'EOF' | kubectl apply -f -
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-          name: hyperpage
-          namespace: ${NAMESPACE}
-          labels:
-            app: hyperpage
-            version: test
-            pr: ${{ github.event.pull_request.number }}
-        spec:
-          replicas: 1
-          strategy:
-            type: RollingUpdate
-            rollingUpdate:
-              maxSurge: 1
-              maxUnavailable: 0
-          selector:
-            matchLabels:
+      - name: Deploy Hyperpage to test environment
+        run: |
+          export KUBECONFIG=kubeconfig
+          NAMESPACE="${{ needs.provision-test-environment.outputs.namespace }}"
+
+          # Create deployment
+          envsubst <<'EOF' | kubectl apply -f -
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: hyperpage
+            namespace: ${NAMESPACE}
+            labels:
               app: hyperpage
-          template:
-            metadata:
-              labels:
+              version: test
+              pr: ${{ github.event.pull_request.number }}
+          spec:
+            replicas: 1
+            strategy:
+              type: RollingUpdate
+              rollingUpdate:
+                maxSurge: 1
+                maxUnavailable: 0
+            selector:
+              matchLabels:
                 app: hyperpage
-                version: test
-                pr: ${{ github.event.pull_request.number }}
-            spec:
-              securityContext:
-                runAsNonRoot: true
-                runAsUser: 1001
-                runAsGroup: 1001
-                fsGroup: 1001
-              serviceAccountName: hyperpage-service-account
-              containers:
-              - name: hyperpage
-                image: ${{ needs.build-test-container.outputs.image-tag }}
-                imagePullPolicy: Always
-                resources:
-                  requests:
-                    memory: "256Mi"
-                    cpu: "100m"
-                  limits:
-                    memory: "512Mi"
-                    cpu: "500m"
-                livenessProbe:
-                  httpGet:
-                    path: /api/health
-                    port: 3000
-                  initialDelaySeconds: 30
-                  periodSeconds: 30
-                  timeoutSeconds: 5
-                  failureThreshold: 3
-                readinessProbe:
-                  httpGet:
-                    path: /api/health
-                    port: 3000
-                  initialDelaySeconds: 5
-                  periodSeconds: 10
-                  timeoutSeconds: 5
-                  failureThreshold: 3
-                startupProbe:
-                  httpGet:
-                    path: /api/health
-                    port: 3000
-                  initialDelaySeconds: 10
-                  periodSeconds: 10
-                  timeoutSeconds: 5
-                  failureThreshold: 30
-                envFrom:
-                - configMapRef:
-                    name: hyperpage-config
-                - secretRef:
-                    name: hyperpage-secrets
-                ports:
-                - containerPort: 3000
-                  name: http
-                  protocol: TCP
-                volumeMounts:
+            template:
+              metadata:
+                labels:
+                  app: hyperpage
+                  version: test
+                  pr: ${{ github.event.pull_request.number }}
+              spec:
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 1001
+                  runAsGroup: 1001
+                  fsGroup: 1001
+                serviceAccountName: hyperpage-service-account
+                containers:
+                - name: hyperpage
+                  image: ${{ needs.build-test-container.outputs.image-tag }}
+                  imagePullPolicy: Always
+                  resources:
+                    requests:
+                      memory: "256Mi"
+                      cpu: "100m"
+                    limits:
+                      memory: "512Mi"
+                      cpu: "500m"
+                  livenessProbe:
+                    httpGet:
+                      path: /api/health
+                      port: 3000
+                    initialDelaySeconds: 30
+                    periodSeconds: 30
+                    timeoutSeconds: 5
+                    failureThreshold: 3
+                  readinessProbe:
+                    httpGet:
+                      path: /api/health
+                      port: 3000
+                    initialDelaySeconds: 5
+                    periodSeconds: 10
+                    timeoutSeconds: 5
+                    failureThreshold: 3
+                  startupProbe:
+                    httpGet:
+                      path: /api/health
+                      port: 3000
+                    initialDelaySeconds: 10
+                    periodSeconds: 10
+                    timeoutSeconds: 5
+                    failureThreshold: 30
+                  envFrom:
+                  - configMapRef:
+                      name: hyperpage-config
+                  - secretRef:
+                      name: hyperpage-secrets
+                  ports:
+                  - containerPort: 3000
+                    name: http
+                    protocol: TCP
+                  volumeMounts:
+                  - name: data-storage
+                    mountPath: /app/data
+                volumes:
                 - name: data-storage
-                  mountPath: /app/data
-              volumes:
-              - name: data-storage
-                persistentVolumeClaim:
-                  claimName: hyperpage-data-pvc
-              dnsPolicy: ClusterFirst
-              restartPolicy: Always
-        EOF
+                  persistentVolumeClaim:
+                    claimName: hyperpage-data-pvc
+                dnsPolicy: ClusterFirst
+                restartPolicy: Always
+          EOF
 
-    - name: Create test environment service
-      run: |
-        export KUBECONFIG=kubeconfig
-        NAMESPACE="${{ needs.provision-test-environment.outputs.namespace }}"
-        
-        cat <<EOF | kubectl apply -f -
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: hyperpage-service
-          namespace: ${NAMESPACE}
-          labels:
-            app: hyperpage
-        spec:
-          type: LoadBalancer
-          ports:
-          - port: 80
-            targetPort: 3000
-            protocol: TCP
-            name: http
-          selector:
-            app: hyperpage
-        EOF
+      - name: Create test environment service
+        run: |
+          export KUBECONFIG=kubeconfig
+          NAMESPACE="${{ needs.provision-test-environment.outputs.namespace }}"
 
-    - name: Wait for deployment to be ready
-      run: |
-        export KUBECONFIG=kubeconfig
-        NAMESPACE="${{ needs.provision-test-environment.outputs.namespace }}"
-        
-        # Wait for deployment to be ready
-        kubectl rollout status deployment/hyperpage -n ${NAMESPACE} --timeout=300s
-        
-        # Get service external IP
-        SERVICE_IP=$(kubectl get service hyperpage-service -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-        
-        if [ -z "$SERVICE_IP" ]; then
-          SERVICE_IP=$(kubectl get service hyperpage-service -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-        fi
-        
-        echo "Service deployed with IP: $SERVICE_IP"
-        echo "SERVICE_IP=${SERVICE_IP}" >> $GITHUB_ENV
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: hyperpage-service
+            namespace: ${NAMESPACE}
+            labels:
+              app: hyperpage
+          spec:
+            type: LoadBalancer
+            ports:
+            - port: 80
+              targetPort: 3000
+              protocol: TCP
+              name: http
+            selector:
+              app: hyperpage
+          EOF
 
-    - name: Health check test
+      - name: Wait for deployment to be ready
+        run: |
+          export KUBECONFIG=kubeconfig
+          NAMESPACE="${{ needs.provision-test-environment.outputs.namespace }}"
+
+          # Wait for deployment to be ready
+          kubectl rollout status deployment/hyperpage -n ${NAMESPACE} --timeout=300s
+
+          # Get service external IP
+          SERVICE_IP=$(kubectl get service hyperpage-service -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+          if [ -z "$SERVICE_IP" ]; then
+            SERVICE_IP=$(kubectl get service hyperpage-service -n ${NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          fi
+
+          echo "Service deployed with IP: $SERVICE_IP"
+          echo "SERVICE_IP=${SERVICE_IP}" >> $GITHUB_ENV
+
+      - name: Health check test

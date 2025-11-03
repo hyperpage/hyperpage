@@ -3,6 +3,7 @@
 This workflow validates newly added tools against project requirements and architectural standards from coding-principles.md.
 
 ## Prerequisites
+
 - Tool has been added via add-new-tool.md workflow
 - Environment variables configured in .env.local
 - Basic tool structure exists
@@ -18,6 +19,7 @@ This workflow validates newly added tools against project requirements and archi
 ```
 
 Verify tool follows registry-driven pattern:
+
 - [ ] Exports tool object with required properties (name, isEnabled, capabilities, handlers, widgets)
 - [ ] Environment-controlled enablement check
 - [ ] Server-side API client with error handling
@@ -32,6 +34,7 @@ Verify tool follows registry-driven pattern:
 ```
 
 Check type definitions:
+
 - [ ] Tool-specific interfaces defined in tools/[tool]/types.ts
 - [ ] ApiParams, Response interfaces present
 - [ ] Capabilities type correctly defined as 'portal'
@@ -48,6 +51,7 @@ Check type definitions:
 ```
 
 Validate handlers structure:
+
 - [ ] Handler functions match capability declarations
 - [ ] Error boundaries with try/catch blocks
 - [ ] Server-side credential access only
@@ -64,6 +68,7 @@ Validate handlers structure:
 ```
 
 Check widget definitions:
+
 - [ ] Dynamic flag appropriately set
 - [ ] refreshInterval configured (reasonable values)
 - [ ] Loading states and error handling
@@ -78,6 +83,7 @@ Check widget definitions:
 ```
 
 Confirm proper registration:
+
 - [ ] Tool imported in tools/index.ts
 - [ ] Added to registry array
 - [ ] Follows import naming conventions
@@ -91,6 +97,7 @@ Confirm proper registration:
 ```
 
 Validate environment setup:
+
 - [ ] ENABLE_TOOL_NAME=false variable present
 - [ ] API credentials placeholders added
 - [ ] Web URL and token configurations
@@ -108,6 +115,7 @@ Test the tool endpoints (requires environment config):
 ```
 
 Verify API responses:
+
 - [ ] Endpoint returns 200 status
 - [ ] Response matches expected structure
 - [ ] Data accessible at configured dataKey
@@ -123,6 +131,7 @@ Verify API responses:
 ```
 
 Validate UI integration:
+
 - [ ] Tool appears in enabled tools list
 - [ ] Widgets render in portal
 - [ ] Sidebar shows tool status
@@ -161,6 +170,7 @@ If tool passes validation, update documentation:
 ```
 
 Validate production readiness:
+
 - [ ] Build completes without errors
 - [ ] TypeScript compilation successful
 - [ ] No security vulnerabilities introduced

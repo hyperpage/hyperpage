@@ -1,7 +1,19 @@
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { getRateLimitStatus, clearRateLimitCache } from '../../lib/rate-limit-monitor';
-import { getDynamicInterval } from '../../lib/rate-limit-utils';
-import { toolRegistry } from '../../tools/registry';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "vitest";
+import {
+  getRateLimitStatus,
+  clearRateLimitCache,
+} from "../../lib/rate-limit-monitor";
+import { getDynamicInterval } from "../../lib/rate-limit-utils";
+import { toolRegistry } from "../../tools/registry";
 
 // Type definitions to replace 'any' types
 interface MockToolHandlers {
@@ -23,7 +35,7 @@ interface MockToolRegistry {
   [key: string]: MockToolConfig;
 }
 
-describe('Rate Limiting Performance Tests', () => {
+describe("Rate Limiting Performance Tests", () => {
   // Create spy for global.fetch
   const mockFetch = vi.fn();
   global.fetch = mockFetch;
@@ -31,61 +43,61 @@ describe('Rate Limiting Performance Tests', () => {
   // Mock tools for rate limiting
   const mockTools = {
     github: {
-      name: 'GitHub',
-      slug: 'github',
+      name: "GitHub",
+      slug: "github",
       enabled: true,
-      capabilities: ['rate-limit'],
-      ui: { color: '', icon: 'GitHubIcon' },
+      capabilities: ["rate-limit"],
+      ui: { color: "", icon: "GitHubIcon" },
       widgets: [],
       apis: {},
       handlers: {
-        'rate-limit': vi.fn().mockResolvedValue({
+        "rate-limit": vi.fn().mockResolvedValue({
           rateLimit: {
             resources: {
               core: { limit: 5000, remaining: 4000, reset: 1640995200 },
               search: { limit: 30, remaining: 25, reset: 1640995200 },
-              graphql: { limit: 5000, remaining: 4990, reset: 1640995200 }
-            }
-          }
-        })
-      }
+              graphql: { limit: 5000, remaining: 4990, reset: 1640995200 },
+            },
+          },
+        }),
+      },
     },
     gitlab: {
-      name: 'GitLab',
-      slug: 'gitlab',
+      name: "GitLab",
+      slug: "gitlab",
       enabled: true,
-      capabilities: ['rate-limit'],
-      ui: { color: '', icon: 'GitLabIcon' },
+      capabilities: ["rate-limit"],
+      ui: { color: "", icon: "GitLabIcon" },
       widgets: [],
       apis: {},
       handlers: {
-        'rate-limit': vi.fn().mockResolvedValue({
+        "rate-limit": vi.fn().mockResolvedValue({
           rateLimit: {
-            message: 'Rate limit exceeded',
+            message: "Rate limit exceeded",
             retryAfter: 60,
-            statusCode: 429
-          }
-        })
-      }
+            statusCode: 429,
+          },
+        }),
+      },
     },
     jira: {
-      name: 'Jira',
-      slug: 'jira',
+      name: "Jira",
+      slug: "jira",
       enabled: true,
-      capabilities: ['rate-limit'],
-      ui: { color: '', icon: 'JiraIcon' },
+      capabilities: ["rate-limit"],
+      ui: { color: "", icon: "JiraIcon" },
       widgets: [],
       apis: {},
       handlers: {
-        'rate-limit': vi.fn().mockResolvedValue({
+        "rate-limit": vi.fn().mockResolvedValue({
           rateLimit: {
-            message: 'Too many requests',
-            retryAfter: '3600',
-            statusCode: 429
-          }
-        })
-      }
-    }
+            message: "Too many requests",
+            retryAfter: "3600",
+            statusCode: 429,
+          },
+        }),
+      },
+    },
   };
 
   beforeAll(() => {
@@ -107,36 +119,57 @@ describe('Rate Limiting Performance Tests', () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({
-        platform: 'github',
+        platform: "github",
         lastUpdated: Date.now(),
         dataFresh: true,
-        status: 'normal',
+        status: "normal",
         limits: {
           github: {
-            core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: Date.now() + 3600000, retryAfter: null },
-            search: { limit: 30, remaining: 25, used: 5, usagePercent: 16.67, resetTime: Date.now() + 3600000, retryAfter: null },
-            graphql: { limit: 5000, remaining: 4990, used: 10, usagePercent: 0.2, resetTime: Date.now() + 3600000, retryAfter: null }
-          }
-        }
-      })
+            core: {
+              limit: 5000,
+              remaining: 4000,
+              used: 1000,
+              usagePercent: 20,
+              resetTime: Date.now() + 3600000,
+              retryAfter: null,
+            },
+            search: {
+              limit: 30,
+              remaining: 25,
+              used: 5,
+              usagePercent: 16.67,
+              resetTime: Date.now() + 3600000,
+              retryAfter: null,
+            },
+            graphql: {
+              limit: 5000,
+              remaining: 4990,
+              used: 10,
+              usagePercent: 0.2,
+              resetTime: Date.now() + 3600000,
+              retryAfter: null,
+            },
+          },
+        },
+      }),
     });
   });
 
   afterEach(() => {
     // Clean up mock tools
-    Object.keys(mockTools).forEach(key => {
+    Object.keys(mockTools).forEach((key) => {
       delete toolRegistry[key as keyof typeof toolRegistry];
     });
   });
 
-  describe('High-Frequency Request Handling', () => {
-    it('handles rapid consecutive requests without memory leaks', async () => {
+  describe("High-Frequency Request Handling", () => {
+    it("handles rapid consecutive requests without memory leaks", async () => {
       const startTime = Date.now();
       const iterationCount = 50;
 
       // Generate rapid requests
       const promises = Array.from({ length: iterationCount }, () =>
-        getRateLimitStatus('github')
+        getRateLimitStatus("github"),
       );
 
       // Execute all requests and measure time
@@ -145,9 +178,9 @@ describe('Rate Limiting Performance Tests', () => {
       const totalTime = endTime - startTime;
 
       // All requests should succeed
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).not.toBeNull();
-        expect(result?.platform).toBe('github');
+        expect(result?.platform).toBe("github");
       });
 
       // Should complete within reasonable time (allowing for cache hits)
@@ -158,7 +191,7 @@ describe('Rate Limiting Performance Tests', () => {
       expect(fetchCount).toBeLessThanOrEqual(iterationCount); // At most as many calls as requests
     });
 
-    it('maintains consistent performance under varying usage levels', async () => {
+    it("maintains consistent performance under varying usage levels", async () => {
       const usageLevels = [10, 50, 75, 90, 95];
       const timings: number[] = [];
 
@@ -167,7 +200,7 @@ describe('Rate Limiting Performance Tests', () => {
         mockFetch.mockClear();
 
         const startTime = Date.now();
-        await getRateLimitStatus('github');
+        await getRateLimitStatus("github");
         const timing = Date.now() - startTime;
         timings.push(timing);
 
@@ -188,71 +221,90 @@ describe('Rate Limiting Performance Tests', () => {
     });
   });
 
-  describe('Simulated High-Load Scenarios', () => {
-    it('handles extreme polling frequency with proper backoff', () => {
+  describe("Simulated High-Load Scenarios", () => {
+    it("handles extreme polling frequency with proper backoff", () => {
       const baseInterval = 60000; // 1 minute
       const extremeUsage = 98;
 
       // Even under extreme usage, should respect bounds
-      const adjustedInterval = getDynamicInterval(extremeUsage, baseInterval, false);
+      const adjustedInterval = getDynamicInterval(
+        extremeUsage,
+        baseInterval,
+        false,
+      );
       expect(adjustedInterval).toBe(baseInterval * 4); // Max backoff
 
       // With additional slowdown factors, should still be clamped
       const activitySlowdown = 3; // Background polling
       const businessSlowdown = 1.2; // Business hours
-      const finalInterval = adjustedInterval * activitySlowdown * businessSlowdown;
+      const finalInterval =
+        adjustedInterval * activitySlowdown * businessSlowdown;
 
       // Should be <= 24 hours max
       expect(finalInterval).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
     });
 
-    it('maintains stability during recovery scenarios', async () => {
+    it("maintains stability during recovery scenarios", async () => {
       // Start with critical usage - mock a response with critical status
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: vi.fn().mockResolvedValue({
-          platform: 'github',
+          platform: "github",
           lastUpdated: Date.now(),
           dataFresh: true,
-          status: 'critical',
+          status: "critical",
           limits: {
             github: {
-              core: { limit: 5000, remaining: 100, used: 4900, usagePercent: 98, resetTime: Date.now() + 3600000, retryAfter: null }
-            }
-          }
-        })
+              core: {
+                limit: 5000,
+                remaining: 100,
+                used: 4900,
+                usagePercent: 98,
+                resetTime: Date.now() + 3600000,
+                retryAfter: null,
+              },
+            },
+          },
+        }),
       });
 
-      const criticalStatus = await getRateLimitStatus('github');
-      expect(criticalStatus?.status).toBe('critical');
+      const criticalStatus = await getRateLimitStatus("github");
+      expect(criticalStatus?.status).toBe("critical");
 
       // Simulate recovery - reset cache and mock normal status
       clearRateLimitCache();
       mockFetch.mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue({
-          platform: 'github',
+          platform: "github",
           lastUpdated: Date.now(),
           dataFresh: true,
-          status: 'normal',
+          status: "normal",
           limits: {
             github: {
-              core: { limit: 5000, remaining: 4900, used: 100, usagePercent: 2, resetTime: Date.now() + 3600000, retryAfter: null }
-            }
-          }
-        })
+              core: {
+                limit: 5000,
+                remaining: 4900,
+                used: 100,
+                usagePercent: 2,
+                resetTime: Date.now() + 3600000,
+                retryAfter: null,
+              },
+            },
+          },
+        }),
       });
 
-      const recoveryStatus = await getRateLimitStatus('github');
-      expect(recoveryStatus?.status).toBe('normal');
+      const recoveryStatus = await getRateLimitStatus("github");
+      expect(recoveryStatus?.status).toBe("normal");
 
       // Recovery should be detected quickly
       expect(recoveryStatus).not.toBeNull();
     });
   });
 
-  describe('Resource Usage Monitoring', () => {
-    it('tracks request patterns without excessive memory usage', async () => {
+  describe("Resource Usage Monitoring", () => {
+    it("tracks request patterns without excessive memory usage", async () => {
       const initialMemoryUsage = process.memoryUsage().heapUsed;
 
       // Simulate varied request patterns - change mock responses for each call
@@ -264,19 +316,26 @@ describe('Rate Limiting Performance Tests', () => {
         mockFetch.mockResolvedValue({
           ok: true,
           json: vi.fn().mockResolvedValue({
-            platform: 'github',
+            platform: "github",
             lastUpdated: Date.now(),
             dataFresh: true,
-            status: 'normal',
+            status: "normal",
             limits: {
               github: {
-                core: { limit: 5000, remaining: 5000 - (usageLevel * 50), used: usageLevel * 50, usagePercent: usageLevel, resetTime: Date.now() + 3600000, retryAfter: null }
-              }
-            }
-          })
+                core: {
+                  limit: 5000,
+                  remaining: 5000 - usageLevel * 50,
+                  used: usageLevel * 50,
+                  usagePercent: usageLevel,
+                  resetTime: Date.now() + 3600000,
+                  retryAfter: null,
+                },
+              },
+            },
+          }),
         });
 
-        await getRateLimitStatus('github');
+        await getRateLimitStatus("github");
       }
 
       const finalMemoryUsage = process.memoryUsage().heapUsed;
@@ -289,8 +348,8 @@ describe('Rate Limiting Performance Tests', () => {
       clearRateLimitCache();
     });
 
-    it('handles concurrent platform monitoring', async () => {
-      const platforms = ['github', 'gitlab', 'jira'];
+    it("handles concurrent platform monitoring", async () => {
+      const platforms = ["github", "gitlab", "jira"];
       const startTime = Date.now();
 
       // Monitor all platforms concurrently - each gets different mocked data
@@ -298,45 +357,78 @@ describe('Rate Limiting Performance Tests', () => {
         github: {
           ok: true,
           json: vi.fn().mockResolvedValue({
-            platform: 'github',
+            platform: "github",
             lastUpdated: Date.now(),
             dataFresh: true,
-            status: 'normal',
-            limits: { github: { core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: Date.now() + 3600000, retryAfter: null } } }
-          })
+            status: "normal",
+            limits: {
+              github: {
+                core: {
+                  limit: 5000,
+                  remaining: 4000,
+                  used: 1000,
+                  usagePercent: 20,
+                  resetTime: Date.now() + 3600000,
+                  retryAfter: null,
+                },
+              },
+            },
+          }),
         },
         gitlab: {
           ok: true,
           json: vi.fn().mockResolvedValue({
-            platform: 'gitlab',
+            platform: "gitlab",
             lastUpdated: Date.now(),
             dataFresh: true,
-            status: 'normal',
-            limits: { gitlab: { global: { limit: null, remaining: null, used: null, usagePercent: 10, resetTime: null, retryAfter: null } } }
-          })
+            status: "normal",
+            limits: {
+              gitlab: {
+                global: {
+                  limit: null,
+                  remaining: null,
+                  used: null,
+                  usagePercent: 10,
+                  resetTime: null,
+                  retryAfter: null,
+                },
+              },
+            },
+          }),
         },
         jira: {
           ok: true,
           json: vi.fn().mockResolvedValue({
-            platform: 'jira',
+            platform: "jira",
             lastUpdated: Date.now(),
             dataFresh: true,
-            status: 'normal',
-            limits: { jira: { global: { limit: null, remaining: null, used: null, usagePercent: 5, resetTime: null, retryAfter: null } } }
-          })
-        }
+            status: "normal",
+            limits: {
+              jira: {
+                global: {
+                  limit: null,
+                  remaining: null,
+                  used: null,
+                  usagePercent: 5,
+                  resetTime: null,
+                  retryAfter: null,
+                },
+              },
+            },
+          }),
+        },
       };
 
       // Mock fetch to return different data based on URL
       mockFetch.mockImplementation(async (url: string) => {
-        if (url.includes('/github')) return mockResponses.github;
-        if (url.includes('/gitlab')) return mockResponses.gitlab;
-        if (url.includes('/jira')) return mockResponses.jira;
+        if (url.includes("/github")) return mockResponses.github;
+        if (url.includes("/gitlab")) return mockResponses.gitlab;
+        if (url.includes("/jira")) return mockResponses.jira;
         return { ok: false };
       });
 
       const results = await Promise.all(
-        platforms.map(platform => getRateLimitStatus(platform))
+        platforms.map((platform) => getRateLimitStatus(platform)),
       );
 
       const totalTime = Date.now() - startTime;
@@ -352,16 +444,16 @@ describe('Rate Limiting Performance Tests', () => {
     });
   });
 
-  describe('Edge Case Performance', () => {
-    it('handles rapid status transitions without errors', async () => {
+  describe("Edge Case Performance", () => {
+    it("handles rapid status transitions without errors", async () => {
       const transitionPromises: Promise<void>[] = [];
 
       // Simulate different status levels by mocking different responses
       const statusResponses = [
-        { status: 'normal', usage: 10 },
-        { status: 'warning', usage: 75 },
-        { status: 'critical', usage: 95 },
-        { status: 'normal', usage: 5 }
+        { status: "normal", usage: 10 },
+        { status: "warning", usage: 75 },
+        { status: "critical", usage: 95 },
+        { status: "normal", usage: 5 },
       ];
 
       statusResponses.forEach((responseData) => {
@@ -371,19 +463,26 @@ describe('Rate Limiting Performance Tests', () => {
         mockFetch.mockResolvedValue({
           ok: true,
           json: vi.fn().mockResolvedValue({
-            platform: 'github',
+            platform: "github",
             lastUpdated: Date.now(),
             dataFresh: true,
             status: responseData.status,
             limits: {
               github: {
-                core: { limit: 5000, remaining: 5000 - (responseData.usage * 50), used: responseData.usage * 50, usagePercent: responseData.usage, resetTime: Date.now() + 3600000, retryAfter: null }
-              }
-            }
-          })
+                core: {
+                  limit: 5000,
+                  remaining: 5000 - responseData.usage * 50,
+                  used: responseData.usage * 50,
+                  usagePercent: responseData.usage,
+                  resetTime: Date.now() + 3600000,
+                  retryAfter: null,
+                },
+              },
+            },
+          }),
         });
 
-        const promise = getRateLimitStatus('github').then(result => {
+        const promise = getRateLimitStatus("github").then((result) => {
           expect(result).not.toBeNull();
           expect(result?.status).toBe(responseData.status);
           return Promise.resolve();
@@ -396,7 +495,7 @@ describe('Rate Limiting Performance Tests', () => {
       await Promise.all(transitionPromises);
     });
 
-    it('maintains cache efficiency during high churn', async () => {
+    it("maintains cache efficiency during high churn", async () => {
       // Simulate high cache churn with frequent invalidations
       const cacheHits: boolean[] = [];
 
@@ -406,11 +505,11 @@ describe('Rate Limiting Performance Tests', () => {
         }
 
         const startTime = Date.now();
-        await getRateLimitStatus('github');
+        await getRateLimitStatus("github");
         const endTime = Date.now();
 
         // Track if this was likely a cache hit (faster response)
-        const isCacheHit = (endTime - startTime) < 50; // < 50ms indicates cache hit
+        const isCacheHit = endTime - startTime < 50; // < 50ms indicates cache hit
         cacheHits.push(isCacheHit);
       }
 
@@ -424,8 +523,8 @@ describe('Rate Limiting Performance Tests', () => {
     });
   });
 
-  describe('Long-Running Stability', () => {
-    it('maintains consistent behavior over extended periods', async () => {
+  describe("Long-Running Stability", () => {
+    it("maintains consistent behavior over extended periods", async () => {
       const startTime = process.hrtime.bigint();
       const durationMs = 1000; // 1 second test
       const targetTime = startTime + BigInt(durationMs * 1000000); // Convert to nanoseconds
@@ -433,11 +532,11 @@ describe('Rate Limiting Performance Tests', () => {
 
       // Make requests as quickly as possible for 1 second
       while (process.hrtime.bigint() < targetTime) {
-        await getRateLimitStatus('github');
+        await getRateLimitStatus("github");
         requestCount++;
 
         // Small delay to prevent overwhelming the system
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise((resolve) => setTimeout(resolve, 1));
       }
 
       // Should handle reasonable request volume without issues

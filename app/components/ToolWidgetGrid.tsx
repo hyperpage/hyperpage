@@ -30,7 +30,7 @@ export default function ToolWidgetGrid({
               isLoading={loadingStates[`${widget.toolName}-refresh`] || false}
               onRefresh={() => {
                 const tool = enabledTools.find(
-                  (t) => t.name === widget.toolName
+                  (t) => t.name === widget.toolName,
                 );
                 if (tool) {
                   refreshToolData(tool);

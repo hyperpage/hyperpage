@@ -44,12 +44,14 @@ export const codeReviewsTool: Tool = {
 
       // Get all enabled tools that provide pull-requests capability (GitHub)
       const pullRequestTools = getEnabledTools().filter(
-        (tool) => tool.capabilities && tool.capabilities.includes("pull-requests"),
+        (tool) =>
+          tool.capabilities && tool.capabilities.includes("pull-requests"),
       );
 
       // Get all enabled tools that provide merge-requests capability (GitLab)
       const mergeRequestTools = getEnabledTools().filter(
-        (tool) => tool.capabilities && tool.capabilities.includes("merge-requests"),
+        (tool) =>
+          tool.capabilities && tool.capabilities.includes("merge-requests"),
       );
 
       // Combine all Git tools

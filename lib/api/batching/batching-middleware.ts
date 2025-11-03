@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 // Types for batch requests
 export interface BatchRequest {
@@ -7,7 +7,7 @@ export interface BatchRequest {
   /** API path without the base URL (e.g., '/api/tools/github/pull-requests') */
   path: string;
   /** HTTP method */
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   /** Request headers */
   headers?: Record<string, string>;
   /** Request body (for POST/PUT/PATCH) */
@@ -82,17 +82,20 @@ export class BatchingMiddleware {
    */
   async processBatch(
     requests: BatchRequest[],
-    request: NextRequest
+    request: NextRequest,
   ): Promise<NextResponse> {
     const startTime = Date.now();
 
     // Validate batch request
     const validation = this.validateBatchRequest(requests);
     if (!validation.valid) {
-      return NextResponse.json({
-        error: validation.error,
-        code: 'BATCH_VALIDATION_ERROR'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: validation.error,
+          code: "BATCH_VALIDATION_ERROR",
+        },
+        { status: 400 },
+      );
     }
 
     try {
@@ -107,32 +110,38 @@ export class BatchingMiddleware {
       batchResult.totalDuration = Date.now() - startTime;
 
       // Count successes and errors
-      batchResult.successCount = batchResult.responses.filter(r => r.status >= 200 && r.status < 400).length;
-      batchResult.errorCount = batchResult.responses.filter(r => r.status >= 400).length;
+      batchResult.successCount = batchResult.responses.filter(
+        (r) => r.status >= 200 && r.status < 400,
+      ).length;
+      batchResult.errorCount = batchResult.responses.filter(
+        (r) => r.status >= 400,
+      ).length;
       batchResult.hasErrors = batchResult.errorCount > 0;
 
       // Return batch result
       return NextResponse.json(batchResult, {
         headers: {
-          'X-Batch-Total-Duration': batchResult.totalDuration.toString(),
-          'X-Batch-Success-Count': batchResult.successCount.toString(),
-          'X-Batch-Error-Count': batchResult.errorCount.toString(),
-          'X-Batch-Has-Errors': batchResult.hasErrors.toString(),
+          "X-Batch-Total-Duration": batchResult.totalDuration.toString(),
+          "X-Batch-Success-Count": batchResult.successCount.toString(),
+          "X-Batch-Error-Count": batchResult.errorCount.toString(),
+          "X-Batch-Has-Errors": batchResult.hasErrors.toString(),
         },
       });
-
     } catch (error) {
-      console.error('Batch processing error:', error);
-      return NextResponse.json({
-        error: 'Batch processing failed',
-        code: 'BATCH_EXECUTION_ERROR',
-      }, {
-        status: 500,
-        headers: {
-          'X-Batch-Error': 'EXECUTION_FAILED',
-          'X-Batch-Total-Duration': (Date.now() - startTime).toString(),
+      console.error("Batch processing error:", error);
+      return NextResponse.json(
+        {
+          error: "Batch processing failed",
+          code: "BATCH_EXECUTION_ERROR",
         },
-      });
+        {
+          status: 500,
+          headers: {
+            "X-Batch-Error": "EXECUTION_FAILED",
+            "X-Batch-Total-Duration": (Date.now() - startTime).toString(),
+          },
+        },
+      );
     }
   }
 
@@ -141,21 +150,21 @@ export class BatchingMiddleware {
    */
   private async executeBatch(
     requests: BatchRequest[],
-    internalBaseUrl: string
+    internalBaseUrl: string,
   ): Promise<BatchResult> {
     const responses: BatchResponse[] = [];
     let hasErrors = false;
 
     if (this.options.parallelExecution) {
       // Execute requests in parallel
-      const promises = requests.map(request =>
-        this.executeSingleRequest(request, internalBaseUrl)
+      const promises = requests.map((request) =>
+        this.executeSingleRequest(request, internalBaseUrl),
       );
 
       const results = await Promise.allSettled(promises);
 
       results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
+        if (result.status === "fulfilled") {
           responses.push(result.value);
           if (result.value.status >= 400) {
             hasErrors = true;
@@ -163,12 +172,14 @@ export class BatchingMiddleware {
         } else {
           // Handle rejected promises (network errors, timeouts, etc.)
           const originalRequest = requests[index];
-          responses.push(this.createErrorResponse(
-            originalRequest.id,
-            'Request execution failed',
-            result.reason?.message || 'Unknown error',
-            0
-          ));
+          responses.push(
+            this.createErrorResponse(
+              originalRequest.id,
+              "Request execution failed",
+              result.reason?.message || "Unknown error",
+              0,
+            ),
+          );
           hasErrors = true;
         }
       });
@@ -176,7 +187,10 @@ export class BatchingMiddleware {
       // Execute requests sequentially
       for (const request of requests) {
         try {
-          const response = await this.executeSingleRequest(request, internalBaseUrl);
+          const response = await this.executeSingleRequest(
+            request,
+            internalBaseUrl,
+          );
           responses.push(response);
           if (response.status >= 400) {
             hasErrors = true;
@@ -188,9 +202,9 @@ export class BatchingMiddleware {
         } catch (error) {
           const errorResponse = this.createErrorResponse(
             request.id,
-            'Request execution failed',
-            error instanceof Error ? error.message : 'Unknown error',
-            0
+            "Request execution failed",
+            error instanceof Error ? error.message : "Unknown error",
+            0,
           );
           responses.push(errorResponse);
           hasErrors = true;
@@ -215,34 +229,36 @@ export class BatchingMiddleware {
    */
   private async executeSingleRequest(
     request: BatchRequest,
-    internalBaseUrl: string
+    internalBaseUrl: string,
   ): Promise<BatchResponse> {
     const startTime = Date.now();
 
     try {
       // Build full URL
-      const fullUrl = request.path.startsWith('/')
+      const fullUrl = request.path.startsWith("/")
         ? `${internalBaseUrl}${request.path}`
         : `${internalBaseUrl}/${request.path}`;
 
       // Build request headers
       const headers = new Headers(request.headers);
-      headers.set('X-Batch-Request-Id', request.id);
-      headers.set('X-Batch-Request', 'true');
+      headers.set("X-Batch-Request-Id", request.id);
+      headers.set("X-Batch-Request", "true");
 
       // Create fetch request
       const fetchOptions: RequestInit = {
         method: request.method,
         headers,
         // Add timeout using AbortController
-        signal: AbortSignal.timeout(request.timeout || this.options.defaultTimeout || 30000),
+        signal: AbortSignal.timeout(
+          request.timeout || this.options.defaultTimeout || 30000,
+        ),
       };
 
       // Add body for applicable methods
-      if (['POST', 'PUT', 'PATCH'].includes(request.method) && request.body) {
-        if (typeof request.body === 'object') {
+      if (["POST", "PUT", "PATCH"].includes(request.method) && request.body) {
+        if (typeof request.body === "object") {
           fetchOptions.body = JSON.stringify(request.body) as BodyInit;
-          headers.set('Content-Type', 'application/json');
+          headers.set("Content-Type", "application/json");
         } else {
           fetchOptions.body = request.body as BodyInit;
         }
@@ -253,8 +269,8 @@ export class BatchingMiddleware {
 
       // Parse response
       let responseBody: unknown;
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
         responseBody = await response.json();
       } else {
         responseBody = await response.text();
@@ -273,14 +289,13 @@ export class BatchingMiddleware {
         body: responseBody,
         duration: Date.now() - startTime,
       };
-
     } catch (error) {
       console.error(`Batch request ${request.id} failed:`, error);
       return this.createErrorResponse(
         request.id,
-        'Request failed',
-        error instanceof Error ? error.message : 'Unknown error',
-        Date.now() - startTime
+        "Request failed",
+        error instanceof Error ? error.message : "Unknown error",
+        Date.now() - startTime,
       );
     }
   }
@@ -292,12 +307,12 @@ export class BatchingMiddleware {
     requestId: string,
     error: string,
     details: string,
-    duration: number
+    duration: number,
   ): BatchResponse {
     return {
       id: requestId,
       status: 500,
-      headers: { 'content-type': 'application/json' },
+      headers: { "content-type": "application/json" },
       body: { error, details },
       error: details,
       duration,
@@ -307,42 +322,60 @@ export class BatchingMiddleware {
   /**
    * Validate batch request format and constraints
    */
-  private validateBatchRequest(requests: BatchRequest[]): { valid: boolean; error?: string } {
+  private validateBatchRequest(requests: BatchRequest[]): {
+    valid: boolean;
+    error?: string;
+  } {
     // Check if requests array is provided
     if (!Array.isArray(requests)) {
-      return { valid: false, error: 'Requests must be an array' };
+      return { valid: false, error: "Requests must be an array" };
     }
 
     // Check maximum requests
     if (requests.length > (this.options.maxRequests || 20)) {
       return {
         valid: false,
-        error: `Maximum ${this.options.maxRequests} requests per batch exceeded`
+        error: `Maximum ${this.options.maxRequests} requests per batch exceeded`,
       };
     }
 
     // Check minimum requests
     if (requests.length === 0) {
-      return { valid: false, error: 'At least one request required' };
+      return { valid: false, error: "At least one request required" };
     }
 
     // Validate each request
     for (const request of requests) {
-      if (!request.id || typeof request.id !== 'string') {
-        return { valid: false, error: 'Each request must have a valid string id' };
+      if (!request.id || typeof request.id !== "string") {
+        return {
+          valid: false,
+          error: "Each request must have a valid string id",
+        };
       }
 
-      if (!request.path || typeof request.path !== 'string') {
-        return { valid: false, error: 'Each request must have a valid string path' };
+      if (!request.path || typeof request.path !== "string") {
+        return {
+          valid: false,
+          error: "Each request must have a valid string path",
+        };
       }
 
-      if (!request.method || !['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
-        return { valid: false, error: 'Each request must have a valid HTTP method' };
+      if (
+        !request.method ||
+        !["GET", "POST", "PUT", "DELETE", "PATCH"].includes(request.method)
+      ) {
+        return {
+          valid: false,
+          error: "Each request must have a valid HTTP method",
+        };
       }
 
       // Validate path (prevent external URLs for security)
-      if (!request.path.startsWith('/api/') && !request.path.startsWith('/')) {
-        return { valid: false, error: 'Request paths must be internal API routes' };
+      if (!request.path.startsWith("/api/") && !request.path.startsWith("/")) {
+        return {
+          valid: false,
+          error: "Request paths must be internal API routes",
+        };
       }
     }
 
@@ -372,7 +405,7 @@ export class BatchingMiddleware {
 }
 
 // Default batching middleware instance (adjustable via environment)
-const defaultBaseUrl = process.env.BASE_URL || 'http://localhost:3000';
+const defaultBaseUrl = process.env.BASE_URL || "http://localhost:3000";
 export const defaultBatchingMiddleware = new BatchingMiddleware(defaultBaseUrl);
 
 /**
@@ -381,8 +414,8 @@ export const defaultBatchingMiddleware = new BatchingMiddleware(defaultBaseUrl);
 export function createBatchRequest(
   id: string,
   path: string,
-  method: BatchRequest['method'] = 'GET',
-  options: Partial<Omit<BatchRequest, 'id' | 'path' | 'method'>> = {}
+  method: BatchRequest["method"] = "GET",
+  options: Partial<Omit<BatchRequest, "id" | "path" | "method">> = {},
 ): BatchRequest {
   return {
     id: id || crypto.randomUUID(),
@@ -396,9 +429,11 @@ export function createBatchRequest(
  * Type guard to check if a request is a batch request
  */
 export function isBatchRequest(body: unknown): body is BatchRequest[] {
-  return Array.isArray(body) &&
-         body.length > 0 &&
-         typeof body[0].id === 'string' &&
-         typeof body[0].path === 'string' &&
-         typeof body[0].method === 'string';
+  return (
+    Array.isArray(body) &&
+    body.length > 0 &&
+    typeof body[0].id === "string" &&
+    typeof body[0].path === "string" &&
+    typeof body[0].method === "string"
+  );
 }

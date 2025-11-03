@@ -13,7 +13,8 @@ The improved onboarding experience addresses the critical issue of user adoption
 **File**: `.env.local.sample`
 
 **Before**: All tools disabled, complex OAuth setup required
-**After**: 
+**After**:
+
 - GitHub integration enabled by default with clear examples
 - Separated Simple Setup vs Advanced Setup paths
 - Clear visual hierarchy with emojis and sectioning
@@ -21,6 +22,7 @@ The improved onboarding experience addresses the critical issue of user adoption
 - Copy-paste ready configuration examples
 
 **Key Features**:
+
 - 🚀 Quick Start section with 4-step guide
 - 🔧 Simple Setup section with basic API tokens
 - 🔒 Advanced Setup section for OAuth authentication
@@ -31,6 +33,7 @@ The improved onboarding experience addresses the critical issue of user adoption
 **File**: `app/components/SetupWizard.tsx`
 
 **Features**:
+
 - Interactive 4-step setup guide
 - Real-time configuration status checking
 - Tool-specific setup instructions with direct links
@@ -39,6 +42,7 @@ The improved onboarding experience addresses the critical issue of user adoption
 - Responsive design with dark mode support
 
 **User Flow**:
+
 1. Quick Start guide with step-by-step instructions
 2. Tool configuration with status detection
 3. Direct links to token generation pages
@@ -47,6 +51,7 @@ The improved onboarding experience addresses the critical issue of user adoption
 ### 3. Configuration Detection
 
 The SetupWizard automatically:
+
 - Checks current tool configuration via `/api/tools/enabled`
 - Updates UI to reflect configured tools
 - Shows appropriate guidance based on current state
@@ -55,6 +60,7 @@ The SetupWizard automatically:
 ## User Experience Improvements
 
 ### Before (Barriers)
+
 - ❌ All tools disabled by default
 - ❌ No clear setup path
 - ❌ Complex OAuth required for any functionality
@@ -62,6 +68,7 @@ The SetupWizard automatically:
 - ❌ No guidance for configuration
 
 ### After (Improved Experience)
+
 - ✅ GitHub enabled by default
 - ✅ Clear 4-step quick start guide
 - ✅ Simple API token setup (OAuth optional)
@@ -73,6 +80,7 @@ The SetupWizard automatically:
 ## Simple vs Advanced Setup Paths
 
 ### Simple Setup (Recommended)
+
 ```bash
 # Enable one tool to start
 ENABLE_GITHUB=true
@@ -81,12 +89,14 @@ GITHUB_USERNAME=your_username
 ```
 
 **Benefits**:
+
 - Immediate functionality
 - No OAuth complexity
 - Perfect for individual developers
 - Quick setup in under 5 minutes
 
 ### Advanced Setup (Optional)
+
 - OAuth authentication for multi-user access
 - Per-user tool connections
 - Enterprise security features
@@ -95,6 +105,7 @@ GITHUB_USERNAME=your_username
 ## Configuration Examples
 
 ### GitHub (Simplest Setup)
+
 ```bash
 ENABLE_GITHUB=true
 GITHUB_TOKEN=ghp_your_personal_access_token_here
@@ -102,6 +113,7 @@ GITHUB_USERNAME=your_github_username
 ```
 
 ### GitLab
+
 ```bash
 ENABLE_GITLAB=true
 GITLAB_WEB_URL=https://gitlab.com
@@ -109,6 +121,7 @@ GITLAB_TOKEN=glpat_your_token_here
 ```
 
 ### Jira
+
 ```bash
 ENABLE_JIRA=true
 JIRA_WEB_URL=https://your-company.atlassian.net
@@ -126,11 +139,13 @@ JIRA_API_TOKEN=your_jira_api_token
 ## Testing and Validation
 
 ### Build Verification
+
 - ✅ Successful Next.js production build
 - ✅ TypeScript compilation without errors
 - ✅ All static pages generated correctly
 
 ### Functional Testing
+
 - ✅ SetupWizard component renders correctly
 - ✅ Configuration detection API endpoints working
 - ✅ Tool status badges update dynamically
@@ -138,6 +153,7 @@ JIRA_API_TOKEN=your_jira_api_token
 - ✅ External links open in new tabs
 
 ### No Regressions
+
 - ✅ Existing functionality preserved
 - ✅ All API routes continue working
 - ✅ OAuth system remains functional for advanced users
@@ -146,17 +162,20 @@ JIRA_API_TOKEN=your_jira_api_token
 ## Benefits
 
 ### For New Users
+
 - **Reduced Setup Time**: From 30+ minutes to under 5 minutes
 - **Immediate Value**: Can see data quickly without complex configuration
 - **Clear Guidance**: Step-by-step instructions with visual feedback
 - **Progressive Enhancement**: Start simple, add features as needed
 
 ### For Advanced Users
+
 - **No Breaking Changes**: Existing OAuth setup still works
 - **Additional Convenience**: Better documentation and examples
 - **Enhanced Monitoring**: Better visibility into configuration status
 
 ### For Development Teams
+
 - **Improved Onboarding**: New team members can get started quickly
 - **Reduced Support**: Self-service configuration reduces help requests
 - **Better Documentation**: Clear examples and troubleshooting guidance
@@ -164,6 +183,7 @@ JIRA_API_TOKEN=your_jira_api_token
 ## Future Enhancements
 
 Potential improvements for future versions:
+
 1. **Configuration Validation**: Real-time API token validation
 2. **Sample Data**: Demo mode with mock data for immediate preview
 3. **Setup Analytics**: Track onboarding completion rates

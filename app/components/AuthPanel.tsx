@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Shield, LogOut, CheckCircle, AlertTriangle } from "lucide-react";
@@ -10,12 +15,13 @@ import { AuthProvider, useAuth } from "./AuthProvider";
 import { getToolIcon } from "../../tools";
 
 function AuthPanelContent() {
-  const { tools, authenticate, disconnect, clearAuth, isConfigured } = useAuth();
+  const { tools, authenticate, disconnect, clearAuth, isConfigured } =
+    useAuth();
 
   // Auto-refresh auth status periodically
   useEffect(() => {
     const interval = setInterval(() => {
-      tools.forEach(tool => {
+      tools.forEach((tool) => {
         if (tool.isAuthenticated) {
           // Could optionally refresh status here
         }
@@ -25,9 +31,9 @@ function AuthPanelContent() {
     return () => clearInterval(interval);
   }, [tools]);
 
-  const authenticatedCount = tools.filter(t => t.isAuthenticated).length;
+  const authenticatedCount = tools.filter((t) => t.isAuthenticated).length;
   const totalCount = tools.length;
-  const hasAnyErrors = tools.some(t => t.error !== null);
+  const hasAnyErrors = tools.some((t) => t.error !== null);
 
   return (
     <Card className="w-full">
@@ -44,7 +50,10 @@ function AuthPanelContent() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <Badge variant={hasAnyErrors ? "destructive" : "default"} className="text-xs">
+            <Badge
+              variant={hasAnyErrors ? "destructive" : "default"}
+              className="text-xs"
+            >
               {authenticatedCount}/{totalCount} Connected
               {hasAnyErrors && <AlertTriangle className="w-3 h-3 ml-1" />}
             </Badge>
@@ -69,10 +78,13 @@ function AuthPanelContent() {
             <div className="flex items-center space-x-2">
               <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <div>
-                <h4 className="font-medium text-blue-900 dark:text-blue-100">Get Started</h4>
+                <h4 className="font-medium text-blue-900 dark:text-blue-100">
+                  Get Started
+                </h4>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  Connect your tools to access full features like real-time data synchronization and personalized insights.
-                  Authentication is secure and encrypted.
+                  Connect your tools to access full features like real-time data
+                  synchronization and personalized insights. Authentication is
+                  secure and encrypted.
                 </p>
               </div>
             </div>
@@ -86,7 +98,9 @@ function AuthPanelContent() {
             return (
               <AuthButton
                 key={tool.toolSlug}
-                toolName={tool.toolSlug.charAt(0).toUpperCase() + tool.toolSlug.slice(1)}
+                toolName={
+                  tool.toolSlug.charAt(0).toUpperCase() + tool.toolSlug.slice(1)
+                }
                 toolSlug={tool.toolSlug}
                 toolIcon={toolIcon}
                 isAuthenticated={tool.isAuthenticated}
@@ -105,9 +119,12 @@ function AuthPanelContent() {
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
               <div>
-                <h4 className="font-medium text-green-900 dark:text-green-100">Authentication Active</h4>
+                <h4 className="font-medium text-green-900 dark:text-green-100">
+                  Authentication Active
+                </h4>
                 <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                  Your tools are connected and ready to provide real-time data. API requests are authenticated and secure.
+                  Your tools are connected and ready to provide real-time data.
+                  API requests are authenticated and secure.
                 </p>
               </div>
             </div>
@@ -117,13 +134,16 @@ function AuthPanelContent() {
         <div className="mt-6 pt-4 border-t border-muted">
           <div className="text-xs text-muted-foreground space-y-1">
             <p>
-              <strong>Security:</strong> All authentication tokens are encrypted with AES-256-GCM and never stored in browser storage.
+              <strong>Security:</strong> All authentication tokens are encrypted
+              with AES-256-GCM and never stored in browser storage.
             </p>
             <p>
-              <strong>Permissions:</strong> Only the minimum required permissions are requested for each tool.
+              <strong>Permissions:</strong> Only the minimum required
+              permissions are requested for each tool.
             </p>
             <p>
-              <strong>Data Usage:</strong> Your tool credentials are only used for Hyperpage functionality and not shared with third parties.
+              <strong>Data Usage:</strong> Your tool credentials are only used
+              for Hyperpage functionality and not shared with third parties.
             </p>
           </div>
         </div>

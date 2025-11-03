@@ -5,6 +5,7 @@ This guide helps new developers get started with the Hyperpage integration testi
 ## Prerequisites
 
 ### Required Knowledge
+
 - **JavaScript/TypeScript**: Basic proficiency required
 - **React**: Understanding of hooks and component patterns
 - **Node.js**: Package management and development tools
@@ -14,6 +15,7 @@ This guide helps new developers get started with the Hyperpage integration testi
 ### Development Environment Setup
 
 #### 1. Install Dependencies
+
 ```bash
 # Clone the repository
 git clone https://github.com/hyperpage/hyperpage.git
@@ -30,7 +32,9 @@ cp .env.local.sample .env.local.test
 ```
 
 #### 2. Environment Configuration
+
 Edit `.env.local.test` for testing:
+
 ```bash
 # Test environment URL
 HYPERPAGE_TEST_BASE_URL=http://localhost:3000
@@ -47,6 +51,7 @@ JIRA_CLIENT_ID=test_jira_client
 ```
 
 #### 3. Database Setup
+
 ```bash
 # Start development database
 npm run db:dev
@@ -61,6 +66,7 @@ npm run db:seed
 ## Testing Infrastructure Overview
 
 ### Test Structure
+
 ```
 __tests__/
 ├── integration/          # Integration tests
@@ -76,6 +82,7 @@ __tests__/
 ### Key Test Classes
 
 #### IntegrationTestEnvironment
+
 - **Purpose**: Provides isolated test environment
 - **Usage**: Creates test sessions with mock credentials
 - **Location**: `__tests__/lib/test-credentials.ts`
@@ -83,13 +90,14 @@ __tests__/
 ```typescript
 // Setup example
 const testEnv = await IntegrationTestEnvironment.setup();
-const session = await testEnv.createTestSession('github');
+const session = await testEnv.createTestSession("github");
 
 // Cleanup example
 await testEnv.cleanup();
 ```
 
 #### OAuthTestCredentials
+
 - **Purpose**: Provides mock OAuth credentials
 - **Providers**: GitHub, GitLab, Jira
 - **Security**: Isolated to test environment only
@@ -105,19 +113,20 @@ console.log(credentials.token); // Mock token for testing
 ### Step-by-Step Example
 
 #### 1. Create Basic Test Structure
+
 ```typescript
 // __tests__/integration/tools/my-first-test.spec.ts
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { IntegrationTestEnvironment } from '../../lib/test-credentials';
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { IntegrationTestEnvironment } from "../../lib/test-credentials";
 
-describe('My First Integration Test', () => {
+describe("My First Integration Test", () => {
   let testEnv: IntegrationTestEnvironment;
   let baseUrl: string;
 
   beforeAll(async () => {
     // Setup test environment
     testEnv = await IntegrationTestEnvironment.setup();
-    baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || 'http://localhost:3000';
+    baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
   });
 
   afterAll(async () => {
@@ -127,28 +136,29 @@ describe('My First Integration Test', () => {
     }
   });
 
-  it('should fetch data from GitHub API', async () => {
+  it("should fetch data from GitHub API", async () => {
     // Create test session
-    const session = await testEnv.createTestSession('github');
-    
+    const session = await testEnv.createTestSession("github");
+
     // Make API request
     const response = await fetch(`${baseUrl}/api/tools/github/pull-requests`, {
       headers: {
-        'Cookie': `session_id=${session.id}`
-      }
+        Cookie: `session_id=${session.id}`,
+      },
     });
 
     // Validate response
     expect(response.status).toBe(200);
-    
+
     const data = await response.json();
-    expect(data).toHaveProperty('data');
+    expect(data).toHaveProperty("data");
     expect(Array.isArray(data.data)).toBe(true);
   });
 });
 ```
 
 #### 2. Run Your First Test
+
 ```bash
 # Run specific test
 npm run test:integration -- --run --grep "My First Integration Test"
@@ -160,48 +170,53 @@ npm run test:integration -- --run --reporter=verbose
 ### Common Patterns
 
 #### Pattern 1: API Request with Authentication
+
 ```typescript
 const authenticatedRequest = async (endpoint: string, sessionId: string) => {
   const response = await fetch(`${baseUrl}${endpoint}`, {
     headers: {
-      'Cookie': `session_id=${sessionId}`
-    }
+      Cookie: `session_id=${sessionId}`,
+    },
   });
-  
+
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Request failed: ${response.status} ${response.statusText}`,
+    );
   }
-  
+
   return response.json();
 };
 ```
 
 #### Pattern 2: Mock Data Validation
+
 ```typescript
 const validatePullRequest = (pr: any) => {
-  expect(pr).toHaveProperty('id');
-  expect(pr).toHaveProperty('title');
-  expect(pr).toHaveProperty('state');
-  expect(pr).toHaveProperty('created_at');
-  expect(['open', 'closed', 'merged']).toContain(pr.state);
+  expect(pr).toHaveProperty("id");
+  expect(pr).toHaveProperty("title");
+  expect(pr).toHaveProperty("state");
+  expect(pr).toHaveProperty("created_at");
+  expect(["open", "closed", "merged"]).toContain(pr.state);
 };
 ```
 
 #### Pattern 3: Error Handling
+
 ```typescript
 const testErrorHandling = async () => {
-  const invalidSessionId = 'invalid-session-id';
-  
+  const invalidSessionId = "invalid-session-id";
+
   const response = await fetch(`${baseUrl}/api/tools/github/pull-requests`, {
     headers: {
-      'Cookie': `session_id=${invalidSessionId}`
-    }
+      Cookie: `session_id=${invalidSessionId}`,
+    },
   });
 
   expect(response.status).toBe(401);
-  
+
   const errorData = await response.json();
-  expect(errorData).toHaveProperty('error');
+  expect(errorData).toHaveProperty("error");
 };
 ```
 
@@ -210,61 +225,69 @@ const testErrorHandling = async () => {
 ### GitHub Integration Testing
 
 #### Basic GitHub Test
+
 ```typescript
-describe('GitHub Integration', () => {
+describe("GitHub Integration", () => {
   let session: TestSession;
 
   beforeAll(async () => {
     const testEnv = await IntegrationTestEnvironment.setup();
-    session = await testEnv.createTestSession('github');
+    session = await testEnv.createTestSession("github");
   });
 
-  it('should fetch GitHub pull requests', async () => {
+  it("should fetch GitHub pull requests", async () => {
     const response = await fetch(`${baseUrl}/api/tools/github/pull-requests`, {
-      headers: { 'Cookie': `session_id=${session.id}` }
+      headers: { Cookie: `session_id=${session.id}` },
     });
 
     expect(response.status).toBe(200);
     const data = await response.json();
-    
+
     // Validate unified data format
     if (data.data.length > 0) {
       const pr = data.data[0];
-      expect(pr).toHaveProperty('id');
-      expect(pr).toHaveProperty('title');
-      expect(pr).toHaveProperty('source');
-      expect(pr.source).toBe('github');
+      expect(pr).toHaveProperty("id");
+      expect(pr).toHaveProperty("title");
+      expect(pr).toHaveProperty("source");
+      expect(pr.source).toBe("github");
     }
   });
 });
 ```
 
 #### GitHub-Specific Testing Patterns
+
 ```typescript
 // Test rate limiting
-it('should handle GitHub rate limits', async () => {
+it("should handle GitHub rate limits", async () => {
   // Simulate rate limit scenario
   vi.mocked(fetch).mockResolvedValueOnce({
     status: 403,
-    headers: new Headers({ 'X-RateLimit-Remaining': '0' })
+    headers: new Headers({ "X-RateLimit-Remaining": "0" }),
   } as Response);
 
-  const response = await makeAuthenticatedRequest('/api/tools/github/pull-requests', session.id);
+  const response = await makeAuthenticatedRequest(
+    "/api/tools/github/pull-requests",
+    session.id,
+  );
   expect(response.rateLimit).toBeDefined();
 });
 
 // Test repository filtering
-it('should filter pull requests by repository', async () => {
-  const response = await fetch(`${baseUrl}/api/tools/github/pull-requests?repo=owner/repo`, {
-    headers: { 'Cookie': `session_id=${session.id}` }
-  });
+it("should filter pull requests by repository", async () => {
+  const response = await fetch(
+    `${baseUrl}/api/tools/github/pull-requests?repo=owner/repo`,
+    {
+      headers: { Cookie: `session_id=${session.id}` },
+    },
+  );
 
   expect(response.status).toBe(200);
   const data = await response.json();
-  
+
   // Verify repository filtering worked
   if (data.data.length > 0) {
-    expect(data.data[0].repository).toContain('owner/repo');
+    expect(data.data[0].repository).toContain("owner/repo");
   }
 });
 ```
@@ -272,28 +295,29 @@ it('should filter pull requests by repository', async () => {
 ### GitLab Integration Testing
 
 #### Basic GitLab Test
+
 ```typescript
-describe('GitLab Integration', () => {
+describe("GitLab Integration", () => {
   let session: TestSession;
 
   beforeAll(async () => {
     const testEnv = await IntegrationTestEnvironment.setup();
-    session = await testEnv.createTestSession('gitlab');
+    session = await testEnv.createTestSession("gitlab");
   });
 
-  it('should fetch GitLab merge requests', async () => {
+  it("should fetch GitLab merge requests", async () => {
     const response = await fetch(`${baseUrl}/api/tools/gitlab/merge-requests`, {
-      headers: { 'Cookie': `session_id=${session.id}` }
+      headers: { Cookie: `session_id=${session.id}` },
     });
 
     expect(response.status).toBe(200);
     const data = await response.json();
-    
+
     // Validate GitLab-specific data
     if (data.data.length > 0) {
       const mr = data.data[0];
-      expect(mr).toHaveProperty('iid'); // GitLab internal ID
-      expect(mr.source).toBe('gitlab');
+      expect(mr).toHaveProperty("iid"); // GitLab internal ID
+      expect(mr.source).toBe("gitlab");
     }
   });
 });
@@ -302,29 +326,30 @@ describe('GitLab Integration', () => {
 ### Jira Integration Testing
 
 #### Basic Jira Test
+
 ```typescript
-describe('Jira Integration', () => {
+describe("Jira Integration", () => {
   let session: TestSession;
 
   beforeAll(async () => {
     const testEnv = await IntegrationTestEnvironment.setup();
-    session = await testEnv.createTestSession('jira');
+    session = await testEnv.createTestSession("jira");
   });
 
-  it('should fetch Jira issues', async () => {
+  it("should fetch Jira issues", async () => {
     const response = await fetch(`${baseUrl}/api/tools/jira/issues`, {
-      headers: { 'Cookie': `session_id=${session.id}` }
+      headers: { Cookie: `session_id=${session.id}` },
     });
 
     expect(response.status).toBe(200);
     const data = await response.json();
-    
+
     // Validate Jira-specific data
     if (data.data.length > 0) {
       const issue = data.data[0];
-      expect(issue).toHaveProperty('key'); // Jira issue key (e.g., PROJ-123)
-      expect(issue).toHaveProperty('fields');
-      expect(issue.source).toBe('jira');
+      expect(issue).toHaveProperty("key"); // Jira issue key (e.g., PROJ-123)
+      expect(issue).toHaveProperty("fields");
+      expect(issue.source).toBe("jira");
     }
   });
 });
@@ -333,32 +358,33 @@ describe('Jira Integration', () => {
 ## Performance Testing Basics
 
 ### Performance Test Setup
+
 ```typescript
-describe('Performance Tests', () => {
-  it('should complete API requests within time limit', async () => {
+describe("Performance Tests", () => {
+  it("should complete API requests within time limit", async () => {
     const startTime = Date.now();
-    
+
     const response = await fetch(`${baseUrl}/api/tools/github/pull-requests`, {
-      headers: { 'Cookie': `session_id=${session.id}` }
+      headers: { Cookie: `session_id=${session.id}` },
     });
 
     const duration = Date.now() - startTime;
-    
+
     expect(duration).toBeLessThan(5000); // Should complete within 5 seconds
     expect(response.status).toBe(200);
   });
 
-  it('should handle concurrent requests', async () => {
-    const requests = Array.from({ length: 10 }, (_, i) => 
+  it("should handle concurrent requests", async () => {
+    const requests = Array.from({ length: 10 }, (_, i) =>
       fetch(`${baseUrl}/api/tools/github/pull-requests`, {
-        headers: { 'Cookie': `session_id=${session.id}` }
-      })
+        headers: { Cookie: `session_id=${session.id}` },
+      }),
     );
 
     const responses = await Promise.all(requests);
-    
+
     // All requests should succeed
-    responses.forEach(response => {
+    responses.forEach((response) => {
       expect(response.status).toBe(200);
     });
   });
@@ -368,6 +394,7 @@ describe('Performance Tests', () => {
 ## Common Pitfalls and Solutions
 
 ### Pitfall 1: Not Cleaning Up Test Sessions
+
 **Problem**: Memory leaks and test interference
 **Solution**: Always cleanup in `afterEach` or `afterAll`
 
@@ -383,48 +410,53 @@ afterEach(async () => {
 ```
 
 ### Pitfall 2: Hardcoded URLs
+
 **Problem**: Tests break when server runs on different port
 **Solution**: Use environment variables
 
 ```typescript
 // Bad
-const response = await fetch('http://localhost:3000/api/tools/github/pull-requests');
+const response = await fetch(
+  "http://localhost:3000/api/tools/github/pull-requests",
+);
 
 // Good
-const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || 'http://localhost:3000';
+const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
 const response = await fetch(`${baseUrl}/api/tools/github/pull-requests`);
 ```
 
 ### Pitfall 3: Ignoring Async Operations
+
 **Problem**: Tests fail due to timing issues
 **Solution**: Properly handle async operations
 
 ```typescript
 // Bad
-it('should update data', () => {
+it("should update data", () => {
   updateData(); // Async operation not awaited
-  expect(data).toBe('updated'); // Fails because updateData hasn't completed
+  expect(data).toBe("updated"); // Fails because updateData hasn't completed
 });
 
 // Good
-it('should update data', async () => {
+it("should update data", async () => {
   await updateData(); // Properly await async operation
-  expect(data).toBe('updated');
+  expect(data).toBe("updated");
 });
 ```
 
 ### Pitfall 4: Testing Implementation Details
+
 **Problem**: Tests break when implementation changes
 **Solution**: Test behavior, not implementation
 
 ```typescript
 // Bad - Testing implementation
-it('should call updateUser function', () => {
+it("should call updateUser function", () => {
   expect(updateUser).toHaveBeenCalledWith(userId, userData);
 });
 
 // Good - Testing behavior
-it('should update user information', async () => {
+it("should update user information", async () => {
   const result = await updateUser(userId, userData);
   expect(result.name).toBe(userData.name);
   expect(result.email).toBe(userData.email);
@@ -434,24 +466,28 @@ it('should update user information', async () => {
 ## Testing Best Practices
 
 ### 1. Test Organization
+
 - **Group related tests** using `describe` blocks
 - **Use descriptive test names** that explain the scenario
 - **Follow AAA pattern**: Arrange, Act, Assert
 - **Keep tests independent** - no shared state
 
 ### 2. Data Management
+
 - **Use consistent mock data** across tests
 - **Reset mocks between tests** using `beforeEach`
 - **Validate data structure** in addition to content
 - **Test both happy path and error scenarios**
 
 ### 3. Error Handling
+
 - **Test error conditions** thoroughly
 - **Validate error messages** are user-friendly
 - **Test network failures** and timeouts
 - **Ensure graceful degradation**
 
 ### 4. Performance Considerations
+
 - **Set appropriate timeouts** for slow operations
 - **Test under load** with concurrent requests
 - **Monitor memory usage** during test execution
@@ -460,6 +496,7 @@ it('should update user information', async () => {
 ## Running Tests
 
 ### Development Workflow
+
 ```bash
 # Run tests in watch mode during development
 npm run test:integration --watch
@@ -475,6 +512,7 @@ npm run test:integration -- --grep "should fetch.*pull requests"
 ```
 
 ### CI/CD Integration
+
 ```bash
 # Run all integration tests (for CI)
 npm run test:integration -- --run
@@ -484,6 +522,7 @@ npm run test:integration -- --run --reporter=junit --outputFile=test-results.xml
 ```
 
 ### Debugging Tests
+
 ```bash
 # Run with verbose output
 npm run test:integration -- --reporter=verbose
@@ -498,26 +537,29 @@ node --inspect-brk ./node_modules/.bin/vitest run integration/tools/github.spec.
 ## Getting Help
 
 ### Documentation Resources
+
 - [Integration Testing Guide](integration-testing-guide.md) - Comprehensive test suite documentation
 - [Test Maintenance Procedures](test-maintenance-procedures.md) - Long-term test maintenance
 - [Test Troubleshooting Guide](test-troubleshooting-guide.md) - Common issues and solutions
 
 ### Debugging Tools
+
 ```typescript
 // Add console logging for debugging
-it('should debug API response', async () => {
+it("should debug API response", async () => {
   const response = await fetch(`${baseUrl}/api/tools/github/pull-requests`);
   const data = await response.json();
-  
-  console.log('Response status:', response.status);
-  console.log('Data structure:', JSON.stringify(data, null, 2));
-  console.log('Data keys:', Object.keys(data));
-  
+
+  console.log("Response status:", response.status);
+  console.log("Data structure:", JSON.stringify(data, null, 2));
+  console.log("Data keys:", Object.keys(data));
+
   expect(response.status).toBe(200);
 });
 ```
 
 ### Common Commands Reference
+
 ```bash
 # Setup development environment
 npm run dev

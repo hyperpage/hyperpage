@@ -5,20 +5,20 @@
  * Supports automated backups, point-in-time recovery, and disaster recovery procedures.
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { db, closeDatabase } from './index.js';
-import { jobs, jobHistory, rateLimits, toolConfigs } from './schema.js';
-import { loadPersistedRateLimits } from '../rate-limit-service.js';
-import { loadToolConfigurations } from '../tool-config-manager.js';
+import { promises as fs } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { db, closeDatabase } from "./index.js";
+import { jobs, jobHistory, rateLimits, toolConfigs } from "./schema.js";
+import { loadPersistedRateLimits } from "../rate-limit-service.js";
+import { loadToolConfigurations } from "../tool-config-manager.js";
 
 // Get project root directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PROJECT_ROOT = path.join(__dirname, '../..');
-const DATA_DIR = path.join(PROJECT_ROOT, 'data');
-const BACKUP_DIR = path.join(PROJECT_ROOT, 'data', 'backups');
+const PROJECT_ROOT = path.join(__dirname, "../..");
+const DATA_DIR = path.join(PROJECT_ROOT, "data");
+const BACKUP_DIR = path.join(PROJECT_ROOT, "data", "backups");
 
 export interface BackupMetadata {
   timestamp: number;
@@ -48,8 +48,8 @@ async function ensureBackupDirectory(): Promise<void> {
   try {
     await fs.mkdir(BACKUP_DIR, { recursive: true });
   } catch (error) {
-    console.error('Failed to create backup directory:', error);
-    throw new Error('Cannot create backup directory');
+    console.error("Failed to create backup directory:", error);
+    throw new Error("Cannot create backup directory");
   }
 }
 
@@ -58,7 +58,7 @@ async function ensureBackupDirectory(): Promise<void> {
  */
 function generateBackupFilename(timestamp = Date.now()): string {
   const date = new Date(timestamp);
-  const dateStr = date.toISOString().slice(0, 19).replace(/:/g, '-');
+  const dateStr = date.toISOString().slice(0, 19).replace(/:/g, "-");
   return `hyperpage-backup-${dateStr}.db`;
 }
 
@@ -66,7 +66,7 @@ function generateBackupFilename(timestamp = Date.now()): string {
  * Get database file path
  */
 function getDatabasePath(): string {
-  return path.join(DATA_DIR, 'hyperpage.db');
+  return path.join(DATA_DIR, "hyperpage.db");
 }
 
 /**
@@ -88,18 +88,18 @@ async function getBackupMetadata(backupPath: string): Promise<BackupMetadata> {
 
     return {
       timestamp: Date.now(),
-      version: process.env.npm_package_version || '1.0.0',
+      version: process.env.npm_package_version || "1.0.0",
       databaseSize: stats.size,
       recordCounts: {
         jobs: jobCount,
         rateLimits: rateLimitCount,
         toolConfigs: toolConfigCount,
-        jobHistory: jobHistoryCount
+        jobHistory: jobHistoryCount,
       },
-      checksum
+      checksum,
     };
   } catch (error) {
-    console.error('Error generating backup metadata:', error);
+    console.error("Error generating backup metadata:", error);
     throw error;
   }
 }
@@ -121,7 +121,7 @@ export async function createBackup(): Promise<BackupResult> {
     try {
       await fs.access(dbPath);
     } catch {
-      throw new Error('Source database does not exist');
+      throw new Error("Source database does not exist");
     }
 
     // Create backup by copying the database file
@@ -137,26 +137,27 @@ export async function createBackup(): Promise<BackupResult> {
 
     const duration = Date.now() - startTime;
 
-    console.info(`Database backup created successfully: ${backupPath} (${(await fs.stat(backupPath)).size} bytes)`);
+    console.info(
+      `Database backup created successfully: ${backupPath} (${(await fs.stat(backupPath)).size} bytes)`,
+    );
 
     return {
       success: true,
       backupPath,
       metadata,
       size: (await fs.stat(backupPath)).size,
-      duration
+      duration,
     };
-
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error('Failed to create database backup:', error);
+    console.error("Failed to create database backup:", error);
 
     return {
       success: false,
-      backupPath: '',
+      backupPath: "",
       metadata: {} as BackupMetadata,
       size: 0,
-      duration
+      duration,
     };
   }
 }
@@ -164,14 +165,16 @@ export async function createBackup(): Promise<BackupResult> {
 /**
  * Restore database from backup file
  */
-export async function restoreBackup(backupPath: string): Promise<{ success: boolean; duration: number }> {
+export async function restoreBackup(
+  backupPath: string,
+): Promise<{ success: boolean; duration: number }> {
   const startTime = Date.now();
 
   try {
     // Validate backup file exists and is readable
     await fs.stat(backupPath);
-    if (!backupPath.endsWith('.db')) {
-      throw new Error('Invalid backup file format');
+    if (!backupPath.endsWith(".db")) {
+      throw new Error("Invalid backup file format");
     }
 
     const dbPath = getDatabasePath();
@@ -183,7 +186,7 @@ export async function restoreBackup(backupPath: string): Promise<{ success: bool
       await fs.copyFile(dbPath, tempBackupPath);
       console.info(`Created safety backup: ${tempBackupPath}`);
     } catch {
-      console.info('No existing database to backup for safety');
+      console.info("No existing database to backup for safety");
     }
 
     // Close current database connections
@@ -198,39 +201,45 @@ export async function restoreBackup(backupPath: string): Promise<{ success: bool
 
       return {
         success: true,
-        duration
+        duration,
       };
-
     } catch (restoreError) {
       // Restore failed, try to put back the original database
       try {
-        if (await fs.access(tempBackupPath).then(() => true).catch(() => false)) {
+        if (
+          await fs
+            .access(tempBackupPath)
+            .then(() => true)
+            .catch(() => false)
+        ) {
           await fs.copyFile(tempBackupPath, dbPath);
-          console.info('Emergency restore: Reverted to original database');
+          console.info("Emergency restore: Reverted to original database");
         }
       } catch (revertError) {
-        console.error('Critical: Could not revert to original database:', revertError);
+        console.error(
+          "Critical: Could not revert to original database:",
+          revertError,
+        );
       }
 
       throw restoreError;
     }
-
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error('Failed to restore database backup:', error);
+    console.error("Failed to restore database backup:", error);
 
     // Try to load persisted data if database was corrupted
     try {
       await loadPersistedRateLimits();
       await loadToolConfigurations();
-      console.info('Attempted to load persisted data after restore failure');
+      console.info("Attempted to load persisted data after restore failure");
     } catch (loadError) {
-      console.error('Could not load fallback data:', loadError);
+      console.error("Could not load fallback data:", loadError);
     }
 
     return {
       success: false,
-      duration
+      duration,
     };
   }
 }
@@ -238,55 +247,74 @@ export async function restoreBackup(backupPath: string): Promise<{ success: bool
 /**
  * List all available backup files with metadata
  */
-export async function listBackups(): Promise<Array<BackupMetadata & { filename: string; path: string }>> {
+export async function listBackups(): Promise<
+  Array<BackupMetadata & { filename: string; path: string }>
+> {
   try {
     await ensureBackupDirectory();
 
     const files = await fs.readdir(BACKUP_DIR);
-    const backupFiles = files.filter(file => file.endsWith('.db'));
+    const backupFiles = files.filter((file) => file.endsWith(".db"));
 
-    const backups = await Promise.all(backupFiles.map(async (filename) => {
-      const dbPath = path.join(BACKUP_DIR, filename);
-      const metadataPath = `${dbPath}.metadata.json`;
+    const backups = await Promise.all(
+      backupFiles.map(async (filename) => {
+        const dbPath = path.join(BACKUP_DIR, filename);
+        const metadataPath = `${dbPath}.metadata.json`;
 
-      let metadata: BackupMetadata = {
-        timestamp: 0,
-        version: 'unknown',
-        databaseSize: 0,
-        recordCounts: { jobs: 0, rateLimits: 0, toolConfigs: 0, jobHistory: 0 },
-        checksum: ''
-      };
+        let metadata: BackupMetadata = {
+          timestamp: 0,
+          version: "unknown",
+          databaseSize: 0,
+          recordCounts: {
+            jobs: 0,
+            rateLimits: 0,
+            toolConfigs: 0,
+            jobHistory: 0,
+          },
+          checksum: "",
+        };
 
-      try {
-        const metadataContent = await fs.readFile(metadataPath, 'utf-8');
-        metadata = JSON.parse(metadataContent);
-      } catch {
-        // Try to get basic metadata from file stats
         try {
-          const stats = await fs.stat(dbPath);
-          metadata = {
-            timestamp: 0,
-            version: 'unknown',
-            databaseSize: stats.size,
-            recordCounts: { jobs: 0, rateLimits: 0, toolConfigs: 0, jobHistory: 0 },
-            checksum: `size-${stats.size}`
-          };
+          const metadataContent = await fs.readFile(metadataPath, "utf-8");
+          metadata = JSON.parse(metadataContent);
         } catch {
-          // Skip files we can't read
-          return null;
+          // Try to get basic metadata from file stats
+          try {
+            const stats = await fs.stat(dbPath);
+            metadata = {
+              timestamp: 0,
+              version: "unknown",
+              databaseSize: stats.size,
+              recordCounts: {
+                jobs: 0,
+                rateLimits: 0,
+                toolConfigs: 0,
+                jobHistory: 0,
+              },
+              checksum: `size-${stats.size}`,
+            };
+          } catch {
+            // Skip files we can't read
+            return null;
+          }
         }
-      }
 
-      return {
-        ...metadata,
-        filename,
-        path: dbPath
-      };
-    }));
+        return {
+          ...metadata,
+          filename,
+          path: dbPath,
+        };
+      }),
+    );
 
-    return backups.filter((item): item is BackupMetadata & { filename: string; path: string } => item !== null).sort((a, b) => b.timestamp - a.timestamp);
+    return backups
+      .filter(
+        (item): item is BackupMetadata & { filename: string; path: string } =>
+          item !== null,
+      )
+      .sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
-    console.error('Failed to list backups:', error);
+    console.error("Failed to list backups:", error);
     return [];
   }
 }
@@ -294,7 +322,9 @@ export async function listBackups(): Promise<Array<BackupMetadata & { filename: 
 /**
  * Clean up old backup files (keep last N backups)
  */
-export async function cleanupOldBackups(keepLast: number = 10): Promise<{ deleted: string[]; kept: number }> {
+export async function cleanupOldBackups(
+  keepLast: number = 10,
+): Promise<{ deleted: string[]; kept: number }> {
   try {
     const backups = await listBackups();
 
@@ -315,15 +345,16 @@ export async function cleanupOldBackups(keepLast: number = 10): Promise<{ delete
       }
     }
 
-    console.info(`Cleaned up ${deleted.length} old backups. Kept ${keepLast} most recent backups.`);
+    console.info(
+      `Cleaned up ${deleted.length} old backups. Kept ${keepLast} most recent backups.`,
+    );
 
     return {
       deleted,
-      kept: backups.length - deleted.length
+      kept: backups.length - deleted.length,
     };
-
   } catch (error) {
-    console.error('Failed to cleanup old backups:', error);
+    console.error("Failed to cleanup old backups:", error);
     return { deleted: [], kept: 0 };
   }
 }
@@ -331,7 +362,9 @@ export async function cleanupOldBackups(keepLast: number = 10): Promise<{ delete
 /**
  * Validate backup file integrity
  */
-export async function validateBackup(backupPath: string): Promise<{ valid: boolean; message: string }> {
+export async function validateBackup(
+  backupPath: string,
+): Promise<{ valid: boolean; message: string }> {
   try {
     const metadata = await getBackupMetadata(backupPath);
 
@@ -342,7 +375,7 @@ export async function validateBackup(backupPath: string): Promise<{ valid: boole
     if (!sizeMatches) {
       return {
         valid: false,
-        message: `Backup file size (${currentStats.size}) does not match metadata (${metadata.databaseSize})`
+        message: `Backup file size (${currentStats.size}) does not match metadata (${metadata.databaseSize})`,
       };
     }
 
@@ -350,13 +383,12 @@ export async function validateBackup(backupPath: string): Promise<{ valid: boole
 
     return {
       valid: true,
-      message: 'Backup file is valid and intact'
+      message: "Backup file is valid and intact",
     };
-
   } catch (error) {
     return {
       valid: false,
-      message: `Failed to validate backup: ${(error as Error).message}`
+      message: `Failed to validate backup: ${(error as Error).message}`,
     };
   }
 }

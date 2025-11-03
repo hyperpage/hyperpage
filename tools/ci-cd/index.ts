@@ -4,8 +4,6 @@ import { Tool, ToolConfig } from "../tool-types";
 import { registerTool } from "../registry";
 import { getEnabledTools } from "../index";
 
-
-
 export const ciCdTool: Tool = {
   name: "CI/CD",
   slug: "ci-cd",

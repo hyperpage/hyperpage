@@ -1,7 +1,11 @@
-import type { ICache, CacheFactoryConfig, CacheMetrics } from './cache-interface';
-import { MemoryCache } from './memory-cache';
-import { RedisCache } from './redis-cache';
-import { CacheBackend, CacheError } from './cache-interface';
+import type {
+  ICache,
+  CacheFactoryConfig,
+  CacheMetrics,
+} from "./cache-interface";
+import { MemoryCache } from "./memory-cache";
+import { RedisCache } from "./redis-cache";
+import { CacheBackend, CacheError } from "./cache-interface";
 
 /**
  * Factory for creating and managing cache instances across different backends.
@@ -38,7 +42,7 @@ export class CacheFactory {
    * @throws CacheError if cache creation fails
    */
   static async create<T = unknown>(
-    config: CacheFactoryConfig
+    config: CacheFactoryConfig,
   ): Promise<ICache<T>> {
     const cacheKey = this.generateCacheKey(config);
 
@@ -66,10 +70,10 @@ export class CacheFactory {
         case CacheBackend.REDIS:
           if (!config.redisUrl && !config.enableFallback) {
             throw new CacheError(
-              'Redis backend requires redisUrl or enableFallback=true',
+              "Redis backend requires redisUrl or enableFallback=true",
               CacheBackend.REDIS,
-              'create',
-              false
+              "create",
+              false,
             );
           }
 
@@ -77,7 +81,10 @@ export class CacheFactory {
             cache = new RedisCache<T>(config.redisUrl, cacheOptions);
           } catch (error) {
             if (config.enableFallback) {
-              console.warn('Redis connection failed, falling back to memory cache:', error);
+              console.warn(
+                "Redis connection failed, falling back to memory cache:",
+                error,
+              );
               cache = new MemoryCache<T>(cacheOptions);
             } else {
               throw error;
@@ -89,10 +96,10 @@ export class CacheFactory {
           // Hybrid: Redis primary, memory fallback
           if (!config.redisUrl) {
             throw new CacheError(
-              'Hybrid backend requires redisUrl',
+              "Hybrid backend requires redisUrl",
               CacheBackend.HYBRID,
-              'create',
-              false
+              "create",
+              false,
             );
           }
 
@@ -100,7 +107,7 @@ export class CacheFactory {
             // Try Redis first
             cache = new RedisCache<T>(config.redisUrl, cacheOptions);
           } catch (error) {
-            console.warn('Redis connection failed, using memory cache:', error);
+            console.warn("Redis connection failed, using memory cache:", error);
             cache = new MemoryCache<T>(cacheOptions);
           }
           break;
@@ -109,8 +116,8 @@ export class CacheFactory {
           throw new CacheError(
             `Unsupported cache backend: ${config.backend}`,
             config.backend as CacheBackend,
-            'create',
-            false
+            "create",
+            false,
           );
       }
 
@@ -120,17 +127,18 @@ export class CacheFactory {
       // Initialize metrics tracking
       this.initializeMetrics(cacheKey, cache);
 
-      console.info(`Cache instance created with backend '${config.backend}' (key: ${cacheKey})`);
+      console.info(
+        `Cache instance created with backend '${config.backend}' (key: ${cacheKey})`,
+      );
 
       return cache;
-
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to create ${config.backend} cache: ${message}`,
         config.backend,
-        'create',
-        false
+        "create",
+        false,
       );
     }
   }
@@ -142,7 +150,7 @@ export class CacheFactory {
    * @returns Configured cache instance
    */
   static async createFromEnv<T = unknown>(
-    defaultMemory: boolean = true
+    defaultMemory: boolean = true,
   ): Promise<ICache<T>> {
     const redisUrl = process.env.REDIS_URL;
 
@@ -156,16 +164,16 @@ export class CacheFactory {
     } else {
       // No Redis configured, use memory
       if (defaultMemory) {
-        console.info('No REDIS_URL configured, using memory cache');
+        console.info("No REDIS_URL configured, using memory cache");
         return await this.create<T>({
           backend: CacheBackend.MEMORY,
         });
       } else {
         throw new CacheError(
-          'No cache backend available and defaultMemory=false',
+          "No cache backend available and defaultMemory=false",
           CacheBackend.MEMORY,
-          'createFromEnv',
-          false
+          "createFromEnv",
+          false,
         );
       }
     }
@@ -195,7 +203,7 @@ export class CacheFactory {
   static clearInstances(): void {
     this.instances.clear();
     this.metrics.clear();
-    console.info('All cache instances cleared from factory management');
+    console.info("All cache instances cleared from factory management");
   }
 
   /**
@@ -208,7 +216,7 @@ export class CacheFactory {
     for (const [key, cache] of this.instances.entries()) {
       try {
         // Redis caches need disconnection, memory caches are no-ops
-        if ('disconnect' in cache && typeof cache.disconnect === 'function') {
+        if ("disconnect" in cache && typeof cache.disconnect === "function") {
           promises.push(cache.disconnect());
         }
       } catch (error) {
@@ -218,7 +226,7 @@ export class CacheFactory {
 
     await Promise.allSettled(promises);
     this.clearInstances();
-    console.info('All cache instances disposed');
+    console.info("All cache instances disposed");
   }
 
   /**
@@ -230,12 +238,12 @@ export class CacheFactory {
     // Create a stable key based on configuration
     const keyParts = [
       config.backend,
-      config.redisUrl || 'no-redis',
-      config.enableFallback ? 'fallback-yes' : 'fallback-no',
+      config.redisUrl || "no-redis",
+      config.enableFallback ? "fallback-yes" : "fallback-no",
       JSON.stringify(config.cacheOptions || {}),
     ];
 
-    return keyParts.join('|');
+    return keyParts.join("|");
   }
 
   /**
@@ -243,21 +251,30 @@ export class CacheFactory {
    * @param cacheKey - Unique cache identifier
    * @param cache - Cache instance to track
    */
-  private static async initializeMetrics(cacheKey: string, cache: ICache<unknown>): Promise<void> {
+  private static async initializeMetrics(
+    cacheKey: string,
+    cache: ICache<unknown>,
+  ): Promise<void> {
     try {
       const stats = await cache.getStats();
 
       const metrics: CacheMetrics = {
         totalHits: stats.hits,
         totalMisses: stats.misses,
-        hitRate: stats.hits + stats.misses > 0 ? stats.hits / (stats.hits + stats.misses) : 0,
+        hitRate:
+          stats.hits + stats.misses > 0
+            ? stats.hits / (stats.hits + stats.misses)
+            : 0,
         operationsCompleted: stats.hits + stats.misses,
         lastOperationTimestamp: Date.now(),
       };
 
       this.metrics.set(cacheKey, metrics);
     } catch (error) {
-      console.warn(`Failed to initialize metrics for cache ${cacheKey}:`, error);
+      console.warn(
+        `Failed to initialize metrics for cache ${cacheKey}:`,
+        error,
+      );
     }
   }
 
@@ -270,8 +287,8 @@ export class CacheFactory {
    */
   public static updateMetrics(
     cacheKey: string,
-    operation: 'hit' | 'miss' | 'error',
-    responseTimeMs?: number
+    operation: "hit" | "miss" | "error",
+    responseTimeMs?: number,
   ): void {
     const metrics = this.metrics.get(cacheKey);
     if (!metrics) return;
@@ -279,17 +296,18 @@ export class CacheFactory {
     metrics.operationsCompleted++;
 
     switch (operation) {
-      case 'hit':
+      case "hit":
         metrics.totalHits++;
         break;
-      case 'miss':
+      case "miss":
         metrics.totalMisses++;
         break;
     }
 
     // Recalculate hit rate
     const totalOperations = metrics.totalHits + metrics.totalMisses;
-    metrics.hitRate = totalOperations > 0 ? metrics.totalHits / totalOperations : 0;
+    metrics.hitRate =
+      totalOperations > 0 ? metrics.totalHits / totalOperations : 0;
 
     // Update response time (rolling average)
     if (responseTimeMs !== undefined) {
@@ -313,9 +331,13 @@ export const defaultCache = await CacheFactory.createFromEnv();
  */
 export function getCacheBackendName(backend: CacheBackend): string {
   switch (backend) {
-    case CacheBackend.MEMORY: return 'Memory';
-    case CacheBackend.REDIS: return 'Redis';
-    case CacheBackend.HYBRID: return 'Hybrid (Redis/Memory)';
-    default: return 'Unknown';
+    case CacheBackend.MEMORY:
+      return "Memory";
+    case CacheBackend.REDIS:
+      return "Redis";
+    case CacheBackend.HYBRID:
+      return "Hybrid (Redis/Memory)";
+    default:
+      return "Unknown";
   }
 }

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 import {
   performanceDashboard,
-  PerformanceThresholds
-} from '../../../lib/monitoring/performance-dashboard';
+  PerformanceThresholds,
+} from "../../../lib/monitoring/performance-dashboard";
 
 /**
  * GET /api/dashboard - Get real-time performance dashboard metrics
@@ -21,15 +21,20 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const timeWindowMs = parseInt(url.searchParams.get('timeWindow') || '300000');
-    const format = url.searchParams.get('format') || 'json';
+    const timeWindowMs = parseInt(
+      url.searchParams.get("timeWindow") || "300000",
+    );
+    const format = url.searchParams.get("format") || "json";
 
-    if (format === 'prometheus') {
-      const prometheusMetrics = performanceDashboard.exportMetrics('prometheus', timeWindowMs) as string;
+    if (format === "prometheus") {
+      const prometheusMetrics = performanceDashboard.exportMetrics(
+        "prometheus",
+        timeWindowMs,
+      ) as string;
       return new NextResponse(prometheusMetrics, {
         status: 200,
         headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
+          "Content-Type": "text/plain; charset=utf-8",
         },
       });
     }
@@ -37,24 +42,29 @@ export async function GET(request: NextRequest) {
     // JSON format - full dashboard metrics
     const metrics = performanceDashboard.getDashboardMetrics(timeWindowMs);
 
-    return NextResponse.json({
-      timestamp: new Date().toISOString(),
-      timeWindowMs,
-      metrics,
-    }, {
-      headers: {
-        'Cache-Control': 'private, max-age=5', // Short cache for real-time monitoring
+    return NextResponse.json(
+      {
+        timestamp: new Date().toISOString(),
+        timeWindowMs,
+        metrics,
       },
-    });
-
+      {
+        headers: {
+          "Cache-Control": "private, max-age=5", // Short cache for real-time monitoring
+        },
+      },
+    );
   } catch (error) {
-    console.error('Dashboard API error:', error);
-    return NextResponse.json({
-      error: 'Failed to generate dashboard metrics',
-      code: 'DASHBOARD_ERROR',
-    }, {
-      status: 500,
-    });
+    console.error("Dashboard API error:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to generate dashboard metrics",
+        code: "DASHBOARD_ERROR",
+      },
+      {
+        status: 500,
+      },
+    );
   }
 }
 
@@ -81,9 +91,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const action = url.searchParams.get('action');
+    const action = url.searchParams.get("action");
 
-    if (action === 'thresholds') {
+    if (action === "thresholds") {
       const updates = await request.json();
 
       // Validate threshold updates
@@ -96,28 +106,29 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      if (typeof updates.maxErrorRate === 'number') {
+      if (typeof updates.maxErrorRate === "number") {
         validatedUpdates.maxErrorRate = updates.maxErrorRate;
       }
 
-      if (typeof updates.minCacheHitRate === 'number') {
+      if (typeof updates.minCacheHitRate === "number") {
         validatedUpdates.minCacheHitRate = updates.minCacheHitRate;
       }
 
-      if (typeof updates.maxMemoryUsage === 'number') {
+      if (typeof updates.maxMemoryUsage === "number") {
         validatedUpdates.maxMemoryUsage = updates.maxMemoryUsage;
       }
 
-      if (typeof updates.minCompressionRatio === 'number') {
+      if (typeof updates.minCompressionRatio === "number") {
         validatedUpdates.minCompressionRatio = updates.minCompressionRatio;
       }
 
-      if (typeof updates.maxBatchDurationMs === 'number') {
+      if (typeof updates.maxBatchDurationMs === "number") {
         validatedUpdates.maxBatchDurationMs = updates.maxBatchDurationMs;
       }
 
-      if (typeof updates.circuitBreakerThreshold === 'number') {
-        validatedUpdates.circuitBreakerThreshold = updates.circuitBreakerThreshold;
+      if (typeof updates.circuitBreakerThreshold === "number") {
+        validatedUpdates.circuitBreakerThreshold =
+          updates.circuitBreakerThreshold;
       }
 
       // Update thresholds
@@ -125,39 +136,48 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Performance thresholds updated successfully',
+        message: "Performance thresholds updated successfully",
         updatedThresholds: performanceDashboard.getPerformanceThresholds(),
       });
-
-    } else if (action === 'resolve-alert') {
+    } else if (action === "resolve-alert") {
       const { alertId } = await request.json();
 
       if (!alertId) {
-        return NextResponse.json({
-          error: 'alertId is required',
-          code: 'MISSING_ALERT_ID',
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: "alertId is required",
+            code: "MISSING_ALERT_ID",
+          },
+          { status: 400 },
+        );
       }
 
       const resolved = performanceDashboard.resolveAlert(alertId);
 
       return NextResponse.json({
         success: resolved,
-        message: resolved ? 'Alert resolved' : 'Alert not found or already resolved',
+        message: resolved
+          ? "Alert resolved"
+          : "Alert not found or already resolved",
       });
     }
 
-    return NextResponse.json({
-      error: 'Invalid action. Supported actions: thresholds, resolve-alert',
-      code: 'INVALID_ACTION',
-    }, { status: 400 });
-
+    return NextResponse.json(
+      {
+        error: "Invalid action. Supported actions: thresholds, resolve-alert",
+        code: "INVALID_ACTION",
+      },
+      { status: 400 },
+    );
   } catch (error) {
-    console.error('Dashboard update error:', error);
-    return NextResponse.json({
-      error: 'Failed to update dashboard settings',
-      code: 'DASHBOARD_UPDATE_ERROR',
-    }, { status: 500 });
+    console.error("Dashboard update error:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to update dashboard settings",
+        code: "DASHBOARD_UPDATE_ERROR",
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -170,13 +190,16 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const action = url.searchParams.get('action');
+    const action = url.searchParams.get("action");
 
-    if (action !== 'reset') {
-      return NextResponse.json({
-        error: 'Invalid action. Use action=reset to reset dashboard metrics',
-        code: 'INVALID_RESET_ACTION',
-      }, { status: 400 });
+    if (action !== "reset") {
+      return NextResponse.json(
+        {
+          error: "Invalid action. Use action=reset to reset dashboard metrics",
+          code: "INVALID_RESET_ACTION",
+        },
+        { status: 400 },
+      );
     }
 
     // Reset dashboard metrics
@@ -184,14 +207,16 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Dashboard metrics and alert history have been reset',
+      message: "Dashboard metrics and alert history have been reset",
     });
-
   } catch (error) {
-    console.error('Dashboard reset error:', error);
-    return NextResponse.json({
-      error: 'Failed to reset dashboard metrics',
-      code: 'DASHBOARD_RESET_ERROR',
-    }, { status: 500 });
+    console.error("Dashboard reset error:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to reset dashboard metrics",
+        code: "DASHBOARD_RESET_ERROR",
+      },
+      { status: 500 },
+    );
   }
 }

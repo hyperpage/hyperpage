@@ -1,4 +1,9 @@
-import type { ICache, CacheEntry, CacheOptions, CacheStats } from './cache-interface';
+import type {
+  ICache,
+  CacheEntry,
+  CacheOptions,
+  CacheStats,
+} from "./cache-interface";
 
 /**
  * In-memory cache with TTL support for API response caching.
@@ -128,7 +133,7 @@ export class MemoryCache<T = unknown> implements ICache<T> {
       misses: this.stats.misses,
       expiries: this.stats.expiries,
       evictions: this.stats.evictions,
-      backend: 'memory',
+      backend: "memory",
     };
   }
 
@@ -193,14 +198,14 @@ export const defaultCache = defaultMemoryCache;
 export function generateCacheKey(
   toolName: string,
   endpoint: string,
-  queryParams: string | Record<string, unknown>
+  queryParams: string | Record<string, unknown>,
 ): string {
   let paramsHash: string;
-  if (typeof queryParams === 'string') {
+  if (typeof queryParams === "string") {
     paramsHash = queryParams;
   } else {
     // Sort keys for consistent hashing
     paramsHash = JSON.stringify(queryParams, Object.keys(queryParams).sort());
   }
-  return `${toolName}:${endpoint}:${Buffer.from(paramsHash).toString('base64')}`;
+  return `${toolName}:${endpoint}:${Buffer.from(paramsHash).toString("base64")}`;
 }

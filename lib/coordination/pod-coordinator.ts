@@ -1,21 +1,25 @@
-import logger from '../logger';
-import { CacheFactory } from '../cache/cache-factory';
-import { CacheBackend } from '../cache/cache-interface';
+import logger from "../logger";
+import { CacheFactory } from "../cache/cache-factory";
+import { CacheBackend } from "../cache/cache-interface";
 
 export interface CoordinationMessage {
   id: string;
-  type: 'cache_invalidate' | 'job_coordination' | 'rate_limit_sync' | 'broadcast';
+  type:
+    | "cache_invalidate"
+    | "job_coordination"
+    | "rate_limit_sync"
+    | "broadcast";
   payload: Record<string, unknown>;
   timestamp: number;
   sourcePod: string;
-  priority: 'low' | 'normal' | 'high';
+  priority: "low" | "normal" | "high";
 }
 
 export interface LeaderElection {
   leaderId: string;
   term: number;
   lastHeartbeat: number;
-  status: 'active' | 'expired';
+  status: "active" | "expired";
 }
 
 export interface CoordinationHandler {
@@ -31,7 +35,7 @@ export interface CoordinationData {
     usage: number;
   };
   jobCoordination?: {
-    operation: 'cache_warmup' | 'bg_job_balance' | 'cleanup';
+    operation: "cache_warmup" | "bg_job_balance" | "cleanup";
     data?: unknown;
     coordinator: string;
   };
@@ -41,16 +45,25 @@ export interface CoordinationData {
   };
 }
 
-
 // Define Redis client types
 interface RedisClient {
   publish: (channel: string, message: string) => Promise<number>;
   subscribe: (channel: string) => Promise<void>;
   unsubscribe: () => Promise<void>;
-  on: (event: 'message' | 'error' | string, callback: (channel: string, message: string) => void) => void;
-  set: (key: string, value: string, ...args: (string | number)[]) => Promise<string | null>;
+  on: (
+    event: "message" | "error" | string,
+    callback: (channel: string, message: string) => void,
+  ) => void;
+  set: (
+    key: string,
+    value: string,
+    ...args: (string | number)[]
+  ) => Promise<string | null>;
   get: (key: string) => Promise<string | null>;
-  scan: (cursor: number, ...args: (string | number)[]) => Promise<[string, string[]]>;
+  scan: (
+    cursor: number,
+    ...args: (string | number)[]
+  ) => Promise<[string, string[]]>;
 }
 
 /**
@@ -69,11 +82,12 @@ export class PodCoordinator {
   private handlers = new Map<string, CoordinationHandler>();
 
   // Configuration
-  private readonly pubsubPrefix = 'hyperpage:coord:';
-  private readonly leaderKey = 'hyperpage:leader';
+  private readonly pubsubPrefix = "hyperpage:coord:";
+  private readonly leaderKey = "hyperpage:leader";
   private readonly heartbeatInterval = 10000; // 10 seconds
   private readonly electionTimeout = 30000; // 30 seconds
-  private readonly podHeartbeatKey = (podId: string) => `hyperpage:pod:${podId}:heartbeat`;
+  private readonly podHeartbeatKey = (podId: string) =>
+    `hyperpage:pod:${podId}:heartbeat`;
 
   constructor(podId?: string) {
     this.podId = podId || this.generatePodId();
@@ -89,7 +103,9 @@ export class PodCoordinator {
         enableFallback: true,
       });
 
-      this.redisClient = (cache as unknown as { getClient: () => RedisClient }).getClient();
+      this.redisClient = (
+        cache as unknown as { getClient: () => RedisClient }
+      ).getClient();
 
       // Separate subscriber client for Pub/Sub (required for ioredis)
       const subscriberCache = await CacheFactory.create({
@@ -98,7 +114,9 @@ export class PodCoordinator {
         enableFallback: true,
       });
 
-      this.subscriberRedisClient = (subscriberCache as unknown as { getClient: () => RedisClient }).getClient();
+      this.subscriberRedisClient = (
+        subscriberCache as unknown as { getClient: () => RedisClient }
+      ).getClient();
 
       this.connected = true;
       this.setupMessageHandlers();
@@ -106,7 +124,7 @@ export class PodCoordinator {
 
       logger.info(`Pod Coordinator initialized. Pod ID: ${this.podId}`);
     } catch (error) {
-      logger.error('Failed to initialize Pod Coordinator:', error);
+      logger.error("Failed to initialize Pod Coordinator:", error);
       this.connected = false;
     }
   }
@@ -117,7 +135,7 @@ export class PodCoordinator {
   private generatePodId(): string {
     // Use hostname or generate UUID-like identifier
     // In K8s this would be the pod name
-    const hostname = process.env.HOSTNAME || 'unknown';
+    const hostname = process.env.HOSTNAME || "unknown";
     const random = Math.random().toString(36).substr(2, 9);
     return `${hostname}-${random}`;
   }
@@ -128,14 +146,17 @@ export class PodCoordinator {
   private setupMessageHandlers(): void {
     if (!this.subscriberRedisClient) return;
 
-    this.subscriberRedisClient.on('message', (channel: string, message: string) => {
-      try {
-        const coordinationMessage: CoordinationMessage = JSON.parse(message);
-        this.handleIncomingMessage(coordinationMessage);
-      } catch (error) {
-        logger.error('Failed to parse coordination message:', error);
-      }
-    });
+    this.subscriberRedisClient.on(
+      "message",
+      (channel: string, message: string) => {
+        try {
+          const coordinationMessage: CoordinationMessage = JSON.parse(message);
+          this.handleIncomingMessage(coordinationMessage);
+        } catch (error) {
+          logger.error("Failed to parse coordination message:", error);
+        }
+      },
+    );
 
     // Subscribe to coordination channels
     this.subscriberRedisClient.subscribe(`${this.pubsubPrefix}all`);
@@ -145,24 +166,31 @@ export class PodCoordinator {
   /**
    * Handle incoming coordination messages
    */
-  private async handleIncomingMessage(message: CoordinationMessage): Promise<void> {
-    logger.debug(`Received coordination message: ${message.type} from ${message.sourcePod}`);
+  private async handleIncomingMessage(
+    message: CoordinationMessage,
+  ): Promise<void> {
+    logger.debug(
+      `Received coordination message: ${message.type} from ${message.sourcePod}`,
+    );
 
-    const handler = this.handlers.get(message.type) || this.handlers.get('*');
+    const handler = this.handlers.get(message.type) || this.handlers.get("*");
     if (handler) {
       try {
         await handler(message);
       } catch (error) {
-        logger.error(`Error handling coordination message ${message.id}:`, error);
+        logger.error(
+          `Error handling coordination message ${message.id}:`,
+          error,
+        );
       }
     }
 
     // Handle specific message types
     switch (message.type) {
-      case 'cache_invalidate':
+      case "cache_invalidate":
         await this.handleCacheInvalidation(message);
         break;
-      case 'rate_limit_sync':
+      case "rate_limit_sync":
         await this.handleRateLimitSync(message);
         break;
     }
@@ -171,9 +199,13 @@ export class PodCoordinator {
   /**
    * Broadcast message to all pods
    */
-  async broadcast(type: CoordinationMessage['type'], payload: CoordinationData[keyof CoordinationData], priority: CoordinationMessage['priority'] = 'normal'): Promise<void> {
+  async broadcast(
+    type: CoordinationMessage["type"],
+    payload: CoordinationData[keyof CoordinationData],
+    priority: CoordinationMessage["priority"] = "normal",
+  ): Promise<void> {
     if (!this.connected || !this.redisClient) {
-      logger.warn('Pod Coordinator not connected, cannot broadcast');
+      logger.warn("Pod Coordinator not connected, cannot broadcast");
       return;
     }
 
@@ -192,16 +224,21 @@ export class PodCoordinator {
 
       logger.debug(`Broadcasted message ${message.id} to ${channel}`);
     } catch (error) {
-      logger.error('Failed to broadcast message:', error);
+      logger.error("Failed to broadcast message:", error);
     }
   }
 
   /**
    * Send message to specific pod
    */
-  async sendToPod(podId: string, type: CoordinationMessage['type'], payload: CoordinationData[keyof CoordinationData], priority: CoordinationMessage['priority'] = 'normal'): Promise<void> {
+  async sendToPod(
+    podId: string,
+    type: CoordinationMessage["type"],
+    payload: CoordinationData[keyof CoordinationData],
+    priority: CoordinationMessage["priority"] = "normal",
+  ): Promise<void> {
     if (!this.connected || !this.redisClient) {
-      logger.warn('Pod Coordinator not connected, cannot send message');
+      logger.warn("Pod Coordinator not connected, cannot send message");
       return;
     }
 
@@ -243,15 +280,15 @@ export class PodCoordinator {
         leaderId: this.podId,
         term: (this.leaderInfo?.term || 0) + 1,
         lastHeartbeat: Date.now(),
-        status: 'active' as const,
+        status: "active" as const,
       });
 
       const wasSet = await this.redisClient.set(
         this.leaderKey,
         leaderData,
-        'NX',  // Only set if key doesn't exist
-        'EX',  // Expire
-        Math.ceil(this.electionTimeout / 1000) + 10 // Extra 10 seconds
+        "NX", // Only set if key doesn't exist
+        "EX", // Expire
+        Math.ceil(this.electionTimeout / 1000) + 10, // Extra 10 seconds
       );
 
       if (wasSet) {
@@ -259,11 +296,13 @@ export class PodCoordinator {
           leaderId: this.podId,
           term: (this.leaderInfo?.term || 0) + 1,
           lastHeartbeat: Date.now(),
-          status: 'active',
+          status: "active",
         };
         this.isLeader = true;
 
-        logger.info(`Pod ${this.podId} became leader (term ${this.leaderInfo.term})`);
+        logger.info(
+          `Pod ${this.podId} became leader (term ${this.leaderInfo.term})`,
+        );
         this.startLeadership();
       } else {
         // Someone else is leader, get their info
@@ -273,7 +312,7 @@ export class PodCoordinator {
             this.leaderInfo = JSON.parse(existingLeaderData) as LeaderElection;
             this.isLeader = this.leaderInfo.leaderId === this.podId;
           } catch (parseError) {
-            logger.error('Failed to parse existing leader data:', parseError);
+            logger.error("Failed to parse existing leader data:", parseError);
             this.leaderInfo = null;
             this.isLeader = false;
           }
@@ -285,7 +324,7 @@ export class PodCoordinator {
         this.startFollowership();
       }
     } catch (error) {
-      logger.error('Leader election failed:', error);
+      logger.error("Leader election failed:", error);
     }
   }
 
@@ -300,7 +339,7 @@ export class PodCoordinator {
 
     // Set up leadership timeout
     this.electionTimer = setTimeout(() => {
-      logger.warn('Leadership expired, initiating new election');
+      logger.warn("Leadership expired, initiating new election");
       this.isLeader = false;
       this.startLeaderElection();
     }, this.electionTimeout);
@@ -314,11 +353,13 @@ export class PodCoordinator {
 
     // Monitor leader health
     this.electionTimer = setInterval(async () => {
-      if (!this.leaderInfo || this.leaderInfo.status !== 'active') return;
+      if (!this.leaderInfo || this.leaderInfo.status !== "active") return;
 
       const timeSinceHeartbeat = Date.now() - this.leaderInfo.lastHeartbeat;
       if (timeSinceHeartbeat > this.electionTimeout) {
-        logger.warn(`Leader ${this.leaderInfo.leaderId} appears dead, starting election`);
+        logger.warn(
+          `Leader ${this.leaderInfo.leaderId} appears dead, starting election`,
+        );
         this.startLeaderElection();
       }
     }, this.heartbeatInterval);
@@ -339,16 +380,20 @@ export class PodCoordinator {
       await this.redisClient.set(
         this.leaderKey,
         JSON.stringify(updatedLeaderData),
-        'EX',
-        Math.ceil(this.electionTimeout / 1000) + 10
+        "EX",
+        Math.ceil(this.electionTimeout / 1000) + 10,
       );
 
       this.leaderInfo = updatedLeaderData;
 
       // Broadcast heartbeat to all pods
-      await this.broadcast('broadcast', { type: 'leader_heartbeat', leaderId: this.podId }, 'low');
+      await this.broadcast(
+        "broadcast",
+        { type: "leader_heartbeat", leaderId: this.podId },
+        "low",
+      );
     } catch (error) {
-      logger.error('Failed to send heartbeat:', error);
+      logger.error("Failed to send heartbeat:", error);
       // Resign leadership and start new election
       this.isLeader = false;
       setTimeout(() => this.startLeaderElection(), 1000);
@@ -365,7 +410,7 @@ export class PodCoordinator {
       const leaderData = await this.redisClient.get(this.leaderKey);
       return leaderData ? JSON.parse(leaderData) : null;
     } catch (error) {
-      logger.error('Failed to get leader info:', error);
+      logger.error("Failed to get leader info:", error);
       return null;
     }
   }
@@ -374,21 +419,32 @@ export class PodCoordinator {
    * Check if this pod is the leader
    */
   getIsLeader(): boolean {
-    return this.isLeader && this.leaderInfo?.status === 'active';
+    return this.isLeader && this.leaderInfo?.status === "active";
   }
 
   /**
    * Coordinate operation (leader-only)
    */
-  async coordinate(operation: 'cache_warmup' | 'bg_job_balance' | 'cleanup', data?: Record<string, unknown>): Promise<boolean> {
+  async coordinate(
+    operation: "cache_warmup" | "bg_job_balance" | "cleanup",
+    data?: Record<string, unknown>,
+  ): Promise<boolean> {
     if (!this.getIsLeader()) {
-      logger.debug('Only leader can coordinate operations');
+      logger.debug("Only leader can coordinate operations");
       return false;
     }
 
     try {
       // Send coordination broadcast
-      await this.broadcast('job_coordination', { operation, data, coordinator: this.podId } as CoordinationData['jobCoordination'], 'high');
+      await this.broadcast(
+        "job_coordination",
+        {
+          operation,
+          data,
+          coordinator: this.podId,
+        } as CoordinationData["jobCoordination"],
+        "high",
+      );
       return true;
     } catch (error) {
       logger.error(`Failed to coordinate operation ${operation}:`, error);
@@ -399,11 +455,13 @@ export class PodCoordinator {
   /**
    * Handle cache invalidation messages
    */
-  private async handleCacheInvalidation(message: CoordinationMessage): Promise<void> {
+  private async handleCacheInvalidation(
+    message: CoordinationMessage,
+  ): Promise<void> {
     // Invalidate local cache entries
     const payload = message.payload as { keys?: string[] };
     const keysToInvalidate = payload.keys || [];
-    logger.info(`Invalidating cache keys: ${keysToInvalidate.join(', ')}`);
+    logger.info(`Invalidating cache keys: ${keysToInvalidate.join(", ")}`);
 
     // This would integrate with the local cache system
     // For now, just log the operation
@@ -412,7 +470,9 @@ export class PodCoordinator {
   /**
    * Handle rate limit sync messages
    */
-  private async handleRateLimitSync(message: CoordinationMessage): Promise<void> {
+  private async handleRateLimitSync(
+    message: CoordinationMessage,
+  ): Promise<void> {
     const payload = message.payload as { platform: string; usage: number };
     const { platform, usage } = payload;
     logger.info(`Syncing rate limit for ${platform}: ${usage}`);
@@ -445,7 +505,13 @@ export class PodCoordinator {
 
     try {
       // Scan for pod heartbeat keys
-      const scanResult = await this.redisClient.scan(0, 'MATCH', 'hyperpage:pod:*:heartbeat', 'COUNT', 1000);
+      const scanResult = await this.redisClient.scan(
+        0,
+        "MATCH",
+        "hyperpage:pod:*:heartbeat",
+        "COUNT",
+        1000,
+      );
       const keys = Array.isArray(scanResult) ? scanResult[1] : [];
 
       // Extract pod IDs and check recency
@@ -454,9 +520,13 @@ export class PodCoordinator {
         try {
           const heartbeatData = await this.redisClient.get(key);
           if (heartbeatData) {
-            const heartbeat = JSON.parse(heartbeatData) as { timestamp: number; podId: string };
+            const heartbeat = JSON.parse(heartbeatData) as {
+              timestamp: number;
+              podId: string;
+            };
             const age = Date.now() - heartbeat.timestamp;
-            if (age < this.heartbeatInterval * 3) { // 3x heartbeat interval
+            if (age < this.heartbeatInterval * 3) {
+              // 3x heartbeat interval
               activePods.push(heartbeat.podId);
             }
           }
@@ -467,7 +537,7 @@ export class PodCoordinator {
 
       return activePods;
     } catch (error) {
-      logger.error('Failed to get active pods:', error);
+      logger.error("Failed to get active pods:", error);
       return [];
     }
   }

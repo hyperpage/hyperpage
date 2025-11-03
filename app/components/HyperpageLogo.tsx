@@ -4,9 +4,7 @@ interface HyperpageLogoProps {
   className?: string;
 }
 
-export default function HyperpageLogo({
-  className = "",
-}: HyperpageLogoProps) {
+export default function HyperpageLogo({ className = "" }: HyperpageLogoProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -19,7 +17,12 @@ export default function HyperpageLogo({
     >
       <title id="titleDesc">Hyperpage — bold connected network H logo</title>
       {/* Connections */}
-      <g stroke="currentColor" strokeWidth="5" strokeLinecap="round" fill="none">
+      <g
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinecap="round"
+        fill="none"
+      >
         {/* Left vertical */}
         <path d="M25 20 L25 40 Q25 45 28 50 Q25 55 25 60 L25 80" />
         {/* Right vertical */}

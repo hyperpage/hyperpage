@@ -1,20 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { sessionManager } from '@/lib/sessions/session-manager';
-import { SecureTokenStorage } from '@/lib/oauth-token-store';
+import { NextRequest, NextResponse } from "next/server";
+import { sessionManager } from "@/lib/sessions/session-manager";
+import { SecureTokenStorage } from "@/lib/oauth-token-store";
 
 /**
  * GitHub OAuth Status Handler
  * Returns authentication status for GitHub
  */
 
-const PROVIDER_NAME = 'github';
+const PROVIDER_NAME = "github";
 
 // GET /api/auth/github/status - Get OAuth authentication status
 export async function GET(request: NextRequest) {
   try {
     // Get session ID from cookies
     const cookies = request.cookies;
-    const sessionCookie = cookies.get('hyperpage-session');
+    const sessionCookie = cookies.get("hyperpage-session");
 
     if (!sessionCookie) {
       return NextResponse.json({
@@ -52,25 +52,30 @@ export async function GET(request: NextRequest) {
 
       // Check if tokens are expired
       const isExpired = tokenStorage.areExpired(tokens);
-      const isRefreshExpired = tokens.refreshToken && tokenStorage.isRefreshExpired(tokens);
+      const isRefreshExpired =
+        tokens.refreshToken && tokenStorage.isRefreshExpired(tokens);
 
       // Consider authenticated if we have tokens and they're not completely expired
       // (having expired access token but valid refresh token is still partially authenticated)
-      const authenticated = !isExpired || (!isRefreshExpired && tokens.refreshToken !== undefined);
+      const authenticated =
+        !isExpired || (!isRefreshExpired && tokens.refreshToken !== undefined);
 
       // Handle lastConnectedAt safely for Date constructor - ensure it's always a valid timestamp
-      const lastConnectedAt = tokens.metadata?.lastConnectedAt && typeof tokens.metadata.lastConnectedAt === 'number'
-        ? tokens.metadata.lastConnectedAt 
-        : Date.now();
+      const lastConnectedAt =
+        tokens.metadata?.lastConnectedAt &&
+        typeof tokens.metadata.lastConnectedAt === "number"
+          ? tokens.metadata.lastConnectedAt
+          : Date.now();
 
       return NextResponse.json({
         authenticated,
         lastConnectedAt: new Date(lastConnectedAt).toISOString(),
-        expiresAt: tokens.expiresAt ? new Date(tokens.expiresAt).toISOString() : null,
+        expiresAt: tokens.expiresAt
+          ? new Date(tokens.expiresAt).toISOString()
+          : null,
         isExpired,
         hasRefreshToken: !!tokens.refreshToken && !isRefreshExpired,
       });
-
     } catch (storageError) {
       console.error(`${PROVIDER_NAME} status storage error:`, storageError);
       // If storage check fails, assume not authenticated
@@ -78,18 +83,20 @@ export async function GET(request: NextRequest) {
         authenticated: false,
         lastConnectedAt: null,
         expiresAt: null,
-        error: 'Failed to check authentication status',
+        error: "Failed to check authentication status",
       });
     }
-
   } catch (error) {
     console.error(`${PROVIDER_NAME} status error:`, error);
     // Always return valid JSON in case of error
-    return NextResponse.json({
-      authenticated: false,
-      lastConnectedAt: null,
-      expiresAt: null,
-      error: 'Failed to get authentication status',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        authenticated: false,
+        lastConnectedAt: null,
+        expiresAt: null,
+        error: "Failed to get authentication status",
+      },
+      { status: 500 },
+    );
   }
 }

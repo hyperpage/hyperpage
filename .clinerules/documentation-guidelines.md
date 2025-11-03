@@ -17,13 +17,17 @@ The `.clinerules/` directory contains focused rule files organized by domain for
 ## Rule File Maintenance Guidelines
 
 ### When to Add New Rule Files
+
 Add new rule files when introducing major new domains or categories that require dedicated guidance:
+
 - New architectural paradigms (e.g., new deployment patterns would go in a new file)
 - Major new domains not covered by existing files (e.g., testing strategies, performance monitoring)
 - Significant process changes requiring dedicated documentation
 
 ### When to Update Existing Rule Files
+
 Update existing rule files for:
+
 - **coding-principles.md**: New architectural patterns, widget requirements, tool integration changes
 - **coding-style.md**: Code style updates, new framework guidelines, component patterns
 - **security-practices.md**: Security improvements, new validation requirements, audit findings
@@ -31,7 +35,9 @@ Update existing rule files for:
 - **documentation-guidelines.md**: Changes to documentation processes or this file
 
 ### Cross-Reference Requirements
+
 Rule files should reference other files for clear separation of concerns:
+
 - Link to `security-practices.md` when discussing authentication or validation
 - Reference `configuration-guidelines.md` for tool setup and environment configuration
 - Cite `coding-principles.md` for architectural design decisions
@@ -39,17 +45,20 @@ Rule files should reference other files for clear separation of concerns:
 ## Documentation Updates
 
 ### README.md Integration
+
 - Update the Contributing section when adding or renaming rule files
 - Document new features, tool integrations, or architectural changes
 - Update configuration sections when adding new tools or environment variables
 - Maintain the `.clinerules/` directory overview with accurate links
 
 ### Project Documentation
+
 - **Tool Integration System**: Maintain `docs/tool-integration-system.md` as the comprehensive guide for tool architecture, adding new integrations, and examples
 - **Roadmap**: Keep `docs/roadmap.md` current for development planning and features
 - **Component Documentation**: Major components should include inline JSDoc comments for complex logic
 
 ### Version Control Practices
+
 - Rule files should be committed to version control for team access
 - Use meaningful commit messages for documentation changes
 - Keep README.md references synchronized with `.clinerules/` file changes
@@ -58,12 +67,14 @@ Rule files should reference other files for clear separation of concerns:
 ## Quality Standards
 
 ### Content Organization
+
 - Use consistent heading hierarchy and formatting
 - Include clear bullet points and numbered lists for procedures
 - Provide practical examples in code blocks where helpful
 - Maintain consistent terminology across rule files
 
 ### Maintenance Responsibilities
+
 - **Architectural Changes**: Update `coding-principles.md` for new patterns or integrations
 - **Security Updates**: Immediately update `security-practices.md` for new requirements
 - **Tool Additions**: Update both `configuration-guidelines.md` and `coding-principles.md`

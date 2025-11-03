@@ -129,9 +129,9 @@ export interface ICache<T = unknown> {
  * Cache backend types supported by the factory.
  */
 export enum CacheBackend {
-  MEMORY = 'memory',
-  REDIS = 'redis',
-  HYBRID = 'hybrid'
+  MEMORY = "memory",
+  REDIS = "redis",
+  HYBRID = "hybrid",
 }
 
 /**
@@ -156,10 +156,10 @@ export class CacheError extends Error {
     message: string,
     public readonly backend: CacheBackend,
     public readonly operation: string,
-    public readonly recoverable: boolean = true
+    public readonly recoverable: boolean = true,
   ) {
     super(message);
-    this.name = 'CacheError';
+    this.name = "CacheError";
   }
 }
 

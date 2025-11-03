@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { performanceDashboard, PerformanceSnapshot } from './performance-dashboard';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  performanceDashboard,
+  PerformanceSnapshot,
+} from "./performance-dashboard";
 
 export interface PerformanceMiddlewareOptions {
   /** Whether to log detailed debugging information */
@@ -34,7 +37,7 @@ export class PerformanceMiddleware {
    */
   async recordPerformance(
     request: NextRequest,
-    response: NextResponse
+    response: NextResponse,
   ): Promise<NextResponse> {
     const url = new URL(request.url);
 
@@ -51,23 +54,25 @@ export class PerformanceMiddleware {
       const responseClone = response.clone();
       let responseSizeBytes = 0;
       let compressionRatio: number | undefined;
-      let compressionMethod: 'gzip' | 'br' | 'identity' = 'identity';
+      let compressionMethod: "gzip" | "br" | "identity" = "identity";
 
       // Extract response metadata
       if (this.options.includeBodySize) {
         const responseBodyText = await responseClone.text();
-        responseSizeBytes = Buffer.byteLength(responseBodyText, 'utf8');
+        responseSizeBytes = Buffer.byteLength(responseBodyText, "utf8");
 
         // Recreate response from text since we consumed the original
         response = this.recreateResponseFromText(response, responseBodyText);
 
         // Check for compression headers
-        const contentEncoding = responseClone.headers.get('content-encoding');
+        const contentEncoding = responseClone.headers.get("content-encoding");
         if (contentEncoding) {
-          compressionMethod = contentEncoding as 'gzip' | 'br' | 'identity';
+          compressionMethod = contentEncoding as "gzip" | "br" | "identity";
 
           // Extract compression ratio from headers if available
-          const compressionRatioHeader = responseClone.headers.get('x-compression-ratio');
+          const compressionRatioHeader = responseClone.headers.get(
+            "x-compression-ratio",
+          );
           if (compressionRatioHeader) {
             const match = compressionRatioHeader.match(/(\d+\.?\d*)%/);
             if (match) {
@@ -80,16 +85,16 @@ export class PerformanceMiddleware {
       const responseTimeMs = performance.now() - reqStartTime;
 
       // Extract cache status
-      let cacheStatus: PerformanceSnapshot['cacheStatus'] = 'MISS';
-      const cacheStatusHeader = responseClone.headers.get('x-cache-status');
-      if (cacheStatusHeader === 'HIT') {
-        cacheStatus = 'HIT';
-      } else if (cacheStatusHeader === 'BYPASS') {
-        cacheStatus = 'BYPASS';
+      let cacheStatus: PerformanceSnapshot["cacheStatus"] = "MISS";
+      const cacheStatusHeader = responseClone.headers.get("x-cache-status");
+      if (cacheStatusHeader === "HIT") {
+        cacheStatus = "HIT";
+      } else if (cacheStatusHeader === "BYPASS") {
+        cacheStatus = "BYPASS";
       }
 
       // Create performance snapshot
-      const snapshot: Omit<PerformanceSnapshot, 'timestamp'> = {
+      const snapshot: Omit<PerformanceSnapshot, "timestamp"> = {
         responseTimeMs,
         responseSizeBytes,
         cacheStatus,
@@ -116,15 +121,14 @@ export class PerformanceMiddleware {
       }
 
       return response;
-
     } catch (error) {
-      console.error('Performance monitoring error:', error);
+      console.error("Performance monitoring error:", error);
 
       // Don't let performance monitoring break the response
       // Log the error but continue with the response
 
       if (this.options.debug) {
-        console.debug('Performance snapshot failed to record');
+        console.debug("Performance snapshot failed to record");
       }
 
       return response;
@@ -137,18 +141,23 @@ export class PerformanceMiddleware {
   private shouldExcludeEndpoint(endpoint: string): boolean {
     if (!this.options.excludePatterns) return false;
 
-    return this.options.excludePatterns.some(pattern => pattern.test(endpoint));
+    return this.options.excludePatterns.some((pattern) =>
+      pattern.test(endpoint),
+    );
   }
 
   /**
    * Recreate a NextResponse from a text body (needed after consuming the original body)
    */
-  private recreateResponseFromText(originalResponse: NextResponse, bodyText: string): NextResponse {
+  private recreateResponseFromText(
+    originalResponse: NextResponse,
+    bodyText: string,
+  ): NextResponse {
     // Create new headers preserving all original headers
     const headers = new Headers(originalResponse.headers);
 
     // Remove content-length as it will be recalculated (it's ok if it doesn't match exactly for monitoring)
-    headers.delete('content-length');
+    headers.delete("content-length");
 
     return new NextResponse(bodyText, {
       status: originalResponse.status,
@@ -163,7 +172,7 @@ export class PerformanceMiddleware {
   createPerfWrapper() {
     return async (
       request: NextRequest,
-      response: NextResponse
+      response: NextResponse,
     ): Promise<NextResponse> => {
       return this.recordPerformance(request, response);
     };
@@ -177,28 +186,40 @@ export class PerformanceMiddleware {
       const startTime = performance.now();
 
       // Define safe type guards for Express objects
-      const isExpressResponse = (obj: unknown): obj is { on: (event: string, callback: () => void) => void; statusCode?: number } => {
-        return typeof obj === 'object' && obj !== null && 'on' in obj && typeof (obj as { on: unknown }).on === 'function';
+      const isExpressResponse = (
+        obj: unknown,
+      ): obj is {
+        on: (event: string, callback: () => void) => void;
+        statusCode?: number;
+      } => {
+        return (
+          typeof obj === "object" &&
+          obj !== null &&
+          "on" in obj &&
+          typeof (obj as { on: unknown }).on === "function"
+        );
       };
 
       const getSafeString = (obj: unknown, property: string): string => {
-        return (obj as Record<string, unknown>)?.[property] as string || '/';
+        return ((obj as Record<string, unknown>)?.[property] as string) || "/";
       };
 
       // Hook into response finish event
       if (isExpressResponse(res)) {
-        res.on('finish', () => {
+        res.on("finish", () => {
           try {
             const responseTimeMs = performance.now() - startTime;
 
             // Create basic snapshot for Express middleware
-            const snapshot: Omit<PerformanceSnapshot, 'timestamp'> = {
+            const snapshot: Omit<PerformanceSnapshot, "timestamp"> = {
               responseTimeMs,
               responseSizeBytes: 0, // Express doesn't provide easy access to response size
-              cacheStatus: 'MISS',
-              endpoint: getSafeString(req, 'path') || getSafeString(req, 'url') || '/',
-              method: getSafeString(req, 'method') || 'GET',
-              statusCode: (res as Record<string, unknown>)?.statusCode as number || 200,
+              cacheStatus: "MISS",
+              endpoint:
+                getSafeString(req, "path") || getSafeString(req, "url") || "/",
+              method: getSafeString(req, "method") || "GET",
+              statusCode:
+                ((res as Record<string, unknown>)?.statusCode as number) || 200,
             };
 
             performanceDashboard.recordSnapshot(snapshot);
@@ -207,7 +228,7 @@ export class PerformanceMiddleware {
               console.debug(`📊 Performance snapshot recorded:`, snapshot);
             }
           } catch (error) {
-            console.error('Express performance monitoring error:', error);
+            console.error("Express performance monitoring error:", error);
           }
         });
       }
@@ -225,11 +246,11 @@ export class PerformanceMiddleware {
     statusCode: number,
     responseTimeMs: number,
     responseSizeBytes: number = 0,
-    cacheStatus: PerformanceSnapshot['cacheStatus'] = 'MISS',
+    cacheStatus: PerformanceSnapshot["cacheStatus"] = "MISS",
     compressionRatio?: number,
-    compressionMethod: 'gzip' | 'br' | 'identity' = 'identity'
+    compressionMethod: "gzip" | "br" | "identity" = "identity",
   ): void {
-    const snapshot: Omit<PerformanceSnapshot, 'timestamp'> = {
+    const snapshot: Omit<PerformanceSnapshot, "timestamp"> = {
       responseTimeMs,
       responseSizeBytes,
       cacheStatus,
@@ -260,12 +281,12 @@ export class PerformanceMiddleware {
 
 // Global performance middleware instance
 export const performanceMiddleware = new PerformanceMiddleware({
-  debug: process.env.NODE_ENV === 'development',
+  debug: process.env.NODE_ENV === "development",
   excludePatterns: [
-    /^\/api\/metrics/,     // Don't monitor metrics endpoint to avoid recursion
-    /^\/api\/health/,      // Health checks don't need detailed monitoring
-    /^\/_next\//,          // Next.js internal routes
-    /^\/favicon/,          // Static assets
+    /^\/api\/metrics/, // Don't monitor metrics endpoint to avoid recursion
+    /^\/api\/health/, // Health checks don't need detailed monitoring
+    /^\/_next\//, // Next.js internal routes
+    /^\/favicon/, // Static assets
   ],
 });
 
@@ -274,7 +295,7 @@ export const performanceMiddleware = new PerformanceMiddleware({
  */
 export async function withPerformanceMonitoring(
   request: NextRequest,
-  response: NextResponse
+  response: NextResponse,
 ): Promise<NextResponse> {
   return performanceMiddleware.recordPerformance(request, response);
 }
@@ -288,9 +309,9 @@ export function recordPerformanceSnapshot(
   statusCode: number,
   responseTimeMs: number,
   responseSizeBytes: number = 0,
-  cacheStatus: PerformanceSnapshot['cacheStatus'] = 'MISS',
+  cacheStatus: PerformanceSnapshot["cacheStatus"] = "MISS",
   compressionRatio?: number,
-  compressionMethod: 'gzip' | 'br' | 'identity' = 'identity'
+  compressionMethod: "gzip" | "br" | "identity" = "identity",
 ): void {
   performanceMiddleware.recordManualSnapshot(
     endpoint,
@@ -300,6 +321,6 @@ export function recordPerformanceSnapshot(
     responseSizeBytes,
     cacheStatus,
     compressionRatio,
-    compressionMethod
+    compressionMethod,
   );
 }

@@ -39,7 +39,7 @@ The session management system uses Redis as the primary storage with automatic f
 #### SessionManager Class
 
 ```typescript
-import { SessionManager } from 'lib/sessions/session-manager';
+import { SessionManager } from "lib/sessions/session-manager";
 
 const sessionManager = new SessionManager();
 
@@ -51,8 +51,8 @@ const existing = await sessionManager.getSession(sessionId);
 
 // Update session data
 await sessionManager.updateSession(sessionId, {
-  preferences: { theme: 'dark' },
-  uiState: { expandedWidgets: ['github-issues'] }
+  preferences: { theme: "dark" },
+  uiState: { expandedWidgets: ["github-issues"] },
 });
 
 // Delete session
@@ -65,7 +65,7 @@ await sessionManager.deleteSession(sessionId);
 interface SessionData {
   userId?: string;
   preferences: {
-    theme: 'light' | 'dark' | 'system';
+    theme: "light" | "dark" | "system";
     timezone: string;
     language: string;
     refreshInterval: number;
@@ -96,12 +96,15 @@ interface SessionData {
 ### API Endpoints
 
 #### GET /api/sessions
+
 Create new session or retrieve existing one.
 
 **Query Parameters:**
+
 - `sessionId` (optional): Specific session ID to retrieve
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -131,9 +134,11 @@ Create new session or retrieve existing one.
 ```
 
 #### POST /api/sessions
+
 Update session with new data.
 
 **Body:**
+
 ```json
 {
   "sessionId": "abc123-def456",
@@ -145,17 +150,21 @@ Update session with new data.
 ```
 
 #### PATCH /api/sessions
+
 Update specific session properties.
 
 **Query Parameters:**
+
 - `sessionId`: Required session ID to update
 
 **Body:** Partial SessionData object
 
 #### DELETE /api/sessions
+
 Remove session entirely.
 
 **Query Parameters:**
+
 - `sessionId`: Required session ID to delete
 
 ### Client Integration
@@ -255,31 +264,31 @@ The coordination system uses Redis Pub/Sub for real-time messaging and leader el
 #### PodCoordinator Class
 
 ```typescript
-import { podCoordinator } from 'lib/coordination/pod-coordinator';
+import { podCoordinator } from "lib/coordination/pod-coordinator";
 
 // Broadcast to all pods
-await podCoordinator.broadcast('cache_invalidate', {
-  keys: ['user:123:settings'],
-  source: 'admin-panel'
+await podCoordinator.broadcast("cache_invalidate", {
+  keys: ["user:123:settings"],
+  source: "admin-panel",
 });
 
 // Send to specific pod
-await podCoordinator.sendToPod('pod-abc-123', 'job_coordination', {
-  operation: 'cache_warmup',
-  data: { userIds: [1,2,3] }
+await podCoordinator.sendToPod("pod-abc-123", "job_coordination", {
+  operation: "cache_warmup",
+  data: { userIds: [1, 2, 3] },
 });
 
 // Coordinate as leader
 if (podCoordinator.getIsLeader()) {
-  await podCoordinator.coordinate('bg_job_balance', {
-    redistribute: true
+  await podCoordinator.coordinate("bg_job_balance", {
+    redistribute: true,
   });
 }
 
 // Register message handlers
-podCoordinator.onMessage('cache_invalidate', (message) => {
+podCoordinator.onMessage("cache_invalidate", (message) => {
   // Handle cache invalidation
-  console.log('Invalidating keys:', message.payload.keys);
+  console.log("Invalidating keys:", message.payload.keys);
 });
 ```
 
@@ -288,11 +297,15 @@ podCoordinator.onMessage('cache_invalidate', (message) => {
 ```typescript
 type CoordinationMessage = {
   id: string;
-  type: 'cache_invalidate' | 'job_coordination' | 'rate_limit_sync' | 'broadcast';
+  type:
+    | "cache_invalidate"
+    | "job_coordination"
+    | "rate_limit_sync"
+    | "broadcast";
   payload: any;
   timestamp: number;
   sourcePod: string;
-  priority: 'low' | 'normal' | 'high';
+  priority: "low" | "normal" | "high";
 };
 ```
 
@@ -307,7 +320,7 @@ interface LeaderElection {
   leaderId: string;
   term: number;
   lastHeartbeat: number;
-  status: 'active' | 'expired';
+  status: "active" | "expired";
 }
 
 // Get current leader
@@ -317,9 +330,9 @@ const leader = await podCoordinator.getLeader();
 const isLeader = podCoordinator.getIsLeader();
 
 // Handle leadership changes
-podCoordinator.onMessage('election', (message) => {
+podCoordinator.onMessage("election", (message) => {
   if (message.payload.newLeader) {
-    console.log('New leader elected:', message.payload.newLeader);
+    console.log("New leader elected:", message.payload.newLeader);
   }
 });
 ```
@@ -334,11 +347,13 @@ podCoordinator.onMessage('election', (message) => {
 ### Message Routing
 
 #### Channel Structure
+
 - `hyperpage:coord:all` - Broadcast to all pods
 - `hyperpage:coord:{podId}` - Direct messaging to specific pod
 - `hyperpage:coord:election` - Leadership election messages
 
 #### Priority Levels
+
 - **HIGH**: Cache invalidations, critical updates
 - **NORMAL**: Routine coordination, status updates
 - **LOW**: Heartbeats, non-critical notifications
@@ -381,23 +396,23 @@ kind: Deployment
 metadata:
   name: hyperpage
 spec:
-  replicas: 3  # Scales to 50+ with HPA
+  replicas: 3 # Scales to 50+ with HPA
   template:
     spec:
       containers:
-      - name: hyperpage
-        env:
-        - name: REDIS_URL
-          value: "redis://redis-service:6379"
-        - name: POD_COORDINATION_ENABLED
-          value: "true"
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "100m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
+        - name: hyperpage
+          env:
+            - name: REDIS_URL
+              value: "redis://redis-service:6379"
+            - name: POD_COORDINATION_ENABLED
+              value: "true"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
 ```
 
 #### Redis Deployment
@@ -413,24 +428,26 @@ spec:
   template:
     spec:
       containers:
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        volumeMounts:
-        - name: redis-data
-          mountPath: /data
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
 ```
 
 ### Monitoring and Observability
 
 #### Session Metrics
+
 - Active session count
 - Session creation rate
 - Session expiration rate
 - Cache hit/miss ratios
 
 #### Coordination Metrics
+
 - Messages per second by priority
 - Leadership election frequency
 - Pod health status
@@ -459,6 +476,7 @@ readinessProbe:
 ### Scalability Testing
 
 #### Pod Scale Testing
+
 ```bash
 # Test with increasing pod counts
 kubectl scale deployment hyperpage --replicas=5
@@ -470,6 +488,7 @@ watch -n 5 "curl http://hyperpage-service/api/sessions?sessionId=test-session"
 ```
 
 #### Load Testing
+
 ```bash
 # Simulate high concurrency
 hey -n 10000 -c 100 -m GET http://hyperpage-service/api/sessions
@@ -483,6 +502,7 @@ ab -n 1000 -c 10 -T 'application/json' \
 ### Fault Tolerance Testing
 
 #### Pod Failure Simulation
+
 ```bash
 # Kill pod and verify automatic recovery
 kubectl delete pod hyperpage-pod-xyz
@@ -495,6 +515,7 @@ curl http://hyperpage-service/api/sessions?sessionId=persistent-session
 ```
 
 #### Redis Failure Testing
+
 ```bash
 # Temporarily disable Redis
 kubectl scale deployment redis --replicas=0
@@ -509,12 +530,14 @@ kubectl scale deployment redis --replicas=3
 ## 5. Security Considerations
 
 ### Session Security
+
 - **HTTPS Only**: All session communication over TLS
 - **Secure Cookies**: HttpOnly, Secure, SameSite flags
 - **Session Expiry**: Automatic cleanup of stale sessions
 - **IP Validation**: Optional IP binding for session security
 
 ### Pod Communication Security
+
 - **Network Policies**: Restrict pod-to-pod communication
 - **Message Encryption**: Critical messages encrypted in transit
 - **Authentication**: Pod identity verification for coordination
@@ -547,14 +570,17 @@ For existing sessions in local storage:
 
 ```typescript
 // One-time migration script
-import { migrateLocalSessionsToRedis } from './migration-helpers';
+import { migrateLocalSessionsToRedis } from "./migration-helpers";
 
 async function migrateSessions() {
   const localSessions = loadLocalStorageSessions();
   const redisClient = getRedisClient();
 
   for (const [sessionId, sessionData] of Object.entries(localSessions)) {
-    await redisClient.set(`hyperpage:session:${sessionId}`, JSON.stringify(sessionData));
+    await redisClient.set(
+      `hyperpage:session:${sessionId}`,
+      JSON.stringify(sessionData),
+    );
     await redisClient.expire(`hyperpage:session:${sessionId}`, 86400);
   }
 
@@ -569,6 +595,7 @@ async function migrateSessions() {
 The horizontal pod scaling infrastructure transforms Hyperpage from a single-pod application to a true enterprise-grade, horizontally scalable system capable of handling millions of requests with sub-second response times and 99.9% uptime.
 
 Key achievements:
+
 - ✅ **Zero Session Loss** across pod failures and deployments
 - ✅ **Sub-Second Coordination** between distributed pods
 - ✅ **Automatic Failover** with leader election

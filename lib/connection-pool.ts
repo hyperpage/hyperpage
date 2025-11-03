@@ -1,4 +1,4 @@
-import { Agent, Dispatcher, request } from 'undici';
+import { Agent, Dispatcher, request } from "undici";
 
 /**
  * Connection pool configuration for HTTP keep-alive optimization
@@ -79,7 +79,7 @@ export class PooledHttpClient {
       tlsTimeout: config.tlsTimeout ?? 10000, // 10 seconds
       timeout: config.timeout ?? 30000, // 30 seconds
       pipelining: config.pipelining ?? 1,
-      userAgent: config.userAgent ?? 'Hyperpage/1.0',
+      userAgent: config.userAgent ?? "Hyperpage/1.0",
       keepAlive: config.keepAlive ?? true,
     };
 
@@ -113,7 +113,7 @@ export class PooledHttpClient {
       headers?: Record<string, string>;
       body?: string | Buffer;
       searchParams?: URLSearchParams;
-    } = {}
+    } = {},
   ): Promise<{
     statusCode: number;
     headers: Record<string, string>;
@@ -129,12 +129,7 @@ export class PooledHttpClient {
     this.metrics.totalRequests++;
 
     try {
-      const {
-        method = 'GET',
-        headers = {},
-        body,
-        searchParams,
-      } = options;
+      const { method = "GET", headers = {}, body, searchParams } = options;
 
       // Build full URL with search params
       const urlObj = new URL(url);
@@ -143,7 +138,7 @@ export class PooledHttpClient {
       }
 
       const requestHeaders = {
-        'User-Agent': this.config.userAgent,
+        "User-Agent": this.config.userAgent,
         ...headers,
       };
 
@@ -160,7 +155,7 @@ export class PooledHttpClient {
 
       // Update metrics
       this.metrics.successfulRequests++;
-      
+
       // Get agent state safely
       const agentState = this.getAgentState();
       this.metrics.activeConnections = agentState.pending + agentState.running;
@@ -174,7 +169,9 @@ export class PooledHttpClient {
 
       // Track connection lifetime if this is a new connection
       if (!connectionReused) {
-        this.metrics.connectionLifetimes.push(Date.now() - this.metrics.connectionCreationTime);
+        this.metrics.connectionLifetimes.push(
+          Date.now() - this.metrics.connectionCreationTime,
+        );
         this.metrics.totalConnections++;
       }
 
@@ -182,7 +179,9 @@ export class PooledHttpClient {
       const normalizedHeaders: Record<string, string> = {};
       for (const [key, value] of Object.entries(response.headers)) {
         if (value !== undefined) {
-          normalizedHeaders[key] = Array.isArray(value) ? value[0] : String(value);
+          normalizedHeaders[key] = Array.isArray(value)
+            ? value[0]
+            : String(value);
         }
       }
 
@@ -197,7 +196,6 @@ export class PooledHttpClient {
           responseTime,
         },
       };
-
     } catch (error) {
       this.metrics.failedRequests++;
       throw error;
@@ -210,16 +208,18 @@ export class PooledHttpClient {
   async get(
     url: string,
     headers?: Record<string, string>,
-    searchParams?: URLSearchParams
+    searchParams?: URLSearchParams,
   ): Promise<Buffer> {
     const response = await this.request(url, {
-      method: 'GET',
+      method: "GET",
       headers,
       searchParams,
     });
 
     if (response.statusCode >= 400) {
-      throw new Error(`HTTP ${response.statusCode}: ${response.body.toString()}`);
+      throw new Error(
+        `HTTP ${response.statusCode}: ${response.body.toString()}`,
+      );
     }
 
     return response.body;
@@ -232,20 +232,22 @@ export class PooledHttpClient {
     url: string,
     body: string | Buffer,
     headers?: Record<string, string>,
-    searchParams?: URLSearchParams
+    searchParams?: URLSearchParams,
   ): Promise<Buffer> {
     const response = await this.request(url, {
-      method: 'POST',
+      method: "POST",
       body,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...headers,
       },
       searchParams,
     });
 
     if (response.statusCode >= 400) {
-      throw new Error(`HTTP ${response.statusCode}: ${response.body.toString()}`);
+      throw new Error(
+        `HTTP ${response.statusCode}: ${response.body.toString()}`,
+      );
     }
 
     return response.body;
@@ -256,11 +258,17 @@ export class PooledHttpClient {
    */
   getMetrics(): ConnectionPoolMetrics {
     const totalConnections = this.metrics.totalConnections;
-    const reuseRatio = totalConnections > 0 ? this.metrics.connectionReuseCount / totalConnections : 0;
+    const reuseRatio =
+      totalConnections > 0
+        ? this.metrics.connectionReuseCount / totalConnections
+        : 0;
 
     return {
       activeConnections: this.metrics.activeConnections,
-      idleConnections: Math.max(0, this.metrics.totalConnections - this.metrics.activeConnections),
+      idleConnections: Math.max(
+        0,
+        this.metrics.totalConnections - this.metrics.activeConnections,
+      ),
       totalConnections: this.metrics.totalConnections,
       pendingRequests: this.getAgentState().pending,
       averageConnectionLifetime: this.calculateAverageLifetime(),
@@ -273,7 +281,7 @@ export class PooledHttpClient {
    * Get pool health status
    */
   getHealth(): {
-    status: 'healthy' | 'degraded' | 'unhealthy';
+    status: "healthy" | "degraded" | "unhealthy";
     details: Record<string, unknown>;
   } {
     const metrics = this.getMetrics();
@@ -283,31 +291,31 @@ export class PooledHttpClient {
 
     if (successRate >= 0.95 && totalConnections > 0) {
       return {
-        status: 'healthy',
+        status: "healthy",
         details: {
           successRate: `${(successRate * 100).toFixed(1)}%`,
           connections: `${activeConnections}/${totalConnections}`,
           reuseRatio: `${(metrics.reuseRatio * 100).toFixed(1)}%`,
         },
       };
-    } else if (successRate >= 0.80) {
+    } else if (successRate >= 0.8) {
       return {
-        status: 'degraded',
+        status: "degraded",
         details: {
           successRate: `${(successRate * 100).toFixed(1)}%`,
           connections: `${activeConnections}/${totalConnections}`,
           reuseRatio: `${(metrics.reuseRatio * 100).toFixed(1)}%`,
-          advice: 'Connection success rate is acceptable but could be improved',
+          advice: "Connection success rate is acceptable but could be improved",
         },
       };
     } else {
       return {
-        status: 'unhealthy',
+        status: "unhealthy",
         details: {
           successRate: `${(successRate * 100).toFixed(1)}%`,
           connections: `${activeConnections}/${totalConnections}`,
           reuseRatio: `${(metrics.reuseRatio * 100).toFixed(1)}%`,
-          advice: 'High connection failure rate - check network configuration',
+          advice: "High connection failure rate - check network configuration",
         },
       };
     }
@@ -326,7 +334,7 @@ export class PooledHttpClient {
   private getAgentState(): UndiciAgentState {
     try {
       // Access undici's internal state safely
-      const state = (this.agent as unknown) as UndiciAgentState;
+      const state = this.agent as unknown as UndiciAgentState;
       return {
         pending: state.pending || 0,
         running: state.running || 0,
@@ -341,11 +349,17 @@ export class PooledHttpClient {
    * Check if connection was reused (best effort)
    * This is a heuristic based on undici's internal behavior
    */
-  private checkConnectionReuse(response: { headers: Record<string, string | string[] | undefined>; statusCode: number }): boolean {
+  private checkConnectionReuse(response: {
+    headers: Record<string, string | string[] | undefined>;
+    statusCode: number;
+  }): boolean {
     // undici doesn't directly expose connection reuse info in the public API
     // This is a heuristic based on response metadata and timing
-    return response.headers['connection'] === 'keep-alive' ||
-           response.statusCode === 200 && Date.now() - this.metrics.connectionCreationTime > 100;
+    return (
+      response.headers["connection"] === "keep-alive" ||
+      (response.statusCode === 200 &&
+        Date.now() - this.metrics.connectionCreationTime > 100)
+    );
   }
 
   /**
@@ -375,14 +389,19 @@ export class PooledHttpClient {
     // Keep only recent connection lifetimes (last 1000)
     if (this.metrics.connectionLifetimes.length > 1000) {
       // Keep the most recent 500 entries
-      this.metrics.connectionLifetimes = this.metrics.connectionLifetimes.slice(-500);
+      this.metrics.connectionLifetimes =
+        this.metrics.connectionLifetimes.slice(-500);
     }
 
     // Reset counters occasionally to prevent overflow
     if (this.metrics.totalRequests > 1000000) {
       this.metrics.totalRequests = Math.floor(this.metrics.totalRequests * 0.1);
-      this.metrics.successfulRequests = Math.floor(this.metrics.successfulRequests * 0.1);
-      this.metrics.failedRequests = Math.floor(this.metrics.failedRequests * 0.1);
+      this.metrics.successfulRequests = Math.floor(
+        this.metrics.successfulRequests * 0.1,
+      );
+      this.metrics.failedRequests = Math.floor(
+        this.metrics.failedRequests * 0.1,
+      );
     }
   }
 }
@@ -393,6 +412,8 @@ export const defaultHttpClient = new PooledHttpClient();
 /**
  * Create a custom HTTP client with specific configuration
  */
-export function createHttpClient(config: ConnectionPoolConfig): PooledHttpClient {
+export function createHttpClient(
+  config: ConnectionPoolConfig,
+): PooledHttpClient {
   return new PooledHttpClient(config);
 }

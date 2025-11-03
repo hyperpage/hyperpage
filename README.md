@@ -15,6 +15,7 @@ All documented claims must be verifiable against the actual codebase. No marketi
 Hyperpage solves the challenge of scattered development data across multiple platforms. For development teams and project managers, it provides a single pane of glass to monitor code reviews, CI/CD pipelines, tickets, and project status from your entire toolchain.
 
 ### Key Features
+
 - **Code Reviews**: GitHub PRs and GitLab MRs in one view
 - **CI/CD Pipelines**: Consolidated pipeline status and workflows
 - **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues
@@ -28,6 +29,7 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 **Kubernetes Deployment Status**: Includes Kubernetes manifests
 
 ### Enterprise Capabilities
+
 - **🔄 Auto-Scaling**: HPA with 3-50 pod scaling based on CPU/memory metrics
 - **🔒 Security Hardening**: Non-root containers, RBAC, network policies, security contexts
 - **📊 Observability**: Prometheus metrics, Grafana dashboards, structured logging
@@ -62,31 +64,37 @@ Hyperpage uses environment variables for configuration. Copy `.env.local.sample`
 #### Required Variables
 
 **Base Configuration:**
+
 - `BASE_URL`: Internal API base URL (defaults to `http://localhost:3000`)
 - `NEXT_PUBLIC_BASE_URL`: Public base URL accessible in client components
 
 **Redis Configuration (Production):**
+
 - `REDIS_URL`: Redis connection URL for persistent caching (optional, falls back to memory-only)
 
 #### Tool Integration Variables
 
 **Tool Enabling:**
+
 - `ENABLE_CODE_REVIEWS`: Enable code review aggregations (`true`/`false`, default `false`)
 - `ENABLE_CICD`: Enable CI/CD pipeline aggregations (`true`/`false`, default `false`)
 - `ENABLE_TICKETING`: Enable issue/ticket aggregations (`true`/`false`, default `false`)
 
 **Jira Configuration:**
+
 - `ENABLE_JIRA`: Enable Jira integration (`true`/`false`)
 - `JIRA_WEB_URL`: Jira instance URL (e.g., `https://your-domain.atlassian.net`)
 - `JIRA_EMAIL`: Jira account email address
 - `JIRA_API_TOKEN`: Jira personal access token
 
 **GitHub Configuration:**
+
 - `ENABLE_GITHUB`: Enable GitHub integration (`true`/`false`)
 - `GITHUB_TOKEN`: GitHub personal access token (PAT)
 - `GITHUB_USERNAME`: GitHub username associated with the token
 
 **GitLab Configuration:**
+
 - `ENABLE_GITLAB`: Enable GitLab integration (`true`/`false`)
 - `GITLAB_WEB_URL`: GitLab instance URL (e.g., `https://gitlab.com`)
 - `GITLAB_TOKEN`: GitLab personal access token
@@ -94,23 +102,28 @@ Hyperpage uses environment variables for configuration. Copy `.env.local.sample`
 #### OAuth Authentication Variables
 
 **Authentication Encryption:**
+
 - `OAUTH_ENCRYPTION_KEY`: 32-character hex key for encrypting stored OAuth tokens (generate with `openssl rand -hex 32`)
 
 **GitHub OAuth Application:**
+
 - `GITHUB_OAUTH_CLIENT_ID`: GitHub OAuth app client ID
 - `GITHUB_OAUTH_CLIENT_SECRET`: GitHub OAuth app client secret
 
 **GitLab OAuth Application:**
+
 - `GITLAB_OAUTH_CLIENT_ID`: GitLab OAuth app client ID
 - `GITLAB_OAUTH_CLIENT_SECRET`: GitLab OAuth app client secret
 
 **Jira OAuth Application:**
+
 - `JIRA_OAUTH_CLIENT_ID`: Jira OAuth app client ID
 - `JIRA_OAUTH_CLIENT_SECRET`: Jira OAuth app client secret
 
 #### Configuration Examples
 
 **Basic Setup (Anonymous Usage):**
+
 ```env
 ENABLE_GITHUB=true
 GITHUB_TOKEN=github_pat_...
@@ -122,6 +135,7 @@ JIRA_API_TOKEN=jira_token_...
 ```
 
 **With OAuth Authentication:**
+
 ```env
 # Enable tools
 ENABLE_GITHUB=true
@@ -154,6 +168,7 @@ cat docs/kubernetes.md
 ```
 
 **Production Features:**
+
 - Horizontal Pod Auto-Scaling (HPA) with 3-50 replica scaling
 - Security hardened with RBAC and non-root containers
 - Enterprise observability with Prometheus and Grafana integration
@@ -179,7 +194,7 @@ npm test -- --run integration/tools        # Tool integration tests
 
 # Individual Tool Tests
 npm test -- --run integration/tools/github           # GitHub integration (21 tests)
-npm test -- --run integration/tools/gitlab           # GitLab integration (25 tests)  
+npm test -- --run integration/tools/gitlab           # GitLab integration (25 tests)
 npm test -- --run integration/tools/jira             # Jira integration (15 tests)
 npm test -- --run integration/tools/cross-tool       # Cross-tool aggregation (6 tests)
 
@@ -190,6 +205,7 @@ npm run test:e2e:ui        # Interactive E2E mode
 ```
 
 **Testing Setup:**
+
 - **Unit Tests**: Vitest + React Testing Library for component isolation
 - **OAuth Integration Tests**: Comprehensive testing for GitHub, GitLab, and Jira OAuth flows
 - **Tool Integration Tests**: API endpoint validation, rate limiting, data transformation
@@ -198,6 +214,7 @@ npm run test:e2e:ui        # Interactive E2E mode
 - **CI/CD Ready**: All tests run in automated pipelines with parallel execution
 
 **Test Coverage:**
+
 - **67 Integration Tests** across 4 specialized test suites
 - **OAuth Security**: Token handling, session isolation, credential protection
 - **API Integration**: Rate limiting, error handling, data consistency
@@ -207,6 +224,7 @@ npm run test:e2e:ui        # Interactive E2E mode
 ## Usage Examples
 
 **Enable GitHub Integration:**
+
 ```env
 ENABLE_GITHUB=true
 GITHUB_TOKEN=github_pat_...

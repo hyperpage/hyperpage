@@ -2,22 +2,22 @@ name: Container Registry & Image Management
 
 on:
   push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
+    branches: [main, develop]
+    tags: ["v*"]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
     inputs:
       action:
-        description: 'Registry action to perform'
+        description: "Registry action to perform"
         required: true
-        default: 'build-and-push'
+        default: "build-and-push"
         type: choice
         options:
-        - build-and-push
-        - security-scan
-        - manifest-update
-        - cleanup
+          - build-and-push
+          - security-scan
+          - manifest-update
+          - cleanup
 
 env:
   REGISTRY: ghcr.io
@@ -31,79 +31,79 @@ jobs:
     name: Multi-Architecture Container Build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    
+
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
       image-tags: ${{ steps.meta.outputs.tags }}
       image-manifests: ${{ steps.meta.outputs.tags }}
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        driver-opts: network=host
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
 
-    - name: Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-          type=raw,value=edge,enable={{is_default_branch}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=edge,enable={{is_default_branch}}
 
-    - name: Build and push multi-arch image
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: |
-          linux/amd64
-          linux/arm64
-          linux/arm/v7
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-          NODE_VERSION=22
-        pull: true
+      - name: Build and push multi-arch image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: |
+            linux/amd64
+            linux/arm64
+            linux/arm/v7
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            NODE_VERSION=22
+          pull: true
 
-    - name: Generate build summary
-      run: |
-        echo "## 🐳 Multi-Architecture Build Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Registry**: ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Repository**: ${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Platforms**: linux/amd64, linux/arm64, linux/arm/v7" >> $GITHUB_STEP_SUMMARY
-        echo "**Digest**: ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Available Commands:" >> $GITHUB_STEP_SUMMARY
-        echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "# Pull specific architecture" >> $GITHUB_STEP_SUMMARY
-        echo 'docker pull --platform linux/amd64 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "# Pull by digest (architecture-agnostic)" >> $GITHUB_STEP_SUMMARY
-        echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: Generate build summary
+        run: |
+          echo "## 🐳 Multi-Architecture Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry**: ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository**: ${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms**: linux/amd64, linux/arm64, linux/arm/v7" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest**: ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Available Commands:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Pull specific architecture" >> $GITHUB_STEP_SUMMARY
+          echo 'docker pull --platform linux/amd64 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull by digest (architecture-agnostic)" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   # ==============================================
   # COMPREHENSIVE SECURITY SCANNING
@@ -112,103 +112,102 @@ jobs:
     name: Comprehensive Security Scanning
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=sha,prefix=sha-
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
 
-    - name: Build Docker image for scanning
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: false
-        tags: ${{ steps.meta.outputs.tags }}
-        platforms: linux/amd64
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build Docker image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ steps.meta.outputs.tags }}
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        severity: 'CRITICAL,HIGH,MEDIUM'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
 
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
 
-    - name: Run Snyk container scan
-      uses: snyk/actions/container@master
-      continue-on-error: true
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        image: ${{ steps.meta.outputs.tags }}
-        args: --severity-threshold=high
+      - name: Run Snyk container scan
+        uses: snyk/actions/container@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ steps.meta.outputs.tags }}
+          args: --severity-threshold=high
 
-    - name: Run Docker Scout CVE scan
-      if: contains(github.event_name, 'push') || github.event_name == 'workflow_dispatch'
-      uses: docker/scout-action@v1
-      with:
-        command: cve
-        image: ${{ steps.meta.outputs.tags }}
-        format: sarif
-        output: 'scout-results.sarif'
+      - name: Run Docker Scout CVE scan
+        if: contains(github.event_name, 'push') || github.event_name == 'workflow_dispatch'
+        uses: docker/scout-action@v1
+        with:
+          command: cve
+          image: ${{ steps.meta.outputs.tags }}
+          format: sarif
+          output: "scout-results.sarif"
 
-    - name: Upload Docker Scout results
-      if: contains(github.event_name, 'push') || github.event_name == 'workflow_dispatch'
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'scout-results.sarif'
+      - name: Upload Docker Scout results
+        if: (contains(github.event_name, 'push') || github.event_name == 'workflow_dispatch') && always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "scout-results.sarif"
 
-    - name: Generate security report
-      if: always()
-      run: |
-        echo "## 🔒 Container Security Scan Report" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Scanned Image**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Scan Tools**: Trivy, Snyk, Docker Scout" >> $GITHUB_STEP_SUMMARY
-        echo "**Scan Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Check if results exist and summarize
-        if [ -f "trivy-results.sarif" ]; then
-          echo "### Trivy Results" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Trivy scan completed - results uploaded to GitHub Security tab" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        if [ -f "scout-results.sarif" ]; then
-          echo "### Docker Scout Results" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Docker Scout scan completed - results uploaded to GitHub Security tab" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Security Resources:" >> $GITHUB_STEP_SUMMARY
-        echo "- [GitHub Security Advisories](https://github.com/${{ github.repository }}/security/advisories)" >> $GITHUB_STEP_SUMMARY
-        echo "- [Dependency Graph](https://github.com/${{ github.repository }}/network/dependencies)" >> $GITHUB_STEP_SUMMARY
+      - name: Generate security report
+        if: always()
+        run: |
+          echo "## 🔒 Container Security Scan Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scanned Image**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Tools**: Trivy, Snyk, Docker Scout" >> $GITHUB_STEP_SUMMARY
+          echo "**Scan Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check if results exist and summarize
+          if [ -f "trivy-results.sarif" ]; then
+            echo "### Trivy Results" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Trivy scan completed - results uploaded to GitHub Security tab" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f "scout-results.sarif" ]; then
+            echo "### Docker Scout Results" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Docker Scout scan completed - results uploaded to GitHub Security tab" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Resources:" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Security Advisories](https://github.com/${{ github.repository }}/security/advisories)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Dependency Graph](https://github.com/${{ github.repository }}/network/dependencies)" >> $GITHUB_STEP_SUMMARY
 
   # ==============================================
   # CONTAINER IMAGE MANIFEST MANAGEMENT
@@ -217,92 +216,92 @@ jobs:
     name: Container Manifest Management
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    
+
     needs: [build-multi-arch]
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Login to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=semver,pattern={{version}}
-          type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Inspect multi-arch manifest
-      run: |
-        echo "## 📦 Multi-Architecture Manifest Information" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Primary Tag**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Manifest Digest**: ${{ needs.build-multi-arch.outputs.image-digest }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Inspect the manifest
-        docker manifest inspect ${{ steps.meta.outputs.tags }} | jq '.' > manifest.json
-        
-        echo "### Architecture Support:" >> $GITHUB_STEP_SUMMARY
-        cat manifest.json | jq -r '.manifests[] | "- \(.platform.architecture)/\(.platform.os)"' >> $GITHUB_STEP_SUMMARY
-        
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Manifest Details:" >> $GITHUB_STEP_SUMMARY
-        echo '```json' >> $GITHUB_STEP_SUMMARY
-        cat manifest.json >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: Inspect multi-arch manifest
+        run: |
+          echo "## 📦 Multi-Architecture Manifest Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Primary Tag**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Manifest Digest**: ${{ needs.build-multi-arch.outputs.image-digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-    - name: Create additional tag aliases
-      run: |
-        # Create version tags
-        VERSION_TAG="${{ github.ref_name }}"
-        MAJOR_MINOR=$(echo "$VERSION_TAG" | cut -d. -f1,2)
-        
-        # Tag as version
-        docker tag ${{ needs.build-multi-arch.outputs.image-digest }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_TAG}
-        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_TAG}
-        
-        # Tag as major.minor if it's a version tag
-        if [[ "$VERSION_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          docker tag ${{ needs.build-multi-arch.outputs.image-digest }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${MAJOR_MINOR}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${MAJOR_MINOR}
-        fi
-        
-        echo "✅ Created additional tag aliases:" >> $GITHUB_STEP_SUMMARY
-        echo "- ${VERSION_TAG}" >> $GITHUB_STEP_SUMMARY
-        if [[ "$VERSION_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "- ${MAJOR_MINOR}" >> $GITHUB_STEP_SUMMARY
-        fi
+          # Inspect the manifest
+          docker manifest inspect ${{ steps.meta.outputs.tags }} | jq '.' > manifest.json
 
-    - name: Update health check status
-      run: |
-        echo "## ✅ Container Health Status" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Last Updated**: $(date -u)" >> $GITHUB_STEP_SUMMARY
-        echo "**Build Status**: Success" >> $GITHUB_STEP_SUMMARY
-        echo "**Security Status**: Passed" >> $GITHUB_STEP_SUMMARY
-        echo "**Architecture Support**: Multi-arch (amd64, arm64, arm/v7)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Deployment Commands:" >> $GITHUB_STEP_SUMMARY
-        echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "# Kubernetes deployment" >> $GITHUB_STEP_SUMMARY
-        echo 'kubectl set image deployment/hyperpage hyperpage=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_TAG}' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "# Docker deployment" >> $GITHUB_STEP_SUMMARY
-        echo 'docker run -p 3000:3000 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_TAG}' >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "### Architecture Support:" >> $GITHUB_STEP_SUMMARY
+          cat manifest.json | jq -r '.manifests[] | "- \(.platform.architecture)/\(.platform.os)"' >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Manifest Details:" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat manifest.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Create additional tag aliases
+        run: |
+          # Create version tags
+          VERSION_TAG="${{ github.ref_name }}"
+          MAJOR_MINOR=$(echo "$VERSION_TAG" | cut -d. -f1,2)
+
+          # Tag as version
+          docker tag ${{ needs.build-multi-arch.outputs.image-digest }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_TAG}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_TAG}
+
+          # Tag as major.minor if it's a version tag
+          if [[ "$VERSION_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            docker tag ${{ needs.build-multi-arch.outputs.image-digest }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${MAJOR_MINOR}
+            docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${MAJOR_MINOR}
+          fi
+
+          echo "✅ Created additional tag aliases:" >> $GITHUB_STEP_SUMMARY
+          echo "- ${VERSION_TAG}" >> $GITHUB_STEP_SUMMARY
+          if [[ "$VERSION_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "- ${MAJOR_MINOR}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Update health check status
+        run: |
+          echo "## ✅ Container Health Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Last Updated**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Status**: Success" >> $GITHUB_STEP_SUMMARY
+          echo "**Security Status**: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "**Architecture Support**: Multi-arch (amd64, arm64, arm/v7)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Commands:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Kubernetes deployment" >> $GITHUB_STEP_SUMMARY
+          echo 'kubectl set image deployment/hyperpage hyperpage=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_TAG}' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Docker deployment" >> $GITHUB_STEP_SUMMARY
+          echo 'docker run -p 3000:3000 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_TAG}' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   # ==============================================
   # IMAGE REGISTRY CLEANUP
@@ -311,55 +310,55 @@ jobs:
     name: Registry Cleanup & Maintenance
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'cleanup'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Docker CLI
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker.io
+      - name: Setup Docker CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
 
-    - name: Login to Container Registry
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+      - name: Login to Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
-    - name: List existing images
-      run: |
-        echo "## 🧹 Registry Cleanup Report" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Repository**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Cleanup Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # List images by age and size
-        echo "### Current Images:" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: List existing images
+        run: |
+          echo "## 🧹 Registry Cleanup Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleanup Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-    - name: Clean up old development images
-      run: |
-        echo "### Cleanup Actions:" >> $GITHUB_STEP_SUMMARY
-        echo "🧹 **Note**: Manual review required for production image cleanup" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "To remove old images safely:" >> $GITHUB_STEP_SUMMARY
-        echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "# Remove images older than 30 days (excluding latest and version tags)" >> $GITHUB_STEP_SUMMARY
-        echo 'gh api --jq \".[] | select(.updated_at < \"$(date -d \"30 days ago\" -u +%Y-%m-%dT%H:%M:%SZ)\") | .name\" \\' >> $GITHUB_STEP_SUMMARY
-        echo '  "/orgs/${{ github.repository_owner }}/packages/container/${{ env.IMAGE_NAME }}/versions" \\' >> $GITHUB_STEP_SUMMARY
-        echo '  | xargs -I {} gh api -X DELETE "/orgs/${{ github.repository_owner }}/packages/container/${{ env.IMAGE_NAME }}/versions/{}"' >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+          # List images by age and size
+          echo "### Current Images:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
-    - name: Generate cleanup summary
-      run: |
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Recommendations:" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Keep latest 3 semantic versions" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Keep latest branch builds for active development" >> $GITHUB_STEP_SUMMARY
-        echo "- ⚠️  Review and manually approve removal of development images older than 30 days" >> $GITHUB_STEP_SUMMARY
-        echo "- ⚠️  Never remove production deployment images without proper backup strategy" >> $GITHUB_STEP_SUMMARY
+      - name: Clean up old development images
+        run: |
+          echo "### Cleanup Actions:" >> $GITHUB_STEP_SUMMARY
+          echo "🧹 **Note**: Manual review required for production image cleanup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To remove old images safely:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Remove images older than 30 days (excluding latest and version tags)" >> $GITHUB_STEP_SUMMARY
+          echo 'gh api --jq \".[] | select(.updated_at < \"$(date -d \"30 days ago\" -u +%Y-%m-%dT%H:%M:%SZ)\") | .name\" \\' >> $GITHUB_STEP_SUMMARY
+          echo '  "/orgs/${{ github.repository_owner }}/packages/container/${{ env.IMAGE_NAME }}/versions" \\' >> $GITHUB_STEP_SUMMARY
+          echo '  | xargs -I {} gh api -X DELETE "/orgs/${{ github.repository_owner }}/packages/container/${{ env.IMAGE_NAME }}/versions/{}"' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate cleanup summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Recommendations:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Keep latest 3 semantic versions" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Keep latest branch builds for active development" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️  Review and manually approve removal of development images older than 30 days" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️  Never remove production deployment images without proper backup strategy" >> $GITHUB_STEP_SUMMARY
 
   # ==============================================
   # IMAGE PROMOTION BETWEEN ENVIRONMENTS
@@ -368,64 +367,64 @@ jobs:
     name: Promote Image Between Environments
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Extract promotion metadata
-      id: promotion
-      run: |
-        SOURCE_TAG="${{ github.event.inputs.source_tag || 'latest' }}"
-        TARGET_ENV="${{ github.event.inputs.target_env || 'staging' }}"
-        TARGET_TAG="${{ github.event.inputs.target_tag || 'staging' }}"
-        
-        echo "source_tag=${SOURCE_TAG}" >> $GITHUB_OUTPUT
-        echo "target_env=${TARGET_ENV}" >> $GITHUB_OUTPUT
-        echo "target_tag=${TARGET_TAG}" >> $GITHUB_OUTPUT
-        
-        echo "## 🚀 Image Promotion Report" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Source**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SOURCE_TAG}" >> $GITHUB_STEP_SUMMARY
-        echo "**Target**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TARGET_TAG}" >> $GITHUB_STEP_SUMMARY
-        echo "**Environment**: ${TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
+      - name: Extract promotion metadata
+        id: promotion
+        run: |
+          SOURCE_TAG="${{ github.event.inputs.source_tag || 'latest' }}"
+          TARGET_ENV="${{ github.event.inputs.target_env || 'staging' }}"
+          TARGET_TAG="${{ github.event.inputs.target_tag || 'staging' }}"
 
-    - name: Setup Docker CLI
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker.io
+          echo "source_tag=${SOURCE_TAG}" >> $GITHUB_OUTPUT
+          echo "target_env=${TARGET_ENV}" >> $GITHUB_OUTPUT
+          echo "target_tag=${TARGET_TAG}" >> $GITHUB_OUTPUT
 
-    - name: Login to Container Registry
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+          echo "## 🚀 Image Promotion Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Source**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SOURCE_TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "**Target**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TARGET_TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${TARGET_ENV}" >> $GITHUB_STEP_SUMMARY
 
-    - name: Pull and retag image
-      run: |
-        SOURCE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.promotion.outputs.source_tag }}"
-        TARGET_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.promotion.outputs.target_tag }}"
-        
-        echo "Pulling source image: ${SOURCE_IMAGE}" >> $GITHUB_STEP_SUMMARY
-        docker pull "${SOURCE_IMAGE}"
-        
-        echo "Creating promotion tag: ${TARGET_IMAGE}" >> $GITHUB_STEP_SUMMARY
-        docker tag "${SOURCE_IMAGE}" "${TARGET_IMAGE}"
-        
-        echo "Pushing to registry" >> $GITHUB_STEP_SUMMARY
-        docker push "${TARGET_IMAGE}"
-        
-        echo "✅ **Promotion completed successfully**" >> $GITHUB_STEP_SUMMARY
+      - name: Setup Docker CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
 
-    - name: Generate promotion summary
-      run: |
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Deployment Instructions:" >> $GITHUB_STEP_SUMMARY
-        echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "# Update Kubernetes deployment" >> $GITHUB_STEP_SUMMARY
-        echo "kubectl set image deployment/hyperpage hyperpage=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.promotion.outputs.target_tag }} -n ${{ steps.promotion.outputs.target_env }}" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Promotion Verification:" >> $GITHUB_STEP_SUMMARY
-        echo "- [ ] Update Kubernetes manifests with new image tag" >> $GITHUB_STEP_SUMMARY
-        echo "- [ ] Deploy to ${TARGET_ENV} environment" >> $GITHUB_STEP_SUMMARY
-        echo "- [ ] Run smoke tests in target environment" >> $GITHUB_STEP_SUMMARY
-        echo "- [ ] Monitor application health and performance" >> $GITHUB_STEP_SUMMARY
+      - name: Login to Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: Pull and retag image
+        run: |
+          SOURCE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.promotion.outputs.source_tag }}"
+          TARGET_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.promotion.outputs.target_tag }}"
+
+          echo "Pulling source image: ${SOURCE_IMAGE}" >> $GITHUB_STEP_SUMMARY
+          docker pull "${SOURCE_IMAGE}"
+
+          echo "Creating promotion tag: ${TARGET_IMAGE}" >> $GITHUB_STEP_SUMMARY
+          docker tag "${SOURCE_IMAGE}" "${TARGET_IMAGE}"
+
+          echo "Pushing to registry" >> $GITHUB_STEP_SUMMARY
+          docker push "${TARGET_IMAGE}"
+
+          echo "✅ **Promotion completed successfully**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate promotion summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Instructions:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Update Kubernetes deployment" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl set image deployment/hyperpage hyperpage=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.promotion.outputs.target_tag }} -n ${{ steps.promotion.outputs.target_env }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Promotion Verification:" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Update Kubernetes manifests with new image tag" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Deploy to ${TARGET_ENV} environment" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Run smoke tests in target environment" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Monitor application health and performance" >> $GITHUB_STEP_SUMMARY

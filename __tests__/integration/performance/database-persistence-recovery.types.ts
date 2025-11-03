@@ -69,7 +69,7 @@ export interface TimePersistenceTest {
 }
 
 export interface LifecyclePhase {
-  lifecyclePhase: 'active' | 'invalidated';
+  lifecyclePhase: "active" | "invalidated";
   lifecycleIndex: number;
   invalidationTime?: number;
   [key: string]: unknown;
@@ -158,7 +158,7 @@ export interface ConcurrentReadResult {
 
 export interface TransactionOperationResult {
   operationId: number;
-  type: 'read' | 'write';
+  type: "read" | "write";
   sessionId: string;
   success: boolean;
   dataConsistent?: boolean;

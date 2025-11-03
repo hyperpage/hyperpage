@@ -35,77 +35,77 @@ spec:
 
       # Container specifications
       containers:
-      - name: hyperpage
-        image: hyperpage:v0.1.0
-        imagePullPolicy: Never
+        - name: hyperpage
+          image: hyperpage:v0.1.0
+          imagePullPolicy: Never
 
-        # Resource limits for HPA
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "100m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
+          # Resource limits for HPA
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
 
-        # Health checks for Kubernetes
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 30
-          timeoutSeconds: 5
-          failureThreshold: 3
-          successThreshold: 1
+          # Health checks for Kubernetes
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
 
-        readinessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-          successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
 
-        # Startup probe
-        startupProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 30
-          successThreshold: 1
+          # Startup probe
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+            successThreshold: 1
 
-        # Environment variables
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: NEXT_TELEMETRY_DISABLED
-          value: "1"
+          # Environment variables
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: NEXT_TELEMETRY_DISABLED
+              value: "1"
 
-        # Environment variables from secrets/configmaps (to be defined separately)
-        envFrom:
-        - configMapRef:
-            name: hyperpage-config
-        - secretRef:
-            name: hyperpage-secrets
+          # Environment variables from secrets/configmaps (to be defined separately)
+          envFrom:
+            - configMapRef:
+                name: hyperpage-config
+            - secretRef:
+                name: hyperpage-secrets
 
-        # Ports
-        ports:
-        - containerPort: 3000
-          name: http
-          protocol: TCP
+          # Ports
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
 
-        # Volume mounts disabled for demo deployment - would be enabled in production
-        # volumeMounts:
-        # - name: data-storage
-        #   mountPath: /app/data
-        # - name: logs-storage
-        #   mountPath: /app/logs
+          # Volume mounts disabled for demo deployment - would be enabled in production
+          # volumeMounts:
+          # - name: data-storage
+          #   mountPath: /app/data
+          # - name: logs-storage
+          #   mountPath: /app/logs
 
       # Volumes disabled for demo deployment - would be enabled in production
       # volumes:

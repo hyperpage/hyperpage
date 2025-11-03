@@ -1,5 +1,5 @@
-import { SessionData } from './session-manager';
-import logger from '../logger';
+import { SessionData } from "./session-manager";
+import logger from "../logger";
 
 export class MemorySessionStore {
   private sessions = new Map<string, SessionData>();

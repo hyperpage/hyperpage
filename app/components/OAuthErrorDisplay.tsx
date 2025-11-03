@@ -18,71 +18,76 @@ export default function OAuthErrorDisplay({
   onRetry,
   onDismiss,
   showRetry = true,
-  compact = false
+  compact = false,
 }: OAuthErrorDisplayProps) {
   if (!error) return null;
 
-  const getSeverityIcon = (severity: 'error' | 'warning' | 'info') => {
+  const getSeverityIcon = (severity: "error" | "warning" | "info") => {
     switch (severity) {
-      case 'error':
+      case "error":
         return <AlertCircle className="h-4 w-4" />;
-      case 'warning':
+      case "warning":
         return <AlertTriangle className="h-4 w-4" />;
-      case 'info':
+      case "info":
         return <Info className="h-4 w-4" />;
       default:
         return <AlertCircle className="h-4 w-4" />;
     }
   };
 
-  const getSeverityVariant = (severity: 'error' | 'warning' | 'info') => {
+  const getSeverityVariant = (severity: "error" | "warning" | "info") => {
     switch (severity) {
-      case 'error':
-        return 'destructive';
-      case 'warning':
-        return 'default';
-      case 'info':
-        return 'default';
+      case "error":
+        return "destructive";
+      case "warning":
+        return "default";
+      case "info":
+        return "default";
       default:
-        return 'destructive';
+        return "destructive";
     }
   };
 
   const getErrorDetails = (error: OAuthError) => {
-    let severity: 'error' | 'warning' | 'info' = 'error';
+    let severity: "error" | "warning" | "info" = "error";
 
     // Adjust severity based on error type
-    if (error.type === 'CONFIGURATION_ERROR' ||
-        error.type === 'PERMISSION_DENIED' ||
-        error.type === 'AUTHENTICATION_FAILED') {
-      severity = 'warning';
-    } else if (error.type === 'RATE_LIMITED' ||
-               error.type === 'SERVICE_UNAVAILABLE') {
-      severity = 'info';
+    if (
+      error.type === "CONFIGURATION_ERROR" ||
+      error.type === "PERMISSION_DENIED" ||
+      error.type === "AUTHENTICATION_FAILED"
+    ) {
+      severity = "warning";
+    } else if (
+      error.type === "RATE_LIMITED" ||
+      error.type === "SERVICE_UNAVAILABLE"
+    ) {
+      severity = "info";
     }
 
     const getErrorTitle = (errorType: string) => {
       const titles = {
-        'CONFIGURATION_ERROR': 'Configuration Error',
-        'NETWORK_ERROR': 'Connection Error',
-        'AUTHENTICATION_FAILED': 'Authentication Failed',
-        'TOKEN_EXCHANGE_FAILED': 'Token Exchange Failed',
-        'TOKEN_REFRESH_FAILED': 'Connection Renewal Failed',
-        'PERMISSION_DENIED': 'Permission Denied',
-        'STATE_MISMATCH': 'Session Expired',
-        'INVALID_REQUEST': 'Invalid Request',
-        'RATE_LIMITED': 'Rate Limited',
-        'SERVICE_UNAVAILABLE': 'Service Unavailable',
-        'UNKNOWN_ERROR': 'Authentication Error'
+        CONFIGURATION_ERROR: "Configuration Error",
+        NETWORK_ERROR: "Connection Error",
+        AUTHENTICATION_FAILED: "Authentication Failed",
+        TOKEN_EXCHANGE_FAILED: "Token Exchange Failed",
+        TOKEN_REFRESH_FAILED: "Connection Renewal Failed",
+        PERMISSION_DENIED: "Permission Denied",
+        STATE_MISMATCH: "Session Expired",
+        INVALID_REQUEST: "Invalid Request",
+        RATE_LIMITED: "Rate Limited",
+        SERVICE_UNAVAILABLE: "Service Unavailable",
+        UNKNOWN_ERROR: "Authentication Error",
       };
-      return titles[errorType as keyof typeof titles] || 'Authentication Error';
+      return titles[errorType as keyof typeof titles] || "Authentication Error";
     };
 
     return {
       title: getErrorTitle(error.type),
       description: error.userMessage,
-      action: error.suggestedAction || 'Contact support if the problem persists.',
-      severity
+      action:
+        error.suggestedAction || "Contact support if the problem persists.",
+      severity,
     };
   };
 
@@ -90,11 +95,15 @@ export default function OAuthErrorDisplay({
 
   if (compact) {
     return (
-      <div className={`flex items-center space-x-2 p-2 rounded-md border ${
-        severity === 'error' ? 'bg-destructive/10 border-destructive/20' :
-        severity === 'warning' ? 'bg-yellow-500/10 border-yellow-500/20' :
-        'bg-blue-500/10 border-blue-500/20'
-      }`}>
+      <div
+        className={`flex items-center space-x-2 p-2 rounded-md border ${
+          severity === "error"
+            ? "bg-destructive/10 border-destructive/20"
+            : severity === "warning"
+              ? "bg-yellow-500/10 border-yellow-500/20"
+              : "bg-blue-500/10 border-blue-500/20"
+        }`}
+      >
         {getSeverityIcon(severity)}
         <div className="flex-1">
           <p className="text-sm font-medium">{title}</p>
@@ -151,7 +160,11 @@ export default function OAuthErrorDisplay({
                 <p className="text-xs opacity-70">
                   Tool: <span className="font-medium">{error.toolName}</span>
                   {error.provider && (
-                    <> • Provider: <span className="font-medium">{error.provider}</span></>
+                    <>
+                      {" "}
+                      • Provider:{" "}
+                      <span className="font-medium">{error.provider}</span>
+                    </>
                   )}
                 </p>
               </div>
@@ -180,16 +193,17 @@ export default function OAuthErrorDisplay({
                     provider: error.provider,
                     message: error.message,
                     details: error.technicalDetails,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                   };
 
-                  navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2))
+                  navigator.clipboard
+                    .writeText(JSON.stringify(errorDetails, null, 2))
                     .then(() => {
                       // Could show a toast notification here
-                      console.log('Error details copied to clipboard');
+                      console.log("Error details copied to clipboard");
                     })
                     .catch(() => {
-                      console.log('Failed to copy error details');
+                      console.log("Failed to copy error details");
                     });
                 }}
                 className="text-xs"
@@ -204,11 +218,9 @@ export default function OAuthErrorDisplay({
   );
 }
 
-
-
 export function OAuthConnectionError({
   toolName,
-  onRetry
+  onRetry,
 }: {
   toolName: string;
   onRetry?: () => void;
@@ -219,10 +231,11 @@ export function OAuthConnectionError({
         type: OAuthErrorType.NETWORK_ERROR,
         message: `Connection failed for ${toolName}`,
         userMessage: `Unable to connect to ${toolName}. Please check your configuration and try again.`,
-        suggestedAction: 'Verify your OAuth settings are correct and the service is available.',
+        suggestedAction:
+          "Verify your OAuth settings are correct and the service is available.",
         retryable: true,
         toolName,
-        provider: toolName.toLowerCase()
+        provider: toolName.toLowerCase(),
       }}
       onRetry={onRetry}
       compact
@@ -232,7 +245,7 @@ export function OAuthConnectionError({
 
 export function OAuthConfigError({
   toolName,
-  provider
+  provider,
 }: {
   toolName: string;
   provider: string;
@@ -246,7 +259,7 @@ export function OAuthConfigError({
         suggestedAction: `Configure ${provider.toUpperCase()}_OAUTH_CLIENT_ID and ${provider.toUpperCase()}_OAUTH_CLIENT_SECRET in your environment variables.`,
         retryable: false,
         toolName,
-        provider
+        provider,
       }}
       showRetry={false}
       compact
@@ -256,7 +269,7 @@ export function OAuthConfigError({
 
 export function OAuthPermissionError({
   toolName,
-  provider
+  provider,
 }: {
   toolName: string;
   provider: string;
@@ -270,7 +283,7 @@ export function OAuthPermissionError({
         suggestedAction: `Request additional permissions from your ${provider} administrator.`,
         retryable: false,
         toolName,
-        provider
+        provider,
       }}
       showRetry={false}
       compact

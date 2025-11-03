@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { sessionManager } from '../../../../lib/sessions/session-manager';
+import { NextRequest, NextResponse } from "next/server";
+import { sessionManager } from "../../../../lib/sessions/session-manager";
 
 /**
  * Parse session cookies to extract session ID
  */
 function parseSessionCookies(request: NextRequest): { sessionId?: string } {
   const cookies = request.cookies;
-  const sessionCookie = cookies.get('hyperpage-session');
+  const sessionCookie = cookies.get("hyperpage-session");
 
   if (sessionCookie) {
     return { sessionId: sessionCookie.value };
@@ -54,12 +54,11 @@ export async function GET(request: NextRequest) {
       user: session.user || null,
       authenticatedTools: session.authenticatedTools || {},
     });
-
   } catch (error) {
-    console.error('Auth status error:', error);
+    console.error("Auth status error:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to get authentication status' },
-      { status: 500 }
+      { success: false, error: "Failed to get authentication status" },
+      { status: 500 },
     );
   }
 }

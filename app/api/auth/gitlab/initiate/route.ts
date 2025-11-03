@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
-import { getOAuthConfig, buildAuthorizationUrl } from '@/lib/oauth-config';
-import { createOAuthStateCookie } from '@/lib/oauth-state-cookies';
+import { NextResponse } from "next/server";
+import { getOAuthConfig, buildAuthorizationUrl } from "@/lib/oauth-config";
+import { createOAuthStateCookie } from "@/lib/oauth-state-cookies";
 
 /**
  * GitLab OAuth Initiate Handler
  * Starts OAuth flow by redirecting to GitLab authorization
  */
 
-const PROVIDER_NAME = 'gitlab';
+const PROVIDER_NAME = "gitlab";
 
 // GET /api/auth/gitlab/initiate - Initiate OAuth flow
 export async function GET() {
@@ -18,7 +18,7 @@ export async function GET() {
       console.error(`${PROVIDER_NAME} OAuth not configured`);
       return NextResponse.json(
         { error: `${PROVIDER_NAME} OAuth not configured` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -32,17 +32,19 @@ export async function GET() {
     const response = NextResponse.redirect(authUrl);
 
     // Set OAuth state cookie for CSRF protection
-    const { name, value, options } = createOAuthStateCookie(PROVIDER_NAME, state);
+    const { name, value, options } = createOAuthStateCookie(
+      PROVIDER_NAME,
+      state,
+    );
     response.cookies.set(name, value, options);
 
     // Redirect to GitLab authorization
     return response;
-
   } catch (error) {
     console.error(`${PROVIDER_NAME} OAuth initiate error:`, error);
     return NextResponse.json(
-      { error: 'Failed to initiate OAuth flow' },
-      { status: 500 }
+      { error: "Failed to initiate OAuth flow" },
+      { status: 500 },
     );
   }
 }

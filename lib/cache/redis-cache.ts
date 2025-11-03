@@ -1,6 +1,11 @@
-import { RedisClient } from './redis-client';
-import type { ICache, CacheEntry, CacheOptions, CacheStats } from './cache-interface';
-import { CacheBackend, CacheError } from './cache-interface';
+import { RedisClient } from "./redis-client";
+import type {
+  ICache,
+  CacheEntry,
+  CacheOptions,
+  CacheStats,
+} from "./cache-interface";
+import { CacheBackend, CacheError } from "./cache-interface";
 
 /**
  * Redis-based cache implementation.
@@ -20,7 +25,7 @@ export class RedisCache<T = unknown> implements ICache<T> {
 
   constructor(
     redisUrl?: string,
-    options: CacheOptions = { maxSize: 10000, enableLru: false }
+    options: CacheOptions = { maxSize: 10000, enableLru: false },
   ) {
     this.redisClient = new RedisClient(redisUrl);
     this.defaultTtl = options.defaultTtl || 600000; // 10 minutes default
@@ -52,15 +57,14 @@ export class RedisCache<T = unknown> implements ICache<T> {
 
       // Use Redis SET with EX (TTL in seconds)
       const ttlSeconds = Math.ceil(ttlMs / 1000);
-      await client.set(key, entryString, 'EX', ttlSeconds);
-
+      await client.set(key, entryString, "EX", ttlSeconds);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to set cache entry: ${message}`,
         this.backend,
-        'set',
-        true
+        "set",
+        true,
       );
     }
   }
@@ -98,14 +102,13 @@ export class RedisCache<T = unknown> implements ICache<T> {
 
       this.stats.hits++;
       return entry.data;
-
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to get cache entry: ${message}`,
         this.backend,
-        'get',
-        true
+        "get",
+        true,
       );
     }
   }
@@ -140,14 +143,13 @@ export class RedisCache<T = unknown> implements ICache<T> {
       const client = this.redisClient.getClient();
       const result = await client.del(key);
       return result === 1; // Redis DEL returns number of keys deleted
-
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to delete cache entry: ${message}`,
         this.backend,
-        'delete',
-        true
+        "delete",
+        true,
       );
     }
   }
@@ -164,14 +166,13 @@ export class RedisCache<T = unknown> implements ICache<T> {
 
       const client = this.redisClient.getClient();
       await client.flushdb(); // Clear current database only
-
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to clear cache: ${message}`,
         this.backend,
-        'clear',
-        true
+        "clear",
+        true,
       );
     }
   }
@@ -200,14 +201,13 @@ export class RedisCache<T = unknown> implements ICache<T> {
         evictions: this.stats.evictions,
         backend: this.backend,
       };
-
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to get cache stats: ${message}`,
         this.backend,
-        'getStats',
-        true
+        "getStats",
+        true,
       );
     }
   }

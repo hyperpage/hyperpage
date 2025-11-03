@@ -1,34 +1,46 @@
 // Server-only rate limit service
 // This module should only be used by API routes and server-side code
 
-import { toolRegistry } from '../tools/registry';
-import { transformGitHubLimits, transformGitLabLimits, transformJiraLimits, calculateOverallStatus } from './rate-limit-monitor';
-import { Tool } from '../tools/tool-types';
-import { PlatformRateLimits, RateLimitStatus } from './types/rate-limit';
-import { db } from './database';
-import { rateLimits } from './database/schema';
-import { sql } from 'drizzle-orm';
+import { toolRegistry } from "../tools/registry";
+import {
+  transformGitHubLimits,
+  transformGitLabLimits,
+  transformJiraLimits,
+  calculateOverallStatus,
+} from "./rate-limit-monitor";
+import { Tool } from "../tools/tool-types";
+import { PlatformRateLimits, RateLimitStatus } from "./types/rate-limit";
+import { db } from "./database";
+import { rateLimits } from "./database/schema";
+import { sql } from "drizzle-orm";
 
 // In-memory cache with TTL support for server-side use only
-const rateLimitCache: { [key: string]: { data: RateLimitStatus; expiresAt: number } } = {};
+const rateLimitCache: {
+  [key: string]: { data: RateLimitStatus; expiresAt: number };
+} = {};
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Server-only function to get rate limit status for a platform
  * Fetches fresh data from external APIs via the tool's handler
  */
-export async function getServerRateLimitStatus(platform: string, baseUrl?: string): Promise<RateLimitStatus | null> {
+export async function getServerRateLimitStatus(
+  platform: string,
+  baseUrl?: string,
+): Promise<RateLimitStatus | null> {
   const tool = toolRegistry[platform];
 
-  if (!tool || !tool.capabilities?.includes('rate-limit')) {
+  if (!tool || !tool.capabilities?.includes("rate-limit")) {
     return null;
   }
 
   // Create a mock request object for the handler
-  const mockRequest = new Request(`${baseUrl || 'http://localhost:3000'}/api/rate-limit/${platform}`);
+  const mockRequest = new Request(
+    `${baseUrl || "http://localhost:3000"}/api/rate-limit/${platform}`,
+  );
 
   // Call the tool's rate-limit handler directly
-  const rateLimitHandler = (tool as Tool).handlers['rate-limit'];
+  const rateLimitHandler = (tool as Tool).handlers["rate-limit"];
   if (!rateLimitHandler) {
     console.warn(`Rate limit handler not found for platform ${platform}`);
     return null;
@@ -45,31 +57,33 @@ export async function getServerRateLimitStatus(platform: string, baseUrl?: strin
     // Transform platform-specific data to universal format
     let limits: PlatformRateLimits;
     switch (platform) {
-      case 'github':
+      case "github":
         limits = transformGitHubLimits(result.rateLimit);
         break;
-      case 'gitlab':
+      case "gitlab":
         limits = transformGitLabLimits(result.rateLimit, null);
         break;
-      case 'jira':
+      case "jira":
         limits = transformJiraLimits(result.rateLimit);
         break;
       default:
-        console.warn(`Rate limit transformation not implemented for platform: ${platform}`);
+        console.warn(
+          `Rate limit transformation not implemented for platform: ${platform}`,
+        );
         return null;
     }
 
     // Calculate overall status
-    const status: 'normal' | 'warning' | 'critical' | 'unknown' = calculateOverallStatus(limits);
+    const status: "normal" | "warning" | "critical" | "unknown" =
+      calculateOverallStatus(limits);
 
     return {
       platform,
       lastUpdated: Date.now(),
       dataFresh: true,
       status,
-      limits
+      limits,
     };
-
   } catch (error) {
     console.error(`Error fetching rate limit status for ${platform}:`, error);
     return null;
@@ -81,7 +95,7 @@ export async function getServerRateLimitStatus(platform: string, baseUrl?: strin
  */
 export async function loadPersistedRateLimits(): Promise<number> {
   try {
-    console.info('Loading persisted rate limit data...');
+    console.info("Loading persisted rate limit data...");
     const persistedLimits = await db.select().from(rateLimits);
 
     let loadedCount = 0;
@@ -106,69 +120,117 @@ export async function loadPersistedRateLimits(): Promise<number> {
 
         // Reconstruct rate limit status from persisted data
         const limitTotal = limit.limitTotal ? Number(limit.limitTotal) : null;
-        const limitRemaining = limit.limitRemaining ? Number(limit.limitRemaining) : null;
+        const limitRemaining = limit.limitRemaining
+          ? Number(limit.limitRemaining)
+          : null;
         const resetTime = limit.resetTime ? Number(limit.resetTime) : null;
 
-        let status: 'normal' | 'warning' | 'critical' | 'unknown' = 'unknown';
+        let status: "normal" | "warning" | "critical" | "unknown" = "unknown";
         if (limitRemaining !== null && limitTotal !== null) {
-          const usagePercent = ((limitTotal - limitRemaining) / limitTotal) * 100;
-          status = usagePercent >= 90 ? 'critical' : usagePercent >= 75 ? 'warning' : 'normal';
+          const usagePercent =
+            ((limitTotal - limitRemaining) / limitTotal) * 100;
+          status =
+            usagePercent >= 90
+              ? "critical"
+              : usagePercent >= 75
+                ? "warning"
+                : "normal";
         }
 
         const limitsObject: PlatformRateLimits = {};
-        if (platform === 'github') {
+        if (platform === "github") {
           limitsObject.github = {
             core: {
               limit: limitTotal,
               remaining: limitRemaining,
-              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
-              usagePercent: limitTotal && limitRemaining ?
-                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              used:
+                limitTotal && limitRemaining
+                  ? limitTotal - limitRemaining
+                  : null,
+              usagePercent:
+                limitTotal && limitRemaining
+                  ? Math.min(
+                      100,
+                      ((limitTotal - limitRemaining) / limitTotal) * 100,
+                    )
+                  : null,
               resetTime,
-              retryAfter: null
+              retryAfter: null,
             },
             search: {
               limit: limitTotal,
               remaining: limitRemaining,
-              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
-              usagePercent: limitTotal && limitRemaining ?
-                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              used:
+                limitTotal && limitRemaining
+                  ? limitTotal - limitRemaining
+                  : null,
+              usagePercent:
+                limitTotal && limitRemaining
+                  ? Math.min(
+                      100,
+                      ((limitTotal - limitRemaining) / limitTotal) * 100,
+                    )
+                  : null,
               resetTime,
-              retryAfter: null
+              retryAfter: null,
             },
             graphql: {
               limit: limitTotal,
               remaining: limitRemaining,
-              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
-              usagePercent: limitTotal && limitRemaining ?
-                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              used:
+                limitTotal && limitRemaining
+                  ? limitTotal - limitRemaining
+                  : null,
+              usagePercent:
+                limitTotal && limitRemaining
+                  ? Math.min(
+                      100,
+                      ((limitTotal - limitRemaining) / limitTotal) * 100,
+                    )
+                  : null,
               resetTime,
-              retryAfter: null
-            }
+              retryAfter: null,
+            },
           };
-        } else if (platform === 'gitlab') {
+        } else if (platform === "gitlab") {
           limitsObject.gitlab = {
             global: {
               limit: limitTotal,
               remaining: limitRemaining,
-              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
-              usagePercent: limitTotal && limitRemaining ?
-                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              used:
+                limitTotal && limitRemaining
+                  ? limitTotal - limitRemaining
+                  : null,
+              usagePercent:
+                limitTotal && limitRemaining
+                  ? Math.min(
+                      100,
+                      ((limitTotal - limitRemaining) / limitTotal) * 100,
+                    )
+                  : null,
               resetTime,
-              retryAfter: null
-            }
+              retryAfter: null,
+            },
           };
-        } else if (platform === 'jira') {
+        } else if (platform === "jira") {
           limitsObject.jira = {
             global: {
               limit: limitTotal,
               remaining: limitRemaining,
-              used: limitTotal && limitRemaining ? limitTotal - limitRemaining : null,
-              usagePercent: limitTotal && limitRemaining ?
-                Math.min(100, ((limitTotal - limitRemaining) / limitTotal) * 100) : null,
+              used:
+                limitTotal && limitRemaining
+                  ? limitTotal - limitRemaining
+                  : null,
+              usagePercent:
+                limitTotal && limitRemaining
+                  ? Math.min(
+                      100,
+                      ((limitTotal - limitRemaining) / limitTotal) * 100,
+                    )
+                  : null,
               resetTime,
-              retryAfter: null
-            }
+              retryAfter: null,
+            },
           };
         }
 
@@ -177,26 +239,33 @@ export async function loadPersistedRateLimits(): Promise<number> {
           lastUpdated: lastUpdatedMs,
           dataFresh: false, // Data from restart isn't fresh
           status,
-          limits: limitsObject
+          limits: limitsObject,
         };
 
         // Cache the persisted data
         rateLimitCache[cacheKey] = {
           data: rateLimitStatus,
-          expiresAt: resetTime ? Math.min(now + CACHE_TTL_MS, resetTime) : (now + CACHE_TTL_MS)
+          expiresAt: resetTime
+            ? Math.min(now + CACHE_TTL_MS, resetTime)
+            : now + CACHE_TTL_MS,
         };
 
         loadedCount++;
       } catch (error) {
-        console.error(`Failed to load persisted rate limit for ${limit.platform}:`, error);
+        console.error(
+          `Failed to load persisted rate limit for ${limit.platform}:`,
+          error,
+        );
         continue;
       }
     }
 
-    console.info(`Successfully loaded ${loadedCount} persisted rate limit records`);
+    console.info(
+      `Successfully loaded ${loadedCount} persisted rate limit records`,
+    );
     return loadedCount;
   } catch (error) {
-    console.error('Failed to load persisted rate limits:', error);
+    console.error("Failed to load persisted rate limits:", error);
     return 0;
   }
 }
@@ -204,22 +273,30 @@ export async function loadPersistedRateLimits(): Promise<number> {
 /**
  * Save rate limit status to database for persistence
  */
-export async function saveRateLimitStatus(rateLimitStatus: RateLimitStatus): Promise<void> {
+export async function saveRateLimitStatus(
+  rateLimitStatus: RateLimitStatus,
+): Promise<void> {
   try {
     const platform = rateLimitStatus.platform;
 
     // Extract limit data by checking known platform types
-    let platformLimits: { remaining?: number | null; limit?: number | null; resetTime?: number | null };
+    let platformLimits: {
+      remaining?: number | null;
+      limit?: number | null;
+      resetTime?: number | null;
+    };
 
-    if (platform === 'github' && rateLimitStatus.limits.github) {
+    if (platform === "github" && rateLimitStatus.limits.github) {
       // For GitHub, use core limits as primary (most restrictive)
       platformLimits = rateLimitStatus.limits.github.core || {};
-    } else if (platform === 'gitlab' && rateLimitStatus.limits.gitlab) {
+    } else if (platform === "gitlab" && rateLimitStatus.limits.gitlab) {
       platformLimits = rateLimitStatus.limits.gitlab.global || {};
-    } else if (platform === 'jira' && rateLimitStatus.limits.jira) {
+    } else if (platform === "jira" && rateLimitStatus.limits.jira) {
       platformLimits = rateLimitStatus.limits.jira.global || {};
     } else {
-      console.warn(`No rate limit data found for platform ${platform}, skipping persistence`);
+      console.warn(
+        `No rate limit data found for platform ${platform}, skipping persistence`,
+      );
       return;
     }
 
@@ -233,7 +310,8 @@ export async function saveRateLimitStatus(rateLimitStatus: RateLimitStatus): Pro
     };
 
     // Upsert the rate limit record
-    await db.insert(rateLimits)
+    await db
+      .insert(rateLimits)
       .values(limitRecord)
       .onConflictDoUpdate({
         target: rateLimits.id,
@@ -242,18 +320,20 @@ export async function saveRateLimitStatus(rateLimitStatus: RateLimitStatus): Pro
           limitTotal: limitRecord.limitTotal,
           resetTime: limitRecord.resetTime,
           lastUpdated: limitRecord.lastUpdated,
-        }
+        },
       });
 
     // Also clean up old rate limit records (older than 7 days)
-    const cutoffTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
     await db.delete(rateLimits).where(
       // Use a proper comparison for cleanup - records older than cutoff time
-      sql`${rateLimits.lastUpdated} < ${cutoffTime}`
+      sql`${rateLimits.lastUpdated} < ${cutoffTime}`,
     );
-
   } catch (error) {
-    console.error(`Failed to save rate limit status for ${rateLimitStatus.platform}:`, error);
+    console.error(
+      `Failed to save rate limit status for ${rateLimitStatus.platform}:`,
+      error,
+    );
     // Don't throw - persistence failures shouldn't break rate limit monitoring
   }
 }

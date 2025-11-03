@@ -1,6 +1,4 @@
-- [x] Remove unused RateLimitUsage import
-- [x] Define proper TypeScript interfaces for rate limit response types
-- [x] Replace any types in custom response configurations (line 30)
-- [x] Replace any types in endpoint configuration (line 234)
-- [x] Replace any types in test utilities (lines 283, 286)
-- [x] Run ESLint to verify all issues are resolved
+- [x] Fix duplicate "if" key error in .github/workflows/container-registry.yml
+- [x] Fix YAML syntax error in .github/workflows/cicd-monitoring.yml
+- [x] Auto-format all other files with Prettier
+- [x] Verify formatting fixes with Prettier check

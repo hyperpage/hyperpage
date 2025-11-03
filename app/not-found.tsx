@@ -1,5 +1,5 @@
 /* eslint-disable react/no-unescaped-entities */
-'use client';
+"use client";
 
 import { Home, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ export default function NotFound() {
               Go Back
             </Button>
             <Button
-              onClick={() => window.location.href = '/'}
+              onClick={() => (window.location.href = "/")}
               className="flex-1"
             >
               <Home className="w-4 h-4 mr-2" />

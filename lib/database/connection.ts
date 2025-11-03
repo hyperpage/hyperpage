@@ -5,16 +5,16 @@
  * Handles connection pooling, error handling, and graceful shutdown.
  */
 
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as schema from './schema';
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import * as fs from "fs";
+import * as path from "path";
+import * as schema from "./schema";
 
 type DrizzleInstance = ReturnType<typeof drizzle<typeof schema>>;
 
 // Database configuration
-export const DATABASE_PATH = process.env.DATABASE_PATH || './data/hyperpage.db';
+export const DATABASE_PATH = process.env.DATABASE_PATH || "./data/hyperpage.db";
 export const DATABASE_DIR = path.dirname(DATABASE_PATH);
 
 // Ensure database directory exists
@@ -23,13 +23,14 @@ try {
     fs.mkdirSync(DATABASE_DIR, { recursive: true });
   }
 } catch (error) {
-  console.error('Failed to create database directory:', error);
+  console.error("Failed to create database directory:", error);
   // Continue - the database will be created in the current directory if needed
 }
 
 // Test-safe database path (use in-memory database for tests)
-const IS_TEST_ENV = process.env.NODE_ENV === 'test' || process.env.VITEST === '1';
-const TEST_DB_PATH = IS_TEST_ENV ? ':memory:' : DATABASE_PATH;
+const IS_TEST_ENV =
+  process.env.NODE_ENV === "test" || process.env.VITEST === "1";
+const TEST_DB_PATH = IS_TEST_ENV ? ":memory:" : DATABASE_PATH;
 
 // Application database connection (for business logic)
 let _appDb: Database.Database | null = null;
@@ -42,19 +43,22 @@ let _internalDb: Database.Database | null = null;
  * Get the application database instance (singleton)
  * Used for all business logic operations
  */
-export function getAppDatabase(): { sqlite: Database.Database; drizzle: DrizzleInstance } {
+export function getAppDatabase(): {
+  sqlite: Database.Database;
+  drizzle: DrizzleInstance;
+} {
   if (!_appDb || !_appDrizzleDb) {
     const dbPath = IS_TEST_ENV ? TEST_DB_PATH : DATABASE_PATH;
     _appDb = new Database(dbPath, {
-      verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
+      verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
     });
 
     // Enable WAL mode for better concurrency (skip for in-memory test databases)
     if (!IS_TEST_ENV) {
-      _appDb.pragma('journal_mode = WAL');
-      _appDb.pragma('synchronous = NORMAL');
-      _appDb.pragma('cache_size = 1000000'); // 1GB cache
-      _appDb.pragma('temp_store = memory'); // Temporary tables in memory
+      _appDb.pragma("journal_mode = WAL");
+      _appDb.pragma("synchronous = NORMAL");
+      _appDb.pragma("cache_size = 1000000"); // 1GB cache
+      _appDb.pragma("temp_store = memory"); // Temporary tables in memory
     }
 
     // Set up Drizzle with schema
@@ -74,13 +78,13 @@ export function getInternalDatabase(): Database.Database {
   if (!_internalDb) {
     const dbPath = IS_TEST_ENV ? TEST_DB_PATH : DATABASE_PATH;
     _internalDb = new Database(dbPath, {
-      verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
+      verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
     });
 
     // Enable WAL mode for internal operations too (skip for in-memory test databases)
     if (!IS_TEST_ENV) {
-      _internalDb.pragma('journal_mode = WAL');
-      _internalDb.pragma('synchronous = NORMAL');
+      _internalDb.pragma("journal_mode = WAL");
+      _internalDb.pragma("synchronous = NORMAL");
     }
 
     console.info(`Internal database initialized at ${dbPath}`);
@@ -98,14 +102,14 @@ export const appDb = getAppDatabase;
  * Should be called during application shutdown
  */
 export function closeAllConnections(): void {
-  console.info('Closing database connections...');
+  console.info("Closing database connections...");
 
   if (_appDb) {
     try {
       _appDb.close();
-      console.info('Application database connection closed');
+      console.info("Application database connection closed");
     } catch (error) {
-      console.warn('Error closing application database:', error);
+      console.warn("Error closing application database:", error);
     }
     _appDb = null;
     _appDrizzleDb = null;
@@ -114,9 +118,9 @@ export function closeAllConnections(): void {
   if (_internalDb) {
     try {
       _internalDb.close();
-      console.info('Internal database connection closed');
+      console.info("Internal database connection closed");
     } catch (error) {
-      console.warn('Error closing internal database:', error);
+      console.warn("Error closing internal database:", error);
     }
     _internalDb = null;
   }
@@ -152,37 +156,39 @@ export function getDatabaseStats(): {
  * Health check for database connectivity
  */
 export function checkDatabaseConnectivity(): {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   details: Record<string, unknown>;
 } {
   try {
     const internal = getInternalDatabase();
 
     // Simple connectivity test
-    const result = internal.prepare('SELECT 1 as test').get() as { test: number };
+    const result = internal.prepare("SELECT 1 as test").get() as {
+      test: number;
+    };
 
     if (result.test === 1) {
       return {
-        status: 'healthy',
+        status: "healthy",
         details: {
-          message: 'Database connection successful',
+          message: "Database connection successful",
           ...getDatabaseStats(),
         },
       };
     } else {
       return {
-        status: 'degraded',
+        status: "degraded",
         details: {
-          message: 'Database query returned unexpected result',
+          message: "Database query returned unexpected result",
           ...getDatabaseStats(),
         },
       };
     }
   } catch (error) {
     return {
-      status: 'unhealthy',
+      status: "unhealthy",
       details: {
-        message: 'Database connectivity check failed',
+        message: "Database connectivity check failed",
         error: (error as Error).message,
         ...getDatabaseStats(),
       },
@@ -195,13 +201,13 @@ export function checkDatabaseConnectivity(): {
  * Each test suite gets its own isolated database instance
  */
 export function createTestDatabase(): Database.Database {
-  const db = new Database(':memory:', {
-    verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
+  const db = new Database(":memory:", {
+    verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
   });
 
   // Set up basic WAL mode for consistency with regular databases
-  db.pragma('journal_mode = MEMORY'); // Use MEMORY mode for in-memory databases
-  db.pragma('synchronous = NORMAL');
+  db.pragma("journal_mode = MEMORY"); // Use MEMORY mode for in-memory databases
+  db.pragma("synchronous = NORMAL");
 
   return db;
 }

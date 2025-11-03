@@ -3,6 +3,7 @@
 This workflow automates the 3-step process for adding new tools to Hyperpage, implementing the registry-driven architecture and coding principles.
 
 ## Prerequisites
+
 - Tool has been analyzed and approved per coding-principles.md
 - Environment variables defined in .env.local.sample
 - Required API credentials available
@@ -61,3 +62,4 @@ export interface {ToolName}Response {
 }
 
 export type {ToolName}Capabilities = 'portal';
+```

@@ -74,9 +74,7 @@ export default function DataTable({
           <TableHeader>
             <TableRow>
               {headers.map((header, index) => (
-                <TableHead key={index}>
-                  {header}
-                </TableHead>
+                <TableHead key={index}>{header}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -148,7 +146,9 @@ export default function DataTable({
                 Previous
               </Button>
               <Button
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                onClick={() =>
+                  handlePageChange(Math.min(totalPages, currentPage + 1))
+                }
                 disabled={currentPage === totalPages}
                 variant="outline"
                 size="sm"

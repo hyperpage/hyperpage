@@ -10,8 +10,8 @@
  * 3. Add the migration to the MIGRATIONS_EXPORT registry below
  */
 
-import * as initialSchema from './001_initial_schema';
-import * as oauthAuthTables from './002_oauth_auth_tables';
+import * as initialSchema from "./001_initial_schema";
+import * as oauthAuthTables from "./002_oauth_auth_tables";
 
 /**
  * Database type for migration operations
@@ -36,11 +36,11 @@ export interface Migration {
  * Add new migrations here when they are created
  */
 export const MIGRATIONS_REGISTRY: Record<string, Migration> = {
-  '001_initial_schema': {
+  "001_initial_schema": {
     up: initialSchema.up,
     down: initialSchema.down,
   },
-  '002_oauth_auth_tables': {
+  "002_oauth_auth_tables": {
     up: oauthAuthTables.up,
     down: oauthAuthTables.down,
   },

@@ -11,10 +11,9 @@ import {
   getMaxUsageForPlatform,
   getGitHubWeightedUsage,
   getActivityAccelerationFactor,
-  clampInterval
+  clampInterval,
 } from "../../../lib/rate-limit-utils";
 import { useMultipleRateLimits, RateLimitStatus } from "./useRateLimit";
-
 
 interface UseToolQueriesProps {
   enabledTools: Omit<Tool, "handlers">[];
@@ -29,10 +28,15 @@ interface UseToolQueriesReturn {
 }
 
 // Fetch function for a specific tool endpoint
-const fetchToolData = async (tool: Omit<Tool, "handlers">, endpoint: string): Promise<ToolData[]> => {
+const fetchToolData = async (
+  tool: Omit<Tool, "handlers">,
+  endpoint: string,
+): Promise<ToolData[]> => {
   const response = await fetch(`/api/tools/${tool.slug}/${endpoint}`);
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${tool.name}/${endpoint}: ${response.status}`);
+    throw new Error(
+      `Failed to fetch ${tool.name}/${endpoint}: ${response.status}`,
+    );
   }
   const data = await response.json();
   // Use registry-driven data key access
@@ -45,7 +49,7 @@ const createQueryConfigs = (
   enabledTools: Omit<Tool, "handlers">[],
   rateLimitStatuses: Map<string, RateLimitStatus>,
   isTabVisible: boolean,
-  isUserActive: boolean
+  isUserActive: boolean,
 ) => {
   const queries = [];
 
@@ -57,11 +61,13 @@ const createQueryConfigs = (
     if (dynamicWidgets.length === 0) continue;
 
     // Find unique API endpoints that widgets require
-    const requiredApiEndpoints = Array.from(new Set(
-      tool.widgets
-        .filter(widget => widget.dynamic && widget.apiEndpoint)
-        .map(widget => widget.apiEndpoint!)
-    ));
+    const requiredApiEndpoints = Array.from(
+      new Set(
+        tool.widgets
+          .filter((widget) => widget.dynamic && widget.apiEndpoint)
+          .map((widget) => widget.apiEndpoint!),
+      ),
+    );
 
     // Get platform-specific rate limit usage for this tool
     const platform = TOOL_PLATFORM_MAP[tool.slug];
@@ -70,7 +76,7 @@ const createQueryConfigs = (
     // Use GitHub-specific weighted usage for better search API awareness
     let usagePercent = 0;
     if (platformStatus) {
-      if (platform === 'github') {
+      if (platform === "github") {
         usagePercent = getGitHubWeightedUsage(platformStatus);
       } else {
         usagePercent = getMaxUsageForPlatform(platformStatus);
@@ -78,14 +84,19 @@ const createQueryConfigs = (
     }
 
     // Apply activity-based acceleration factor
-    const activityFactor = getActivityAccelerationFactor(isTabVisible, isUserActive);
+    const activityFactor = getActivityAccelerationFactor(
+      isTabVisible,
+      isUserActive,
+    );
 
     // Create a query for each endpoint this tool needs
     for (const endpoint of requiredApiEndpoints) {
-      const queryKey = ['tool-data', tool.name, endpoint];
+      const queryKey = ["tool-data", tool.name, endpoint];
 
       // Find the base refresh interval for this endpoint
-      const endpointWidget = dynamicWidgets.find(w => w.apiEndpoint === endpoint);
+      const endpointWidget = dynamicWidgets.find(
+        (w) => w.apiEndpoint === endpoint,
+      );
       const baseInterval = endpointWidget?.refreshInterval;
 
       // Calculate final adaptive interval
@@ -96,8 +107,13 @@ const createQueryConfigs = (
         originalInterval = baseInterval;
 
         // Apply adaptive polling: rate-aware dynamic interval + activity factor
-        const rateAwareInterval = getDynamicInterval(usagePercent, baseInterval);
-        const finalDynamicInterval = Math.round(rateAwareInterval * activityFactor);
+        const rateAwareInterval = getDynamicInterval(
+          usagePercent,
+          baseInterval,
+        );
+        const finalDynamicInterval = Math.round(
+          rateAwareInterval * activityFactor,
+        );
 
         // Clamp to reasonable bounds and ensure at least 30 seconds
         finalInterval = clampInterval(finalDynamicInterval) || false;
@@ -118,7 +134,7 @@ const createQueryConfigs = (
           originalInterval,
           finalInterval,
           usagePercent,
-          activityFactor
+          activityFactor,
         },
       });
     }
@@ -133,13 +149,13 @@ export function useToolQueries({
   const queryClient = useQueryClient();
 
   // Rate limit monitoring for all active platforms
-  const activePlatforms = useMemo(() =>
-    getActivePlatforms(enabledTools),
-    [enabledTools]
+  const activePlatforms = useMemo(
+    () => getActivePlatforms(enabledTools),
+    [enabledTools],
   );
   const { statuses: rateLimitStatuses } = useMultipleRateLimits(
     activePlatforms,
-    activePlatforms.length > 0
+    activePlatforms.length > 0,
   );
 
   // User activity and tab visibility detection for adaptive polling
@@ -152,8 +168,9 @@ export function useToolQueries({
       setIsTabVisible(!document.hidden);
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   // User activity detection (keyboard/mouse events)
@@ -164,14 +181,24 @@ export function useToolQueries({
       setIsUserActive(true);
       clearTimeout(inactivityTimeout);
       // Set user as inactive after 5 minutes of no activity
-      inactivityTimeout = setTimeout(() => setIsUserActive(false), 5 * 60 * 1000);
+      inactivityTimeout = setTimeout(
+        () => setIsUserActive(false),
+        5 * 60 * 1000,
+      );
     };
 
     // Activity events to monitor
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    const events = [
+      "mousedown",
+      "mousemove",
+      "keypress",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
 
     // Add event listeners
-    events.forEach(event => {
+    events.forEach((event) => {
       document.addEventListener(event, resetActivity, { passive: true });
     });
 
@@ -181,7 +208,7 @@ export function useToolQueries({
     // Cleanup
     return () => {
       clearTimeout(inactivityTimeout);
-      events.forEach(event => {
+      events.forEach((event) => {
         document.removeEventListener(event, resetActivity);
       });
     };
@@ -189,8 +216,14 @@ export function useToolQueries({
 
   // Create dynamic query configurations based on enabled tools and rate limits
   const queryConfigs = useMemo(
-    () => createQueryConfigs(enabledTools, rateLimitStatuses, isTabVisible, isUserActive),
-    [enabledTools, rateLimitStatuses, isTabVisible, isUserActive]
+    () =>
+      createQueryConfigs(
+        enabledTools,
+        rateLimitStatuses,
+        isTabVisible,
+        isUserActive,
+      ),
+    [enabledTools, rateLimitStatuses, isTabVisible, isUserActive],
   );
 
   // Execute all queries
@@ -204,7 +237,10 @@ export function useToolQueries({
       if (!queryResult.isSuccess || !queryResult.data) return;
 
       const config = queryConfigs[index];
-      const { toolName, endpoint } = config.meta as { toolName: string; endpoint: string };
+      const { toolName, endpoint } = config.meta as {
+        toolName: string;
+        endpoint: string;
+      };
 
       if (!result[toolName]) {
         result[toolName] = {};
@@ -223,11 +259,14 @@ export function useToolQueries({
     enabledTools.forEach((tool) => {
       const toolKey = `${tool.name}-refresh`;
       // A tool is loading if any of its queries are loading or fetching
-      const toolQueries = queryConfigs.filter(config =>
-        (config.meta as { toolName: string; endpoint: string })?.toolName === tool.name
+      const toolQueries = queryConfigs.filter(
+        (config) =>
+          (config.meta as { toolName: string; endpoint: string })?.toolName ===
+          tool.name,
       );
-      const isToolLoading = toolQueries.some((_, index) =>
-        queryResults[index]?.isLoading || queryResults[index]?.isFetching
+      const isToolLoading = toolQueries.some(
+        (_, index) =>
+          queryResults[index]?.isLoading || queryResults[index]?.isFetching,
       );
       states[toolKey] = isToolLoading;
     });
@@ -236,24 +275,31 @@ export function useToolQueries({
   }, [queryResults, queryConfigs, enabledTools]);
 
   // Manual refresh function for a specific tool
-  const refreshToolData = useCallback(async (tool: Omit<Tool, "handlers">) => {
-    if (!tool.enabled) return;
+  const refreshToolData = useCallback(
+    async (tool: Omit<Tool, "handlers">) => {
+      if (!tool.enabled) return;
 
-    // Find all endpoints this tool provides
-    const toolQueries = queryConfigs.filter(config =>
-      (config.meta as { toolName: string; endpoint: string })?.toolName === tool.name
-    );
+      // Find all endpoints this tool provides
+      const toolQueries = queryConfigs.filter(
+        (config) =>
+          (config.meta as { toolName: string; endpoint: string })?.toolName ===
+          tool.name,
+      );
 
-    // Trigger immediate refetch for all tool queries
-    await Promise.all(
-      toolQueries.map((config) => queryClient.refetchQueries({ queryKey: config.queryKey }))
-    );
-  }, [queryConfigs, queryClient]);
+      // Trigger immediate refetch for all tool queries
+      await Promise.all(
+        toolQueries.map((config) =>
+          queryClient.refetchQueries({ queryKey: config.queryKey }),
+        ),
+      );
+    },
+    [queryConfigs, queryClient],
+  );
 
   // Global refresh function for all enabled tools
   const refreshAllData = useCallback(async () => {
     // Trigger immediate refetch for all tool queries
-    await queryClient.refetchQueries({ queryKey: ['tool-data'] });
+    await queryClient.refetchQueries({ queryKey: ["tool-data"] });
   }, [queryClient]);
 
   // Initialize polling - cleanup function since React Query handles polling automatically

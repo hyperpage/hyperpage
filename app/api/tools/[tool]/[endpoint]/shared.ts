@@ -1,29 +1,32 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getToolByName, Tool } from "../../../../../tools";
 import { ToolApi } from "../../../../../tools/tool-types";
-import { canExecuteRequest, recordRequestSuccess, recordRequestFailure } from "../../../../../tools/validation";
+import {
+  canExecuteRequest,
+  recordRequestSuccess,
+  recordRequestFailure,
+} from "../../../../../tools/validation";
 import { defaultCache } from "../../../../../lib/cache/cache-factory";
 import { generateCacheKey } from "../../../../../lib/cache/memory-cache";
 import { defaultCompressionMiddleware } from "../../../../../lib/api/compression/compression-middleware";
 import { sessionManager } from "../../../../../lib/sessions/session-manager";
 
 // Session validation helper
-async function validateSession(request: NextRequest): Promise<NextResponse | null> {
+async function validateSession(
+  request: NextRequest,
+): Promise<NextResponse | null> {
   // TEMPORARY: Skip session validation in test environment to allow parameter validation testing
   // This is needed because session validation has issues in the test environment
-  if (process.env.NODE_ENV === 'test') {
+  if (process.env.NODE_ENV === "test") {
     return null;
   }
 
-  const cookieHeader = request.headers.get('cookie');
+  const cookieHeader = request.headers.get("cookie");
 
   const sessionId = cookieHeader?.match(/sessionId=([^;]+)/)?.[1];
 
   if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID required" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Session ID required" }, { status: 401 });
   }
 
   // Check if session actually exists in session manager
@@ -32,14 +35,12 @@ async function validateSession(request: NextRequest): Promise<NextResponse | nul
   if (!session) {
     return NextResponse.json(
       { error: "Invalid or expired session" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
   return null; // Session exists and is valid
 }
-
-
 
 // Input validation helper
 export function validateInput(
@@ -98,44 +99,50 @@ export function validateTool(
 
 // Helper to map error types to HTTP status codes
 function getErrorStatusCode(error: Error): number {
-  const message = error.message?.toLowerCase() || '';
+  const message = error.message?.toLowerCase() || "";
 
   // Input validation errors -> 400
-  if (message.includes('invalid json') ||
-      message.includes('issueids must be a non-empty array') ||
-      message.includes('maximum 50 issue ids') ||
-      message.includes('maximum 50 issue ids allowed') ||
-      (message.includes('issueids') && message.includes('array')) ||
-      (message.includes('invalid') && message.includes('parameter'))) {
+  if (
+    message.includes("invalid json") ||
+    message.includes("issueids must be a non-empty array") ||
+    message.includes("maximum 50 issue ids") ||
+    message.includes("maximum 50 issue ids allowed") ||
+    (message.includes("issueids") && message.includes("array")) ||
+    (message.includes("invalid") && message.includes("parameter"))
+  ) {
     return 400;
   }
-  
+
   // Authentication/authorization errors -> 401/403
-  if (message.includes('credentials') ||
-      message.includes('not configured') ||
-      message.includes('access denied') ||
-      message.includes('authentication') ||
-      message.includes('session')) {
+  if (
+    message.includes("credentials") ||
+    message.includes("not configured") ||
+    message.includes("access denied") ||
+    message.includes("authentication") ||
+    message.includes("session")
+  ) {
     return 401;
   }
-  
+
   // Rate limiting -> 429
-  if (message.includes('rate limit') || message.includes('rate limited')) {
+  if (message.includes("rate limit") || message.includes("rate limited")) {
     return 429;
   }
-  
+
   // Not found -> 404
-  if (message.includes('not found')) {
+  if (message.includes("not found")) {
     return 404;
   }
-  
+
   // Service unavailable -> 503
-  if (message.includes('temporarily unavailable') || 
-      message.includes('timeout') ||
-      message.includes('network')) {
+  if (
+    message.includes("temporarily unavailable") ||
+    message.includes("timeout") ||
+    message.includes("network")
+  ) {
     return 503;
   }
-  
+
   // Default to 500 for other errors
   return 500;
 }
@@ -148,7 +155,9 @@ export async function executeHandler(
 ): Promise<NextResponse> {
   // Check circuit breaker before executing
   if (!canExecuteRequest(tool.slug)) {
-    console.warn(`Circuit breaker open for tool '${tool.slug}' - blocking request`);
+    console.warn(
+      `Circuit breaker open for tool '${tool.slug}' - blocking request`,
+    );
     return NextResponse.json(
       { error: "Service temporarily unavailable", circuitBreaker: "open" },
       { status: 503 },
@@ -163,10 +172,12 @@ export async function executeHandler(
 
   // Check for cache bypass headers
   const url = new URL(request.url);
-  const cacheControl = request.headers.get('cache-control');
-  const skipCache = cacheControl === 'no-cache' ||
-                   request.headers.has('x-cache-bypass') ||
-                   request.headers.has('pragma') && request.headers.get('pragma') === 'no-cache';
+  const cacheControl = request.headers.get("cache-control");
+  const skipCache =
+    cacheControl === "no-cache" ||
+    request.headers.has("x-cache-bypass") ||
+    (request.headers.has("pragma") &&
+      request.headers.get("pragma") === "no-cache");
 
   // Generate cache key from request parameters
   const queryParams = Object.fromEntries(url.searchParams);
@@ -179,9 +190,9 @@ export async function executeHandler(
       console.debug(`Cache hit for ${tool.slug}/${endpoint} (${cacheKey})`);
       return NextResponse.json(cachedData, {
         headers: {
-          'Cache-Control': 'private, max-age=30', // Brief client-side caching
-          'X-Cache-Status': 'HIT',
-          'X-Cache-Key': cacheKey,
+          "Cache-Control": "private, max-age=30", // Brief client-side caching
+          "X-Cache-Status": "HIT",
+          "X-Cache-Key": cacheKey,
         },
       });
     }
@@ -206,38 +217,55 @@ export async function executeHandler(
     recordRequestSuccess(tool.slug); // Record successful execution
 
     // Check if the response is an error object (like { error: "message", status: 400 })
-    if (data && typeof data === 'object' && data.error && typeof data.error === 'string') {
-      const errorMessage = data.error || 'Unknown error';
-      const statusCode = typeof data.status === 'number' ? data.status : getErrorStatusCode(new Error(errorMessage));
+    if (
+      data &&
+      typeof data === "object" &&
+      data.error &&
+      typeof data.error === "string"
+    ) {
+      const errorMessage = data.error || "Unknown error";
+      const statusCode =
+        typeof data.status === "number"
+          ? data.status
+          : getErrorStatusCode(new Error(errorMessage));
       return NextResponse.json(data, {
         status: statusCode,
         headers: {
-          'Cache-Control': 'no-store', // Never cache error responses
-          'X-Cache-Status': 'ERROR',
-          'X-Cache-Key': cacheKey,
+          "Cache-Control": "no-store", // Never cache error responses
+          "X-Cache-Status": "ERROR",
+          "X-Cache-Key": cacheKey,
         },
       });
     }
 
     // Cache successful responses (not bypass and not errors)
-    if (!skipCache && data && typeof data === 'object') {
+    if (!skipCache && data && typeof data === "object") {
       // Default TTL: 5 minutes for activity endpoints, 10 minutes for others
-      const ttlMs = endpoint.includes('activity') ? 300000 : 600000;
+      const ttlMs = endpoint.includes("activity") ? 300000 : 600000;
       defaultCache.set(cacheKey, data, ttlMs);
-      console.debug(`Cached response for ${tool.slug}/${endpoint} (${cacheKey}) with TTL ${ttlMs}ms`);
+      console.debug(
+        `Cached response for ${tool.slug}/${endpoint} (${cacheKey}) with TTL ${ttlMs}ms`,
+      );
     }
 
     // Create response with caching headers and rate limit headers for GitHub
     const headers: Record<string, string> = {
-      'Cache-Control': 'private, max-age=30', // Brief client-side caching
-      'X-Cache-Status': skipCache ? 'BYPASS' : 'MISS',
-      'X-Cache-Key': cacheKey,
+      "Cache-Control": "private, max-age=30", // Brief client-side caching
+      "X-Cache-Status": skipCache ? "BYPASS" : "MISS",
+      "X-Cache-Key": cacheKey,
     };
 
     // Add rate limit headers for GitHub tool rate-limit endpoint
-    if (tool.slug === 'github' && endpoint === 'rate-limit' && data && typeof data === 'object' && 'headers' in data) {
+    if (
+      tool.slug === "github" &&
+      endpoint === "rate-limit" &&
+      data &&
+      typeof data === "object" &&
+      "headers" in data
+    ) {
       // Extract headers returned by the GitHub handler
-      const toolHeaders = (data as { headers?: Record<string, string> }).headers;
+      const toolHeaders = (data as { headers?: Record<string, string> })
+        .headers;
       if (toolHeaders) {
         Object.assign(headers, toolHeaders);
       }
@@ -253,8 +281,15 @@ export async function executeHandler(
     console.error(`Handler error for ${tool.name}/${endpoint}:`, error);
     recordRequestFailure(tool.slug); // Record handler error as a failure
 
-    const errorMessage = error instanceof Error ? error.message : "An error occurred while processing the request";
-    const statusCode = getErrorStatusCode(error instanceof Error ? error : new Error(errorMessage || "Unknown error"));
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "An error occurred while processing the request";
+    const statusCode = getErrorStatusCode(
+      error instanceof Error
+        ? error
+        : new Error(errorMessage || "Unknown error"),
+    );
 
     // Don't cache error responses - let them go through fresh
     // This ensures rate limit errors can be retried later
@@ -263,9 +298,9 @@ export async function executeHandler(
       {
         status: statusCode,
         headers: {
-          'Cache-Control': 'no-store', // Never cache errors
-          'X-Cache-Status': 'ERROR',
-          'X-Cache-Key': cacheKey,
+          "Cache-Control": "no-store", // Never cache errors
+          "X-Cache-Status": "ERROR",
+          "X-Cache-Key": cacheKey,
         },
       },
     );

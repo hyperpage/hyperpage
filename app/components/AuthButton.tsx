@@ -45,7 +45,6 @@ export default function AuthButton({
     }
   };
 
-
   if (!isConfigured) {
     return (
       <Card className="p-6 border-dashed border-2 border-muted-foreground/20">
@@ -55,7 +54,9 @@ export default function AuthButton({
             <div>
               <h3 className="font-semibold text-base">{toolName}</h3>
               <div className="flex items-center space-x-2 mt-1">
-                <Badge variant="secondary" className="text-sm">Not Configured</Badge>
+                <Badge variant="secondary" className="text-sm">
+                  Not Configured
+                </Badge>
                 <AlertCircle className="w-4 h-4 text-muted-foreground" />
               </div>
             </div>
@@ -111,10 +112,7 @@ export default function AuthButton({
               )}
             </Button>
           ) : (
-            <Button
-              onClick={handleAuthenticate}
-              disabled={isLoading}
-            >
+            <Button onClick={handleAuthenticate} disabled={isLoading}>
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
               ) : (
@@ -130,7 +128,9 @@ export default function AuthButton({
         <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
           <div className="flex items-center space-x-2">
             <AlertCircle className="w-4 h-4 text-destructive" />
-            <span className="text-sm text-destructive font-medium">Authentication Error</span>
+            <span className="text-sm text-destructive font-medium">
+              Authentication Error
+            </span>
           </div>
           <p className="text-xs text-destructive/80 mt-1">{error}</p>
         </div>
@@ -151,7 +151,10 @@ export default function AuthButton({
           </div>
           <ul className="mt-2 space-y-1">
             {requiredScopes.map((scope, index) => (
-              <li key={index} className="text-xs text-muted-foreground flex items-center space-x-2">
+              <li
+                key={index}
+                className="text-xs text-muted-foreground flex items-center space-x-2"
+              >
                 <div className="w-1 h-1 bg-muted-foreground rounded-full" />
                 <span>{scope}</span>
               </li>

@@ -1,11 +1,13 @@
 # OAuth 2.0 Integration Research - Authentication System
 
 ## Overview
+
 This document summarizes OAuth 2.0 authorization code flow requirements for the supported tools in Hyperpage (GitHub, Jira, GitLab) to implement secure authentication.
 
 ## OAuth 2.0 Authorization Code Flow Requirements
 
 ### Common OAuth 2.0 Components
+
 - **Client ID**: Application identifier registered with OAuth provider
 - **Client Secret**: Secret key for server-side token requests (never exposed to client)
 - **Redirect URI**: HTTPS URL where users are redirected after authorization
@@ -17,6 +19,7 @@ This document summarizes OAuth 2.0 authorization code flow requirements for the 
 ### Tool-Specific OAuth Implementation
 
 #### GitHub OAuth 2.0
+
 - **Authorization URL**: `https://github.com/login/oauth/authorize`
 - **Token URL**: `https://github.com/login/oauth/access_token`
 - **Supported Flow**: Authorization Code (PKCE recommended)
@@ -25,6 +28,7 @@ This document summarizes OAuth 2.0 authorization code flow requirements for the 
 - **API Note**: GitHub's REST API v3 requires base URL `https://api.github.com`
 
 #### Jira OAuth 2.0
+
 - **Authorization URL**: `{instance-url}/rest/oauth2/latest/authorize`
 - **Token URL**: `{instance-url}/rest/oauth2/latest/token`
 - **Supported Flow**: Authorization Code Grant (separate from OAuth 1.0a)
@@ -33,6 +37,7 @@ This document summarizes OAuth 2.0 authorization code flow requirements for the 
 - **API Note**: REST API v3 is available, but v2 is more widely supported
 
 #### GitLab OAuth 2.0
+
 - **Authorization URL**: `{instance-url}/oauth/authorize` (e.g., `https://gitlab.com/oauth/authorize`)
 - **Token URL**: `{instance-url}/oauth/token`
 - **Supported Flow**: Authorization Code Grant
@@ -41,6 +46,7 @@ This document summarizes OAuth 2.0 authorization code flow requirements for the 
 - **API Note**: GitLab provides both v3 and v4 APIs, with v4 being the current recommended version
 
 ## Security Considerations
+
 - Use HTTPS exclusively for all OAuth flows (critical requirement)
 - Store client secrets securely in environment variables only
 - Implement PKCE (Proof Key for Code Exchange) for public clients
@@ -49,6 +55,7 @@ This document summarizes OAuth 2.0 authorization code flow requirements for the 
 - Use secure token storage (server-side only, never in localStorage)
 
 ## Implementation Architecture
+
 1. **Initiation**: User clicks "Connect [Tool]" → Redirect to OAuth authorization URL
 2. **Authorization**: User grants permissions → Provider redirects with authorization code
 3. **Exchange**: Server exchanges code for access/refresh tokens via secure POST
@@ -57,4 +64,5 @@ This document summarizes OAuth 2.0 authorization code flow requirements for the 
 6. **Refresh**: Automate token refresh before expiry to maintain continuous access
 
 ## Next Steps for Implementation
+
 Following this research, implement the server-side OAuth handlers starting with a single tool (GitHub) to establish the pattern, then expand to other tools using similar flows.

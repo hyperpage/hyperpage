@@ -1,18 +1,30 @@
 /**
  * Jira Tool Integration Tests
- * 
+ *
  * Tests complete Jira tool integration including issues, projects, changelogs,
  * rate limiting behavior, batch processing, and advanced caching features.
  */
 
-import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
-import { IntegrationTestEnvironment, OAuthTestCredentials, isServerAvailable } from '../../lib/test-credentials';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  afterAll,
+} from "vitest";
+import {
+  IntegrationTestEnvironment,
+  OAuthTestCredentials,
+  isServerAvailable,
+} from "../../lib/test-credentials";
 
 // Check server availability before defining tests
-const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || 'http://localhost:3000';
+const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
 const serverAvailable = await isServerAvailable(baseUrl);
 
-describe('Jira Tool Integration', () => {
+describe("Jira Tool Integration", () => {
   let testEnv: IntegrationTestEnvironment;
   let testSession: {
     userId: string;
@@ -22,8 +34,12 @@ describe('Jira Tool Integration', () => {
 
   beforeAll(async () => {
     if (!serverAvailable) {
-      console.log('⚠️  Test server not available. Integration tests will be skipped.');
-      console.log('💡 To run integration tests, start the server with: npm run dev');
+      console.log(
+        "⚠️  Test server not available. Integration tests will be skipped.",
+      );
+      console.log(
+        "💡 To run integration tests, start the server with: npm run dev",
+      );
       return;
     }
 
@@ -32,19 +48,22 @@ describe('Jira Tool Integration', () => {
 
   beforeEach(async () => {
     if (!serverAvailable) return;
-    testSession = await testEnv.createTestSession('jira');
+    testSession = await testEnv.createTestSession("jira");
   });
 
   afterEach(async () => {
     // Cleanup test session only if server is available and session exists
     if (serverAvailable && testSession?.sessionId) {
       try {
-        await fetch(`${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`, {
-          method: 'DELETE'
-        });
+        await fetch(
+          `${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`,
+          {
+            method: "DELETE",
+          },
+        );
       } catch (error) {
         // Ignore cleanup errors in tests
-        console.log('Cleanup error (ignored):', error);
+        console.log("Cleanup error (ignored):", error);
       }
     }
   });
@@ -58,29 +77,29 @@ describe('Jira Tool Integration', () => {
   // Skip all tests if server is not available
   const testSuite = serverAvailable ? describe : describe.skip;
 
-  testSuite('Issues API Integration', () => {
-    it('should fetch Jira issues using JQL', async () => {
+  testSuite("Issues API Integration", () => {
+    it("should fetch Jira issues using JQL", async () => {
       const response = await fetch(`${baseUrl}/api/tools/jira/issues`, {
         headers: {
-          'Cookie': `sessionId=${testSession.sessionId}`
-        }
+          Cookie: `sessionId=${testSession.sessionId}`,
+        },
       });
 
       expect([200, 401, 403, 500]).toContain(response.status);
 
       if (response.status === 200) {
         const data = await response.json();
-        expect(data).toHaveProperty('issues');
+        expect(data).toHaveProperty("issues");
         expect(Array.isArray(data.issues)).toBe(true);
 
         // Validate issue data structure
         if (data.issues.length > 0) {
           const issue = data.issues[0];
-          expect(issue).toHaveProperty('ticket');
-          expect(issue).toHaveProperty('title');
-          expect(issue).toHaveProperty('status');
-          expect(issue).toHaveProperty('url');
-          expect(issue).toHaveProperty('assignee');
+          expect(issue).toHaveProperty("ticket");
+          expect(issue).toHaveProperty("title");
+          expect(issue).toHaveProperty("status");
+          expect(issue).toHaveProperty("url");
+          expect(issue).toHaveProperty("assignee");
 
           // Verify ticket format (Jira uses project key format like PROJ-123)
           expect(issue.ticket).toMatch(/^[A-Z]+-\d+$/);
@@ -88,47 +107,47 @@ describe('Jira Tool Integration', () => {
       }
     });
 
-    it('should handle JQL filtering parameters', async () => {
+    it("should handle JQL filtering parameters", async () => {
       const url = new URL(`${baseUrl}/api/tools/jira/issues`);
-      url.searchParams.set('project', 'TEST');
-      url.searchParams.set('status', 'Open');
+      url.searchParams.set("project", "TEST");
+      url.searchParams.set("status", "Open");
 
       const response = await fetch(url.toString(), {
         headers: {
-          'Cookie': `sessionId=${testSession.sessionId}`
-        }
+          Cookie: `sessionId=${testSession.sessionId}`,
+        },
       });
 
       expect([200, 401, 403, 500]).toContain(response.status);
-      
+
       if (response.status === 200) {
         const data = await response.json();
-        expect(data).toHaveProperty('issues');
+        expect(data).toHaveProperty("issues");
         expect(Array.isArray(data.issues)).toBe(true);
       }
     });
 
-    it('should handle missing Jira credentials gracefully', async () => {
+    it("should handle missing Jira credentials gracefully", async () => {
       const response = await fetch(`${baseUrl}/api/tools/jira/issues`, {
         headers: {
-          'Cookie': `sessionId=${testSession.sessionId}`
-        }
+          Cookie: `sessionId=${testSession.sessionId}`,
+        },
       });
 
       // Should return 401/403 if no credentials, but not crash
       expect([200, 401, 403]).toContain(response.status);
-      
+
       if (response.status === 401 || response.status === 403) {
         const data = await response.json();
-        expect(data).toHaveProperty('error');
+        expect(data).toHaveProperty("error");
       }
     });
 
-    it('should use JQL to fetch recent issues', async () => {
+    it("should use JQL to fetch recent issues", async () => {
       const response = await fetch(`${baseUrl}/api/tools/jira/issues`, {
         headers: {
-          'Cookie': `sessionId=${testSession.sessionId}`
-        }
+          Cookie: `sessionId=${testSession.sessionId}`,
+        },
       });
 
       if (response.status === 200) {
@@ -145,212 +164,219 @@ describe('Jira Tool Integration', () => {
     });
   });
 
-  testSuite('Changelogs API Integration', () => {
-    it('should batch fetch changelogs for multiple issues', async () => {
+  testSuite("Changelogs API Integration", () => {
+    it("should batch fetch changelogs for multiple issues", async () => {
       const requestBody = {
-        issueIds: ['TEST-123', 'TEST-456', 'TEST-789'],
+        issueIds: ["TEST-123", "TEST-456", "TEST-789"],
         maxResults: 10,
-        since: '2024-01-01T00:00:00.000Z'
+        since: "2024-01-01T00:00:00.000Z",
       };
 
       const response = await fetch(`${baseUrl}/api/tools/jira/changelogs`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `sessionId=${testSession.sessionId}`
+          "Content-Type": "application/json",
+          Cookie: `sessionId=${testSession.sessionId}`,
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
 
       expect([200, 400, 401, 403]).toContain(response.status);
-      
+
       if (response.status === 200) {
         const data = await response.json();
-        expect(data).toHaveProperty('changelogs');
+        expect(data).toHaveProperty("changelogs");
         expect(Array.isArray(data.changelogs)).toBe(true);
-        
+
         // Validate changelog data structure
         if (data.changelogs.length > 0) {
           const changelog = data.changelogs[0];
-          expect(changelog).toHaveProperty('issueId');
-          expect(changelog).toHaveProperty('changelog');
+          expect(changelog).toHaveProperty("issueId");
+          expect(changelog).toHaveProperty("changelog");
           expect(Array.isArray(changelog.changelog)).toBe(true);
         }
       }
     });
 
-    it('should validate batch request parameters', async () => {
+    it("should validate batch request parameters", async () => {
       // First verify the session exists by checking the sessions endpoint
-      const sessionCheck = await fetch(`${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`);
-      console.log('Session check status:', sessionCheck.status);
+      const sessionCheck = await fetch(
+        `${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`,
+      );
+      console.log("Session check status:", sessionCheck.status);
 
       const response = await fetch(`${baseUrl}/api/tools/jira/changelogs`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `sessionId=${testSession.sessionId}`
+          "Content-Type": "application/json",
+          Cookie: `sessionId=${testSession.sessionId}`,
         },
-        body: JSON.stringify({ issueIds: [] })
+        body: JSON.stringify({ issueIds: [] }),
       });
 
-      console.log('Jira changelogs response status:', response.status);
+      console.log("Jira changelogs response status:", response.status);
       const responseText = await response.text();
-      console.log('Jira changelogs response body:', responseText);
+      console.log("Jira changelogs response body:", responseText);
 
       expect(response.status).toBe(400);
     });
 
-    it('should enforce maximum 50 issue IDs per batch', async () => {
+    it("should enforce maximum 50 issue IDs per batch", async () => {
       const issueIds = Array.from({ length: 51 }, (_, i) => `TEST-${i}`);
-      
+
       const response = await fetch(`${baseUrl}/api/tools/jira/changelogs`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `sessionId=${testSession.sessionId}`
+          "Content-Type": "application/json",
+          Cookie: `sessionId=${testSession.sessionId}`,
         },
-        body: JSON.stringify({ issueIds })
+        body: JSON.stringify({ issueIds }),
       });
 
       expect(response.status).toBe(400);
     });
   });
 
-  testSuite('Projects API Integration', () => {
-    it('should fetch Jira project metadata', async () => {
+  testSuite("Projects API Integration", () => {
+    it("should fetch Jira project metadata", async () => {
       const response = await fetch(`${baseUrl}/api/tools/jira/projects`, {
         headers: {
-          'Cookie': `sessionId=${testSession.sessionId}`
-        }
+          Cookie: `sessionId=${testSession.sessionId}`,
+        },
       });
 
       expect([200, 401, 403, 500]).toContain(response.status);
 
       if (response.status === 200) {
         const data = await response.json();
-        expect(data).toHaveProperty('projects');
+        expect(data).toHaveProperty("projects");
         expect(Array.isArray(data.projects)).toBe(true);
 
         if (data.projects.length > 0) {
           const project = data.projects[0];
-          expect(project).toHaveProperty('key');
-          expect(project).toHaveProperty('name');
-          expect(project).toHaveProperty('projectTypeKey');
+          expect(project).toHaveProperty("key");
+          expect(project).toHaveProperty("name");
+          expect(project).toHaveProperty("projectTypeKey");
         }
       }
     });
   });
 
-  testSuite('Rate Limiting Integration', () => {
-    it('should return Jira rate limit status', async () => {
+  testSuite("Rate Limiting Integration", () => {
+    it("should return Jira rate limit status", async () => {
       const response = await fetch(`${baseUrl}/api/tools/jira/rate-limit`, {
         headers: {
-          'Cookie': `sessionId=${testSession.sessionId}`
-        }
+          Cookie: `sessionId=${testSession.sessionId}`,
+        },
       });
 
       expect(response.status).toBe(200);
       const data = await response.json();
 
-      expect(data).toHaveProperty('rateLimit');
+      expect(data).toHaveProperty("rateLimit");
       const rateLimit = data.rateLimit;
 
-      expect(rateLimit).toHaveProperty('message');
-      expect(rateLimit).toHaveProperty('statusCode');
+      expect(rateLimit).toHaveProperty("message");
+      expect(rateLimit).toHaveProperty("statusCode");
     });
 
-    it('should handle rate limited responses gracefully', async () => {
+    it("should handle rate limited responses gracefully", async () => {
       const requests = Array.from({ length: 8 }, () =>
         fetch(`${baseUrl}/api/tools/jira/issues`, {
           headers: {
-            'Cookie': `sessionId=${testSession.sessionId}`
-          }
-        })
+            Cookie: `sessionId=${testSession.sessionId}`,
+          },
+        }),
       );
 
       const responses = await Promise.all(requests);
 
-      const rateLimitedResponses = responses.filter(r => r.status === 429);
-      const successfulResponses = responses.filter(r => r.status === 200);
+      const rateLimitedResponses = responses.filter((r) => r.status === 429);
+      const successfulResponses = responses.filter((r) => r.status === 200);
 
-      expect(successfulResponses.length + rateLimitedResponses.length).toBe(requests.length);
+      expect(successfulResponses.length + rateLimitedResponses.length).toBe(
+        requests.length,
+      );
     });
   });
 
-  testSuite('Error Handling and Edge Cases', () => {
-    it('should handle invalid session gracefully', async () => {
+  testSuite("Error Handling and Edge Cases", () => {
+    it("should handle invalid session gracefully", async () => {
       const response = await fetch(`${baseUrl}/api/tools/jira/issues`, {
         headers: {
-          'Cookie': 'sessionId=invalid-session-id'
-        }
+          Cookie: "sessionId=invalid-session-id",
+        },
       });
 
       expect(response.status).toBe(401);
       const data = await response.json();
-      expect(data).toHaveProperty('error');
+      expect(data).toHaveProperty("error");
     });
 
-    it('should handle malformed parameters', async () => {
-      const response = await fetch(`${baseUrl}/api/tools/jira/nonexistent-endpoint`, {
-        headers: {
-          'Cookie': `sessionId=${testSession.sessionId}`
-        }
-      });
+    it("should handle malformed parameters", async () => {
+      const response = await fetch(
+        `${baseUrl}/api/tools/jira/nonexistent-endpoint`,
+        {
+          headers: {
+            Cookie: `sessionId=${testSession.sessionId}`,
+          },
+        },
+      );
 
       expect([404, 500]).toContain(response.status);
     });
   });
 
-  testSuite('Security and Validation', () => {
-    it('should not expose Jira tokens in responses', async () => {
+  testSuite("Security and Validation", () => {
+    it("should not expose Jira tokens in responses", async () => {
       const [issuesResponse, rateLimitResponse] = await Promise.all([
         fetch(`${baseUrl}/api/tools/jira/issues`, {
-          headers: { 'Cookie': `sessionId=${testSession.sessionId}` }
+          headers: { Cookie: `sessionId=${testSession.sessionId}` },
         }),
         fetch(`${baseUrl}/api/tools/jira/rate-limit`, {
-          headers: { 'Cookie': `sessionId=${testSession.sessionId}` }
-        })
+          headers: { Cookie: `sessionId=${testSession.sessionId}` },
+        }),
       ]);
 
       [issuesResponse, rateLimitResponse].forEach(async (response) => {
         if (response.status === 200) {
           const data = await response.json();
-          expect(JSON.stringify(data)).not.toContain('JIRA_API_TOKEN');
-          expect(JSON.stringify(data)).not.toContain('access_token');
+          expect(JSON.stringify(data)).not.toContain("JIRA_API_TOKEN");
+          expect(JSON.stringify(data)).not.toContain("access_token");
         }
       });
     });
   });
 
-  testSuite('Performance and Reliability', () => {
-    it('should handle concurrent requests efficiently', async () => {
+  testSuite("Performance and Reliability", () => {
+    it("should handle concurrent requests efficiently", async () => {
       const concurrentRequests = [
         fetch(`${baseUrl}/api/tools/jira/issues`, {
-          headers: { 'Cookie': `sessionId=${testSession.sessionId}` }
+          headers: { Cookie: `sessionId=${testSession.sessionId}` },
         }),
         fetch(`${baseUrl}/api/tools/jira/projects`, {
-          headers: { 'Cookie': `sessionId=${testSession.sessionId}` }
+          headers: { Cookie: `sessionId=${testSession.sessionId}` },
         }),
         fetch(`${baseUrl}/api/tools/jira/rate-limit`, {
-          headers: { 'Cookie': `sessionId=${testSession.sessionId}` }
-        })
+          headers: { Cookie: `sessionId=${testSession.sessionId}` },
+        }),
       ];
 
       const responses = await Promise.all(concurrentRequests);
 
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect([200, 401, 403, 429]).toContain(response.status);
       });
     });
 
-    it('should maintain consistent data structure across endpoints', async () => {
+    it("should maintain consistent data structure across endpoints", async () => {
       const requests = [
         fetch(`${baseUrl}/api/tools/jira/issues`, {
-          headers: { 'Cookie': `sessionId=${testSession.sessionId}` }
+          headers: { Cookie: `sessionId=${testSession.sessionId}` },
         }),
         fetch(`${baseUrl}/api/tools/jira/projects`, {
-          headers: { 'Cookie': `sessionId=${testSession.sessionId}` }
-        })
+          headers: { Cookie: `sessionId=${testSession.sessionId}` },
+        }),
       ];
 
       const responses = await Promise.all(requests);

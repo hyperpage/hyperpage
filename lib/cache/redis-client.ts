@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import Redis from "ioredis";
 
 export interface RedisClientOptions {
   host?: string;
@@ -35,7 +35,8 @@ export class RedisClient {
   private connectionStartTime: number | null = null;
 
   constructor(url?: string, options: RedisClientOptions = {}) {
-    this.connectionUrl = url || process.env.REDIS_URL || 'redis://localhost:6379';
+    this.connectionUrl =
+      url || process.env.REDIS_URL || "redis://localhost:6379";
 
     // Initialize client but don't connect yet (lazy)
     this.client = new Redis(this.connectionUrl, {
@@ -54,31 +55,31 @@ export class RedisClient {
   private setupEventHandlers(): void {
     if (!this.client) return;
 
-    this.client.on('connect', () => {
+    this.client.on("connect", () => {
       this.connectionStartTime = Date.now();
       this.lastError = null;
-      console.debug('Redis client connected');
+      console.debug("Redis client connected");
     });
 
-    this.client.on('ready', () => {
+    this.client.on("ready", () => {
       this.isConnecting = false;
-      console.debug('Redis client ready');
+      console.debug("Redis client ready");
     });
 
-    this.client.on('error', (error) => {
+    this.client.on("error", (error) => {
       this.lastError = error.message;
       this.isConnecting = false;
-      console.error('Redis client error:', error.message);
+      console.error("Redis client error:", error.message);
     });
 
-    this.client.on('close', () => {
+    this.client.on("close", () => {
       this.connectionStartTime = null;
       this.isConnecting = false;
-      console.debug('Redis client closed');
+      console.debug("Redis client closed");
     });
 
-    this.client.on('reconnecting', () => {
-      console.debug('Redis client reconnecting...');
+    this.client.on("reconnecting", () => {
+      console.debug("Redis client reconnecting...");
     });
   }
 
@@ -92,15 +93,16 @@ export class RedisClient {
     this.isConnecting = true;
 
     try {
-      if (!this.client) throw new Error('Redis client not initialized');
+      if (!this.client) throw new Error("Redis client not initialized");
 
       await this.client.connect();
-      console.info('Successfully connected to Redis');
+      console.info("Successfully connected to Redis");
     } catch (error) {
       this.isConnecting = false;
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.lastError = errorMessage;
-      console.error('Failed to connect to Redis:', errorMessage);
+      console.error("Failed to connect to Redis:", errorMessage);
 
       // Don't throw - graceful degradation to memory-only mode
       throw new Error(`Redis connection failed: ${errorMessage}`);
@@ -115,9 +117,9 @@ export class RedisClient {
 
     try {
       await this.client.quit();
-      console.debug('Redis client disconnected');
+      console.debug("Redis client disconnected");
     } catch (error) {
-      console.warn('Error during Redis disconnection:', error);
+      console.warn("Error during Redis disconnection:", error);
       // Force disconnect if quit fails
       this.client.disconnect();
     } finally {
@@ -133,7 +135,7 @@ export class RedisClient {
    */
   getClient(): Redis {
     if (!this.client) {
-      throw new Error('Redis client not initialized');
+      throw new Error("Redis client not initialized");
     }
     return this.client;
   }
@@ -142,14 +144,14 @@ export class RedisClient {
    * Check if Redis client is connected and ready.
    */
   get isConnected(): boolean {
-    return this.client?.status === 'ready';
+    return this.client?.status === "ready";
   }
 
   /**
    * Check if Redis client is in the process of connecting.
    */
   get isConnectingToRedis(): boolean {
-    return this.isConnecting || this.client?.status === 'connecting';
+    return this.isConnecting || this.client?.status === "connecting";
   }
 
   /**
@@ -157,8 +159,8 @@ export class RedisClient {
    */
   async getHealth(): Promise<ConnectionHealth> {
     const health: ConnectionHealth = {
-      connected: this.client?.status === 'ready',
-      ready: this.client?.status === 'ready',
+      connected: this.client?.status === "ready",
+      ready: this.client?.status === "ready",
       lastError: this.lastError || undefined,
       uptimeSeconds: this.connectionStartTime
         ? Math.floor((Date.now() - this.connectionStartTime) / 1000)
@@ -171,7 +173,8 @@ export class RedisClient {
         await this.client.ping();
         health.pingLatency = Date.now() - startTime;
       } catch (error) {
-        health.lastError = error instanceof Error ? error.message : String(error);
+        health.lastError =
+          error instanceof Error ? error.message : String(error);
         health.connected = false;
         health.ready = false;
       }
@@ -188,7 +191,7 @@ export class RedisClient {
 
     try {
       const result = await this.client.ping();
-      return result === 'PONG';
+      return result === "PONG";
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : String(error);
       return false;
@@ -206,7 +209,7 @@ export class RedisClient {
   } {
     return {
       url: this.connectionUrl,
-      status: this.client?.status || 'disconnected',
+      status: this.client?.status || "disconnected",
       uptimeSeconds: this.connectionStartTime
         ? Math.floor((Date.now() - this.connectionStartTime) / 1000)
         : undefined,

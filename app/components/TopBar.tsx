@@ -25,7 +25,6 @@ export default function TopBar({
   onClearSearch,
   onGlobalRefresh,
 }: TopBarProps) {
-
   return (
     <div className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/80 border-b border-border px-4 py-3 flex items-center h-16">
       <div className="flex items-center space-x-4">
@@ -77,11 +76,19 @@ export default function TopBar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" title="Authentication" aria-label="Authentication settings">
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Authentication"
+              aria-label="Authentication settings"
+            >
               <Shield className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-96 max-h-[80vh] overflow-y-auto">
+          <DropdownMenuContent
+            align="end"
+            className="w-96 max-h-[80vh] overflow-y-auto"
+          >
             <AuthPanelStandalone />
           </DropdownMenuContent>
         </DropdownMenu>

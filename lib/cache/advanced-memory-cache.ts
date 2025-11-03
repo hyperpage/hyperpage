@@ -1,17 +1,22 @@
-import type { ICache, CacheEntry, CacheOptions, CacheStats } from './cache-interface';
+import type {
+  ICache,
+  CacheEntry,
+  CacheOptions,
+  CacheStats,
+} from "./cache-interface";
 
 /**
  * Eviction policies for advanced cache management.
  */
 export enum EvictionPolicy {
   /** First In First Out - Remove oldest entries first */
-  FIFO = 'fifo',
+  FIFO = "fifo",
   /** Last Recently Used - Remove least recently accessed entries first */
-  LRU = 'lru',
+  LRU = "lru",
   /** Time To Live Only - No size-based eviction, rely on TTL cleanup */
-  TTL_ONLY = 'ttl_only',
+  TTL_ONLY = "ttl_only",
   /** Adaptive - Switches between LRU and TTL based on usage patterns */
-  ADAPTIVE = 'adaptive',
+  ADAPTIVE = "adaptive",
 }
 
 /**
@@ -108,7 +113,7 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
 
     // Set up monitoring intervals
     setInterval(() => this.updateMemoryStats(), 30000); // Update every 30s
-    setInterval(() => this.checkMemoryAlerts(), 60000);  // Check every minute
+    setInterval(() => this.checkMemoryAlerts(), 60000); // Check every minute
   }
 
   /**
@@ -144,7 +149,7 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
       // Update LRU tracking if enabled
       if (this.options.enableLru) {
         this.accessOrder.delete(key); // Remove if exists
-        this.accessOrder.add(key);   // Add to most recently used
+        this.accessOrder.add(key); // Add to most recently used
       }
 
       // Update memory stats
@@ -156,10 +161,12 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
         await this.updateAdaptivePolicy();
       }
 
-      this.updatePerformanceMetrics(Date.now() - startTime, existing ? 'update' : 'set');
-
+      this.updatePerformanceMetrics(
+        Date.now() - startTime,
+        existing ? "update" : "set",
+      );
     } catch (error) {
-      this.updatePerformanceMetrics(Date.now() - startTime, 'error');
+      this.updatePerformanceMetrics(Date.now() - startTime, "error");
       throw error;
     }
   }
@@ -180,7 +187,7 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
 
       if (!entry) {
         this.stats.misses++;
-        this.updatePerformanceMetrics(Date.now() - startTime, 'miss');
+        this.updatePerformanceMetrics(Date.now() - startTime, "miss");
         return undefined;
       }
 
@@ -189,7 +196,7 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
         this.accessOrder.delete(key);
         this.stats.expiries++;
         this.stats.misses++;
-        this.updatePerformanceMetrics(Date.now() - startTime, 'expired');
+        this.updatePerformanceMetrics(Date.now() - startTime, "expired");
         return undefined;
       }
 
@@ -201,11 +208,10 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
       }
 
       this.stats.hits++;
-      this.updatePerformanceMetrics(Date.now() - startTime, 'hit');
+      this.updatePerformanceMetrics(Date.now() - startTime, "hit");
       return entry.data;
-
     } catch (error) {
-      this.updatePerformanceMetrics(Date.now() - startTime, 'error');
+      this.updatePerformanceMetrics(Date.now() - startTime, "error");
       throw error;
     }
   }
@@ -247,7 +253,13 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
   /**
    * Get comprehensive cache statistics including performance metrics.
    */
-  async getStats(): Promise<CacheStats & { performance: CachePerformanceMetrics; memory: MemoryStats; alerts: string[] }> {
+  async getStats(): Promise<
+    CacheStats & {
+      performance: CachePerformanceMetrics;
+      memory: MemoryStats;
+      alerts: string[];
+    }
+  > {
     return {
       size: this.cache.size,
       hits: this.stats.hits,
@@ -322,7 +334,8 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
 
   private async maybeCleanup(): Promise<void> {
     const capacityRatio = this.cache.size / this.options.maxSize;
-    if (capacityRatio > 0.8) { // Cleanup when over 80%
+    if (capacityRatio > 0.8) {
+      // Cleanup when over 80%
       await this.cleanupExpired();
     }
   }
@@ -338,7 +351,9 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
           break;
         case EvictionPolicy.TTL_ONLY:
           // Don't evict, but trigger alert
-          this.alerts.add('Cache at maximum capacity but TTL_ONLY policy prevents eviction');
+          this.alerts.add(
+            "Cache at maximum capacity but TTL_ONLY policy prevents eviction",
+          );
           return;
         case EvictionPolicy.ADAPTIVE:
           await this.adaptiveEviction();
@@ -387,7 +402,8 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
     if (total >= (this.options.adaptiveThreshold || 10)) {
       const hitRate = this.stats.hits / total;
       // Force policy switch based on hit rate for tests
-      if (hitRate < 0.1) {  // Very low hit rate
+      if (hitRate < 0.1) {
+        // Very low hit rate
         this.adaptiveMode = EvictionPolicy.LRU;
       } else if (hitRate > 0.7) {
         this.adaptiveMode = EvictionPolicy.FIFO;
@@ -403,19 +419,23 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
   private updatePerformanceMetrics(duration: number, operation: string): void {
     this.performanceMetrics.operationCount++;
     // Calculate running average for access time
-    const totalTime = this.performanceMetrics.averageAccessTime * (this.performanceMetrics.operationCount - 1) + duration;
-    this.performanceMetrics.averageAccessTime = totalTime / this.performanceMetrics.operationCount;
+    const totalTime =
+      this.performanceMetrics.averageAccessTime *
+        (this.performanceMetrics.operationCount - 1) +
+      duration;
+    this.performanceMetrics.averageAccessTime =
+      totalTime / this.performanceMetrics.operationCount;
 
     // Update specific operation counters
     switch (operation) {
-      case 'hit':
+      case "hit":
         this.performanceMetrics.hitCount++;
         break;
-      case 'miss':
-      case 'expired':
+      case "miss":
+      case "expired":
         this.performanceMetrics.missCount++;
         break;
-      case 'eviction':
+      case "eviction":
         this.performanceMetrics.evictionCount++;
         break;
     }
@@ -423,18 +443,24 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
 
   private updateMemoryStats(): void {
     this.memoryStats.usedEntries = this.cache.size;
-    this.memoryStats.usagePercentage = (this.cache.size / this.options.maxSize) * 100;
-    this.memoryStats.highWaterMark = Math.max(this.memoryStats.highWaterMark, this.cache.size);
+    this.memoryStats.usagePercentage =
+      (this.cache.size / this.options.maxSize) * 100;
+    this.memoryStats.highWaterMark = Math.max(
+      this.memoryStats.highWaterMark,
+      this.cache.size,
+    );
   }
 
   private checkMemoryAlerts(): void {
     const threshold = this.options.memoryAlertThreshold || 90;
     if (this.memoryStats.usagePercentage >= threshold) {
-      this.alerts.add(`Memory usage at ${this.memoryStats.usagePercentage.toFixed(1)}% (${this.cache.size}/${this.options.maxSize} entries)`);
+      this.alerts.add(
+        `Memory usage at ${this.memoryStats.usagePercentage.toFixed(1)}% (${this.cache.size}/${this.options.maxSize} entries)`,
+      );
     } else {
       // Clear alert if usage drops below threshold
-      this.alerts.forEach(alert => {
-        if (alert.includes('Memory usage at')) {
+      this.alerts.forEach((alert) => {
+        if (alert.includes("Memory usage at")) {
           this.alerts.delete(alert);
         }
       });
@@ -446,14 +472,19 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
     // This would be called asynchronously on startup
     if (this.options.warmKeys) {
       // Implementation would depend on the specific warming strategy
-      console.log(`Cache warming enabled for ${this.options.warmKeys.length} keys`);
+      console.log(
+        `Cache warming enabled for ${this.options.warmKeys.length} keys`,
+      );
     }
   }
 }
 
 // Factory functions for different cache configurations
 
-export function createLRUCache<T>(maxSize: number, defaultTtl?: number): AdvancedMemoryCache<T> {
+export function createLRUCache<T>(
+  maxSize: number,
+  defaultTtl?: number,
+): AdvancedMemoryCache<T> {
   return new AdvancedMemoryCache<T>({
     maxSize,
     enableLru: true,
@@ -463,7 +494,10 @@ export function createLRUCache<T>(maxSize: number, defaultTtl?: number): Advance
   });
 }
 
-export function createAdaptiveCache<T>(maxSize: number, defaultTtl?: number): AdvancedMemoryCache<T> {
+export function createAdaptiveCache<T>(
+  maxSize: number,
+  defaultTtl?: number,
+): AdvancedMemoryCache<T> {
   return new AdvancedMemoryCache<T>({
     maxSize,
     enableLru: true,

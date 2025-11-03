@@ -11,7 +11,7 @@ import {
   JobPriority,
   JobStatus,
   JobType,
-} from '../types/jobs';
+} from "../types/jobs";
 
 interface ScheduledJob {
   job: IJob;
@@ -29,14 +29,16 @@ export class MemoryJobScheduler implements IJobScheduler {
   private running: boolean = false;
   private checkInterval?: NodeJS.Timeout;
 
-  constructor(id: string = 'memory-scheduler') {
+  constructor(id: string = "memory-scheduler") {
     this.id = id;
   }
 
   /**
    * Schedule a job for future execution
    */
-  async schedule(jobSpec: Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>): Promise<IJob> {
+  async schedule(
+    jobSpec: Omit<IJob, "status" | "createdAt" | "updatedAt" | "retryCount">,
+  ): Promise<IJob> {
     const now = Date.now();
     const job: IJob = {
       ...jobSpec,
@@ -60,12 +62,18 @@ export class MemoryJobScheduler implements IJobScheduler {
 
     // Schedule immediate execution if due time is in the past
     if (job.schedule?.scheduledAt && job.schedule.scheduledAt <= now) {
-      scheduledJob.timerId = setTimeout(() => this.executeImmediate(job), 0) as NodeJS.Timeout;
+      scheduledJob.timerId = setTimeout(
+        () => this.executeImmediate(job),
+        0,
+      ) as NodeJS.Timeout;
     } else if (job.schedule?.scheduledAt) {
       // Schedule for future execution
       const delay = job.schedule.scheduledAt - now;
       if (delay > 0) {
-        scheduledJob.timerId = setTimeout(() => this.executeImmediate(job), delay) as NodeJS.Timeout;
+        scheduledJob.timerId = setTimeout(
+          () => this.executeImmediate(job),
+          delay,
+        ) as NodeJS.Timeout;
       }
     }
 
@@ -148,7 +156,9 @@ export class MemoryJobScheduler implements IJobScheduler {
    * Get all scheduled jobs
    */
   async getScheduledJobs(): Promise<IJob[]> {
-    return Array.from(this.jobs.values()).map(scheduledJob => scheduledJob.job);
+    return Array.from(this.jobs.values()).map(
+      (scheduledJob) => scheduledJob.job,
+    );
   }
 
   /**
@@ -156,7 +166,7 @@ export class MemoryJobScheduler implements IJobScheduler {
    */
   start(): () => void {
     if (this.running) {
-      throw new Error('Scheduler is already running');
+      throw new Error("Scheduler is already running");
     }
 
     this.running = true;
@@ -215,7 +225,6 @@ export class MemoryJobScheduler implements IJobScheduler {
 
       // Simulate job execution (in real implementation, this would call a job processor)
       await this.executeJob(job);
-
     } catch (error) {
       console.error(`Failed to execute scheduled job ${job.id}:`, error);
 
@@ -259,7 +268,7 @@ export class MemoryJobScheduler implements IJobScheduler {
   private async executeJob(job: IJob): Promise<void> {
     // Simulate job execution time
     const executionTime = Math.random() * 1000 + 500; // 500-1500ms
-    await new Promise(resolve => setTimeout(resolve, executionTime));
+    await new Promise((resolve) => setTimeout(resolve, executionTime));
 
     // Mark as completed
     job.status = JobStatus.COMPLETED;
@@ -279,50 +288,64 @@ export class MemoryJobScheduler implements IJobScheduler {
       timestamp: Date.now(),
     });
 
-    console.log(`Completed scheduled job: ${job.name} (${job.id}) in ${executionTime.toFixed(0)}ms`);
+    console.log(
+      `Completed scheduled job: ${job.name} (${job.id}) in ${executionTime.toFixed(0)}ms`,
+    );
   }
 
   /**
    * Validate scheduled job has required scheduling configuration
    */
   private validateScheduledJob(job: IJob): void {
-    if (!job.id || typeof job.id !== 'string') {
-      throw new Error('Scheduled job must have a valid string ID');
+    if (!job.id || typeof job.id !== "string") {
+      throw new Error("Scheduled job must have a valid string ID");
     }
 
-    if (!job.name || typeof job.name !== 'string') {
-      throw new Error('Scheduled job must have a valid string name');
+    if (!job.name || typeof job.name !== "string") {
+      throw new Error("Scheduled job must have a valid string name");
     }
 
     if (!Object.values(JobPriority).includes(job.priority)) {
-      throw new Error('Scheduled job must have a valid priority');
+      throw new Error("Scheduled job must have a valid priority");
     }
 
     if (!Object.values(JobType).includes(job.type)) {
-      throw new Error('Scheduled job must have a valid type');
+      throw new Error("Scheduled job must have a valid type");
     }
 
     // Check scheduling configuration
     const schedule = job.schedule;
     if (!schedule) {
-      throw new Error('Job must have scheduling configuration to be scheduled');
+      throw new Error("Job must have scheduling configuration to be scheduled");
     }
 
     // Must have either a scheduledAt time or intervalMs for recurring jobs
     if (!schedule.scheduledAt && !schedule.intervalMs) {
-      throw new Error('Job must have either scheduledAt or intervalMs in schedule configuration');
+      throw new Error(
+        "Job must have either scheduledAt or intervalMs in schedule configuration",
+      );
     }
 
-    if (schedule.scheduledAt && (typeof schedule.scheduledAt !== 'number' || schedule.scheduledAt < 0)) {
-      throw new Error('scheduledAt must be a valid positive timestamp');
+    if (
+      schedule.scheduledAt &&
+      (typeof schedule.scheduledAt !== "number" || schedule.scheduledAt < 0)
+    ) {
+      throw new Error("scheduledAt must be a valid positive timestamp");
     }
 
-    if (schedule.intervalMs && (typeof schedule.intervalMs !== 'number' || schedule.intervalMs <= 0)) {
-      throw new Error('intervalMs must be a positive number');
+    if (
+      schedule.intervalMs &&
+      (typeof schedule.intervalMs !== "number" || schedule.intervalMs <= 0)
+    ) {
+      throw new Error("intervalMs must be a positive number");
     }
 
-    if (schedule.maxRecurrences && (typeof schedule.maxRecurrences !== 'number' || schedule.maxRecurrences <= 0)) {
-      throw new Error('maxRecurrences must be a positive number');
+    if (
+      schedule.maxRecurrences &&
+      (typeof schedule.maxRecurrences !== "number" ||
+        schedule.maxRecurrences <= 0)
+    ) {
+      throw new Error("maxRecurrences must be a positive number");
     }
   }
 }

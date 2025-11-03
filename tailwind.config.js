@@ -3,10 +3,10 @@ import tailwindcssAnimate from "tailwindcss-animate";
 
 const config = {
   content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
   ],
   prefix: "",
   theme: {
@@ -75,6 +75,6 @@ const config = {
     },
   },
   plugins: [tailwindcssAnimate],
-}
+};
 
-export default config
+export default config;

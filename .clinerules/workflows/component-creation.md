@@ -3,6 +3,7 @@
 This workflow creates new components following the architectural patterns from coding-principles.md and coding-style.md.
 
 ## Prerequisites
+
 - Feature requirements documented
 - Component purpose and scope defined
 - Design requirements specified (dark mode, responsive behavior)
@@ -230,6 +231,7 @@ Test component appearance and behavior:
 ```
 
 Validation checklist:
+
 - [ ] Dark mode: Colors adapt properly using CSS custom properties
 - [ ] Responsive: Works on mobile (< 768px), tablet, and desktop layouts
 - [ ] Loading states: Shimmer animations and skeleton screens
@@ -266,6 +268,7 @@ Performance check - ensure no unnecessary re-renders:
 ```
 
 Confirm TypeScript compilation:
+
 - [ ] No type errors
 - [ ] Proper interface usage
 - [ ] Generic types correctly applied

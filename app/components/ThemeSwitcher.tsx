@@ -15,7 +15,7 @@ const themes = [
   { name: "dark", label: "Dark", icon: Moon },
 ] as const;
 
-type Theme = typeof themes[number]["name"];
+type Theme = (typeof themes)[number]["name"];
 
 export default function ThemeSwitcher() {
   const [currentTheme, setCurrentTheme] = useState<Theme>("light");
@@ -41,7 +41,7 @@ export default function ThemeSwitcher() {
     applyTheme(theme);
   };
 
-  const currentThemeData = themes.find(t => t.name === currentTheme);
+  const currentThemeData = themes.find((t) => t.name === currentTheme);
 
   return (
     <DropdownMenu>

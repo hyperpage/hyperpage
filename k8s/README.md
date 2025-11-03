@@ -5,6 +5,7 @@ This directory contains all the Kubernetes manifests for a production-ready Hype
 ## 🚀 Quick Deployment
 
 ### Prerequisites
+
 - Kubernetes cluster (v1.24+)
 - `kubectl` configured for cluster access
 - Metrics Server installed
@@ -13,15 +14,17 @@ This directory contains all the Kubernetes manifests for a production-ready Hype
 ### 1. Update Configuration
 
 Edit `service.yaml` to configure:
+
 - Your Docker registry image path
 - Environment variables (secrets, database URL, API tokens)
 
 **Example updates in `service.yaml`:**
+
 ```yaml
 # Update image references
 containers:
-- name: hyperpage
-  image: your-registry/hyperpage:latest  # ← Update this
+  - name: hyperpage
+    image: your-registry/hyperpage:latest # ← Update this
 
 # Add your secrets (replace placeholder values)
 stringData:
@@ -62,6 +65,7 @@ curl http://localhost:3000/api/health
 ## 📊 Architecture Overview
 
 ### Core Components
+
 - **Deployment**: 3 replica pods with anti-affinity scheduling
 - **HPA**: Scales 3-50 pods based on 70% CPU / 80% memory targets
 - **Service**: Load balancing and inter-pod communication
@@ -69,6 +73,7 @@ curl http://localhost:3000/api/health
 - **Storage**: PVC-backed data persistence
 
 ### Enterprise Features
+
 - ✅ **Auto-Scaling**: Intelligent scaling based on resource utilization
 - ✅ **Zero-Downtime**: Rolling updates with health probes
 - ✅ **Security Hardened**: Non-root execution, minimized attack surface
@@ -78,23 +83,27 @@ curl http://localhost:3000/api/health
 ## 🔧 Configuration Files
 
 ### `deployment.yaml`
+
 - Main application deployment
 - Health/liveness probes configuration
 - Security contexts (non-root, seccomp)
 - Rolling update strategy (25% max unavailable)
 
 ### `hpa.yaml`
+
 - HorizontalPodAutoscaler configuration
 - CPU/memory-based scaling (70%/80% thresholds)
 - 3-50 replica range with stabilization policies
 
 ### `service.yaml`
+
 - ServiceAccount, ClusterRole, ClusterRoleBinding (RBAC)
 - ConfigMap (environment variables)
 - Secret (sensitive data like API tokens)
 - PersistentVolumeClaims (PVCs)
 
 ### `ingress.yaml`
+
 - NGINX ingress with TLS termination
 - External access routing
 - Rate limiting and security headers
@@ -102,6 +111,7 @@ curl http://localhost:3000/api/health
 ## 📈 Monitoring & Scaling
 
 ### Check Scaling Behavior
+
 ```bash
 # Generate load to test HPA
 kubectl run load-test --image=busybox -- /bin/sh -c "while true; do echo test; done"
@@ -111,6 +121,7 @@ kubectl get events --field-selector involvedObject.kind=HorizontalPodAutoscaler
 ```
 
 ### Performance Metrics
+
 ```bash
 # CPU/Memory utilization
 kubectl top pods -l app=hyperpage
@@ -130,6 +141,7 @@ kubectl describe hpa hyperpage-hpa
 ## 🚨 Production Considerations
 
 ### Before Going Live
+
 - [ ] Update all image references with production registry
 - [ ] Configure real database URL and credentials
 - [ ] Set production-ready secrets (API tokens, keys)
@@ -138,6 +150,7 @@ kubectl describe hpa hyperpage-hpa
 - [ ] Enable external monitoring (Prometheus/Grafana)
 
 ### Scaling Recommendations
+
 - Start with smaller storage and scale up as needed
 - Monitor actual resource usage for 1-2 weeks post-deployment
 - Adjust HPA thresholds based on application load patterns
@@ -146,27 +159,32 @@ kubectl describe hpa hyperpage-hpa
 ## 🆘 Troubleshooting
 
 ### Pods Not Starting
+
 ```bash
 kubectl describe pod <pod-name>
 kubectl logs <pod-name> --previous
 ```
 
 ### HPA Not Scaling
+
 - Ensure Metrics Server is running: `kubectl get deployment metrics-server -n kube-system`
 - Check resource utilization: `kubectl top nodes`
 
 ### Service Unavailable
+
 - Verify service selectors: `kubectl describe svc hyperpage-service`
 - Check endpoint connectivity: `kubectl get endpoints`
 
 ## 📚 Full Documentation
 
 For comprehensive setup instructions, see:
+
 - **[Hyperpage K8s Guide](../docs/kubernetes.md)**
 
 ## 💝 Support
 
 If you encounter issues:
+
 1. Check the troubleshooting section above
 2. Review full deployment guide in `docs/kubernetes.md`
 3. Verify cluster requirements and prerequisites

@@ -9,10 +9,10 @@
  * Server-side module cache to avoid repeated imports
  */
 const getNodeModules = async () => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     // Server-side - import Node.js modules dynamically
-    const { default: https } = await import('https');
-    const { default: dns } = await import('dns');
+    const { default: https } = await import("https");
+    const { default: dns } = await import("dns");
     return { https, dns };
   }
   return null;
@@ -30,20 +30,20 @@ const getNodeModules = async () => {
 export async function createIPv4Fetch(
   url: string,
   options: RequestInit = {},
-  timeoutMs: number = 10000
+  timeoutMs: number = 10000,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     // Force IPv4 connections to avoid IPv6 timeout issues on IPv6-only networks
-    const enhancedOptions: RequestInit & { agent?: import('https').Agent } = {
+    const enhancedOptions: RequestInit & { agent?: import("https").Agent } = {
       ...options,
       signal: controller.signal,
     };
 
     // Only configure IPv4 forcing server-side where Node.js modules are available
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       try {
         const modules = await getNodeModules();
         if (modules) {
@@ -55,34 +55,43 @@ export async function createIPv4Fetch(
             timeout: timeoutMs, // Set connection timeout at agent level too
             keepAlive: false, // Disable keep-alive to avoid connection pooling issues
           });
-            console.log(`IPv4 fetch configured for ${url} - agent with IPv4 family:`, enhancedOptions.agent?.constructor.name || 'unknown');
+          console.log(
+            `IPv4 fetch configured for ${url} - agent with IPv4 family:`,
+            enhancedOptions.agent?.constructor.name || "unknown",
+          );
         }
       } catch (error) {
         // If modules aren't available, log but continue with standard fetch
-        console.warn(`IPv4 forcing failed for ${url}, using standard fetch:`, error);
+        console.warn(
+          `IPv4 forcing failed for ${url}, using standard fetch:`,
+          error,
+        );
       }
     } else {
-      console.log(`IPv4 fetch skipped for ${url} - running in browser environment`);
+      console.log(
+        `IPv4 fetch skipped for ${url} - running in browser environment`,
+      );
     }
 
     const fetchPromise = fetch(url, enhancedOptions);
 
     return fetchPromise
-      .then(response => {
+      .then((response) => {
         clearTimeout(timeoutId);
         return response;
       })
-      .catch(error => {
+      .catch((error) => {
         clearTimeout(timeoutId);
 
-        if (error.name === 'AbortError') {
-          throw new Error(`Request timed out after ${timeoutMs}ms - this may indicate IPv6 connectivity issues`);
+        if (error.name === "AbortError") {
+          throw new Error(
+            `Request timed out after ${timeoutMs}ms - this may indicate IPv6 connectivity issues`,
+          );
         }
 
         // Re-throw other errors
         throw error;
       });
-
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -97,7 +106,10 @@ export async function createIPv4Fetch(
  * @param options - Standard fetch options
  * @returns Promise<Response>
  */
-export const ipv4Fetch = (url: string, options?: RequestInit): Promise<Response> => {
+export const ipv4Fetch = (
+  url: string,
+  options?: RequestInit,
+): Promise<Response> => {
   return createIPv4Fetch(url, options);
 };
 
@@ -112,7 +124,7 @@ export const ipv4Fetch = (url: string, options?: RequestInit): Promise<Response>
 export async function ipv4FetchJson<T = unknown>(
   url: string,
   options: RequestInit = {},
-  timeoutMs: number = 10000
+  timeoutMs: number = 10000,
 ): Promise<T> {
   const response = await createIPv4Fetch(url, options, timeoutMs);
 

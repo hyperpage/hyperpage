@@ -1,18 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getOAuthConfig, buildAuthorizationUrl } from '@/lib/oauth-config';
+import { NextRequest, NextResponse } from "next/server";
+import { getOAuthConfig, buildAuthorizationUrl } from "@/lib/oauth-config";
 
 /**
  * Jira OAuth 2.0 Initiate Handler
  * Starts OAuth flow by redirecting to Atlassian authorization
  */
 
-const PROVIDER_NAME = 'jira';
+const PROVIDER_NAME = "jira";
 
 // GET /api/auth/jira/initiate - Initiate OAuth flow
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const webUrl = searchParams.get('web_url');
+    const webUrl = searchParams.get("web_url");
 
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME, webUrl || undefined);
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       console.error(`${PROVIDER_NAME} OAuth not configured`);
       return NextResponse.json(
         { error: `${PROVIDER_NAME} OAuth not configured` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const cookieStateValue = JSON.stringify({
       state,
       webUrl: webUrl || undefined,
-      created: Date.now()
+      created: Date.now(),
     });
 
     const cookieOptions = {
@@ -45,23 +45,26 @@ export async function GET(request: NextRequest) {
       value: cookieStateValue,
       options: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax' as const,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
         path: `/api/auth/${PROVIDER_NAME}/callback`,
         maxAge: 600,
       },
     };
 
-    response.cookies.set(cookieOptions.name, cookieOptions.value, cookieOptions.options);
+    response.cookies.set(
+      cookieOptions.name,
+      cookieOptions.value,
+      cookieOptions.options,
+    );
 
     // Redirect to Atlassian authorization
     return response;
-
   } catch (error) {
     console.error(`${PROVIDER_NAME} OAuth initiate error:`, error);
     return NextResponse.json(
-      { error: 'Failed to initiate OAuth flow' },
-      { status: 500 }
+      { error: "Failed to initiate OAuth flow" },
+      { status: 500 },
     );
   }
 }

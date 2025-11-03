@@ -49,7 +49,9 @@ Tool Registry    ┌───────────────────┐
 Hyperpage uses a **completely registry-driven architecture** where all tool integrations are discovered and configured automatically:
 
 #### Tool Ownership Model
+
 Each tool owns its complete integration:
+
 - **API Handlers**: Server-side implementations
 - **UI Components**: Widget definitions and appearance
 - **Data Schemas**: Response structures and types
@@ -57,6 +59,7 @@ Each tool owns its complete integration:
 - **Configuration**: Environment-based settings
 
 #### Registry-Driven Architecture
+
 - **Tool Registration**: Tools self-register with the central registry
 - **Capability System**: Tools declare supported features automatically
 - **Dynamic Discovery**: Aggregators find compatible tools by capability matching
@@ -68,16 +71,17 @@ Tools declare capabilities for automatic discovery by aggregator services:
 
 ```typescript
 interface ToolCapability {
-  'pull-requests': 'GitHub PRs, GitLab MRs';
-  'merge-requests': 'GitLab merge requests';
-  'workflows': 'GitHub Actions workflows';
-  'pipelines': 'GitLab CI/CD pipelines';
-  'issues': 'Ticketing and issue management';
-  'rate-limit': 'API rate limit monitoring';
+  "pull-requests": "GitHub PRs, GitLab MRs";
+  "merge-requests": "GitLab merge requests";
+  workflows: "GitHub Actions workflows";
+  pipelines: "GitLab CI/CD pipelines";
+  issues: "Ticketing and issue management";
+  "rate-limit": "API rate limit monitoring";
 }
 ```
 
 **Aggregator Pattern:**
+
 - **Code Reviews**: Discovers tools with `pull-requests` + `merge-requests` capabilities
 - **CI/CD**: Combines `pipelines` + `workflows` from multiple providers
 - **Ticketing**: Unifies `issues` across all configured tools
@@ -89,28 +93,35 @@ interface ToolCapability {
 All complex stateful logic is extracted into custom hooks before component implementation:
 
 #### Data Management Hooks (React Query Integration)
+
 - **`useToolQueries`**: Dynamic query management for tool widgets with selective refresh intervals
 - **`useDarkMode`**: Theme switching with localStorage persistence
 - **`useRateLimit`**: Rate limit monitoring across all enabled tools
 
 #### React Query Benefits
+
 **Automatic Caching & Background Updates:**
+
 - Intelligent request deduplication reduces API calls
 - Stale-while-revalidate pattern ensures fresh data with minimal loading states
 - Background refetching keeps data current without visual disruption
 
 **Built-in Error Handling & Retry Logic:**
+
 - Configurable retry attempts (3 by default) with exponential backoff
 - Automatic retry for network failures and intermittent issues
 - Graceful error states without complex manual error handling
 
 **Performance Optimizations:**
+
 - Focus/window refetch automatically updates data when users return to the tab
 - Request deduplication prevents multiple identical API calls
 - Garbage collection prevents memory leaks from stale cached data
 
 #### Component Responsibility
+
 Components focus on presentation, with all business logic delegated to hooks:
+
 - **Single Purpose**: Each component handles one clear responsibility
 - **100-Line Limit**: Large components are decomposed into focused sub-components
 - **Clean Separation**: UI logic in components, data logic in hooks
@@ -118,17 +129,24 @@ Components focus on presentation, with all business logic delegated to hooks:
 ### Service Layer Architecture
 
 #### ApiClient Pattern
+
 Base HTTP client with consistent error handling:
+
 ```typescript
 class ApiClient {
-  async request(endpoint: string, options?: RequestOptions): Promise<ApiResponse> {
+  async request(
+    endpoint: string,
+    options?: RequestOptions,
+  ): Promise<ApiResponse> {
     // Consistent error handling, timeout management, retry logic
   }
 }
 ```
 
 #### ToolApiService & Rate Limiting Infrastructure
+
 Centralized API operations with intelligent rate limiting:
+
 - **Type Safety**: Full TypeScript support for all API responses
 - **Rate Limiting Protection**: Platform-specific retry logic prevents API throttling
 - **Registry-Driven Strategy**: Each tool defines its own rate limiting behavior
@@ -140,10 +158,13 @@ Centralized API operations with intelligent rate limiting:
 ### Performance Optimizations
 
 #### React.memo Usage
+
 Frequently re-rendering components are optimized:
+
 - **PortalSearchResults**: Cached for expensive search operations
 
 #### Loading Strategy
+
 - **Background Refresh**: Data updates with minimal visual disruption
 - **Request Deduplication**: API calls are cached to prevent redundancy
 
@@ -162,34 +183,39 @@ export const registerTool = (slug: string, tool: Tool) => {
 ```
 
 #### Self-Registration Pattern
+
 Tools register themselves on module load:
+
 ```typescript
 // tools/github/index.ts
-export const githubTool: Tool = { /* complete definition */ };
-registerTool('github', githubTool);
+export const githubTool: Tool = {
+  /* complete definition */
+};
+registerTool("github", githubTool);
 
 // tools/index.ts
-import './github'; // Triggers self-registration
+import "./github"; // Triggers self-registration
 ```
 
 ### Tool Definition Schema
 
 ```typescript
 interface Tool {
-  name: string;           // Display name
-  slug: string;           // URL-safe identifier
-  enabled: boolean;       // Environment-controlled
+  name: string; // Display name
+  slug: string; // URL-safe identifier
+  enabled: boolean; // Environment-controlled
   capabilities: string[]; // Declared features
 
-  ui: {                   // Visual properties
-    color: string;        // Tailwind color classes
+  ui: {
+    // Visual properties
+    color: string; // Tailwind color classes
     icon: React.ReactNode; // Icon component
   };
 
-  apis: Record<string, ApiSpec>;     // Endpoint specifications
-  handlers: Record<string, Handler>;  // API implementations
-  config: ToolConfig;                // Server-side settings
-  widgets: ToolWidget[];             // UI definitions
+  apis: Record<string, ApiSpec>; // Endpoint specifications
+  handlers: Record<string, Handler>; // API implementations
+  config: ToolConfig; // Server-side settings
+  widgets: ToolWidget[]; // UI definitions
 }
 
 export interface ToolWidget {
@@ -217,6 +243,7 @@ config: {
 ```
 
 **Benefits:**
+
 - **Consistency**: Same pattern across all tools
 - **Flexibility**: Supports custom domains and self-hosted instances
 - **Maintenance**: Changes propagate automatically
@@ -228,6 +255,7 @@ config: {
 Hyperpage implements comprehensive OAuth authentication for secure tool access:
 
 #### Authentication Flow
+
 - **PKCE Support**: Proof Key for Code Exchange prevents authorization code interception
 - **AES-256-GCM Encryption**: All stored tokens encrypted with unique initialization vectors
 - **Automatic Token Refresh**: Access tokens refreshed before expiration without user intervention
@@ -235,6 +263,7 @@ Hyperpage implements comprehensive OAuth authentication for secure tool access:
 - **Secure Storage**: SQLite database with server-side only access to sensitive data
 
 #### Database Schema
+
 ```sql
 -- User authentication data
 CREATE TABLE users (
@@ -262,29 +291,30 @@ CREATE TABLE oauth_tokens (
 ```
 
 #### Authentication Middleware
+
 ```typescript
 // Security layer for tool access
 export async function withAuth(
   handler: NextApiHandler,
-  options: { required?: boolean; tools?: string[] }
+  options: { required?: boolean; tools?: string[] },
 ): Promise<NextApiHandler> {
   return async (req, res) => {
     const session = await getSessionFromCookie(req);
 
     if (!session?.userId && options.required) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     // Check tool-specific authentication
     if (options.tools?.length) {
-      const missingAuth = options.tools.filter(tool =>
-        !await isUserAuthenticatedForTool(session.userId, tool)
+      const missingAuth = options.tools.filter(
+        (tool) => !(await isUserAuthenticatedForTool(session.userId, tool)),
       );
 
       if (missingAuth.length > 0) {
         return res.status(403).json({
-          error: 'Tool authentication required',
-          missingTools: missingAuth
+          error: "Tool authentication required",
+          missingTools: missingAuth,
         });
       }
     }
@@ -298,6 +328,7 @@ export async function withAuth(
 ### Server-Side Credential Isolation
 
 **Triple separation (Client ↔ Server ↔ Tools):**
+
 ```typescript
 // ✅ Client receives OAuth status only
 const authStatus = await getAuthStatus(sessionId);
@@ -314,6 +345,7 @@ const toolApi = await authenticatedToolRequest(userId, toolName, endpoint);
 ### Input Validation & Sanitization
 
 All parameters validated with strict patterns preventing injection:
+
 ```typescript
 // Enhanced validation patterns
 const toolPattern = /^[a-zA-Z0-9_%\-\s]+$/;
@@ -325,6 +357,7 @@ const urlPattern = /^https?:\/\/.+$/; // Protocol validation
 ### Error Handling Strategy
 
 **Authentication-Specific Error Handling:**
+
 ```typescript
 // Client receives safe, generic errors
 { "error": "Authentication failed" }
@@ -336,10 +369,12 @@ const urlPattern = /^https?:\/\/.+$/; // Protocol validation
 ```
 
 #### Audit Logging
+
 All authentication events logged for security monitoring:
+
 ```typescript
 interface AuthAuditEvent {
-  event: 'login' | 'logout' | 'token_refresh' | 'token_revoke';
+  event: "login" | "logout" | "token_refresh" | "token_revoke";
   userId: string;
   toolName: string;
   ipAddress: string;
@@ -352,6 +387,7 @@ interface AuthAuditEvent {
 ## Component Decomposition Strategy
 
 ### Size Limits & Separation
+
 - **Component Limit**: 100 lines maximum per component
 - **Responsibility Focus**: Single purpose per component
 - **Interface Simplification**: Streamlined props interfaces
@@ -360,12 +396,12 @@ interface AuthAuditEvent {
 
 Components are built using shadcn/ui with Tailwind CSS for consistent styling and behavior.
 
-| Component | Implementation | Technologies | Purpose |
-|-----------|----------------|--------------|---------|
-| `TopBar` | Custom component with shadcn/ui | shadcn/ui + Tailwind CSS | Navigation and tool controls |
-| `DataTable` | shadcn/ui table component | shadcn/ui + Tailwind CSS | Data display and sorting |
-| `Overview` | Dashboard layout | shadcn/ui + Tailwind CSS | Main portal interface |
-| **All Components** | shadcn/ui framework | shadcn/ui + Tailwind CSS | Consistent design system |
+| Component          | Implementation                  | Technologies             | Purpose                      |
+| ------------------ | ------------------------------- | ------------------------ | ---------------------------- |
+| `TopBar`           | Custom component with shadcn/ui | shadcn/ui + Tailwind CSS | Navigation and tool controls |
+| `DataTable`        | shadcn/ui table component       | shadcn/ui + Tailwind CSS | Data display and sorting     |
+| `Overview`         | Dashboard layout                | shadcn/ui + Tailwind CSS | Main portal interface        |
+| **All Components** | shadcn/ui framework             | shadcn/ui + Tailwind CSS | Consistent design system     |
 
 ## Rate Limit Monitoring System
 
@@ -374,6 +410,7 @@ Components are built using shadcn/ui with Tailwind CSS for consistent styling an
 Hyperpage implements **multi-platform rate limit monitoring** with unified API endpoints and intelligent UI feedback:
 
 #### System Components
+
 - **`lib/rate-limit-monitor.ts`**: Core monitoring logic with platform-specific transformations
 - **`app/api/rate-limit/[platform]/route.ts`**: Platform-specific API endpoints with capability validation
 - **`app/components/hooks/useRateLimit.ts`**: React hooks for rate limit state management
@@ -381,33 +418,37 @@ Hyperpage implements **multi-platform rate limit monitoring** with unified API e
 - **`lib/types/rate-limit.ts`**: Type-safe interfaces for universal rate limit data structures
 
 #### Platform-Specific Implementations
+
 Each tool integration defines rate limit monitoring through registered handlers:
+
 ```typescript
 export const githubTool: Tool = {
   // ... basic configuration
-  capabilities: ['rate-limit'], // Declares support
+  capabilities: ["rate-limit"], // Declares support
 
   apis: {
-    'rate-limit': {
-      method: 'GET',
-      description: 'Monitor GitHub API rate limits',
-      response: { dataKey: 'rateLimit' }
-    }
+    "rate-limit": {
+      method: "GET",
+      description: "Monitor GitHub API rate limits",
+      response: { dataKey: "rateLimit" },
+    },
   },
 
   handlers: {
-    'rate-limit': async (request, config) => {
-      const response = await fetch('https://api.github.com/rate_limit', {
-        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
+    "rate-limit": async (request, config) => {
+      const response = await fetch("https://api.github.com/rate_limit", {
+        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` },
       });
       return { rateLimit: await response.json() };
-    }
-  }
+    },
+  },
 };
 ```
 
 #### Data Transformation Pipeline
+
 Raw platform responses are transformed to universal format:
+
 ```typescript
 // GitHub: Multiple API limits (core, search, graphql)
 transformGitHubLimits(data) → {
@@ -430,7 +471,9 @@ transformJiraLimits(data) → { jira: { global: { /* null values */ } } }
 ```
 
 #### Intelligent Status Calculation
+
 Overall health status derived from all platforms:
+
 ```typescript
 calculateOverallStatus(limits) → 'normal' | 'warning' | 'critical' | 'unknown'
 // normal: < 75% usage across all limits
@@ -439,23 +482,26 @@ calculateOverallStatus(limits) → 'normal' | 'warning' | 'critical' | 'unknown'
 ```
 
 #### UI Integration
+
 Status displayed through visual indicators:
+
 - **Badges**: Percentage usage (5%, 95%) with color-coded backgrounds
 - **Icons**: Warning symbols for rates approaching limits
 - **Tooltips**: Detailed platform-specific information on hover
 
 #### Caching Strategy
+
 - **5-minute TTL**: Balances fresh data with API rate limiting
 - **Freshness Tracking**: UI indicates data age and freshness
 - **Stale Data Handling**: Falls back to cached data after network failures
 
 #### Benefits
+
 - **Unified API**: Single endpoint per platform regardless of underlying API differences
 - **Intelligent Caching**: Prevents excessive API calls while maintaining freshness
 - **Rich UI Feedback**: Users understand API health without technical knowledge
 - **Platform Awareness**: Optimized handling for different rate limit patterns
 - **Error Resilience**: Graceful degradation when rate limit monitoring fails
-
 
 Rate limit monitoring tracks API usage across all enabled platforms and displays status through the UI.
 
@@ -464,6 +510,7 @@ Rate limit monitoring tracks API usage across all enabled platforms and displays
 ### PLAN → ACT Mode Transition
 
 Following the team-developed workflow:
+
 1. **PLAN Mode**: Discuss features, UI/UX decisions, architectural changes
 2. **ACT Mode**: Implement components, code changes, testing
 3. **Tool-First Tools**: Development workflow itself is tool-based
@@ -471,12 +518,14 @@ Following the team-developed workflow:
 ### Mode-Specific Guidelines
 
 **PLAN Mode:**
+
 - Architect solutions before implementation
 - Gather requirements and explore approaches
 - Document decision reasoning
 - Create comprehensive checklists
 
 **ACT Mode:**
+
 - Implement following established patterns
 - Use tool-first approach for state management
 - Follow 100-line component size limits
@@ -492,15 +541,16 @@ Following the team-developed workflow:
 ## Testing & Quality Assurance
 
 ### Automated Quality Checks
+
 - **TypeScript Compilation**: All interfaces properly defined
 - **Build Success**: Production builds complete without errors
 - **ESLint Compliance**: Clean code standards maintained
 - **Import Organization**: Dependencies properly sorted and grouped
 
 ### Performance Considerations
+
 - **Responsive Design**: Interface adapts from mobile to desktop
 - **Memory Management**: Components clean up on unmount
 - **API Optimization**: Request deduplication and caching
-
 
 For implementation details and API specifications, see [`docs/api.md`](api.md).

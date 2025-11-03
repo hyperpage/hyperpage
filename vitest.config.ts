@@ -1,37 +1,37 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import path from "path";
 
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
+    environment: "jsdom",
+    setupFiles: ["./vitest.setup.ts"],
     globals: true,
     exclude: [
-      '__tests__/e2e/**', // Exclude E2E tests from Vitest
-      'node_modules/**'
+      "__tests__/e2e/**", // Exclude E2E tests from Vitest
+      "node_modules/**",
     ],
     typecheck: {
       enabled: true,
-      checker: 'tsc',
-      include: ['**/*.{test,spec}.ts', '**/*.{test,spec}.tsx'],
-      exclude: ['node_modules', '.next', '__tests__/e2e']
+      checker: "tsc",
+      include: ["**/*.{test,spec}.ts", "**/*.{test,spec}.tsx"],
+      exclude: ["node_modules", ".next", "__tests__/e2e"],
     },
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      provider: "v8",
+      reporter: ["text", "json", "html"],
       exclude: [
-        'node_modules/',
-        '.next/',
-        'coverage/',
-        '**/*.d.ts',
-        'vitest.config.ts',
-        'vitest.setup.ts',
-        '**/*.config.js',
-        '**/*.config.mjs',
-        'e2e/', // Exclude e2e from coverage
+        "node_modules/",
+        ".next/",
+        "coverage/",
+        "**/*.d.ts",
+        "vitest.config.ts",
+        "vitest.setup.ts",
+        "**/*.config.js",
+        "**/*.config.mjs",
+        "e2e/", // Exclude e2e from coverage
       ],
       thresholds: {
         global: {
@@ -45,7 +45,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
+      "@": path.resolve(__dirname, "."),
     },
   },
 });

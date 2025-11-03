@@ -1,4 +1,4 @@
-import type { Server } from 'http';
+import type { Server } from "http";
 
 interface RateLimitResource {
   limit: number;
@@ -10,15 +10,18 @@ interface RateLimitResource {
 interface RateLimitResponse {
   statusCode?: number;
   retryAfter?: string | number | null;
-  resources?: RateLimitResource | {
-    core?: RateLimitResource;
-    search?: RateLimitResource;
-    graphql?: RateLimitResource;
-  } | {
-    core: RateLimitResource;
-    search: RateLimitResource;
-    graphql: RateLimitResource;
-  };
+  resources?:
+    | RateLimitResource
+    | {
+        core?: RateLimitResource;
+        search?: RateLimitResource;
+        graphql?: RateLimitResource;
+      }
+    | {
+        core: RateLimitResource;
+        search: RateLimitResource;
+        graphql: RateLimitResource;
+      };
   message?: string;
   data?: string;
   [key: string]: unknown;
@@ -60,7 +63,7 @@ export class MockRateLimitServer {
   private rateLimitScenarios: Record<string, RateLimitScenario> = {
     github: {
       endpoints: {
-        '/rate_limit': {
+        "/rate_limit": {
           limit: 5000,
           windowSeconds: 3600,
           currentUsage: 0,
@@ -74,29 +77,29 @@ export class MockRateLimitServer {
                   limit: 5000,
                   used: Math.min(count % 5000, 5000),
                   remaining: Math.max(0, 5000 - (count % 5000)),
-                  reset: resetTime
+                  reset: resetTime,
                 },
                 search: {
                   limit: 30,
                   used: Math.min(count % 30, 30),
                   remaining: Math.max(0, 30 - (count % 30)),
-                  reset: resetTime
+                  reset: resetTime,
                 },
                 graphql: {
                   limit: 5000,
                   used: Math.min(count % 5000, 5000),
                   remaining: Math.max(0, 5000 - (count % 5000)),
-                  reset: resetTime
-                }
-              }
+                  reset: resetTime,
+                },
+              },
             };
-          }
-        }
-      }
+          },
+        },
+      },
     },
     gitlab: {
       endpoints: {
-        '/api/v4/rate_limit': {
+        "/api/v4/rate_limit": {
           limit: 2000,
           windowSeconds: 60,
           currentUsage: 0,
@@ -106,23 +109,23 @@ export class MockRateLimitServer {
 
             if (isLimited) {
               return {
-                message: 'Rate limit exceeded',
+                message: "Rate limit exceeded",
                 retryAfter: retryAfter,
-                statusCode: 429
+                statusCode: 429,
               };
             }
 
             return {
               data: `mock-${count}`,
-              statusCode: 200
+              statusCode: 200,
             };
-          }
-        }
-      }
+          },
+        },
+      },
     },
     jira: {
       endpoints: {
-        '/rest/api/3/rate_limit': {
+        "/rest/api/3/rate_limit": {
           limit: 1000,
           windowSeconds: 3600,
           currentUsage: 0,
@@ -131,40 +134,44 @@ export class MockRateLimitServer {
 
             if (isLimited) {
               return {
-                message: 'Too many requests',
-                retryAfter: '3600',
-                statusCode: 429
+                message: "Too many requests",
+                retryAfter: "3600",
+                statusCode: 429,
               };
             }
 
             return {
               data: `jira-mock-${count}`,
-              statusCode: 200
+              statusCode: 200,
             };
-          }
-        }
-      }
-    }
+          },
+        },
+      },
+    },
   };
 
   async start(): Promise<void> {
-    const http = await import('http');
+    const http = await import("http");
 
     this.server = http.createServer(async (req, res) => {
       const url = new URL(req.url!, `http://${req.headers.host}`);
       const platform = this.getPlatformFromUrl(url.pathname);
-      const endpoint = platform ? `/${platform}${url.pathname.replace(`/${platform}`, '')}`.split('?')[0] : url.pathname;
+      const endpoint = platform
+        ? `/${platform}${url.pathname.replace(`/${platform}`, "")}`.split(
+            "?",
+          )[0]
+        : url.pathname;
 
       if (!platform) {
         res.writeHead(404);
-        res.end(JSON.stringify({ error: 'Platform not found' }));
+        res.end(JSON.stringify({ error: "Platform not found" }));
         return;
       }
 
       const scenario = this.rateLimitScenarios[platform];
       if (!scenario) {
         res.writeHead(404);
-        res.end(JSON.stringify({ error: 'Scenario not configured' }));
+        res.end(JSON.stringify({ error: "Scenario not configured" }));
         return;
       }
 
@@ -176,18 +183,26 @@ export class MockRateLimitServer {
       // Get endpoint configuration
       let endpointConfig = scenario.endpoints[endpoint];
       if (!endpointConfig && endpoint === `/${platform}/rate_limit`) {
-        endpointConfig = scenario.endpoints['/rate_limit'];
+        endpointConfig = scenario.endpoints["/rate_limit"];
       }
 
       if (!endpointConfig || !endpointConfig.customResponse) {
         res.writeHead(404);
-        res.end(JSON.stringify({ error: 'Endpoint not configured', requestKey, endpoint }));
+        res.end(
+          JSON.stringify({
+            error: "Endpoint not configured",
+            requestKey,
+            endpoint,
+          }),
+        );
         return;
       }
 
       // Simulate network delay
       if (endpointConfig.responseDelay) {
-        await new Promise(resolve => setTimeout(resolve, endpointConfig.responseDelay));
+        await new Promise((resolve) =>
+          setTimeout(resolve, endpointConfig.responseDelay),
+        );
       }
 
       // Generate response
@@ -195,9 +210,11 @@ export class MockRateLimitServer {
 
       // Set response headers and status
       res.writeHead(responseData.statusCode || 200, {
-        'Content-Type': 'application/json',
-        'X-RateLimit-Request-Count': count.toString(),
-        ...(responseData.retryAfter != null && { 'Retry-After': responseData.retryAfter.toString() })
+        "Content-Type": "application/json",
+        "X-RateLimit-Request-Count": count.toString(),
+        ...(responseData.retryAfter != null && {
+          "Retry-After": responseData.retryAfter.toString(),
+        }),
       });
 
       // Remove statusCode from response body
@@ -207,13 +224,13 @@ export class MockRateLimitServer {
       res.end(JSON.stringify(responseBody));
     });
 
-    const port = parseInt(this.serverUrl.split(':')[2]);
+    const port = parseInt(this.serverUrl.split(":")[2]);
     const server = this.server;
     if (!server) {
-      throw new Error('Server is null');
+      throw new Error("Server is null");
     }
     await new Promise<void>((resolve, reject) => {
-      server.listen(port, () => resolve()).on('error', reject);
+      server.listen(port, () => resolve()).on("error", reject);
     });
   }
 
@@ -238,8 +255,8 @@ export class MockRateLimitServer {
     if (platform) {
       // Reset specific platform
       Array.from(this.requestCounts.keys())
-        .filter(key => key.startsWith(platform))
-        .forEach(key => this.requestCounts.delete(key));
+        .filter((key) => key.startsWith(platform))
+        .forEach((key) => this.requestCounts.delete(key));
     } else {
       // Reset all counters
       this.requestCounts.clear();
@@ -252,7 +269,11 @@ export class MockRateLimitServer {
   }
 
   // Configure a custom endpoint for testing
-  configureEndpoint(platform: string, endpoint: string, config: EndpointConfig): void {
+  configureEndpoint(
+    platform: string,
+    endpoint: string,
+    config: EndpointConfig,
+  ): void {
     if (!this.rateLimitScenarios[platform]) {
       this.rateLimitScenarios[platform] = { endpoints: {} };
     }
@@ -261,12 +282,12 @@ export class MockRateLimitServer {
       windowSeconds: 3600, // Default 1 hour window
       currentUsage: 0,
       responseDelay: config.responseDelay,
-      customResponse: config.customResponse
+      customResponse: config.customResponse,
     };
   }
 
   private getPlatformFromUrl(pathname: string): string | null {
-    const segments = pathname.split('/').filter(Boolean);
+    const segments = pathname.split("/").filter(Boolean);
     if (segments.length === 0) return null;
 
     const firstSegment = segments[0];
@@ -277,8 +298,8 @@ export class MockRateLimitServer {
     }
 
     // For GitLab-style paths
-    if (segments.includes('api') && segments.includes('v4')) {
-      return 'gitlab';
+    if (segments.includes("api") && segments.includes("v4")) {
+      return "gitlab";
     }
 
     return null;
@@ -295,42 +316,42 @@ export const RateLimitTestUtils = {
   createRateLimitScenario: (
     platform: string,
     triggerUsage: number,
-    limit: number = 100
+    limit: number = 100,
   ): CustomResponseGenerator => {
     return (count: number) => {
       const used = count % (limit + 1);
       const isLimited = used >= triggerUsage;
 
-      if (platform === 'github') {
+      if (platform === "github") {
         return {
           resources: {
             core: {
               limit,
               used: Math.min(used, limit),
               remaining: Math.max(0, limit - used),
-              reset: Math.floor(Date.now() / 1000) + 3600
-            }
-          }
+              reset: Math.floor(Date.now() / 1000) + 3600,
+            },
+          },
         };
       }
 
-      if (platform === 'gitlab') {
+      if (platform === "gitlab") {
         if (isLimited) {
           return {
-            message: 'Rate limit exceeded',
+            message: "Rate limit exceeded",
             retryAfter: 60,
-            statusCode: 429
+            statusCode: 429,
           };
         }
         return { data: `mock-${count}`, statusCode: 200 };
       }
 
-      if (platform === 'jira') {
+      if (platform === "jira") {
         if (isLimited) {
           return {
-            message: 'Too many requests',
-            retryAfter: '3600',
-            statusCode: 429
+            message: "Too many requests",
+            retryAfter: "3600",
+            statusCode: 429,
           };
         }
         return { data: `jira-mock-${count}`, statusCode: 200 };
@@ -345,5 +366,5 @@ export const RateLimitTestUtils = {
    */
   simulateNetworkDelay: (minDelayMs: number, maxDelayMs: number): number => {
     return Math.random() * (maxDelayMs - minDelayMs) + minDelayMs;
-  }
+  },
 };
