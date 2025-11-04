@@ -4,6 +4,7 @@ import type {
   CacheOptions,
   CacheStats,
 } from "./cache-interface";
+import logger from "../logger";
 
 /**
  * Eviction policies for advanced cache management.
@@ -472,8 +473,13 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
     // This would be called asynchronously on startup
     if (this.options.warmKeys) {
       // Implementation would depend on the specific warming strategy
-      console.log(
-        `Cache warming enabled for ${this.options.warmKeys.length} keys`,
+      logger.info(
+        `Cache warming enabled`,
+        {
+          warmKeyCount: this.options.warmKeys.length,
+          warmKeys: this.options.warmKeys,
+          cacheType: this.options.evictionPolicy,
+        },
       );
     }
   }

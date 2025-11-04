@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { defaultCache } from "../../cache/cache-factory";
 import { generateCacheKey } from "../../cache/memory-cache";
+import logger from "../../logger";
 
 export interface InvalidationRule {
   /** Pattern to match cache keys for invalidation */
@@ -240,16 +241,26 @@ export class CacheInvalidationMiddleware {
 
       // Delete matched keys
       if (keysToDelete.length > 0) {
-        console.debug(
-          `Invalidating ${keysToDelete.length} cache entries:`,
-          keysToDelete,
+        logger.debug(
+          "Invalidating cache entries by rule",
+          {
+            rulePattern: rule.pattern,
+            invalidatedCount: keysToDelete.length,
+            keysToDelete,
+          },
         );
         await Promise.allSettled(
           keysToDelete.map((key) => defaultCache.delete(key)),
         );
       }
     } catch (error) {
-      
+      logger.warn(
+        "Cache invalidation by rule failed",
+        {
+          error: error instanceof Error ? error.message : String(error),
+          rulePattern: rule.pattern,
+        },
+      );
       // Don't throw - invalidation failures shouldn't break the main request
     }
   }
@@ -306,16 +317,26 @@ export class CacheInvalidationMiddleware {
       }
 
       if (keysToDelete.length > 0) {
-        console.debug(
-          `Invalidating ${keysToDelete.length} cache entries by tags:`,
-          tags,
+        logger.debug(
+          "Invalidating cache entries by tags",
+          {
+            tags,
+            invalidatedCount: keysToDelete.length,
+            keysToDelete,
+          },
         );
         await Promise.allSettled(
           keysToDelete.map((key) => defaultCache.delete(key)),
         );
       }
     } catch (error) {
-      
+      logger.warn(
+        "Cache invalidation by tags failed",
+        {
+          tags,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
     }
   }
 

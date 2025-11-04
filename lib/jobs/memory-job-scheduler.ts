@@ -12,6 +12,7 @@ import {
   JobStatus,
   JobType,
 } from "../types/jobs";
+import logger from "../logger";
 
 interface ScheduledJob {
   job: IJob;
@@ -288,8 +289,15 @@ export class MemoryJobScheduler implements IJobScheduler {
       timestamp: Date.now(),
     });
 
-    console.log(
-      `Completed scheduled job: ${job.name} (${job.id}) in ${executionTime.toFixed(0)}ms`,
+    logger.info(
+      `Scheduled job completed`,
+      {
+        jobId: job.id,
+        jobName: job.name,
+        executionTimeMs: executionTime.toFixed(0),
+        jobType: job.type,
+        priority: job.priority,
+      },
     );
   }
 

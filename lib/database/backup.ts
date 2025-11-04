@@ -12,6 +12,7 @@ import { db, closeDatabase } from "./index.js";
 import { jobs, jobHistory, rateLimits, toolConfigs } from "./schema.js";
 import { loadPersistedRateLimits } from "../rate-limit-service.js";
 import { loadToolConfigurations } from "../tool-config-manager.js";
+import logger from "../logger";
 
 // Get project root directory
 const __filename = fileURLToPath(import.meta.url);
@@ -48,7 +49,13 @@ async function ensureBackupDirectory(): Promise<void> {
   try {
     await fs.mkdir(BACKUP_DIR, { recursive: true });
   } catch (error) {
-    
+    logger.error(
+      "Failed to create backup directory",
+      {
+        backupDir: BACKUP_DIR,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
     throw new Error("Cannot create backup directory");
   }
 }
@@ -99,7 +106,13 @@ async function getBackupMetadata(backupPath: string): Promise<BackupMetadata> {
       checksum,
     };
   } catch (error) {
-    
+    logger.error(
+      "Failed to get backup metadata",
+      {
+        backupPath,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
     throw error;
   }
 }
@@ -137,8 +150,14 @@ export async function createBackup(): Promise<BackupResult> {
 
     const duration = Date.now() - startTime;
 
-    console.info(
-      `Database backup created successfully: ${backupPath} (${(await fs.stat(backupPath)).size} bytes)`,
+    logger.info(
+      "Database backup created successfully",
+      {
+        backupPath,
+        size: (await fs.stat(backupPath)).size,
+        duration,
+        metadata,
+      },
     );
 
     return {
@@ -150,7 +169,14 @@ export async function createBackup(): Promise<BackupResult> {
     };
   } catch (error) {
     const duration = Date.now() - startTime;
-    
+    logger.error(
+      "Failed to create database backup",
+      {
+        duration,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    );
 
     return {
       success: false,
@@ -184,9 +210,9 @@ export async function restoreBackup(
     try {
       await fs.access(dbPath);
       await fs.copyFile(dbPath, tempBackupPath);
-      
+      logger.debug("Created temporary backup before restore", { tempBackupPath });
     } catch {
-      
+      logger.debug("No existing database to backup before restore");
     }
 
     // Close current database connections
@@ -195,7 +221,7 @@ export async function restoreBackup(
     try {
       // Restore from backup
       await fs.copyFile(backupPath, dbPath);
-      
+      logger.info("Database restored from backup", { backupPath, dbPath });
 
       const duration = Date.now() - startTime;
 
@@ -213,12 +239,15 @@ export async function restoreBackup(
             .catch(() => false)
         ) {
           await fs.copyFile(tempBackupPath, dbPath);
-          
+          logger.info("Successfully reverted to original database", { tempBackupPath });
         }
       } catch (revertError) {
-        console.error(
-          "Critical: Could not revert to original database:",
-          revertError,
+        logger.error(
+          "Critical: Could not revert to original database",
+          {
+            tempBackupPath,
+            revertError: revertError instanceof Error ? revertError.message : String(revertError),
+          },
         );
       }
 
@@ -226,15 +255,27 @@ export async function restoreBackup(
     }
   } catch (error) {
     const duration = Date.now() - startTime;
-    
+    logger.error(
+      "Database restore failed",
+      {
+        backupPath,
+        duration,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
 
     // Try to load persisted data if database was corrupted
     try {
       await loadPersistedRateLimits();
       await loadToolConfigurations();
-      
+      logger.info("Successfully loaded persisted data after restore failure");
     } catch (loadError) {
-      
+      logger.error(
+        "Failed to load persisted data after restore failure",
+        {
+          error: loadError instanceof Error ? loadError.message : String(loadError),
+        },
+      );
     }
 
     return {
@@ -314,7 +355,12 @@ export async function listBackups(): Promise<
       )
       .sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
-    
+    logger.error(
+      "Failed to list backup files",
+      {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
     return [];
   }
 }
@@ -341,12 +387,23 @@ export async function cleanupOldBackups(
         await fs.unlink(`${backup.path}.metadata.json`).catch(() => {}); // Ignore if metadata file doesn't exist
         deleted.push(backup.filename);
       } catch (error) {
-        
+        logger.error(
+          "Failed to delete backup file",
+          {
+            backupPath: backup.path,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
       }
     }
 
-    console.info(
-      `Cleaned up ${deleted.length} old backups. Kept ${keepLast} most recent backups.`,
+    logger.info(
+      "Cleaned up old backups",
+      {
+        deletedCount: deleted.length,
+        kept: keepLast,
+        deletedFiles: deleted,
+      },
     );
 
     return {
@@ -354,7 +411,13 @@ export async function cleanupOldBackups(
       kept: backups.length - deleted.length,
     };
   } catch (error) {
-    
+    logger.error(
+      "Failed to cleanup old backups",
+      {
+        error: error instanceof Error ? error.message : String(error),
+        keepLast,
+      },
+    );
     return { deleted: [], kept: 0 };
   }
 }

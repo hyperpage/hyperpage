@@ -18,6 +18,7 @@ import {
 import { db } from "../database";
 import { jobs, Job, NewJob } from "../database/schema";
 import { eq, and, inArray, lt } from "drizzle-orm";
+import logger from "../logger";
 
 /**
  * Priority queue implementation for job scheduling
@@ -469,8 +470,15 @@ export class MemoryJobQueue implements IJobQueue {
         }
       }
 
-      console.info(
-        `Successfully recovered ${recoveredCount} jobs from database`,
+      logger.info(
+        "Successfully recovered jobs from database",
+        {
+          recoveredCount,
+          totalJobs: this.stats.totalJobs,
+          pendingJobs: this.stats.pendingJobs,
+          runningJobs: this.stats.runningJobs,
+          failedJobs: this.stats.failedJobs,
+        },
       );
       return recoveredCount;
     } catch (error) {

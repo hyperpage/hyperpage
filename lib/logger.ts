@@ -32,7 +32,7 @@ export interface LogStream {
   write: (message: string) => void;
 }
 
-// Unified transport configuration - automatically detects environment
+// Simple transport-free logger configuration
 const getTransportConfig = () => {
   const config = {
     name: 'hyperpage',
@@ -42,26 +42,26 @@ const getTransportConfig = () => {
     },
   };
 
-  // Development environment - enhanced readability
-  if (process.env.NODE_ENV === 'development') {
-    return {
-      ...config,
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'YYYY-MM-DD HH:mm:ss',
-          ignore: 'pid,hostname',
-        },
-      },
-    };
-  }
-
+  // Remove all transport configurations to avoid worker thread issues
   return config;
 };
 
-// Create the unified logger - works in both browser and server environments
-const pinoInstance = pino(getTransportConfig());
+// Create the unified logger with comprehensive error handling
+let pinoInstance: pino.Logger;
+
+try {
+  pinoInstance = pino(getTransportConfig());
+} catch (error) {
+  // Emergency fallback - create logger with minimal configuration
+  console.error('Failed to initialize logger with transport config, using emergency fallback:', error);
+  pinoInstance = pino({
+    name: 'hyperpage',
+    level: process.env.LOG_LEVEL || 'info',
+    base: {
+      service: 'hyperpage',
+    },
+  });
+}
 
 // Helper function to safely merge metadata
 const mergeMetadata = (base: Record<string, any>, data?: LoggerMetadata): Record<string, any> => {
@@ -72,10 +72,80 @@ const mergeMetadata = (base: Record<string, any>, data?: LoggerMetadata): Record
   return base;
 };
 
+// Create a safe logging wrapper that catches all errors
+const createSafeLogger = (logger: pino.Logger): pino.Logger => {
+  const safeLogger = {
+    error: (meta: Record<string, any>, msg: string) => {
+      try {
+        logger.error(meta, msg);
+      } catch (error) {
+        // Silently handle logger errors to avoid cascading failures
+        try {
+          console.error(`[HYPERPAGE ERROR] ${msg}`, meta);
+        } catch {
+          // Final fallback
+        }
+      }
+    },
+    warn: (meta: Record<string, any>, msg: string) => {
+      try {
+        logger.warn(meta, msg);
+      } catch (error) {
+        try {
+          console.warn(`[HYPERPAGE WARN] ${msg}`, meta);
+        } catch {
+          // Final fallback
+        }
+      }
+    },
+    info: (meta: Record<string, any>, msg: string) => {
+      try {
+        logger.info(meta, msg);
+      } catch (error) {
+        try {
+          console.info(`[HYPERPAGE INFO] ${msg}`, meta);
+        } catch {
+          // Final fallback
+        }
+      }
+    },
+    debug: (meta: Record<string, any>, msg: string) => {
+      try {
+        logger.debug(meta, msg);
+      } catch (error) {
+        // Silently ignore debug errors to avoid clutter
+      }
+    },
+    fatal: (meta: Record<string, any>, msg: string) => {
+      try {
+        logger.fatal(meta, msg);
+      } catch (error) {
+        try {
+          console.error(`[HYPERPAGE FATAL] ${msg}`, meta);
+        } catch {
+          // Final fallback
+        }
+      }
+    },
+    trace: (meta: Record<string, any>, msg: string) => {
+      try {
+        logger.trace(meta, msg);
+      } catch (error) {
+        // Silently ignore trace errors
+      }
+    },
+  };
+
+  return safeLogger as unknown as pino.Logger;
+};
+
+// Use the safe logger wrapper
+const safePinoInstance = createSafeLogger(pinoInstance);
+
 // Rate Limit Logger - maintains existing API for backward compatibility
 const rateLimitLogger: RateLimitLogger = {
   hit: (platform: string, data: LoggerMetadata) => {
-    pinoInstance.warn(
+    safePinoInstance.warn(
       mergeMetadata(
         { 
           platform, 
@@ -93,7 +163,7 @@ const rateLimitLogger: RateLimitLogger = {
     attemptNumber: number,
     data: LoggerMetadata,
   ) => {
-    pinoInstance.warn(
+    safePinoInstance.warn(
       mergeMetadata(
         {
           platform,
@@ -108,7 +178,7 @@ const rateLimitLogger: RateLimitLogger = {
   },
 
   retry: (platform: string, attemptNumber: number, data: LoggerMetadata) => {
-    pinoInstance.info(
+    safePinoInstance.info(
       mergeMetadata(
         {
           platform,
@@ -127,7 +197,7 @@ const rateLimitLogger: RateLimitLogger = {
     message: string,
     metadata?: Record<string, any>,
   ) => {
-    pinoInstance[level](
+    safePinoInstance[level](
       {
         platform,
         message,
@@ -142,7 +212,16 @@ const rateLimitLogger: RateLimitLogger = {
 // HTTP Stream - for request logging compatibility
 const stream: LogStream = {
   write: (message: string) => {
-    pinoInstance.info({ message: message.trim() }, 'HTTP');
+    try {
+      safePinoInstance.info({ message: message.trim() }, 'HTTP');
+    } catch (error) {
+      // Fallback to console if logger fails
+      try {
+        console.log(message.trim());
+      } catch {
+        // Final fallback - do nothing
+      }
+    }
   },
 };
 
@@ -155,15 +234,19 @@ export const logApiRequest = (
   rateLimitRemaining?: number,
   rateLimitReset?: number,
 ) => {
-  pinoInstance.info({
-    platform,
-    endpoint,
-    statusCode,
-    duration,
-    rateLimitRemaining,
-    rateLimitReset,
-    type: 'api_request',
-  }, 'API_REQUEST');
+  try {
+    safePinoInstance.info({
+      platform,
+      endpoint,
+      statusCode,
+      duration,
+      rateLimitRemaining,
+      rateLimitReset,
+      type: 'api_request',
+    }, 'API_REQUEST');
+  } catch (error) {
+    // Silent fallback
+  }
 };
 
 // Utility function to log rate limit status changes
@@ -173,28 +256,60 @@ export const logRateLimitStatus = (
   status: 'normal' | 'warning' | 'critical' | 'unknown',
   metadata?: Record<string, any>,
 ) => {
-  pinoInstance.info({
-    platform,
-    usagePercent,
-    status,
-    type: 'rate_limit_status',
-    ...metadata,
-  }, 'RATE_LIMIT_STATUS');
+  try {
+    safePinoInstance.info({
+      platform,
+      usagePercent,
+      status,
+      type: 'rate_limit_status',
+      ...metadata,
+    }, 'RATE_LIMIT_STATUS');
+  } catch (error) {
+    // Silent fallback
+  }
 };
 
 // Unified logger interface that matches existing API
 const unifiedLogger: LogLevel = {
   error: (message: string, meta?: LoggerMetadata) => {
-    pinoInstance.error(meta || {}, message);
+    try {
+      safePinoInstance.error(meta || {}, message);
+    } catch (error) {
+      try {
+        console.error(message, meta || {});
+      } catch {
+        // Final fallback - do nothing
+      }
+    }
   },
   warn: (message: string, meta?: LoggerMetadata) => {
-    pinoInstance.warn(meta || {}, message);
+    try {
+      safePinoInstance.warn(meta || {}, message);
+    } catch (error) {
+      try {
+        console.warn(message, meta || {});
+      } catch {
+        // Final fallback - do nothing
+      }
+    }
   },
   info: (message: string, meta?: LoggerMetadata) => {
-    pinoInstance.info(meta || {}, message);
+    try {
+      safePinoInstance.info(meta || {}, message);
+    } catch (error) {
+      try {
+        console.info(message, meta || {});
+      } catch {
+        // Final fallback - do nothing
+      }
+    }
   },
   debug: (message: string, meta?: LoggerMetadata) => {
-    pinoInstance.debug(meta || {}, message);
+    try {
+      safePinoInstance.debug(meta || {}, message);
+    } catch (error) {
+      // Silent fallback for debug
+    }
   },
 };
 
@@ -204,5 +319,5 @@ export default unifiedLogger;
 // Export existing interface objects for backward compatibility
 export { rateLimitLogger, stream };
 
-// Export Pino logger instance for advanced usage
-export { pinoInstance as pinoLogger };
+// Export Pino logger instance for advanced usage (wrapped in safe logger)
+export { safePinoInstance as pinoLogger };

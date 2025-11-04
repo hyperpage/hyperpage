@@ -4,17 +4,18 @@ import {
   DetectedBottleneck,
   BottleneckHistory,
 } from "../../../lib/monitoring/bottleneck-detector";
+import logger from "../../../lib/logger";
 
 /**
  * GET /api/bottlenecks - Get all active and recent bottleneck detections
  */
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const includeHistory = searchParams.get("history") === "true";
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const timeRange = parseInt(searchParams.get("timeRange") || "3600000"); // 1 hour default
+  const { searchParams } = new URL(request.url);
+  const includeHistory = searchParams.get("history") === "true";
+  const limit = parseInt(searchParams.get("limit") || "20");
+  const timeRange = parseInt(searchParams.get("timeRange") || "3600000"); // 1 hour default
 
+  try {
     // Get active bottlenecks
     const activeBottlenecks = bottleneckDetector.getActiveBottlenecks();
 
@@ -65,6 +66,16 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    logger.error(
+      "Failed to retrieve bottleneck data",
+      {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        includeHistory,
+        limit,
+        timeRange,
+      },
+    );
     
     return NextResponse.json(
       { error: "Failed to retrieve bottleneck data" },
@@ -77,9 +88,15 @@ export async function GET(request: NextRequest) {
  * POST /api/bottlenecks - Trigger manual bottleneck analysis
  */
 export async function POST(request: NextRequest) {
+  let timeRange: number | undefined;
+  let categories: unknown;
+  let severities: unknown;
+
   try {
     const body = await request.json();
-    const { timeRange, categories, severities } = body;
+    timeRange = body.timeRange;
+    categories = body.categories;
+    severities = body.severities;
 
     // Force a detection cycle with custom parameters
     const analysisTimeRange = timeRange || 300000; // 5 minutes default
@@ -93,6 +110,16 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now(),
     });
   } catch (error) {
+    logger.error(
+      "Failed to trigger bottleneck analysis",
+      {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        timeRange,
+        categories,
+        severities,
+      },
+    );
     
     return NextResponse.json(
       { error: "Failed to trigger bottleneck analysis" },

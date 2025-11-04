@@ -19,6 +19,7 @@ import {
   OAuthTestCredentials,
   isServerAvailable,
 } from "../../lib/test-credentials";
+import logger from "../../../lib/logger";
 
 // Check server availability before defining tests
 const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
@@ -34,11 +35,20 @@ describe("Jira Tool Integration", () => {
 
   beforeAll(async () => {
     if (!serverAvailable) {
-      console.log(
-        "⚠️  Test server not available. Integration tests will be skipped.",
+      logger.info(
+        "⚠️ Test server not available. Integration tests will be skipped.",
+        {
+          type: 'jira_integration_tests_skipped',
+          serverAvailable: false,
+          baseUrl,
+        },
       );
-      console.log(
+      logger.info(
         "💡 To run integration tests, start the server with: npm run dev",
+        {
+          type: 'integration_test_instructions',
+          command: 'npm run dev',
+        },
       );
       return;
     }
@@ -62,8 +72,12 @@ describe("Jira Tool Integration", () => {
           },
         );
       } catch (error) {
-        // Ignore cleanup errors in tests
-        
+        // Log cleanup errors for debugging but don't fail tests
+        logger.warn("Failed to cleanup test session", {
+          type: 'session_cleanup_error',
+          sessionId: testSession.sessionId,
+          error: error instanceof Error ? error.message : "unknown",
+        });
       }
     }
   });

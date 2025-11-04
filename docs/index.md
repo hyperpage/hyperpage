@@ -16,7 +16,7 @@ Hyperpage is a production-grade enterprise application featuring high-performanc
 
 ### 🏗️ **Architecture & Design**
 
-- **[Architecture Overview](architecture.md)** - System architecture and component relationships
+- **[Architecture Overview](architecture/architecture.md)** - System architecture and component relationships
 - **[UI/UX Design Guide](ui.md)** - User interface and user experience patterns
 - **[Tool Integration System](tool-integration-system.md)** - How tools integrate with Hyperpage
 
@@ -28,16 +28,35 @@ Hyperpage is a production-grade enterprise application featuring high-performanc
 
 ### ⚙️ **Operations & Deployment**
 
-- **[Deployment Guide](deployment.md)** - Production deployment strategies
-- **[Kubernetes Setup](kubernetes.md)** - Container orchestration and scaling
-- **[Performance Optimization](performance.md)** - Tuning and optimization guides
-- **[Testing Strategy](testing.md)** - Test coverage and quality assurance
+- **[Deployment Guide](operations/deployment.md)** - Production deployment strategies
+- **[Kubernetes Setup](operations/kubernetes.md)** - Container orchestration and scaling
+- **[Performance Optimization](operations/scaling.md)** - Scaling and performance tuning guides
 - **[CI/CD Pipeline Documentation](../.github/workflows/)** - GitHub Actions workflows and automation
+
+### 🧪 **Testing & Quality**
+
+- **[Testing Strategy](testing/testing.md)** - Test coverage and quality assurance
+- **[Integration Testing Guide](testing/integration-testing-guide.md)** - Integration testing patterns
+- **[API Testing Patterns](testing/test-api-integration-patterns.md)** - API testing guidelines
+- **[Performance Testing Summary](performance-testing-summary.md)** - Performance test results
+
+### 🔐 **Authentication & Security**
+
+- **[OAuth Architecture Design](auth/oauth-architecture-design.md)** - OAuth implementation design
+- **[Security Practices](security.md)** - Enterprise security standards and validation
+- **[Configuration Management](config-management.md)** - Secure configuration management
 
 ### 🔧 **API Reference**
 
 - **[API Specification](api.md)** - REST API endpoints and schemas
-- **[Configuration Management](config-management.md)** - Tool and system configuration
+- **[Tool Integration System](tool-integration-system.md)** - How tools integrate with Hyperpage
+
+### 📊 **Reports & Analysis**
+
+- **[Reports Directory](reports/)** - Technical reports and analysis
+  - Authentication fixes and debugging reports
+  - Performance testing and optimization reports
+  - Error investigation and resolution reports
 
 ---
 
@@ -91,18 +110,18 @@ Hyperpage is a production-grade enterprise application featuring high-performanc
 
 ### For Developers
 
-1. Review [Architecture Overview](architecture.md) for system understanding
+1. Review [Architecture Overview](architecture/architecture.md) for system understanding
 2. Read [Installation Guide](installation.md) for local development setup
 3. Explore [Data Persistence](persistence.md) and [Caching](caching.md) systems
 4. Study [API Specification](api.md) for integration development
-5. Review [CI/CD Pipeline Documentation](../.github/workflows/) for deployment automation
+5. Review [Testing Strategy](testing/testing.md) for quality assurance
 
 ### For Operators
 
-1. Follow [Deployment Guide](deployment.md) for production deployment
+1. Follow [Deployment Guide](operations/deployment.md) for production deployment
 2. Configure [Monitoring & Alerting](monitoring.md) for production observability
-3. Review [Performance Optimization](performance.md) for production tuning
-4. Implement [Kubernetes Setup](kubernetes.md) for scalable operations
+3. Review [Performance Optimization](operations/scaling.md) for production tuning
+4. Implement [Kubernetes Setup](operations/kubernetes.md) for scalable operations
 5. Utilize [GitHub Actions workflows](../.github/workflows/) for automated CI/CD
 
 ---
@@ -137,10 +156,12 @@ _Last updated: January 11, 2025_
 
 ## 🔗 **Quick Links**
 
-| Area            | Links                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Development** | [README](../README.md) • [Installation](installation.md) • [Architecture](architecture.md)                    |
-| **Systems**     | [Caching](caching.md) • [Persistence](persistence.md) • [Monitoring](monitoring.md)                           |
-| **Operations**  | [Deployment](deployment.md) • [Kubernetes](kubernetes.md) • [Performance](performance.md)                     |
-| **Quality**     | [Testing](testing.md) • [Security](security.md) • [Contributing](CONTRIBUTING.md)                             |
-| **CI/CD**       | [GitHub Actions Workflows](../.github/workflows/) • [Deployment Guide](deployment.md) • [Roadmap](roadmap.md) |
+| Area            | Links                                                                                                             |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Development** | [README](../README.md) • [Installation](installation.md) • [Architecture](architecture/architecture.md)          |
+| **Systems**     | [Caching](caching.md) • [Persistence](persistence.md) • [Monitoring](monitoring.md)                               |
+| **Operations**  | [Deployment](operations/deployment.md) • [Kubernetes](operations/kubernetes.md) • [Scaling](operations/scaling.md) |
+| **Testing**     | [Testing](testing/testing.md) • [Integration Testing](testing/integration-testing-guide.md)                       |
+| **Security**    | [Security](security.md) • [Configuration](config-management.md)                                                   |
+| **Quality**     | [Contributing](CONTRIBUTING.md) • [API Reference](api.md)                                                        |
+| **CI/CD**       | [GitHub Actions Workflows](../.github/workflows/) • [Roadmap](roadmap.md)                                         |

@@ -5,17 +5,18 @@ import {
   getAllToolsHealth,
   getCircuitBreakerStatus,
 } from "../../../../tools/validation";
+import logger from "../../../../lib/logger";
 
 /**
  * Tool Health API Endpoint
  * Returns configuration validation and connectivity status for all tools
  */
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const detailed = searchParams.get("detailed") === "true";
-    const connectivity = searchParams.get("connectivity") === "true";
+  const { searchParams } = new URL(request.url);
+  const detailed = searchParams.get("detailed") === "true";
+  const connectivity = searchParams.get("connectivity") === "true";
 
+  try {
     const tools = getAllTools();
 
     // Get basic health status for all tools
@@ -73,6 +74,15 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    logger.error(
+      "Failed to get tool health status",
+      {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        detailed,
+        connectivity,
+      },
+    );
     
     return NextResponse.json(
       { error: "Failed to get tool health status" },
