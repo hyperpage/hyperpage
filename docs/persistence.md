@@ -51,6 +51,7 @@ PRAGMA cache_size = 1000000;   -- 1GB cache
 ```
 
 **Features:**
+
 - **ACID Transactions** - Atomic, Consistent, Isolated, Durable operations
 - **WAL Mode** - Write-Ahead Logging for concurrent access
 - **Memory-Mapped I/O** - High-performance I/O operations
@@ -64,39 +65,47 @@ PRAGMA cache_size = 1000000;   -- 1GB cache
 The schema is designed for enterprise data patterns:
 
 ```typescript
-export const jobs = sqliteTable('jobs', {
-  id: text('id').primaryKey(),
-  type: text('type').notNull(),
-  name: text('name').notNull(),
-  priority: integer('priority').notNull(),
-  status: text('status').notNull(),
+export const jobs = sqliteTable("jobs", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  name: text("name").notNull(),
+  priority: integer("priority").notNull(),
+  status: text("status").notNull(),
   // ... enterprise job fields
-  recoveryAttempts: integer('recovery_attempts').default(0).notNull(),
+  recoveryAttempts: integer("recovery_attempts").default(0).notNull(),
 });
 
-export const rateLimits = sqliteTable('rate_limits', {
-  id: text('id').primaryKey(),
-  platform: text('platform').notNull(),
-  limitRemaining: integer('limit_remaining'), // Nullable for flexibility
-  limitTotal: integer('limit_total'),
-  resetTime: integer('reset_time'),
-  lastUpdated: integer('last_updated').notNull(),
-  createdAt: integer('created_at').default(sql`(unixepoch() * 1000)`).notNull(),
+export const rateLimits = sqliteTable("rate_limits", {
+  id: text("id").primaryKey(),
+  platform: text("platform").notNull(),
+  limitRemaining: integer("limit_remaining"), // Nullable for flexibility
+  limitTotal: integer("limit_total"),
+  resetTime: integer("reset_time"),
+  lastUpdated: integer("last_updated").notNull(),
+  createdAt: integer("created_at")
+    .default(sql`(unixepoch() * 1000)`)
+    .notNull(),
 });
 
-export const toolConfigs = sqliteTable('tool_configs', {
-  toolName: text('tool_name').primaryKey(),
-  enabled: integer('enabled', { mode: 'boolean' }).default(true).notNull(),
-  config: text('config', { mode: 'json' }).$type<Record<string, any>>(),
-  refreshInterval: integer('refresh_interval'),
-  notifications: integer('notifications', { mode: 'boolean' }).default(true).notNull(),
-  updatedAt: integer('updated_at').default(sql`(unixepoch() * 1000)`).notNull(),
+export const toolConfigs = sqliteTable("tool_configs", {
+  toolName: text("tool_name").primaryKey(),
+  enabled: integer("enabled", { mode: "boolean" }).default(true).notNull(),
+  config: text("config", { mode: "json" }).$type<Record<string, any>>(),
+  refreshInterval: integer("refresh_interval"),
+  notifications: integer("notifications", { mode: "boolean" })
+    .default(true)
+    .notNull(),
+  updatedAt: integer("updated_at")
+    .default(sql`(unixepoch() * 1000)`)
+    .notNull(),
 });
 
-export const appState = sqliteTable('app_state', {
-  key: text('key').primaryKey(),
-  value: text('value'),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).default(sql`(unixepoch() * 1000)`).notNull(),
+export const appState = sqliteTable("app_state", {
+  key: text("key").primaryKey(),
+  value: text("value"),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .default(sql`(unixepoch() * 1000)`)
+    .notNull(),
 });
 ```
 
@@ -182,39 +191,45 @@ export class ToolConfigManager {
 
   async saveToolConfiguration(
     toolName: string,
-    config: ToolConfiguration
+    config: ToolConfiguration,
   ): Promise<void> {
     // Database persistence
-    await db.insert(toolConfigs).values({
-      toolName,
-      enabled: config.enabled,
-      config: JSON.stringify(config.config || {}),
-      refreshInterval: config.refreshInterval,
-      notifications: config.notifications,
-      updatedAt: Date.now()
-    }).onConflictDoUpdate({
-      target: toolConfigs.toolName,
-      set: {
+    await db
+      .insert(toolConfigs)
+      .values({
+        toolName,
         enabled: config.enabled,
         config: JSON.stringify(config.config || {}),
         refreshInterval: config.refreshInterval,
         notifications: config.notifications,
-        updatedAt: Date.now()
-      }
-    });
+        updatedAt: Date.now(),
+      })
+      .onConflictDoUpdate({
+        target: toolConfigs.toolName,
+        set: {
+          enabled: config.enabled,
+          config: JSON.stringify(config.config || {}),
+          refreshInterval: config.refreshInterval,
+          notifications: config.notifications,
+          updatedAt: Date.now(),
+        },
+      });
 
     // Update cache
     this.configCache.set(toolName, config);
   }
 
-  async getToolConfiguration(toolName: string): Promise<ToolConfiguration | null> {
+  async getToolConfiguration(
+    toolName: string,
+  ): Promise<ToolConfiguration | null> {
     // Check cache first
     if (this.configCache.has(toolName)) {
       return this.configCache.get(toolName)!;
     }
 
     // Load from database
-    const result = await db.select()
+    const result = await db
+      .select()
       .from(toolConfigs)
       .where(eq(toolConfigs.toolName, toolName))
       .limit(1);
@@ -223,7 +238,7 @@ export class ToolConfigManager {
 
     const config: ToolConfiguration = {
       enabled: result[0].enabled,
-      config: JSON.parse(result[0].config || '{}'),
+      config: JSON.parse(result[0].config || "{}"),
       refreshInterval: result[0].refreshInterval || undefined,
       notifications: result[0].notifications,
     };
@@ -244,7 +259,7 @@ Persists API rate limit states across application restarts:
 ```typescript
 export async function persistRateLimitData(
   platform: string,
-  status: RateLimitStatus
+  status: RateLimitStatus,
 ): Promise<void> {
   const key = `ratelimit:${platform}:status`;
 
@@ -252,22 +267,25 @@ export async function persistRateLimitData(
 
   // Also persist to database for long-term recovery
   if (status.dataFresh) {
-    await db.insert(rateLimits).values({
-      id: `ratelimit:${platform}`,
-      platform,
-      limitRemaining: status.limits?.[platform]?.core?.remaining,
-      limitTotal: status.limits?.[platform]?.core?.limit,
-      resetTime: status.limits?.[platform]?.core?.resetTime,
-      lastUpdated: Date.now()
-    }).onConflictDoUpdate({
-      target: rateLimits.id,
-      set: {
+    await db
+      .insert(rateLimits)
+      .values({
+        id: `ratelimit:${platform}`,
+        platform,
         limitRemaining: status.limits?.[platform]?.core?.remaining,
         limitTotal: status.limits?.[platform]?.core?.limit,
         resetTime: status.limits?.[platform]?.core?.resetTime,
-        lastUpdated: Date.now()
-      }
-    });
+        lastUpdated: Date.now(),
+      })
+      .onConflictDoUpdate({
+        target: rateLimits.id,
+        set: {
+          limitRemaining: status.limits?.[platform]?.core?.remaining,
+          limitTotal: status.limits?.[platform]?.core?.limit,
+          resetTime: status.limits?.[platform]?.core?.resetTime,
+          lastUpdated: Date.now(),
+        },
+      });
   }
 }
 ```
@@ -318,13 +336,13 @@ Enterprise-grade backup with integrity validation:
 
 ```typescript
 export async function createBackup(
-  description?: string
+  description?: string,
 ): Promise<BackupResult> {
   const timestamp = Date.now();
   const databasePath = getDatabasePath();
   const backupPath = path.join(
     getBackupDirectory(),
-    `hyperpage-backup-${timestamp}.db`
+    `hyperpage-backup-${timestamp}.db`,
   );
 
   // Create backup directory
@@ -336,10 +354,10 @@ export async function createBackup(
   // Generate backup metadata
   const metadata: BackupMetadata = {
     timestamp,
-    description: description || 'Automated backup',
-    version: process.env.npm_package_version || 'unknown',
+    description: description || "Automated backup",
+    version: process.env.npm_package_version || "unknown",
     size: await getFileSize(backupPath),
-    checksum: await generateChecksum(backupPath)
+    checksum: await generateChecksum(backupPath),
   };
 
   // Store metadata
@@ -350,7 +368,7 @@ export async function createBackup(
     success: true,
     backupPath,
     metadata,
-    size: metadata.size
+    size: metadata.size,
   };
 }
 ```
@@ -364,7 +382,7 @@ Safe point-in-time restoration with corruption detection:
 ```typescript
 export async function restoreBackup(
   backupPath: string,
-  confirmOverwrite: boolean = false
+  confirmOverwrite: boolean = false,
 ): Promise<RestoreResult> {
   // Validate backup integrity
   const validation = await validateBackup(backupPath);
@@ -374,7 +392,7 @@ export async function restoreBackup(
 
   if (!confirmOverwrite) {
     // Create safety backup of current database
-    await createBackup('Pre-restore safety backup');
+    await createBackup("Pre-restore safety backup");
   }
 
   // Perform restoration
@@ -387,7 +405,7 @@ export async function restoreBackup(
   return {
     success: true,
     restoredFrom: backupPath,
-    validationResult: validation
+    validationResult: validation,
   };
 }
 ```
@@ -397,40 +415,42 @@ export async function restoreBackup(
 Comprehensive backup validation with corruption detection:
 
 ```typescript
-export async function validateBackup(backupPath: string): Promise<ValidationResult> {
+export async function validateBackup(
+  backupPath: string,
+): Promise<ValidationResult> {
   try {
     // Check file existence
     const stats = await fs.stat(backupPath);
 
     // Basic SQLite integrity check
     const db = new Database(backupPath, { readonly: true });
-    db.pragma('integrity_check');
+    db.pragma("integrity_check");
     db.close();
 
     // Metadata validation
     const metadataPath = `${backupPath}.meta.json`;
-    const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf8'));
+    const metadata = JSON.parse(await fs.readFile(metadataPath, "utf8"));
 
     // Size validation
     if (stats.size !== metadata.size) {
-      return { valid: false, message: 'Size mismatch' };
+      return { valid: false, message: "Size mismatch" };
     }
 
     // Checksum validation
     const checksum = await generateChecksum(backupPath);
     if (checksum !== metadata.checksum) {
-      return { valid: false, message: 'Checksum mismatch' };
+      return { valid: false, message: "Checksum mismatch" };
     }
 
     return {
       valid: true,
-      message: 'Backup is valid and intact',
-      metadata
+      message: "Backup is valid and intact",
+      metadata,
     };
   } catch (error) {
     return {
       valid: false,
-      message: error.message
+      message: error.message,
     };
   }
 }
@@ -447,15 +467,15 @@ RESTful interface for tool configuration management:
 ```typescript
 export async function GET(request: NextRequest) {
   try {
-    const toolName = request.nextUrl.searchParams.get('tool');
+    const toolName = request.nextUrl.searchParams.get("tool");
 
     if (toolName) {
       // Get specific tool configuration
       const config = await getToolConfiguration(toolName);
       if (!config) {
         return NextResponse.json(
-          { error: 'Tool configuration not found' },
-          { status: 404 }
+          { error: "Tool configuration not found" },
+          { status: 404 },
         );
       }
       return NextResponse.json(config);
@@ -465,10 +485,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(allConfigs);
     }
   } catch (error) {
-    console.error('Configuration retrieval error:', error);
+    console.error("Configuration retrieval error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
@@ -480,8 +500,8 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!toolName || !config) {
       return NextResponse.json(
-        { error: 'Tool name and configuration required' },
-        { status: 400 }
+        { error: "Tool name and configuration required" },
+        { status: 400 },
       );
     }
 
@@ -489,14 +509,14 @@ export async function POST(request: NextRequest) {
     await saveToolConfiguration(toolName, config);
 
     return NextResponse.json(
-      { message: 'Configuration saved successfully' },
-      { status: 200 }
+      { message: "Configuration saved successfully" },
+      { status: 200 },
     );
   } catch (error) {
-    console.error('Configuration save error:', error);
+    console.error("Configuration save error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
@@ -519,10 +539,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(groupedBackups);
   } catch (error) {
-    console.error('Backup list error:', error);
+    console.error("Backup list error:", error);
     return NextResponse.json(
-      { error: 'Failed to list backups' },
-      { status: 500 }
+      { error: "Failed to list backups" },
+      { status: 500 },
     );
   }
 }
@@ -536,20 +556,20 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json(
-        { error: 'Backup creation failed' },
-        { status: 500 }
+        { error: "Backup creation failed" },
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
-      message: 'Backup created successfully',
-      backup: result
+      message: "Backup created successfully",
+      backup: result,
     });
   } catch (error) {
-    console.error('Backup creation error:', error);
+    console.error("Backup creation error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
@@ -560,8 +580,8 @@ export async function PUT(request: NextRequest) {
 
     if (!backupPath) {
       return NextResponse.json(
-        { error: 'Backup path required' },
-        { status: 400 }
+        { error: "Backup path required" },
+        { status: 400 },
       );
     }
 
@@ -569,21 +589,18 @@ export async function PUT(request: NextRequest) {
     const result = await restoreBackup(backupPath);
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: 'Restore failed' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Restore failed" }, { status: 500 });
     }
 
     return NextResponse.json({
-      message: 'Database restored successfully',
-      restoredFrom: result.restoredFrom
+      message: "Database restored successfully",
+      restoredFrom: result.restoredFrom,
     });
   } catch (error) {
-    console.error('Restore error:', error);
+    console.error("Restore error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
@@ -635,7 +652,7 @@ Backup/Restore Performance:
 
 ```typescript
 export async function checkDatabaseHealth(): Promise<{
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   details: Record<string, any>;
 }> {
   try {
@@ -647,23 +664,23 @@ export async function checkDatabaseHealth(): Promise<{
       connectionCount: getConnectionCount(),
       memoryUsage: getMemoryUsage(),
       openTransactions: getOpenTransactionCount(),
-      lastBackupTime: getLastBackupTime()
+      lastBackupTime: getLastBackupTime(),
     };
 
     // Table health verification
     const tableHealth = await verifyTableIntegrity();
 
     return {
-      status: connectivity.status === 'healthy' ? 'healthy' : 'unhealthy',
+      status: connectivity.status === "healthy" ? "healthy" : "unhealthy",
       details: {
         ...stats,
-        ...tableHealth
-      }
+        ...tableHealth,
+      },
     };
   } catch (error) {
     return {
-      status: 'unhealthy',
-      details: { error: (error as Error).message }
+      status: "unhealthy",
+      details: { error: (error as Error).message },
     };
   }
 }
@@ -709,6 +726,7 @@ GITLAB_PRIVATE_TOKEN=...
 ### Database Isolation
 
 - **Database Files Excluded from Git:**
+
 ```gitignore
 # Database files - may contain sensitive user data
 data/hyperpage.db
@@ -744,7 +762,7 @@ const productionConfig = {
   // Backup automation
   automaticBackups: true,
   backupInterval: 3600000, // Hourly
-  retentionDays: 30
+  retentionDays: 30,
 };
 ```
 
@@ -805,20 +823,21 @@ export const connectionPool = new Pool({
 ### Common Issues
 
 #### Database Corruption
+
 ```typescript
 // Verify database integrity
 async function checkIntegrity(): Promise<boolean> {
   const db = getInternalDatabase();
-  const result = db.pragma('integrity_check', { simple: true });
+  const result = db.pragma("integrity_check", { simple: true });
 
-  if (result !== 'ok') {
-    console.error('Database corruption detected:', result);
+  if (result !== "ok") {
+    console.error("Database corruption detected:", result);
 
     // Attempt recovery from backup
     const latestBackup = await getLatestValidBackup();
     if (latestBackup) {
       await restoreBackup(latestBackup.path);
-      console.info('Database restored from backup');
+      console.info("Database restored from backup");
     }
 
     return false;
@@ -829,6 +848,7 @@ async function checkIntegrity(): Promise<boolean> {
 ```
 
 #### Performance Issues
+
 ```typescript
 // Performance monitoring
 interface PerformanceMetrics {
@@ -842,7 +862,7 @@ async function getPerformanceMetrics(): Promise<PerformanceMetrics> {
   const db = getInternalDatabase();
 
   // Query execution time
-  const queryLatency = measureQueryTime('SELECT 1');
+  const queryLatency = measureQueryTime("SELECT 1");
 
   // Connection statistics
   const connectionCount = getConnectionCount();
@@ -851,17 +871,18 @@ async function getPerformanceMetrics(): Promise<PerformanceMetrics> {
     queryLatency,
     connectionCount,
     cacheHitRate: getCacheHitRate(),
-    memoryUsage: getDatabaseMemoryUsage()
+    memoryUsage: getDatabaseMemoryUsage(),
   };
 }
 ```
 
 #### Backup Failures
+
 ```typescript
 // Backup verification and recovery
 async function verifyBackupSystem(): Promise<void> {
   // Test backup creation
-  const testBackup = await createBackup('System health check');
+  const testBackup = await createBackup("System health check");
 
   // Verify backup integrity
   const validation = await validateBackup(testBackup.backupPath);

@@ -87,7 +87,7 @@ export interface ToolRateLimitConfig {
   shouldRetry: (response: Response, attemptNumber: number) => number | null; // Returns delay in ms, null means no retry
   getMaxRetries?: (response: Response) => number; // Dynamic max retries based on instance
   maxRetries?: number; // Optional fallback static max retries
-  backoffStrategy?: 'exponential' | 'linear' | 'adaptive-exponential'; // Include new adaptive strategy
+  backoffStrategy?: "exponential" | "linear" | "adaptive-exponential"; // Include new adaptive strategy
   adaptiveThresholds?: {
     // Instance-specific monitoring thresholds
     small: { warningThreshold: number; criticalThreshold: number };

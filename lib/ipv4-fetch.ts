@@ -6,6 +6,19 @@
  */
 
 /**
+ * Server-side module cache to avoid repeated imports
+ */
+const getNodeModules = async () => {
+  if (typeof window === "undefined") {
+    // Server-side - import Node.js modules dynamically
+    const { default: https } = await import("https");
+    const { default: dns } = await import("dns");
+    return { https, dns };
+  }
+  return null;
+};
+
+/**
  * Creates a fetch function that forces IPv4 connections to avoid IPv6 timeout issues
  * in IPv6-only network environments.
  *
@@ -14,62 +27,71 @@
  * @param timeoutMs - Timeout in milliseconds (default: 10000)
  * @returns Promise<Response>
  */
-export function createIPv4Fetch(
+export async function createIPv4Fetch(
   url: string,
   options: RequestInit = {},
-  timeoutMs: number = 10000
+  timeoutMs: number = 10000,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     // Force IPv4 connections to avoid IPv6 timeout issues on IPv6-only networks
-    const enhancedOptions: any = {
+    const enhancedOptions: RequestInit & { agent?: import("https").Agent } = {
       ...options,
       signal: controller.signal,
     };
 
     // Only configure IPv4 forcing server-side where Node.js modules are available
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       try {
-        // Force IPv4 DNS resolution and connection
-        const https = require('https') as typeof import('https');
-        const dns = require('dns') as typeof import('dns');
-
-        // Create an HTTPS agent that forces IPv4 family
-        enhancedOptions.agent = new https.Agent({
-          family: 4, // Force IPv4
-          lookup: dns.lookup, // Explicitly use DNS lookup
-          timeout: timeoutMs, // Set connection timeout at agent level too
-          keepAlive: false, // Disable keep-alive to avoid connection pooling issues
-        });
-        console.log(`IPv4 fetch configured for ${url} - agent with IPv4 family:`, enhancedOptions.agent.constructor.name);
+        const modules = await getNodeModules();
+        if (modules) {
+          // Force IPv4 DNS resolution and connection
+          // Create an HTTPS agent that forces IPv4 family
+          enhancedOptions.agent = new modules.https.Agent({
+            family: 4, // Force IPv4
+            lookup: modules.dns.lookup, // Explicitly use DNS lookup
+            timeout: timeoutMs, // Set connection timeout at agent level too
+            keepAlive: false, // Disable keep-alive to avoid connection pooling issues
+          });
+          console.log(
+            `IPv4 fetch configured for ${url} - agent with IPv4 family:`,
+            enhancedOptions.agent?.constructor.name || "unknown",
+          );
+        }
       } catch (error) {
         // If modules aren't available, log but continue with standard fetch
-        console.warn(`IPv4 forcing failed for ${url}, using standard fetch:`, error);
+        console.warn(
+          `IPv4 forcing failed for ${url}, using standard fetch:`,
+          error,
+        );
       }
     } else {
-      console.log(`IPv4 fetch skipped for ${url} - running in browser environment`);
+      console.log(
+        `IPv4 fetch skipped for ${url} - running in browser environment`,
+      );
     }
 
     const fetchPromise = fetch(url, enhancedOptions);
 
     return fetchPromise
-      .then(response => {
+      .then((response) => {
         clearTimeout(timeoutId);
         return response;
       })
-      .catch(error => {
+      .catch((error) => {
         clearTimeout(timeoutId);
 
-        if (error.name === 'AbortError') {
-          throw new Error(`Request timed out after ${timeoutMs}ms - this may indicate IPv6 connectivity issues`);
+        if (error.name === "AbortError") {
+          throw new Error(
+            `Request timed out after ${timeoutMs}ms - this may indicate IPv6 connectivity issues`,
+          );
         }
 
         // Re-throw other errors
         throw error;
       });
-
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
@@ -84,7 +106,10 @@ export function createIPv4Fetch(
  * @param options - Standard fetch options
  * @returns Promise<Response>
  */
-export const ipv4Fetch = (url: string, options?: RequestInit): Promise<Response> => {
+export const ipv4Fetch = (
+  url: string,
+  options?: RequestInit,
+): Promise<Response> => {
   return createIPv4Fetch(url, options);
 };
 
@@ -94,12 +119,12 @@ export const ipv4Fetch = (url: string, options?: RequestInit): Promise<Response>
  * @param url - The API URL
  * @param options - Fetch options
  * @param timeoutMs - Timeout in milliseconds
- * @returns Promise<any> - Parsed JSON response
+ * @returns Promise<unknown> - Parsed JSON response
  */
-export async function ipv4FetchJson<T = any>(
+export async function ipv4FetchJson<T = unknown>(
   url: string,
   options: RequestInit = {},
-  timeoutMs: number = 10000
+  timeoutMs: number = 10000,
 ): Promise<T> {
   const response = await createIPv4Fetch(url, options, timeoutMs);
 

@@ -1,6 +1,11 @@
-import { RedisClient } from './redis-client';
-import type { ICache, CacheEntry, CacheOptions, CacheStats } from './cache-interface';
-import { CacheBackend, CacheError } from './cache-interface';
+import { RedisClient } from "./redis-client";
+import type {
+  ICache,
+  CacheEntry,
+  CacheOptions,
+  CacheStats,
+} from "./cache-interface";
+import { CacheBackend, CacheError } from "./cache-interface";
 
 /**
  * Configuration for advanced Redis connection pooling.
@@ -36,6 +41,15 @@ export interface RedisPoolMetrics {
 }
 
 /**
+ * Performance metrics for cache operations.
+ */
+export interface CachePerformanceMetrics {
+  averageResponseTime: number;
+  hitRate: number;
+  throughput: number;
+}
+
+/**
  * Advanced Redis cache implementation with connection pooling and enterprise features.
  * Supports high-performance Redis operations with connection management, metrics,
  * and advanced caching strategies.
@@ -67,7 +81,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
   constructor(
     redisUrl?: string,
     poolConfig: RedisPoolConfig = {},
-    options: CacheOptions = { maxSize: 10000, enableLru: false }
+    options: CacheOptions = { maxSize: 10000, enableLru: false },
   ) {
     this.poolConfig = {
       redisUrl,
@@ -111,18 +125,17 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
 
       // Use Redis SET with EX (TTL in seconds)
       const ttlSeconds = Math.ceil(ttlMs / 1000);
-      await client.set(key, entryString, 'EX', ttlSeconds);
+      await client.set(key, entryString, "EX", ttlSeconds);
 
-      this.updatePoolMetrics('success');
-
+      this.updatePoolMetrics("success");
     } catch (error) {
-      this.updatePoolMetrics('failure');
+      this.updatePoolMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to set cache entry: ${message}`,
         this.backend,
-        'set',
-        true
+        "set",
+        true,
       );
     } finally {
       this.operationStartTimes.delete(operationId);
@@ -146,9 +159,9 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       const client = this.redisClient.getClient();
       const entryString = await client.get(key);
 
-      if (!entryString || typeof entryString !== 'string') {
+      if (!entryString || typeof entryString !== "string") {
         this.stats.misses++;
-        this.updatePoolMetrics('success');
+        this.updatePoolMetrics("success");
         return undefined; // Cache miss
       }
 
@@ -160,22 +173,21 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
         // Remove expired entry
         await client.del(key);
         this.stats.expiries++;
-        this.updatePoolMetrics('success');
+        this.updatePoolMetrics("success");
         return undefined;
       }
 
       this.stats.hits++;
-      this.updatePoolMetrics('success');
+      this.updatePoolMetrics("success");
       return entry.data;
-
     } catch (error) {
-      this.updatePoolMetrics('failure');
+      this.updatePoolMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to get cache entry: ${message}`,
         this.backend,
-        'get',
-        true
+        "get",
+        true,
       );
     } finally {
       this.operationStartTimes.delete(operationId);
@@ -200,7 +212,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       const pipeline = client.multi();
 
       // Add all get commands to pipeline
-      keys.forEach(key => {
+      keys.forEach((key) => {
         pipeline.get(key);
       });
 
@@ -209,13 +221,13 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
 
       keys.forEach((key, index) => {
         const result = results?.[index]?.[1]; // Redis pipeline result format
-        if (result && typeof result === 'string') {
+        if (result && typeof result === "string") {
           try {
             const entry: CacheEntry<T> = JSON.parse(result);
             if (Date.now() <= entry.expiresAt) {
               resultMap.set(key, entry.data);
             }
-          } catch (parseError) {
+          } catch {
             // Skip invalid entries
           }
         }
@@ -223,18 +235,17 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
 
       this.stats.hits += resultMap.size;
       this.stats.misses += keys.length - resultMap.size;
-      this.updatePoolMetrics('success');
+      this.updatePoolMetrics("success");
 
       return resultMap;
-
     } catch (error) {
-      this.updatePoolMetrics('failure');
+      this.updatePoolMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to get multiple cache entries: ${message}`,
         this.backend,
-        'getMultiple',
-        true
+        "getMultiple",
+        true,
       );
     } finally {
       this.operationStartTimes.delete(operationId);
@@ -245,7 +256,9 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
   /**
    * Set multiple entries in a pipeline for better performance.
    */
-  async setMultiple(entries: Map<string, { data: T; ttlMs: number }>): Promise<void> {
+  async setMultiple(
+    entries: Map<string, { data: T; ttlMs: number }>,
+  ): Promise<void> {
     const operationId = `setMultiple-${Date.now()}`;
     this.operationStartTimes.set(operationId, Date.now());
     this.poolMetrics.pendingRequests += entries.size;
@@ -267,20 +280,19 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
 
         const entryString = JSON.stringify(entry);
         const ttlSeconds = Math.ceil(ttlMs / 1000);
-        pipeline.set(key, entryString, 'EX', ttlSeconds);
+        pipeline.set(key, entryString, "EX", ttlSeconds);
       }
 
       await pipeline.exec();
-      this.updatePoolMetrics('success');
-
+      this.updatePoolMetrics("success");
     } catch (error) {
-      this.updatePoolMetrics('failure');
+      this.updatePoolMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to set multiple cache entries: ${message}`,
         this.backend,
-        'setMultiple',
-        true
+        "setMultiple",
+        true,
       );
     } finally {
       this.operationStartTimes.delete(operationId);
@@ -296,7 +308,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       const value = await this.get(key);
       return value !== undefined;
     } catch (error) {
-      console.warn(`Cache has() operation failed for key "${key}":`, error);
+      
       return false;
     }
   }
@@ -316,17 +328,16 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
 
       const client = this.redisClient.getClient();
       const result = await client.del(key);
-      this.updatePoolMetrics('success');
+      this.updatePoolMetrics("success");
       return result === 1;
-
     } catch (error) {
-      this.updatePoolMetrics('failure');
+      this.updatePoolMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to delete cache entry: ${message}`,
         this.backend,
-        'delete',
-        true
+        "delete",
+        true,
       );
     } finally {
       this.operationStartTimes.delete(operationId);
@@ -349,16 +360,15 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
 
       const client = this.redisClient.getClient();
       await client.flushdb(); // Clear current database only
-      this.updatePoolMetrics('success');
-
+      this.updatePoolMetrics("success");
     } catch (error) {
-      this.updatePoolMetrics('failure');
+      this.updatePoolMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to clear cache: ${message}`,
         this.backend,
-        'clear',
-        true
+        "clear",
+        true,
       );
     } finally {
       this.operationStartTimes.delete(operationId);
@@ -369,14 +379,19 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
   /**
    * Get comprehensive statistics including pool metrics.
    */
-  async getStats(): Promise<CacheStats & { pool: RedisPoolMetrics; performance: any }> {
+  async getStats(): Promise<
+    CacheStats & {
+      pool: RedisPoolMetrics;
+      performance: CachePerformanceMetrics;
+    }
+  > {
     try {
       if (!this.redisClient.isConnected) {
         await this.ensureConnection();
       }
 
       const client = this.redisClient.getClient();
-      const info = await client.info('stats');
+      await client.info("stats");
       const totalKeys = await client.dbsize();
 
       return {
@@ -393,14 +408,13 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
           throughput: this.poolMetrics.totalConnections,
         },
       };
-
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to get cache stats: ${message}`,
         this.backend,
-        'getStats',
-        true
+        "getStats",
+        true,
       );
     }
   }
@@ -420,7 +434,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
         accessTime: Date.now(),
       };
     } catch (error) {
-      console.warn(`Failed to get cache entry for debugging: ${key}`, error);
+      
       return undefined;
     }
   }
@@ -459,7 +473,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
     while (attempts < maxAttempts) {
       try {
         await this.redisClient.connect();
-        this.updatePoolMetrics('connection_success');
+        this.updatePoolMetrics("connection_success");
         return;
       } catch (error) {
         attempts++;
@@ -468,12 +482,12 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
           throw new CacheError(
             `Failed to connect to Redis after ${attempts} attempts: ${error}`,
             this.backend,
-            'connect',
-            false
+            "connect",
+            false,
           );
         }
         // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempts));
       }
     }
   }
@@ -483,18 +497,20 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       try {
         const health = await this.redisClient.getHealth();
         if (!health.connected || !health.ready) {
-          console.warn('Redis health check failed:', health);
+          
         }
       } catch (error) {
-        console.warn('Redis health monitoring error:', error);
+        
       }
     }, this.poolConfig.healthCheckInterval || 30000);
   }
 
-  private updatePoolMetrics(outcome: 'success' | 'failure' | 'connection_success'): void {
-    if (outcome === 'failure') {
+  private updatePoolMetrics(
+    outcome: "success" | "failure" | "connection_success",
+  ): void {
+    if (outcome === "failure") {
       this.poolMetrics.failedConnections++;
-    } else if (outcome === 'connection_success') {
+    } else if (outcome === "connection_success") {
       this.poolMetrics.totalConnections++;
       this.poolMetrics.idleConnections++;
     }
@@ -502,10 +518,13 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
     // Update utilization
     const totalConnections = this.poolMetrics.totalConnections;
     const activeConnections = this.poolMetrics.activeConnections;
-    this.poolMetrics.poolUtilization = totalConnections > 0 ? (activeConnections / totalConnections) * 100 : 0;
+    this.poolMetrics.poolUtilization =
+      totalConnections > 0 ? (activeConnections / totalConnections) * 100 : 0;
 
     // Update average response time (simplified)
-    const responseTime = Date.now() - (this.operationStartTimes.values().next().value || Date.now());
+    const responseTime =
+      Date.now() -
+      (this.operationStartTimes.values().next().value || Date.now());
     this.poolMetrics.averageResponseTime =
       (this.poolMetrics.averageResponseTime + responseTime) / 2;
   }
@@ -523,12 +542,14 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
 
 export function createPooledRedisCache<T>(
   redisUrl?: string,
-  poolConfig?: Partial<RedisPoolConfig>
+  poolConfig?: Partial<RedisPoolConfig>,
 ): AdvancedRedisCache<T> {
   return new AdvancedRedisCache<T>(redisUrl, poolConfig);
 }
 
-export function createHighPerformanceRedisCache<T>(redisUrl?: string): AdvancedRedisCache<T> {
+export function createHighPerformanceRedisCache<T>(
+  redisUrl?: string,
+): AdvancedRedisCache<T> {
   return new AdvancedRedisCache<T>(redisUrl, {
     minConnections: 5,
     maxConnections: 50,
@@ -539,7 +560,9 @@ export function createHighPerformanceRedisCache<T>(redisUrl?: string): AdvancedR
   });
 }
 
-export function createEnterpriseRedisCache<T>(redisUrl?: string): AdvancedRedisCache<T> {
+export function createEnterpriseRedisCache<T>(
+  redisUrl?: string,
+): AdvancedRedisCache<T> {
   return new AdvancedRedisCache<T>(redisUrl, {
     minConnections: 10,
     maxConnections: 100,

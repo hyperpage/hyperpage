@@ -1,8 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { sessionManager } from '../../../lib/sessions/session-manager';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  sessionManager,
+  SessionData,
+} from "../../../lib/sessions/session-manager";
+
+export interface AuthenticatedTool {
+  connected: boolean;
+  connectedAt?: Date;
+  lastUsed?: Date;
+}
 
 export interface AuthenticatedRequest extends NextRequest {
-  session?: any;
+  session?: SessionData;
   user?: {
     id: string;
     provider: string;
@@ -25,7 +34,7 @@ export interface AuthMiddlewareOptions {
  */
 export async function withAuth(
   handler: (req: AuthenticatedRequest) => Promise<NextResponse>,
-  options: AuthMiddlewareOptions = {}
+  options: AuthMiddlewareOptions = {},
 ): Promise<(req: NextRequest) => Promise<NextResponse>> {
   return async (req: NextRequest): Promise<NextResponse> => {
     try {
@@ -34,8 +43,8 @@ export async function withAuth(
       if (!sessionId) {
         if (options.required || options.tools?.length || options.toolRequired) {
           return NextResponse.json(
-            { error: 'Authentication required' },
-            { status: 401 }
+            { error: "Authentication required" },
+            { status: 401 },
           );
         }
         // Allow anonymous access for optional auth routes
@@ -46,45 +55,52 @@ export async function withAuth(
       const session = await sessionManager.getSession(sessionId);
       if (!session) {
         // Invalid or expired session
-        return NextResponse.json(
-          { error: 'Invalid session' },
-          { status: 401 }
-        );
+        return NextResponse.json({ error: "Invalid session" }, { status: 401 });
       }
 
       // For required authentication, validate user exists
       if (options.required && !session.userId) {
         return NextResponse.json(
-          { error: 'Authentication required' },
-          { status: 401 }
+          { error: "Authentication required" },
+          { status: 401 },
         );
       }
 
       // Check tool-specific authentication requirements
       if (options.tools?.length && session.authenticatedTools) {
-        const missingTools = options.tools.filter(tool =>
-          !session.authenticatedTools[tool]?.connected
+        const missingTools = options.tools.filter(
+          (tool) => !session.authenticatedTools[tool]?.connected,
         );
 
         if (missingTools.length > 0) {
-          return NextResponse.json({
-            error: 'Tool authentication required',
-            missingTools,
-            message: `Please authenticate with: ${missingTools.join(', ')}`
-          }, { status: 403 });
+          return NextResponse.json(
+            {
+              error: "Tool authentication required",
+              missingTools,
+              message: `Please authenticate with: ${missingTools.join(", ")}`,
+            },
+            { status: 403 },
+          );
         }
       }
 
       // Check if any tool authentication is required
       if (options.toolRequired) {
-        const hasAnyAuthenticatedTool = session.authenticatedTools &&
-          Object.values(session.authenticatedTools).some((tool: any) => tool.connected);
+        const hasAnyAuthenticatedTool =
+          session.authenticatedTools &&
+          Object.values(session.authenticatedTools).some(
+            (tool: AuthenticatedTool) => tool.connected,
+          );
 
         if (!hasAnyAuthenticatedTool) {
-          return NextResponse.json({
-            error: 'Tool authentication required',
-            message: 'At least one tool must be authenticated to access this resource'
-          }, { status: 403 });
+          return NextResponse.json(
+            {
+              error: "Tool authentication required",
+              message:
+                "At least one tool must be authenticated to access this resource",
+            },
+            { status: 403 },
+          );
         }
       }
 
@@ -97,12 +113,11 @@ export async function withAuth(
       authenticatedReq.user = session.user;
 
       return handler(authenticatedReq);
-
     } catch (error) {
-      console.error('Authentication middleware error:', error);
+      
       return NextResponse.json(
-        { error: 'Authentication service temporarily unavailable' },
-        { status: 503 }
+        { error: "Authentication service temporarily unavailable" },
+        { status: 503 },
       );
     }
   };
@@ -115,9 +130,10 @@ function parseSessionCookies(req: NextRequest): { sessionId?: string } {
   const cookies = req.cookies;
 
   // Try different possible cookie names
-  const sessionId = cookies.get('hyperpage-session')?.value ||
-                    cookies.get('sessionId')?.value ||
-                    cookies.get('session-id')?.value;
+  const sessionId =
+    cookies.get("hyperpage-session")?.value ||
+    cookies.get("sessionId")?.value ||
+    cookies.get("session-id")?.value;
 
   return { sessionId };
 }
@@ -126,16 +142,16 @@ function parseSessionCookies(req: NextRequest): { sessionId?: string } {
  * Create authenticated API response with session extension
  */
 export async function createAuthenticatedResponse(
-  data: any,
+  data: unknown,
   sessionId?: string,
-  options: { status?: number, headers?: Record<string, string> } = {}
+  options: { status?: number; headers?: Record<string, string> } = {},
 ): Promise<NextResponse> {
   // Extend session if provided
   if (sessionId) {
     try {
       await sessionManager.extendSession(sessionId);
     } catch (error) {
-      console.warn('Failed to extend session:', error);
+      
     }
   }
 
@@ -150,29 +166,28 @@ export async function createAuthenticatedResponse(
  */
 export async function checkToolAuthentication(
   sessionId: string,
-  toolName: string
-): Promise<{ authenticated: boolean, userId?: string, error?: string }> {
+  toolName: string,
+): Promise<{ authenticated: boolean; userId?: string; error?: string }> {
   try {
     const session = await sessionManager.getSession(sessionId);
     if (!session || !session.userId) {
-      return { authenticated: false, error: 'User not authenticated' };
+      return { authenticated: false, error: "User not authenticated" };
     }
 
     const authenticatedTools = session.authenticatedTools;
     if (!authenticatedTools || !authenticatedTools[toolName]) {
-      return { authenticated: false, error: 'Tool not authenticated' };
+      return { authenticated: false, error: "Tool not authenticated" };
     }
 
     const toolAuth = authenticatedTools[toolName];
     if (!toolAuth.connected) {
-      return { authenticated: false, error: 'Tool authentication expired' };
+      return { authenticated: false, error: "Tool authentication expired" };
     }
 
     return { authenticated: true, userId: session.userId };
-
   } catch (error) {
-    console.error('Tool authentication check failed:', error);
-    return { authenticated: false, error: 'Authentication check failed' };
+    
+    return { authenticated: false, error: "Authentication check failed" };
   }
 }
 
@@ -193,16 +208,23 @@ export function getAuthenticatedUser(req: AuthenticatedRequest): {
 /**
  * Validate request has required authentication level
  */
-export function validateAuthLevel(req: AuthenticatedRequest, level: 'user' | 'tool' | 'session'): boolean {
+export function validateAuthLevel(
+  req: AuthenticatedRequest,
+  level: "user" | "tool" | "session",
+): boolean {
   switch (level) {
-    case 'session':
-      return !!(req.session);
-    case 'user':
+    case "session":
+      return !!req.session;
+    case "user":
       return !!(req.user && req.session?.userId);
-    case 'tool':
+    case "tool":
       // Check if user has any authenticated tools
-      return !!(req.session?.authenticatedTools &&
-                Object.values(req.session.authenticatedTools).some((tool: any) => tool.connected));
+      return !!(
+        req.session?.authenticatedTools &&
+        Object.values(req.session.authenticatedTools).some(
+          (tool: AuthenticatedTool) => tool.connected,
+        )
+      );
     default:
       return false;
   }

@@ -49,13 +49,14 @@ A high-performance in-memory cache with TTL support and LRU eviction:
 
 ```typescript
 interface MemoryCacheConfig {
-  maxSize?: number;        // Maximum cache entries
-  defaultTTL?: number;     // Default expiration in seconds
+  maxSize?: number; // Maximum cache entries
+  defaultTTL?: number; // Default expiration in seconds
   cleanupInterval?: number; // Cleanup frequency in ms
 }
 ```
 
 **Features:**
+
 - LRU eviction policy
 - Configurable TTL per entry
 - Automatic cleanup of expired entries
@@ -70,14 +71,15 @@ Production-grade Redis caching with connection pooling and automatic reconnectio
 
 ```typescript
 interface RedisCacheConfig {
-  url?: string;            // Redis connection URL
-  ttl?: number;            // Default expiration in seconds
-  keyPrefix?: string;      // Key namespace prefix
-  retryDelay?: number;     // Reconnection delay
+  url?: string; // Redis connection URL
+  ttl?: number; // Default expiration in seconds
+  keyPrefix?: string; // Key namespace prefix
+  retryDelay?: number; // Reconnection delay
 }
 ```
 
 **Features:**
+
 - Connection pooling and health monitoring
 - Automatic reconnection with exponential backoff
 - Configurable serialization (JSON)
@@ -95,8 +97,8 @@ class CacheFactory {
   static getInstance(): ICache {
     // Priority order: Environment → Hybrid → Memory
     const backend = process.env.REDIS_URL
-      ? 'redis'  // Redis available
-      : 'memory'; // Fallback to memory
+      ? "redis" // Redis available
+      : "memory"; // Fallback to memory
 
     return this.createBackend(backend);
   }
@@ -121,17 +123,17 @@ MEMORY_CACHE_DEFAULT_TTL=300       # 5 minutes default
 ### Programmatic Configuration
 
 ```typescript
-import { CacheFactory } from '@/lib/cache/cache-factory';
+import { CacheFactory } from "@/lib/cache/cache-factory";
 
 // Get configured cache instance
 const cache = CacheFactory.getInstance();
 
 // Advanced configuration
-const customCache = CacheFactory.createBackend('redis', {
-  url: 'redis://localhost:6379',
-  ttl: 1800,        // 30 minutes
-  keyPrefix: 'app:',
-  retryDelay: 1000
+const customCache = CacheFactory.createBackend("redis", {
+  url: "redis://localhost:6379",
+  ttl: 1800, // 30 minutes
+  keyPrefix: "app:",
+  retryDelay: 1000,
 });
 ```
 
@@ -146,12 +148,12 @@ function useToolQueries(tools: Tool[]) {
   const cache = useMemo(() => CacheFactory.getInstance(), []);
 
   return useQueries({
-    queries: tools.map(tool => ({
-      queryKey: [tool.id, 'data'],
+    queries: tools.map((tool) => ({
+      queryKey: [tool.id, "data"],
       queryFn: () => fetchToolData(tool),
       staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 30 * 60 * 1000, // 30 minutes cache
-    }))
+    })),
   });
 }
 ```
@@ -169,7 +171,7 @@ export async function GET(request: NextRequest) {
   const cached = await cache.get(cacheKey);
   if (cached) {
     return NextResponse.json(cached, {
-      headers: { 'X-Cache-Status': 'HIT' }
+      headers: { "X-Cache-Status": "HIT" },
     });
   }
 
@@ -178,7 +180,7 @@ export async function GET(request: NextRequest) {
   await cache.set(cacheKey, data, 300); // 5 minute TTL
 
   return NextResponse.json(data, {
-    headers: { 'X-Cache-Status': 'MISS' }
+    headers: { "X-Cache-Status": "MISS" },
   });
 }
 ```
@@ -186,28 +188,26 @@ export async function GET(request: NextRequest) {
 ### Cache Key Strategies
 
 #### Structured Keys
+
 ```typescript
 // Consistent naming patterns
 const keys = {
   toolData: (toolId: string, endpoint: string) =>
     `tool:${toolId}:${endpoint}:${Date.now()}`,
 
-  rateLimit: (platform: string) =>
-    `ratelimit:${platform}:status`,
+  rateLimit: (platform: string) => `ratelimit:${platform}:status`,
 
-  userConfig: (userId: string) =>
-    `user:${userId}:config`
+  userConfig: (userId: string) => `user:${userId}:config`,
 };
 ```
 
 #### Namespace Isolation
+
 ```typescript
 const cache = CacheFactory.getInstance();
 
 // Environment-based namespacing
-const prefix = process.env.NODE_ENV === 'production'
-  ? 'prod'
-  : 'dev';
+const prefix = process.env.NODE_ENV === "production" ? "prod" : "dev";
 
 const namespacedKey = `${prefix}:user:${userId}:session`;
 ```
@@ -216,15 +216,16 @@ const namespacedKey = `${prefix}:user:${userId}:session`;
 
 ### Benchmarks
 
-| Operation | Memory Cache | Redis Cache | Notes |
-|-----------|-------------|-------------|--------|
-| GET (cached) | ~10μs | ~500μs | Network latency factor |
-| SET | ~50μs | ~800μs | Serialization overhead |
-| Memory Usage | O(n) | Minimal | Constant connection overhead |
-| Throughput | ~1M ops/s | ~10K ops/s | Network bound |
-| Persistence | Process only | Durable | Redis supports persistence |
+| Operation    | Memory Cache | Redis Cache | Notes                        |
+| ------------ | ------------ | ----------- | ---------------------------- |
+| GET (cached) | ~10μs        | ~500μs      | Network latency factor       |
+| SET          | ~50μs        | ~800μs      | Serialization overhead       |
+| Memory Usage | O(n)         | Minimal     | Constant connection overhead |
+| Throughput   | ~1M ops/s    | ~10K ops/s  | Network bound                |
+| Persistence  | Process only | Durable     | Redis supports persistence   |
 
 ### Latency Distribution
+
 ```
 Memory Cache:
 - p50: 15μs
@@ -238,6 +239,7 @@ Redis Cache:
 ```
 
 ### Memory Usage
+
 - **Memory Cache:** O(n) growth with entries, configurable eviction
 - **Redis Cache:** Constant process memory, data stored server-side
 - **Hybrid Mode:** Optimal memory utilization with Redis fallback
@@ -250,8 +252,9 @@ Redis Cache:
 const cache = CacheFactory.getInstance();
 
 // Check cache availability
-const isHealthy = await cache.getStats()
-  .then(stats => stats.healthy)
+const isHealthy = await cache
+  .getStats()
+  .then((stats) => stats.healthy)
   .catch(() => false);
 
 // Get detailed metrics
@@ -262,7 +265,7 @@ console.log({
   hitRate: stats.hitRate,
   size: stats.size,
   memoryUsage: stats.memoryUsage,
-  connectionStatus: stats.connectionStatus
+  connectionStatus: stats.connectionStatus,
 });
 ```
 
@@ -272,16 +275,16 @@ The system automatically tracks:
 
 ```typescript
 interface CacheStats {
-  hits: number;           // Cache hit count
-  misses: number;         // Cache miss count
-  hitRate: number;        // Hit rate percentage
-  size: number;           // Current cache size
-  maxSize: number;        // Maximum allowed size
-  memoryUsage: number;    // Memory consumption
-  evictions: number;      // Items evicted due to size limits
-  errors: number;         // Cache operation errors
-  healthy: boolean;       // Overall cache health
-  connectionStatus: 'connected' | 'disconnected' | 'readonly';
+  hits: number; // Cache hit count
+  misses: number; // Cache miss count
+  hitRate: number; // Hit rate percentage
+  size: number; // Current cache size
+  maxSize: number; // Maximum allowed size
+  memoryUsage: number; // Memory consumption
+  evictions: number; // Items evicted due to size limits
+  errors: number; // Cache operation errors
+  healthy: boolean; // Overall cache health
+  connectionStatus: "connected" | "disconnected" | "readonly";
 }
 ```
 
@@ -291,12 +294,12 @@ interface CacheStats {
 const cache = CacheFactory.getInstance();
 
 try {
-  await cache.set('key', 'value');
+  await cache.set("key", "value");
 } catch (error) {
   // Graceful fallback to memory-only mode
-  console.warn('Cache error:', error);
+  console.warn("Cache error:", error);
 
-  if (error.code === 'REDIS_CONNECTION_ERROR') {
+  if (error.code === "REDIS_CONNECTION_ERROR") {
     // Switch to memory cache
     fallbackToMemoryCache();
   }
@@ -308,22 +311,24 @@ try {
 ### Common Issues
 
 #### Redis Connection Problems
+
 ```typescript
 // Check Redis connectivity
-const redis = require('redis');
+const redis = require("redis");
 const client = redis.createClient({ url: process.env.REDIS_URL });
 
-client.on('error', (err) => {
-  console.error('Redis connection failed:', err.message);
+client.on("error", (err) => {
+  console.error("Redis connection failed:", err.message);
 });
 
 // Test connection
 await client.connect();
-await client.set('test', 'connection');
+await client.set("test", "connection");
 await client.quit();
 ```
 
 #### High Memory Usage
+
 ```typescript
 // Monitor memory usage
 const cache = CacheFactory.getInstance();
@@ -337,10 +342,11 @@ if (stats.memoryUsage > MAX_MEMORY_MB * 1024 * 1024) {
 ```
 
 #### Cache Invalidation Issues
+
 ```typescript
 // Force cache invalidation
 const cache = CacheFactory.getInstance();
-const pattern = 'tool:*:data';
+const pattern = "tool:*:data";
 
 // Clear related cache entries
 // Note: Pattern matching depends on cache backend
@@ -396,10 +402,10 @@ spec:
   template:
     spec:
       containers:
-      - name: hyperpage
-        envFrom:
-        - configMapRef:
-            name: cache-config
+        - name: hyperpage
+          envFrom:
+            - configMapRef:
+                name: cache-config
 ```
 
 ### Performance Tuning
@@ -410,13 +416,13 @@ const config = {
   // Redis-specific
   maxRetriesPerRequest: 3,
   lazyConnect: true,
-  connectionName: 'hyperpage-cache',
+  connectionName: "hyperpage-cache",
   enableReadyCheck: false,
 
   // Memory-specific
   maxSize: parseInt(process.env.CACHE_MAX_SIZE) || 5000,
   defaultTTL: 3600, // 1 hour
-  cleanupInterval: 60000 // Clean every minute
+  cleanupInterval: 60000, // Clean every minute
 };
 ```
 
@@ -435,7 +441,7 @@ class ApiCache {
   async cachedApiCall<T>(
     key: string,
     apiCall: () => Promise<T>,
-    ttl: number = 300
+    ttl: number = 300,
   ): Promise<T> {
     // Check cache first
     const cached = await this.cache.get<T>(key);
@@ -466,7 +472,7 @@ export class ToolDataService {
   async getToolData(toolId: string): Promise<ToolData> {
     const key = `tool:${toolId}:data:${Date.now() % (5 * 60 * 1000)}`; // 5-min buckets
 
-    return this.cache.get(key) || await this.fetchAndCache(toolId, key);
+    return this.cache.get(key) || (await this.fetchAndCache(toolId, key));
   }
 
   private async fetchAndCache(toolId: string, key: string): Promise<ToolData> {
@@ -480,6 +486,7 @@ export class ToolDataService {
 ## Conclusion
 
 The caching system is designed to be:
+
 - **Performant** - Sub-millisecond response times
 - **Reliable** - Graceful degradation and error recovery
 - **Scalable** - Environment-based configuration and connection pooling

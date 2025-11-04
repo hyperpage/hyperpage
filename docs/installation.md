@@ -11,12 +11,14 @@ This guide covers the detailed installation process, system requirements, and co
 ## Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/hyperpage/hyperpage.git
    cd hyperpage
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
@@ -45,6 +47,7 @@ ENABLE_TICKETING=false     # Show unified ticketing widgets
 ### Tool-Specific Configuration
 
 #### GitHub Integration
+
 ```env
 ENABLE_GITHUB=true
 GITHUB_TOKEN=github_pat_...             # Personal access token
@@ -52,6 +55,7 @@ GITHUB_USERNAME=your_github_username
 ```
 
 To create a GitHub Personal Access Token:
+
 1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
 2. Generate new token with these permissions:
    - `repo` (Full control of private repositories)
@@ -59,6 +63,7 @@ To create a GitHub Personal Access Token:
 3. Copy the token and add it to your `.env.local`
 
 #### GitLab Integration
+
 ```env
 ENABLE_GITLAB=true
 GITLAB_WEB_URL=https://gitlab.com       # Your GitLab instance URL
@@ -66,11 +71,13 @@ GITLAB_TOKEN=your_personal_access_token
 ```
 
 To create a GitLab Personal Access Token:
+
 1. Go to GitLab → User Settings → Access Tokens
 2. Create token with `api` scope
 3. Copy the token to your environment file
 
 #### Jira Integration
+
 ```env
 ENABLE_JIRA=true
 JIRA_WEB_URL=https://your-domain.atlassian.net  # Your Jira instance URL
@@ -79,6 +86,7 @@ JIRA_API_TOKEN=ATATT3x...                       # Personal access token
 ```
 
 To create a Jira API Token:
+
 1. Go to Atlassian Account → Security → API tokens
 2. Create new token
 3. Copy the token to your environment file
@@ -96,6 +104,7 @@ Only web URLs need to be configured in environment variables.
 ## Development Setup
 
 1. **Start the development server:**
+
    ```bash
    npm run dev
    ```
@@ -111,6 +120,7 @@ Only web URLs need to be configured in environment variables.
 ## Production Build
 
 1. **Build for production:**
+
    ```bash
    npm run build
    npm start
@@ -126,16 +136,19 @@ Only web URLs need to be configured in environment variables.
 ### Common Issues
 
 **"Tool not appearing on portal"**
+
 - Verify `ENABLE_TOOL=true` in `.env.local`
 - Restart the development server after configuration changes
 - Check that all required environment variables are set
 
 **"API authentication errors"**
+
 - Verify your API tokens are valid and have correct permissions
 - Check that tool URLs match your instance (especially for self-hosted GitLab/Jira)
 - Review console logs for detailed error messages
 
 **"Build failures"**
+
 - Ensure you're using Node.js 18+
 - Try clearing node_modules: `rm -rf node_modules && npm install`
 - Check for TypeScript compilation errors
@@ -150,6 +163,7 @@ Only web URLs need to be configured in environment variables.
 ## Next Steps
 
 Once installed and configured:
+
 - See [`docs/usage.md`](usage.md) for comprehensive portal features and navigation
 - Read [`docs/testing.md`](testing.md) for testing strategy and quality assurance
 - Check [`docs/api.md`](api.md) for technical integration details

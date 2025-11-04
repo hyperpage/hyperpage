@@ -116,9 +116,9 @@ SKIP_REAL_OAUTH=true
 The integration testing framework provides secure credential management:
 
 ```typescript
-import { IntegrationTestEnvironment } from '__tests__/lib/test-credentials';
+import { IntegrationTestEnvironment } from "__tests__/lib/test-credentials";
 
-describe('Integration Test', () => {
+describe("Integration Test", () => {
   let testEnv: IntegrationTestEnvironment;
   let testSession: any;
 
@@ -127,7 +127,7 @@ describe('Integration Test', () => {
   });
 
   beforeEach(async () => {
-    testSession = await testEnv.createTestSession('github');
+    testSession = await testEnv.createTestSession("github");
   });
 
   afterEach(async () => {
@@ -147,14 +147,14 @@ describe('Integration Test', () => {
 Comprehensive testing of GitHub OAuth flows:
 
 ```typescript
-test('should initiate GitHub OAuth flow', async ({ page }) => {
+test("should initiate GitHub OAuth flow", async ({ page }) => {
   await page.goto(`${baseUrl}/api/auth/github/initiate`);
   await expect(page).toHaveURL(/github\.com\/login\/oauth\/authorize/);
 });
 
-test('should store encrypted OAuth tokens', async () => {
+test("should store encrypted OAuth tokens", async () => {
   const response = await fetch(`${baseUrl}/api/auth/github/status`, {
-    headers: { 'Cookie': `sessionId=${testSession.sessionId}` }
+    headers: { Cookie: `sessionId=${testSession.sessionId}` },
   });
   expect(response.status).toBe(200);
 });
@@ -193,6 +193,7 @@ docker-compose -f __tests__/e2e/docker-compose.e2e.yml down
 #### Docker Architecture
 
 The E2E setup includes:
+
 - **`hyperpage-e2e`**: Next.js app container with health checks and API endpoints
 - **`playwright`**: Isolated test runner using official Playwright image with all browsers (Chromium, Firefox, WebKit)
 
@@ -205,6 +206,7 @@ Tests use `__tests__/e2e/.env.e2e` with mock data. Tools are enabled but use tes
 ### Verified Components
 
 ✅ **Confirmed Quality Standards:**
+
 - Next.js 15 API route compatibility
 - React hook testing with proper act() wrappers
 - Mock infrastructure for isolated testing
@@ -234,18 +236,21 @@ Integration tests run alongside unit and E2E tests in CI/CD pipeline.
 ## Testing Architecture
 
 ### Mock Infrastructure
+
 - **vi.mock**: Comprehensive API mocking for unit tests
 - **Component Isolation**: Mocked external dependencies
 - **Test Doubles**: Clean separation between tests
 - **Integration Test Environment**: Isolated test environment with mock and real OAuth support
 
 ### Coverage Goals
+
 - **Statement Coverage**: Target >90%
 - **Branch Coverage**: Focus on critical paths
 - **Function Coverage**: Ensure utility functions tested
 - **Integration Coverage**: Comprehensive OAuth and API integration coverage
 
 ### Test Organization
+
 - **Unit Tests**: `/__tests__/` directory mirroring source structure
 - **Integration Tests**: OAuth flows, API integrations, and cross-tool workflows
 - **E2E Tests**: Complete user flow validation with Playwright
@@ -256,26 +261,31 @@ Integration tests run alongside unit and E2E tests in CI/CD pipeline.
 ### Common Testing Issues
 
 **"Tests failing on fresh clone"**
+
 - Run `npm install` to ensure all dependencies
 - Check that `.env.local` contains test configurations
 - Verify Node.js version 18+
 
 **"Mock errors in tests"**
+
 - Clear test cache: `npm run test:clean-cache`
 - Reset Vitest state: `npm run test:reset`
 - Check mock configurations are properly imported
 
 **"Integration tests failing with OAuth setup"**
+
 - Ensure `SKIP_REAL_OAUTH=true` for development without real OAuth setup
 - Check test environment setup: `IntegrationTestEnvironment.setup()`
 - Verify test database and Redis are available for testing
 
 **"E2E tests failing with environment conflicts"**
+
 - E2E tests require isolation from unit test frameworks (Vitest globals conflict with Playwright)
 - Run E2E tests in a separate Node.js environment via Docker or dedicated CI stage
 - Disable Playwright webServer config and start dev server manually
 
 **"E2E tests timing out"**
+
 - Ensure development server is running: `npm run dev`
 - Configure longer timeouts in Playwright config
 - Check network connectivity to test endpoints

@@ -1,0 +1,494 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily security scans at 2 AM UTC
+    - cron: "0 2 * * *"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ==============================================
+  # PHASE 1: SECURITY & DEPENDENCY SCANNING
+  # ==============================================
+  security-scan:
+    name: Security & Dependency Scanning
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better vulnerability detection
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: |
+          npm ci --only=production=false
+          npm cache clean --force
+
+      - name: Run dependency audit
+        run: |
+          npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  # ==============================================
+  # PHASE 2: CODE QUALITY & LINTING
+  # ==============================================
+  code-quality:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --only=production=false
+
+      - name: Run TypeScript compilation check
+        run: npx tsc --noEmit
+
+      - name: Run ESLint
+        run: npx eslint . --ext .ts,.tsx --max-warnings=0
+
+      - name: Run Prettier check
+        run: npx prettier --check .
+
+      - name: Run security-focused linting
+        run: |
+          npx eslint . --ext .ts,.tsx --config eslint.config.js \
+            --rule 'no-console: error' \
+            --rule 'no-debugger: error' \
+            --rule 'no-alert: error'
+
+  # ==============================================
+  # PHASE 3: COMPREHENSIVE TESTING SUITE
+  # ==============================================
+  test-suite:
+    name: Comprehensive Test Suite (Phase 5 Results)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    strategy:
+      matrix:
+        test-suite: ["unit", "integration", "performance", "e2e"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --only=production=false
+
+      - name: Setup test database
+        run: |
+          mkdir -p data
+          echo "file:./data/hyperpage.db" > test.env
+        env:
+          DATABASE_URL: file:./data/hyperpage.db
+
+      - name: Setup test Redis (mock)
+        run: |
+          # Use in-memory cache for testing
+          echo "CACHE_TYPE=memory" >> test.env
+          echo "REDIS_URL=" >> test.env
+
+      - name: Run Unit Tests
+        if: matrix.test-suite == 'unit'
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Run Integration Tests
+        if: matrix.test-suite == 'integration'
+        run: npm run test:integration
+        env:
+          NODE_ENV: test
+          NEXT_TELEMETRY_DISABLED: 1
+          ENABLE_GITHUB: false
+          ENABLE_GITLAB: false
+          ENABLE_JIRA: false
+
+      - name: Run Performance Tests (Phase 5 Suite)
+        if: matrix.test-suite == 'performance'
+        run: npm run test:performance
+        env:
+          NODE_ENV: test
+          NEXT_TELEMETRY_DISABLED: 1
+        timeout-minutes: 30
+
+      - name: Run E2E Tests
+        if: matrix.test-suite == 'e2e'
+        run: npm run test:e2e
+        timeout-minutes: 45
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.test-suite }}
+          path: |
+            test-results/
+            coverage/
+          retention-days: 30
+
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: ${{ matrix.test-suite }}-tests
+          path: test-results/**/*.xml
+          reporter: java-junit
+
+  # ==============================================
+  # PHASE 4: PERFORMANCE REGRESSION TESTING
+  # ==============================================
+  performance-regression:
+    name: Performance Regression Testing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --only=production=false
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application for performance testing
+        run: |
+          npm start &
+          sleep 30
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Run Phase 5 Performance Benchmarks
+        run: |
+          npm run test:performance -- --regression-test
+        env:
+          NODE_ENV: production
+          BASE_URL: http://localhost:3000
+
+      - name: Store performance results
+        uses: benchmark-action/github-action-benchmark@v1
+        if: always()
+        with:
+          tool: "customSmallerIsBetter"
+          output-file-path: performance-results.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          alert-threshold: "200%"
+          fail-on-alert: true
+
+  # ==============================================
+  # PHASE 5: CONTAINER BUILD & SECURITY SCAN
+  # ==============================================
+  build-container:
+    name: Build & Scan Container
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [security-scan, code-quality, test-suite]
+
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Run Trivy container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: "sarif"
+          output: "trivy-container-results.sarif"
+
+      - name: Upload container scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-container-results.sarif"
+
+      - name: Build multi-arch manifest
+        run: |
+          docker manifest create ${{ steps.meta.outputs.tags }} \
+            ${{ steps.meta.outputs.tags }} \
+            --amend ${{ steps.meta.outputs.tags }}
+          docker manifest push ${{ steps.meta.outputs.tags }}
+
+  # ==============================================
+  # PHASE 6: DEPLOYMENT TO STAGING
+  # ==============================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build-container]
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Configure kubectl for staging cluster
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+        env:
+          KUBECONFIG: kubeconfig
+
+      - name: Update Kubernetes manifests with new image
+        run: |
+          export KUBECONFIG=kubeconfig
+          # Update deployment image
+          kubectl set image deployment/hyperpage hyperpage=${{ needs.build-container.outputs.image-tag }} -n hyperpage-staging
+
+          # Wait for rollout to complete
+          kubectl rollout status deployment/hyperpage -n hyperpage-staging --timeout=600s
+
+      - name: Run smoke tests against staging
+        run: |
+          sleep 30  # Wait for deployment to be ready
+          STAGING_URL="${{ secrets.STAGING_URL }}"
+
+          # Health check
+          curl -f "$STAGING_URL/api/health" || exit 1
+
+          # Basic functionality test
+          curl -f "$STAGING_URL" || exit 1
+
+  # ==============================================
+  # PHASE 7: PROMOTION TO PRODUCTION (Manual Approval)
+  # ==============================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [deploy-staging]
+    environment: production
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Configure kubectl for production cluster
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+        env:
+          KUBECONFIG: kubeconfig
+
+      - name: Blue-Green deployment strategy
+        run: |
+          export KUBECONFIG=kubeconfig
+
+          # Get current deployment
+          CURRENT_COLOR=$(kubectl get service hyperpage-service -o jsonpath='{.spec.selector.color}' 2>/dev/null || echo "blue")
+          NEW_COLOR=$([ "$CURRENT_COLOR" = "blue" ] && echo "green" || echo "blue")
+
+          echo "Current color: $CURRENT_COLOR"
+          echo "Deploying to: $NEW_COLOR"
+
+          # Label pods with color
+          kubectl label pods -l app=hyperpage color=$NEW_COLOR --overwrite
+
+          # Update service selector to new color
+          kubectl patch service hyperpage-service -p '{"spec":{"selector":{"color":"'$NEW_COLOR'"}}}'
+
+          # Remove color label from old pods
+          kubectl label pods -l app=hyperpage,color!=$NEW_COLOR color-
+
+      - name: Wait for new deployment health
+        run: |
+          export KUBECONFIG=kubeconfig
+
+          # Health check
+          PRODUCTION_URL="${{ secrets.PRODUCTION_URL }}"
+
+          for i in {1..30}; do
+            if curl -f "$PRODUCTION_URL/api/health"; then
+              echo "Production deployment successful"
+              break
+            fi
+            echo "Waiting for production health check... ($i/30)"
+            sleep 10
+          done
+
+      - name: Post-deployment monitoring
+        run: |
+          # Monitor for 5 minutes after deployment
+          PRODUCTION_URL="${{ secrets.PRODUCTION_URL }}"
+
+          for i in {1..30}; do
+            RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}\n' "$PRODUCTION_URL/api/health")
+            echo "Health check $i: Response time ${RESPONSE_TIME}s"
+            
+            if (( $(echo "$RESPONSE_TIME > 5" | bc -l) )); then
+              echo "WARNING: High response time detected"
+            fi
+            
+            sleep 10
+          done
+
+      - name: Notify deployment success
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: "#deployments"
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ==============================================
+  # PHASE 8: POST-DEPLOYMENT VALIDATION
+  # ==============================================
+  post-deployment-validation:
+    name: Post-Deployment Validation
+    runs-on: ubuntu-latest
+    if: always() && contains(needs.*.result, 'success')
+    needs: [deploy-production]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run comprehensive post-deployment tests
+        run: |
+          PRODUCTION_URL="${{ secrets.PRODUCTION_URL }}"
+
+          echo "Running post-deployment validation suite..."
+
+          # Health endpoints validation
+          curl -f "$PRODUCTION_URL/api/health" || exit 1
+          curl -f "$PRODUCTION_URL/api/metrics" || exit 1
+
+          # Core functionality tests
+          curl -f "$PRODUCTION_URL/api/tools/enabled" || exit 1
+
+          echo "Post-deployment validation completed successfully"
+
+      - name: Generate deployment report
+        run: |
+          echo "## Deployment Report" > deployment-report.md
+          echo "" >> deployment-report.md
+          echo "- **Commit**: ${{ github.sha }}" >> deployment-report.md
+          echo "- **Environment**: Production" >> deployment-report.md
+          echo "- **Timestamp**: $(date -u)" >> deployment-report.md
+          echo "- **Image**: ${{ needs.build-container.outputs.image-tag }}" >> deployment-report.md
+          echo "- **Status**: Success" >> deployment-report.md
+
+          cat deployment-report.md
+
+      - name: Upload deployment report
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-report
+          path: deployment-report.md
+          retention-days: 90

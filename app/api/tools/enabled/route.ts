@@ -47,7 +47,7 @@ export async function GET() {
       ),
     });
   } catch (error) {
-    console.error("Error getting enabled tools:", error);
+    
     return NextResponse.json(
       { error: "Failed to get enabled tools" },
       { status: 500 },

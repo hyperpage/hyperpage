@@ -5,9 +5,9 @@
  * data refresh, and rate limit updates with sensible defaults.
  */
 
-import { IJobFactory, IJob, JobType, JobPriority } from '../types/jobs';
-import { generateJobId } from './memory-job-queue';
-import { Tool } from '../../tools/tool-types';
+import { IJobFactory, IJob, JobType, JobPriority } from "../types/jobs";
+import { generateJobId } from "./memory-job-queue";
+import { Tool } from "../../tools/tool-types";
 
 /**
  * Job factory implementation
@@ -16,9 +16,12 @@ export class JobFactory implements IJobFactory {
   /**
    * Create a cache warming job for a tool
    */
-  createCacheWarmJob(tool: Omit<any, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'> {
+  createCacheWarmJob(
+    tool: Omit<Tool, "handlers">,
+    endpoints?: string[],
+  ): Omit<IJob, "status" | "createdAt" | "updatedAt" | "retryCount"> {
     return {
-      id: generateJobId('cache-warm'),
+      id: generateJobId("cache-warm"),
       type: JobType.CACHE_WARM,
       name: `Cache warming for ${tool.name}`,
       priority: JobPriority.LOW,
@@ -27,7 +30,7 @@ export class JobFactory implements IJobFactory {
         timeoutMs: 180000, // 3 minutes
         maxRetries: 3,
         data: { endpoints: endpoints || [] },
-        tags: ['cache', 'warming', 'maintenance'],
+        tags: ["cache", "warming", "maintenance"],
       },
     };
   }
@@ -35,9 +38,12 @@ export class JobFactory implements IJobFactory {
   /**
    * Create a data refresh job for a tool
    */
-  createDataRefreshJob(tool: Omit<any, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'> {
+  createDataRefreshJob(
+    tool: Omit<Tool, "handlers">,
+    endpoints?: string[],
+  ): Omit<IJob, "status" | "createdAt" | "updatedAt" | "retryCount"> {
     return {
-      id: generateJobId('data-refresh'),
+      id: generateJobId("data-refresh"),
       type: JobType.DATA_REFRESH,
       name: `Data refresh for ${tool.name}`,
       priority: JobPriority.MEDIUM,
@@ -47,7 +53,7 @@ export class JobFactory implements IJobFactory {
         timeoutMs: 60000, // 1 minute
         maxRetries: 3,
         data: { endpoints: endpoints || [], userInitiated: false },
-        tags: ['data', 'refresh', 'sync'],
+        tags: ["data", "refresh", "sync"],
       },
     };
   }
@@ -55,17 +61,19 @@ export class JobFactory implements IJobFactory {
   /**
    * Create a rate limit update job
    */
-  createRateLimitUpdateJob(platforms?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'> {
+  createRateLimitUpdateJob(
+    platforms?: string[],
+  ): Omit<IJob, "status" | "createdAt" | "updatedAt" | "retryCount"> {
     return {
-      id: generateJobId('rate-limit-update'),
+      id: generateJobId("rate-limit-update"),
       type: JobType.RATE_LIMIT_UPDATE,
-      name: `Rate limit update for ${platforms ? platforms.join(', ') : 'all platforms'}`,
+      name: `Rate limit update for ${platforms ? platforms.join(", ") : "all platforms"}`,
       priority: JobPriority.HIGH,
       payload: {
         timeoutMs: 15000, // 15 seconds
         maxRetries: 0, // Don't retry rate limit checks
         data: { platforms: platforms || [] },
-        tags: ['rate-limit', 'monitoring', 'api-limits'],
+        tags: ["rate-limit", "monitoring", "api-limits"],
       },
     };
   }

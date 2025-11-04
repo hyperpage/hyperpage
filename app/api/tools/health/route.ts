@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAllTools } from "../../../../tools";
-import { testToolConnectivity, getAllToolsHealth, getCircuitBreakerStatus } from "../../../../tools/validation";
+import {
+  testToolConnectivity,
+  getAllToolsHealth,
+  getCircuitBreakerStatus,
+} from "../../../../tools/validation";
 
 /**
  * Tool Health API Endpoint
@@ -9,8 +13,8 @@ import { testToolConnectivity, getAllToolsHealth, getCircuitBreakerStatus } from
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const detailed = searchParams.get('detailed') === 'true';
-    const connectivity = searchParams.get('connectivity') === 'true';
+    const detailed = searchParams.get("detailed") === "true";
+    const connectivity = searchParams.get("connectivity") === "true";
 
     const tools = getAllTools();
 
@@ -19,11 +23,11 @@ export async function GET(request: Request) {
 
     // If detailed mode is requested, include circuit breaker status
     if (detailed) {
-      Object.keys(healthResults).forEach(toolSlug => {
+      Object.keys(healthResults).forEach((toolSlug) => {
         const circuitBreaker = getCircuitBreakerStatus(toolSlug);
         healthResults[toolSlug] = {
           ...healthResults[toolSlug],
-          circuitBreaker
+          circuitBreaker,
         };
       });
     }
@@ -34,15 +38,15 @@ export async function GET(request: Request) {
         try {
           const result = await testToolConnectivity(tool, 3000); // 3 second timeout
           return { slug: tool.slug, connectivity: result };
-        } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
+        } catch {
           return {
             slug: tool.slug,
             connectivity: {
               isValid: false,
-              errors: ['Connectivity test failed'],
+              errors: ["Connectivity test failed"],
               warnings: [],
-              status: 'error' as const
-            }
+              status: "error" as const,
+            },
           };
         }
       });
@@ -53,7 +57,7 @@ export async function GET(request: Request) {
         if (healthResults[slug]) {
           healthResults[slug] = {
             ...healthResults[slug],
-            connectivity
+            connectivity,
           };
         }
       });
@@ -65,11 +69,11 @@ export async function GET(request: Request) {
       meta: {
         toolCount: tools.length,
         detailed,
-        connectivity: connectivity ? 'tested' : 'not_tested'
-      }
+        connectivity: connectivity ? "tested" : "not_tested",
+      },
     });
   } catch (error) {
-    console.error("Error getting tool health:", error);
+    
     return NextResponse.json(
       { error: "Failed to get tool health status" },
       { status: 500 },

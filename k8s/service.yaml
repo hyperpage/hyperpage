@@ -7,10 +7,10 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
-    targetPort: 3000
-    protocol: TCP
-    name: http
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
   selector:
     app: hyperpage
 ---
@@ -29,15 +29,16 @@ metadata:
   labels:
     app: hyperpage
 rules:
-- apiGroups: [""]
-  resources: ["pods", "nodes", "services", "endpoints", "persistentvolumeclaims"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["apps"]
-  resources: ["deployments", "replicasets"]
-  verbs: ["get", "list", "watch", "update", "patch"]
-- apiGroups: ["autoscaling"]
-  resources: ["horizontalpodautoscalers"]
-  verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources:
+      ["pods", "nodes", "services", "endpoints", "persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -46,9 +47,9 @@ metadata:
   labels:
     app: hyperpage
 subjects:
-- kind: ServiceAccount
-  name: hyperpage-service-account
-  namespace: default
+  - kind: ServiceAccount
+    name: hyperpage-service-account
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: hyperpage-cluster-role
@@ -75,7 +76,7 @@ data:
 
   # Caching settings
   CACHE_DEFAULT_TTL_SECONDS: "300"
-  CACHE_MAX_SIZE: "1000000000"  # 1GB
+  CACHE_MAX_SIZE: "1000000000" # 1GB
 
   # Rate limiting defaults
   RATE_LIMIT_DEFAULT_REQUESTS_PER_HOUR: "1000"
@@ -143,7 +144,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: ""  # Use local volumes for demo
+  storageClassName: "" # Use local volumes for demo
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -157,4 +158,4 @@ spec:
   resources:
     requests:
       storage: 5Gi
-  storageClassName: ""  # Use local volumes for demo
+  storageClassName: "" # Use local volumes for demo

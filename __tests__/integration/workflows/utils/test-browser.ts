@@ -1,6 +1,6 @@
 /**
  * Test Browser Utility for End-to-End Testing
- * 
+ *
  * Provides browser automation capabilities for testing user workflows
  * without requiring a real browser instance.
  */
@@ -15,17 +15,17 @@ export interface PageState {
 export interface WidgetData {
   loaded: boolean;
   lastRefresh: number;
-  items: any[];
+  items: unknown[];
 }
 
 export class TestBrowser {
   private baseUrl: string;
   private currentPage: PageState | null = null;
-  private sessionData: Map<string, any> = new Map();
+  private sessionData: Map<string, unknown> = new Map();
   private refreshIntervals: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
-    this.baseUrl = 'http://localhost:3000';
+    this.baseUrl = "http://localhost:3000";
   }
 
   /**
@@ -33,10 +33,10 @@ export class TestBrowser {
    */
   async goto(url: string): Promise<TestPage> {
     this.currentPage = {
-      title: 'Hyperpage',
+      title: "Hyperpage",
       url: url,
-      isAuthenticated: this.sessionData.has('authenticated'),
-      isSetupWizard: url.includes('/setup')
+      isAuthenticated: this.sessionData.has("authenticated"),
+      isSetupWizard: url.includes("/setup"),
     };
     return new TestPage(this);
   }
@@ -52,7 +52,7 @@ export class TestBrowser {
    * Check if authentication is required
    */
   async isAuthenticationRequired(): Promise<boolean> {
-    return !this.sessionData.has('authenticated');
+    return !this.sessionData.has("authenticated");
   }
 
   /**
@@ -60,7 +60,7 @@ export class TestBrowser {
    */
   async clearSession(): Promise<void> {
     this.sessionData.clear();
-    this.refreshIntervals.forEach(interval => clearInterval(interval));
+    this.refreshIntervals.forEach((interval) => clearInterval(interval));
     this.refreshIntervals.clear();
   }
 
@@ -76,20 +76,20 @@ export class TestBrowser {
    * Wait for a specified duration
    */
   async wait(duration: number): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, duration));
+    await new Promise((resolve) => setTimeout(resolve, duration));
   }
 
   /**
    * Get session data
    */
-  getSessionData(key: string): any {
+  getSessionData(key: string): unknown {
     return this.sessionData.get(key);
   }
 
   /**
    * Set session data
    */
-  setSessionData(key: string, value: any): void {
+  setSessionData(key: string, value: unknown): void {
     this.sessionData.set(key, value);
   }
 
@@ -116,7 +116,7 @@ export class TestBrowser {
    * Clean up browser resources
    */
   async cleanup(): Promise<void> {
-    this.refreshIntervals.forEach(interval => clearInterval(interval));
+    this.refreshIntervals.forEach((interval) => clearInterval(interval));
     this.refreshIntervals.clear();
     this.sessionData.clear();
     this.currentPage = null;
@@ -130,39 +130,44 @@ export class TestPage {
   constructor(private browser: TestBrowser) {}
 
   title(): string {
-    return this.browser.getSessionData('pageTitle') || 'Hyperpage';
+    const title = this.browser.getSessionData("pageTitle");
+    return typeof title === "string" ? title : "Hyperpage";
   }
 
   url(): string {
-    return this.browser.getSessionData('currentUrl') || 'http://localhost:3000';
+    const url = this.browser.getSessionData("currentUrl");
+    return typeof url === "string" ? url : "http://localhost:3000";
   }
 
   async isAuthenticated(): Promise<boolean> {
-    return this.browser.getSessionData('authenticated') || false;
+    const auth = this.browser.getSessionData("authenticated");
+    return typeof auth === "boolean" ? auth : false;
   }
 
   async isSetupWizard(): Promise<boolean> {
     const url = this.url();
-    return url.includes('/setup');
+    return url.includes("/setup");
   }
 
   async isTabActive(tabName: string): Promise<boolean> {
-    const activeTab = this.browser.getSessionData('activeTab');
+    const activeTab = this.browser.getSessionData("activeTab");
     return activeTab === tabName;
   }
 
   async clickTab(tabName: string): Promise<void> {
-    this.browser.setSessionData('activeTab', tabName);
+    this.browser.setSessionData("activeTab", tabName);
   }
 
   async getWidgetData(widgetId: string): Promise<WidgetData> {
-    const lastRefresh = this.browser.getSessionData(`widget_${widgetId}_lastRefresh`) || Date.now();
-    const items = this.browser.getSessionData(`widget_${widgetId}_items`) || [];
-    
+    const lastRefresh = this.browser.getSessionData(
+      `widget_${widgetId}_lastRefresh`,
+    );
+    const items = this.browser.getSessionData(`widget_${widgetId}_items`);
+
     return {
       loaded: true,
-      lastRefresh,
-      items
+      lastRefresh: typeof lastRefresh === "number" ? lastRefresh : Date.now(),
+      items: Array.isArray(items) ? items : [],
     };
   }
 

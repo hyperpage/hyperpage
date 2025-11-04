@@ -13,23 +13,27 @@ This document outlines the core architectural principles and development pattern
 ## Component Architecture Patterns
 
 ### Custom Hooks for State Management (React Query Integration)
+
 - **useToolQueries**: Dynamic query management for tool widgets with selective refresh intervals and registry-driven data fetching
 - **useDarkMode**: Handles theme switching with localStorage persistence
 - **Hook-First Pattern**: Extract complex stateful logic into reusable custom hooks before component implementation
 
 ### Component Decomposition Strategy
+
 - **Single Responsibility**: Each component should have one clear purpose and responsibility
 - **Component Size Limit**: No component should exceed 100 lines - decompose larger components
 - **Presentation vs Logic**: UI components should focus on presentation; logic goes into custom hooks or services
 - **React.memo Optimization**: Apply React.memo to components that render frequently to prevent unnecessary re-renders
 
 ### Service Layer Architecture
+
 - **ApiClient**: Base HTTP client with consistent error handling and request/response types
 - **ToolApiService**: Centralized API operations for tool data with proper error boundaries
 - **Service Pattern**: Extract all API logic into service classes to maintain separation of concerns
 - **Error Handling**: Services include graceful error handling without exposing implementation details
 
 ### Performance Optimizations
+
 - **React.memo**: Applied to frequently re-rendering components like Portal
 - **useMemo**: Used for expensive computations like data filtering and widget processing
 - **Error Boundaries**: ErrorBoundary component catches and handles React errors gracefully
@@ -88,6 +92,7 @@ This document outlines the core architectural principles and development pattern
 5. **Documentation Phase**: Update relevant documentation files with new features and usage instructions.
 
 ### Tool Addition Checklist
+
 - ✅ Create tool definition with `apis`, `handlers`, `widgets`, and `types.ts` properties
 - ✅ Define tool-specific TypeScript interfaces in `tools/[tool]/types.ts`
 - ✅ Import local types in `tools/[tool]/index.ts`
@@ -106,6 +111,7 @@ To streamline development processes and ensure consistent implementation of thes
 - **`component-creation.md`**: Component development workflow following hook-first pattern, size limits, and responsive design standards
 
 These workflows operationalize the above principles by:
+
 - Enforcing proper PLAN/ACT mode transitions
 - Implementing step-by-step tool usage with user confirmation
 - Following the hook-first pattern for state management
@@ -116,10 +122,12 @@ These workflows operationalize the above principles by:
 ## Meta-Governance and Cross-References
 
 ### Extends
+
 - **Core Standards**: Implements general coding standards for the Hyperpage project context
 - **Component Patterns**: Extends basic coding principles with specific implementation guidelines
 
 ### See Also
+
 - [Code Standards](coding-style.md) - Code formatting and style guidelines
 - [Security Practices](security-practices.md) - Security standards and validation
 - [Configuration Guidelines](configuration-guidelines.md) - Environment and setup configuration

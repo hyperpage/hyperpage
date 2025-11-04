@@ -13,7 +13,7 @@ export interface ToolValidationResult {
   status: "connected" | "connecting" | "error" | "configuration_error";
   connectivity?: ToolValidationResult;
   circuitBreaker?: {
-    state: 'closed' | 'open' | 'half-open';
+    state: "closed" | "open" | "half-open";
     failures: number;
   };
 }
@@ -51,25 +51,25 @@ export function validateToolConfig(tool: Tool): ToolValidationResult {
   // Validate URLs
   const { webUrl, apiUrl } = getToolUrls(tool);
   if (!webUrl) {
-    errors.push('Cannot determine web URL from configuration');
+    errors.push("Cannot determine web URL from configuration");
   }
   if (!apiUrl) {
-    errors.push('Cannot determine API URL from configuration');
+    errors.push("Cannot determine API URL from configuration");
   }
 
   // Determine status
-  let status: ToolValidationResult['status'] = 'connected';
+  let status: ToolValidationResult["status"] = "connected";
   if (errors.length > 0) {
-    status = 'configuration_error';
+    status = "configuration_error";
   } else if (warnings.length > 0) {
-    status = 'connected'; // Still connected but with warnings
+    status = "connected"; // Still connected but with warnings
   }
 
   return {
     isValid: errors.length === 0,
     errors,
     warnings,
-    status
+    status,
   };
 }
 
@@ -82,30 +82,30 @@ function validateBasicConfig(tool: Tool): ToolValidationResult {
 
   // Basic checks for any tool
   if (!tool.name) {
-    errors.push('Tool missing name');
+    errors.push("Tool missing name");
   }
   if (!tool.slug) {
-    errors.push('Tool missing slug');
+    errors.push("Tool missing slug");
   }
 
   const { webUrl, apiUrl } = getToolUrls(tool);
   if (webUrl && !isValidUrl(webUrl)) {
-    errors.push('Invalid web URL format');
+    errors.push("Invalid web URL format");
   }
   if (apiUrl && !isValidUrl(apiUrl)) {
-    errors.push('Invalid API URL format');
+    errors.push("Invalid API URL format");
   }
 
-  let status: ToolValidationResult['status'] = 'connected';
+  let status: ToolValidationResult["status"] = "connected";
   if (errors.length > 0) {
-    status = 'configuration_error';
+    status = "configuration_error";
   }
 
   return {
     isValid: errors.length === 0,
     errors,
     warnings,
-    status
+    status,
   };
 }
 
@@ -114,7 +114,7 @@ function validateBasicConfig(tool: Tool): ToolValidationResult {
  */
 export async function testToolConnectivity(
   tool: Tool,
-  timeout: number = 5000
+  timeout: number = 5000,
 ): Promise<ToolValidationResult> {
   const configValidation = validateToolConfig(tool);
 
@@ -138,34 +138,34 @@ export async function testToolConnectivity(
         try {
           // Test with a simple HEAD or GET request
           const response = await fetch(`${apiUrl}/user`, {
-            method: 'HEAD', // HEAD request is more efficient for connectivity tests
+            method: "HEAD", // HEAD request is more efficient for connectivity tests
             signal: controller.signal,
             headers: {
-              'User-Agent': 'Hyperpage-HealthCheck/1.0'
-            }
+              "User-Agent": "Hyperpage-HealthCheck/1.0",
+            },
           });
 
           clearTimeout(timeoutId);
 
           if (response.ok) {
-            result.status = 'connected';
+            result.status = "connected";
           } else if (response.status === 401) {
-            result.errors.push('API authentication failed');
-            result.status = 'configuration_error';
+            result.errors.push("API authentication failed");
+            result.status = "configuration_error";
           } else {
             result.errors.push(`API responded with status ${response.status}`);
-            result.status = 'error';
+            result.status = "error";
           }
         } catch {
           clearTimeout(timeoutId);
-          result.errors.push('API connectivity test failed');
-          result.status = 'error';
+          result.errors.push("API connectivity test failed");
+          result.status = "error";
         }
       }
     }
   } catch {
-    result.errors.push('Unexpected error during connectivity test');
-    result.status = 'error';
+    result.errors.push("Unexpected error during connectivity test");
+    result.status = "error";
   }
 
   return result;
@@ -190,7 +190,7 @@ function isValidUrl(string: string): boolean {
 interface CircuitBreakerState {
   failures: number;
   lastFailure: number;
-  state: 'closed' | 'open' | 'half-open';
+  state: "closed" | "open" | "half-open";
 }
 
 const circuitBreakers = new Map<string, CircuitBreakerState>();
@@ -210,13 +210,16 @@ export function canExecuteRequest(toolName: string): boolean {
   const now = Date.now();
 
   // If circuit is open and timeout has passed, move to half-open
-  if (breaker.state === 'open' && now - breaker.lastFailure > CIRCUIT_BREAKER_TIMEOUT) {
-    breaker.state = 'half-open';
+  if (
+    breaker.state === "open" &&
+    now - breaker.lastFailure > CIRCUIT_BREAKER_TIMEOUT
+  ) {
+    breaker.state = "half-open";
     breaker.failures = 0; // Reset failure count for half-open state
   }
 
   // Allow requests in closed or half-open states
-  return breaker.state === 'closed' || breaker.state === 'half-open';
+  return breaker.state === "closed" || breaker.state === "half-open";
 }
 
 /**
@@ -233,14 +236,14 @@ export function recordRequestFailure(toolName: string): void {
   const breaker = circuitBreakers.get(toolName) || {
     failures: 0,
     lastFailure: 0,
-    state: 'closed'
+    state: "closed",
   };
 
   breaker.failures++;
   breaker.lastFailure = Date.now();
 
   if (breaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
-    breaker.state = 'open';
+    breaker.state = "open";
   }
 
   circuitBreakers.set(toolName, breaker);
@@ -250,7 +253,7 @@ export function recordRequestFailure(toolName: string): void {
  * Gets circuit breaker status for a tool
  */
 export function getCircuitBreakerStatus(toolName: string) {
-  return circuitBreakers.get(toolName) || { state: 'closed', failures: 0 };
+  return circuitBreakers.get(toolName) || { state: "closed", failures: 0 };
 }
 
 /**

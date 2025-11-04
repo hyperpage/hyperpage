@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Output standalone for Docker containerization
-  output: 'standalone',
+  output: "standalone",
 
   // Enable response compression for all API routes
   compress: true,
@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   // External packages for Node.js compatibility
-  serverExternalPackages: ['better-sqlite3', 'ioredis'],
+  serverExternalPackages: ["better-sqlite3", "ioredis"],
 
   // Disable ESLint during builds for containerization
   eslint: {
@@ -31,14 +31,14 @@ const nextConfig: NextConfig = {
     // Mark external packages (server-side only)
     config.externals = config.externals || [];
     config.externals.push({
-      'better-sqlite3': 'commonjs better-sqlite3',
-      'ioredis': 'commonjs ioredis',
+      "better-sqlite3": "commonjs better-sqlite3",
+      ioredis: "commonjs ioredis",
     });
 
     // Ensure fs and path are not bundled for client-side
     config.externals.push({
-      fs: 'commonjs fs',
-      path: 'commonjs path',
+      fs: "commonjs fs",
+      path: "commonjs path",
     });
 
     return config;

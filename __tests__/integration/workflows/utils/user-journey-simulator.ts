@@ -1,12 +1,12 @@
 /**
  * User Journey Simulator for End-to-End Testing
- * 
+ *
  * Simulates complex user workflows and interactions across multiple tools
  * and authentication providers.
  */
 
-import { OAuthTestCredentials } from '../../../lib/test-credentials';
-import { TestBrowser } from './test-browser';
+import { OAuthTestCredentials } from "../../../lib/test-credentials";
+import { TestBrowser } from "./test-browser";
 
 export interface OAuthResult {
   success: boolean;
@@ -18,7 +18,7 @@ export interface ToolConfiguration {
   username?: string;
   repository?: string;
   project?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface DataVerificationResult {
@@ -39,24 +39,27 @@ export interface MultiToolAggregationResult {
 }
 
 export interface UserPreferences {
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
   refreshInterval: number;
-  dashboardLayout: 'grid' | 'list';
+  dashboardLayout: "grid" | "list";
+}
+
+export interface ToolDataItem {
+  id: string;
+  title: string;
+  created_at: string;
+  [key: string]: string | number | boolean;
+}
+
+export interface ToolData {
+  items: ToolDataItem[];
+  lastUpdate: number;
 }
 
 export interface OverviewData {
-  github: {
-    items: any[];
-    lastUpdate: number;
-  };
-  gitlab: {
-    items: any[];
-    lastUpdate: number;
-  };
-  jira: {
-    items: any[];
-    lastUpdate: number;
-  };
+  github: ToolData;
+  gitlab: ToolData;
+  jira: ToolData;
 }
 
 export class UserJourneySimulator {
@@ -64,9 +67,9 @@ export class UserJourneySimulator {
   private browser: TestBrowser;
   private connectedProviders: Set<string> = new Set();
   private userPreferences: UserPreferences = {
-    theme: 'light',
+    theme: "light",
     refreshInterval: 300000, // 5 minutes
-    dashboardLayout: 'grid'
+    dashboardLayout: "grid",
   };
 
   constructor(baseUrl: string, browser: TestBrowser) {
@@ -77,25 +80,40 @@ export class UserJourneySimulator {
   /**
    * Complete OAuth flow for a provider
    */
-  async completeOAuthFlow(provider: string, credentials: OAuthTestCredentials): Promise<OAuthResult> {
+  async completeOAuthFlow(
+    provider: string,
+    credentials: OAuthTestCredentials,
+  ): Promise<OAuthResult> {
     try {
+      // Check for invalid credentials
+      if (
+        credentials.clientId === "invalid-client-id" ||
+        !credentials.clientId
+      ) {
+        return {
+          success: false,
+          redirectUrl: "",
+          error: "Invalid OAuth credentials",
+        };
+      }
+
       // Simulate OAuth redirect
       const redirectUrl = `${this.baseUrl}/api/auth/${provider}/callback?code=test-auth-code&state=test-state`;
-      
+
       // Set authentication state
-      this.browser.setSessionData('authenticated', true);
+      this.browser.setSessionData("authenticated", true);
       this.browser.setSessionData(`oauth_${provider}`, credentials);
       this.connectedProviders.add(provider);
 
       return {
         success: true,
-        redirectUrl: redirectUrl
+        redirectUrl: redirectUrl,
       };
     } catch (error) {
       return {
         success: false,
-        redirectUrl: '',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        redirectUrl: "",
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -103,12 +121,15 @@ export class UserJourneySimulator {
   /**
    * Add additional provider to existing session
    */
-  async addProvider(provider: string, credentials: OAuthTestCredentials): Promise<OAuthResult> {
-    if (!this.browser.getSessionData('authenticated')) {
+  async addProvider(
+    provider: string,
+    credentials: OAuthTestCredentials,
+  ): Promise<OAuthResult> {
+    if (!this.browser.getSessionData("authenticated")) {
       return {
         success: false,
-        redirectUrl: '',
-        error: 'Not authenticated'
+        redirectUrl: "",
+        error: "Not authenticated",
       };
     }
 
@@ -119,13 +140,14 @@ export class UserJourneySimulator {
 
       return {
         success: true,
-        redirectUrl: this.baseUrl
+        redirectUrl: this.baseUrl,
       };
     } catch (error) {
       return {
         success: false,
-        redirectUrl: '',
-        error: error instanceof Error ? error.message : 'Failed to add provider'
+        redirectUrl: "",
+        error:
+          error instanceof Error ? error.message : "Failed to add provider",
       };
     }
   }
@@ -154,7 +176,7 @@ export class UserJourneySimulator {
         hasData: false,
         dataItems: 0,
         lastUpdate: 0,
-        errors: [`Tool ${tool} is not enabled`]
+        errors: [`Tool ${tool} is not enabled`],
       };
     }
 
@@ -162,20 +184,22 @@ export class UserJourneySimulator {
     const dataItems = Math.floor(Math.random() * 10); // 0-9 items
     const lastUpdate = Date.now();
 
-    this.browser.setSessionData(`tool_${tool}_data`, {
+    const mockData: ToolData = {
       items: Array.from({ length: dataItems }, (_, i) => ({
         id: `${tool}-item-${i}`,
         title: `${tool} Item ${i}`,
-        created_at: new Date(Date.now() - i * 3600000).toISOString()
+        created_at: new Date(Date.now() - i * 3600000).toISOString(),
       })),
-      lastUpdate
-    });
+      lastUpdate,
+    };
+
+    this.browser.setSessionData(`tool_${tool}_data`, mockData);
 
     return {
       hasData: dataItems > 0,
       dataItems,
       lastUpdate,
-      errors: dataItems === 0 ? [`No data available for ${tool}`] : []
+      errors: dataItems === 0 ? [`No data available for ${tool}`] : [],
     };
   }
 
@@ -198,30 +222,36 @@ export class UserJourneySimulator {
       providersData.push({
         provider,
         hasData: result.hasData,
-        itemCount: result.dataItems
+        itemCount: result.dataItems,
       });
     }
 
     return {
       success: providersData.length > 0,
       providersData,
-      errors: providersData.some(p => !p.hasData) ? ['Some providers have no data'] : []
+      errors: providersData.some((p) => !p.hasData)
+        ? ["Some providers have no data"]
+        : [],
     };
   }
 
   /**
    * Set user preferences
    */
-  async setUserPreferences(preferences: Partial<UserPreferences>): Promise<void> {
+  async setUserPreferences(
+    preferences: Partial<UserPreferences>,
+  ): Promise<void> {
     this.userPreferences = { ...this.userPreferences, ...preferences };
-    this.browser.setSessionData('user_preferences', this.userPreferences);
+    this.browser.setSessionData("user_preferences", this.userPreferences);
   }
 
   /**
    * Get user preferences
    */
   async getUserPreferences(): Promise<UserPreferences> {
-    const stored = this.browser.getSessionData('user_preferences');
+    const stored = this.browser.getSessionData(
+      "user_preferences",
+    ) as UserPreferences | null;
     return stored || this.userPreferences;
   }
 
@@ -229,21 +259,20 @@ export class UserJourneySimulator {
    * Get overview data across all tools
    */
   async getOverviewData(): Promise<OverviewData> {
-    const providers = ['github', 'gitlab', 'jira'];
+    const providers = ["github", "gitlab", "jira"];
     const overview: OverviewData = {
       github: { items: [], lastUpdate: 0 },
       gitlab: { items: [], lastUpdate: 0 },
-      jira: { items: [], lastUpdate: 0 }
+      jira: { items: [], lastUpdate: 0 },
     };
 
     for (const provider of providers) {
       if (this.connectedProviders.has(provider)) {
-        const toolData = this.browser.getSessionData(`tool_${provider}_data`);
+        const toolData = this.browser.getSessionData(
+          `tool_${provider}_data`,
+        ) as ToolData | null;
         if (toolData) {
-          overview[provider as keyof OverviewData] = {
-            items: toolData.items || [],
-            lastUpdate: toolData.lastUpdate || Date.now()
-          };
+          overview[provider as keyof OverviewData] = toolData;
         }
       }
     }
@@ -254,18 +283,23 @@ export class UserJourneySimulator {
   /**
    * Get tool-specific data
    */
-  async getToolData(tool: string): Promise<any> {
-    const toolData = this.browser.getSessionData(`tool_${tool}_data`);
+  async getToolData(tool: string): Promise<ToolData> {
+    const toolData = this.browser.getSessionData(
+      `tool_${tool}_data`,
+    ) as ToolData | null;
     return toolData || { items: [], lastUpdate: 0 };
   }
 
   /**
    * Simulate setup wizard interactions
    */
-  async completeSetupWizard(provider: string, credentials: OAuthTestCredentials): Promise<boolean> {
+  async completeSetupWizard(
+    provider: string,
+    credentials: OAuthTestCredentials,
+  ): Promise<boolean> {
     try {
       // Step 1: Provider selection
-      this.browser.setSessionData('setup_selected_providers', [provider]);
+      this.browser.setSessionData("setup_selected_providers", [provider]);
 
       // Step 2: OAuth authentication
       const authResult = await this.completeOAuthFlow(provider, credentials);
@@ -277,11 +311,14 @@ export class UserJourneySimulator {
       await this.enableTool(provider);
 
       // Step 4: Completion
-      this.browser.setSessionData('setup_completed', true);
-      this.browser.setSessionData('setup_redirect', `${this.baseUrl}/dashboard`);
+      this.browser.setSessionData("setup_completed", true);
+      this.browser.setSessionData(
+        "setup_redirect",
+        `${this.baseUrl}/dashboard`,
+      );
 
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -300,27 +337,36 @@ export class UserJourneySimulator {
 export class SetupWizardPage {
   constructor(private browser: TestBrowser) {}
 
+  async isSetupWizard(): Promise<boolean> {
+    return true;
+  }
+
   async selectProviders(providers: string[]): Promise<void> {
-    this.browser.setSessionData('setup_selected_providers', providers);
+    this.browser.setSessionData("setup_selected_providers", providers);
   }
 
   async continue(): Promise<void> {
-    const selectedProviders = this.browser.getSessionData('setup_selected_providers') || [];
-    if (selectedProviders.length === 0) {
-      throw new Error('No providers selected');
+    const selectedProviders = this.browser.getSessionData(
+      "setup_selected_providers",
+    ) as string[] | null;
+    if (!selectedProviders || selectedProviders.length === 0) {
+      throw new Error("No providers selected");
     }
   }
 
   async startOAuth(provider: string): Promise<void> {
-    this.browser.setSessionData('setup_oauth_started', provider);
+    this.browser.setSessionData("setup_oauth_started", provider);
   }
 
-  async configureProvider(provider: string, config: ToolConfiguration): Promise<void> {
+  async configureProvider(
+    provider: string,
+    config: ToolConfiguration,
+  ): Promise<void> {
     this.browser.setSessionData(`setup_${provider}_config`, config);
   }
 
   async completeSetup(): Promise<boolean> {
-    this.browser.setSessionData('setup_completed', true);
+    this.browser.setSessionData("setup_completed", true);
     return true;
   }
 }

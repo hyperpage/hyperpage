@@ -15,6 +15,7 @@ This document outlines the standards and best practices for configuration manage
 ### Configuration Categories
 
 #### 1. Tool Enablement Variables
+
 ```env
 # Aggregation Tools
 ENABLE_CODE_REVIEWS=false
@@ -28,6 +29,7 @@ ENABLE_GITLAB=false
 ```
 
 #### 2. Tool-Specific Configuration
+
 ```env
 # JIRA Configuration
 JIRA_WEB_URL=https://your-domain.atlassian.net
@@ -40,7 +42,9 @@ GITHUB_USERNAME=your_username
 ```
 
 #### 3. URL Auto-Derivation
+
 The system automatically derives API URLs from web URLs using consistent patterns:
+
 - **Jira**: `webUrl + '/rest/api/3'` (e.g., `https://domain.atlassian.net/rest/api/3`)
 - **GitLab**: `webUrl + '/api/v4'` (e.g., `https://gitlab.com/api/v4`)
 - **GitHub**: Always uses `https://api.github.com`
@@ -48,12 +52,14 @@ The system automatically derives API URLs from web URLs using consistent pattern
 ### Security Standards for Configuration
 
 #### Credential Protection
+
 - **Server-Only Access**: Environment variables read only in server components/pages
 - **No Client-Side Leaks**: Never pass sensitive configs to client components
 - **Registry-Based Isolation**: Tool configs automatically excluded from client-safe objects
 - **Build Cleanliness**: Ensure no credential leakage in production bundles
 
 #### Validation Requirements
+
 - **Parameter Sanitization**: All dynamic route parameters validated with strict regex
 - **Early Validation**: Input validation occurs immediately after parameter extraction
 - **Error Responses**: Invalid inputs return HTTP 400 with generic messages
@@ -96,14 +102,18 @@ The system automatically derives API URLs from web URLs using consistent pattern
 ### Configuration Documentation Standards
 
 #### README Integration
+
 Update README.md configuration section when adding new tools:
+
 - Add tool to configuration examples
 - Document required environment variables
 - Include setup instructions
 - Provide troubleshooting guidelines
 
 #### Developer Onboarding
+
 Ensure all new team members receive:
+
 - Complete .env.local setup guide
 - Tool-specific authentication tutorials
 - Security awareness training for credential handling
@@ -111,12 +121,14 @@ Ensure all new team members receive:
 ### Error Handling and User Experience
 
 #### Configuration Validation
+
 - **Startup Checks**: Validate required variables on application start
 - **Graceful Degradation**: Disable tools with invalid configuration (no crashes)
 - **User Feedback**: Provide clear error messages for missing/invalid configuration
 - **Recovery Guidance**: Link to documentation for fixing configuration issues
 
 #### Development vs Production
+
 - **Development**: Comprehensive error messages for debugging
 - **Production**: Generic error messages without sensitive details
 - **Environment Detection**: Automatic behavior based on NODE_ENV
@@ -124,12 +136,14 @@ Ensure all new team members receive:
 ### Best Practices
 
 #### Organization and Maintainability
+
 - **Logical Grouping**: Group related configurations together
 - **Clear Comments**: Document purpose and format of each variable
 - **Version Control**: Only commit template files with placeholders
 - **Backup Strategy**: Document safe backup procedures for configuration
 
 #### Tool Addition Workflow
+
 1. Define configuration requirements in tool specification
 2. Update .env.local.sample with new variables
 3. Implement validation logic in API routes

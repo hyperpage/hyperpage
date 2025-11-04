@@ -36,7 +36,7 @@ This document provides implementation details for applying task management withi
 **docs/TODO.md** **MUST ONLY contain detailed tasks to do**. **NEVER** include:
 
 - ❌ **No project overviews or introductions**
-- ❌ **No completion summaries or achievements**  
+- ❌ **No completion summaries or achievements**
 - ❌ **No "mission accomplished" sections**
 - ❌ **No status reports or marketing language**
 - ❌ **No category headers or section breaks**
@@ -53,17 +53,20 @@ This document provides implementation details for applying task management withi
 ## Hyperpage-Specific Implementation
 
 ### File Location
+
 - **Primary File**: `docs/TODO.md`
 - **Automatic Updates**: Via `task_progress` parameter in tool calls
 - **Format**: Pure markdown with checkbox syntax
 
 ### Integration Points
+
 - **Plan Mode**: Use `task_progress` to create preliminary roadmaps
 - **Act Mode**: Update progress as tasks are completed
 - **Tool Calls**: Every significant tool use should update TODO status
 - **Mode Switching**: Create comprehensive lists when transitioning to Act Mode
 
 ### Quality Standards for TODO Items
+
 1. **Specific**: Each item describes exactly what needs to be done
 2. **Measurable**: Progress can be clearly tracked
 3. **Actionable**: Starts with an action verb
@@ -71,6 +74,7 @@ This document provides implementation details for applying task management withi
 5. **Atomic**: Single, complete task (no partial completion)
 
 ### Example TODO Structure
+
 ```markdown
 - [ ] Analyze existing authentication flow
 - [ ] Design OAuth integration patterns
@@ -83,15 +87,18 @@ This document provides implementation details for applying task management withi
 ## Implementation Dependencies
 
 ### Depends On
+
 - **Task Management Principles**: Applies task organization to TODO management specifically
 - **Progress Tracking**: Implements automatic list management patterns
 
 ### Extends
+
 - **Core Methodology**: Applies task management principles to TODO tracking specifically
 - **Automation Guidelines**: Implements automatic list management patterns
 
 ## Validation Checklist
 
 Before creating or updating TODO lists:
+
 - [ ] Follows the "ultimate simplicity principle" (no extra content)
 - [ ] Items are atomic and specific

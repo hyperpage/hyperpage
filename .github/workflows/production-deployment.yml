@@ -1,0 +1,579 @@
+name: Production Deployment Automation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "k8s/**"
+      - "Dockerfile"
+      - ".github/workflows/production-deployment.yml"
+  workflow_dispatch:
+    inputs:
+      deployment_strategy:
+        description: "Deployment strategy to use"
+        required: true
+        default: "blue-green"
+        type: choice
+        options:
+          - blue-green
+          - rolling-update
+          - canary
+      force_deployment:
+        description: "Force deployment even if health checks fail"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  KUBE_NAMESPACE: hyperpage-production
+
+jobs:
+  # ==============================================
+  # PRE-DEPLOYMENT VALIDATION
+  # ==============================================
+  pre-deployment-validation:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    outputs:
+      deployment-approved: ${{ steps.validation.outputs.approved }}
+      current-version: ${{ steps.version.outputs.current }}
+      new-version: ${{ steps.version.outputs.new }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Validate Kubernetes manifests
+        id: manifest-validation
+        run: |
+          echo "## 🔍 Pre-Deployment Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Validation Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Validate manifest syntax
+          echo "### Kubernetes Manifest Validation:" >> $GITHUB_STEP_SUMMARY
+          if kubectl apply --dry-run=client -f k8s/deployment.yaml; then
+            echo "✅ Deployment manifest is valid" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Deployment manifest validation failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          if kubectl apply --dry-run=client -f k8s/service.yaml; then
+            echo "✅ Service manifest is valid" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Service manifest validation failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Check image availability
+        run: |
+          # Extract image tag from deployment manifest
+          IMAGE_TAG=$(grep -o 'hyperpage:[^"]*' k8s/deployment.yaml | head -1)
+
+          echo "### Container Image Check:" >> $GITHUB_STEP_SUMMARY
+          echo "**Expected Image**: ${IMAGE_TAG}" >> $GITHUB_STEP_SUMMARY
+
+          # Check if image exists in registry
+          if docker pull "${IMAGE_TAG}" &>/dev/null; then
+            echo "✅ Container image is available in registry" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Container image not found in registry" >> $GITHUB_STEP_SUMMARY
+            echo "Build the image first using the container-registry workflow" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Version comparison
+        id: version
+        run: |
+          # Get current deployed version
+          if kubectl get deployment hyperpage -n ${{ env.KUBE_NAMESPACE }} &>/dev/null; then
+            CURRENT_VERSION=$(kubectl get deployment hyperpage -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -o 'hyperpage:[^"]*')
+            echo "current=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          else
+            echo "current=none" >> $GITHUB_OUTPUT
+          fi
+
+          # Extract new version from manifest
+          NEW_VERSION=$(grep -o 'hyperpage:[^"]*' k8s/deployment.yaml | head -1)
+          echo "new=${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+          echo "### Version Information:" >> $GITHUB_STEP_SUMMARY
+          echo "**Current Version**: ${CURRENT_VERSION:-none}" >> $GITHUB_STEP_SUMMARY
+          echo "**New Version**: ${NEW_VERSION}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${CURRENT_VERSION}" = "${NEW_VERSION}" ]; then
+            echo "⚠️ **Warning**: No version change detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Security and compliance check
+        run: |
+          echo "### Security Compliance:" >> $GITHUB_STEP_SUMMARY
+
+          # Check for security contexts
+          if grep -q "runAsNonRoot" k8s/deployment.yaml; then
+            echo "✅ Non-root user security context configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Missing non-root user security context" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Check for resource limits
+          if grep -q "limits:" k8s/deployment.yaml; then
+            echo "✅ Resource limits configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Warning**: No resource limits configured" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Check for health probes
+          if grep -q "livenessProbe:" k8s/deployment.yaml && grep -q "readinessProbe:" k8s/deployment.yaml; then
+            echo "✅ Health probes configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Missing health probes" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Approval decision
+        id: validation
+        run: |
+          # In a real scenario, this would include manual approval gates
+          # For automation, we'll approve based on validation results
+          echo "approved=true" >> $GITHUB_OUTPUT
+
+          echo "### Deployment Approval:" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Deployment approved for execution**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Execute blue-green deployment" >> $GITHUB_STEP_SUMMARY
+          echo "2. Validate new environment health" >> $GITHUB_STEP_SUMMARY
+          echo "3. Execute traffic switch (if applicable)" >> $GITHUB_STEP_SUMMARY
+          echo "4. Monitor post-deployment metrics" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================
+  # BLUE-GREEN DEPLOYMENT EXECUTION
+  # ==============================================
+  blue-green-deployment:
+    name: Blue-Green Deployment
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-validation]
+    if: github.event.inputs.deployment_strategy == 'blue-green' || github.event_name == 'push'
+
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Configure kubectl for production cluster
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+        env:
+          KUBECONFIG: kubeconfig
+
+      - name: Determine current and next environment colors
+        id: colors
+        run: |
+          # Check current service selector to determine active color
+          CURRENT_COLOR=$(kubectl get service hyperpage-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.selector.color}' 2>/dev/null || echo "blue")
+          NEW_COLOR=$([ "$CURRENT_COLOR" = "blue" ] && echo "green" || echo "blue")
+
+          echo "current_color=${CURRENT_COLOR}" >> $GITHUB_OUTPUT
+          echo "new_color=${NEW_COLOR}" >> $GITHUB_OUTPUT
+
+          echo "## 🟢 Blue-Green Deployment Execution" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Current Active Environment**: ${CURRENT_COLOR}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deploying to Environment**: ${NEW_COLOR}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deploy to new environment
+        run: |
+          export KUBECONFIG=kubeconfig
+          NEW_COLOR="${{ steps.colors.outputs.new_color }}"
+
+          echo "### Deployment to ${NEW_COLOR} Environment:" >> $GITHUB_STEP_SUMMARY
+
+          # Create deployment with color labels
+          envsubst <<'EOF' | kubectl apply -f -
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: hyperpage-${NEW_COLOR}
+            namespace: ${KUBE_NAMESPACE}
+            labels:
+              app: hyperpage
+              color: ${NEW_COLOR}
+              version: ${NEW_COLOR}
+          spec:
+            replicas: 3
+            strategy:
+              type: RollingUpdate
+              rollingUpdate:
+                maxSurge: 1
+                maxUnavailable: 0
+            selector:
+              matchLabels:
+                app: hyperpage
+                color: ${NEW_COLOR}
+            template:
+              metadata:
+                labels:
+                  app: hyperpage
+                  color: ${NEW_COLOR}
+                  version: ${NEW_COLOR}
+              spec:
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 1001
+                  runAsGroup: 1001
+                  fsGroup: 1001
+                serviceAccountName: hyperpage-service-account
+                containers:
+                - name: hyperpage
+                  image: ${REGISTRY}/${IMAGE_NAME}:latest
+                  imagePullPolicy: Always
+                  resources:
+                    requests:
+                      memory: "512Mi"
+                      cpu: "100m"
+                    limits:
+                      memory: "1Gi"
+                      cpu: "500m"
+                  livenessProbe:
+                    httpGet:
+                      path: /api/health
+                      port: 3000
+                    initialDelaySeconds: 30
+                    periodSeconds: 30
+                    timeoutSeconds: 5
+                    failureThreshold: 3
+                  readinessProbe:
+                    httpGet:
+                      path: /api/health
+                      port: 3000
+                    initialDelaySeconds: 5
+                    periodSeconds: 10
+                    timeoutSeconds: 5
+                    failureThreshold: 3
+                  startupProbe:
+                    httpGet:
+                      path: /api/health
+                      port: 3000
+                    initialDelaySeconds: 10
+                    periodSeconds: 10
+                    timeoutSeconds: 5
+                    failureThreshold: 30
+                  envFrom:
+                  - configMapRef:
+                      name: hyperpage-config
+                  - secretRef:
+                      name: hyperpage-secrets
+                  ports:
+                  - containerPort: 3000
+                    name: http
+                    protocol: TCP
+                  volumeMounts:
+                  - name: data-storage
+                    mountPath: /app/data
+                volumes:
+                - name: data-storage
+                  persistentVolumeClaim:
+                    claimName: hyperpage-data-pvc
+                dnsPolicy: ClusterFirst
+                restartPolicy: Always
+          EOF
+
+          echo "✅ Deployment created for ${NEW_COLOR} environment" >> $GITHUB_STEP_SUMMARY
+
+      - name: Wait for new environment to be ready
+        run: |
+          export KUBECONFIG=kubeconfig
+          NEW_COLOR="${{ steps.colors.outputs.new_color }}"
+
+          echo "### Health Check for ${NEW_COLOR} Environment:" >> $GITHUB_STEP_SUMMARY
+
+          # Wait for deployment to be ready
+          kubectl rollout status deployment/hyperpage-${NEW_COLOR} -n ${{ env.KUBE_NAMESPACE }} --timeout=600s
+
+          echo "✅ New environment deployment completed" >> $GITHUB_STEP_SUMMARY
+
+          # Get pod information
+          echo "### New Environment Pods:" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n ${{ env.KUBE_NAMESPACE }} -l app=hyperpage,color=${NEW_COLOR} >> $GITHUB_STEP_SUMMARY
+
+      - name: Execute smoke tests on new environment
+        run: |
+          export KUBECONFIG=kubeconfig
+          NEW_COLOR="${{ steps.colors.outputs.new_color }}"
+
+          echo "### Smoke Testing New Environment:" >> $GITHUB_STEP_SUMMARY
+
+          # Get service endpoint for new environment
+          NEW_SERVICE_IP=$(kubectl get service hyperpage-${NEW_COLOR} -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || kubectl get service hyperpage-${NEW_COLOR} -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
+
+          echo "**Testing endpoint**: http://${NEW_SERVICE_IP}" >> $GITHUB_STEP_SUMMARY
+
+          # Run smoke tests
+          for i in {1..10}; do
+            echo "Smoke test attempt $i/10..." >> $GITHUB_STEP_SUMMARY
+            
+            if curl -f "http://${NEW_SERVICE_IP}/api/health" &>/dev/null; then
+              echo "✅ Health endpoint responding" >> $GITHUB_STEP_SUMMARY
+              break
+            else
+              if [ $i -eq 10 ]; then
+                echo "❌ Health check failed after 10 attempts" >> $GITHUB_STEP_SUMMARY
+                exit 1
+              fi
+              echo "Retrying in 10 seconds..." >> $GITHUB_STEP_SUMMARY
+              sleep 10
+            fi
+          done
+
+          # Test additional endpoints
+          if curl -f "http://${NEW_SERVICE_IP}/api/metrics" &>/dev/null; then
+            echo "✅ Metrics endpoint responding" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if curl -f "http://${NEW_SERVICE_IP}/api/tools/enabled" &>/dev/null; then
+            echo "✅ Tools endpoint responding" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "✅ All smoke tests passed for ${NEW_COLOR} environment" >> $GITHUB_STEP_SUMMARY
+
+      - name: Traffic switching
+        run: |
+          export KUBECONFIG=kubeconfig
+          NEW_COLOR="${{ steps.colors.outputs.new_color }}"
+          CURRENT_COLOR="${{ steps.colors.outputs.current_color }}"
+
+          echo "### Traffic Switching:" >> $GITHUB_STEP_SUMMARY
+          echo "Switching traffic from ${CURRENT_COLOR} to ${NEW_COLOR} environment..." >> $GITHUB_STEP_SUMMARY
+
+          # Update main service to point to new environment
+          kubectl patch service hyperpage-service -n ${{ env.KUBE_NAMESPACE }} -p '{"spec":{"selector":{"color":"'${NEW_COLOR}'"}}}'
+
+          echo "✅ Traffic switched to ${NEW_COLOR} environment" >> $GITHUB_STEP_SUMMARY
+
+          # Update HPA to target new deployment
+          kubectl patch hpa hyperpage-hpa -n ${{ env.KUBE_NAMESPACE }} -p '{"spec":{"scaleTargetRef":{"name":"hyperpage-'${NEW_COLOR}'"}}}'
+
+          echo "✅ HPA updated to target ${NEW_COLOR} environment" >> $GITHUB_STEP_SUMMARY
+
+      - name: Post-deployment validation
+        run: |
+          export KUBECONFIG=kubeconfig
+          NEW_COLOR="${{ steps.colors.outputs.new_color }}"
+
+          echo "### Post-Deployment Validation:" >> $GITHUB_STEP_SUMMARY
+
+          # Verify traffic is flowing to new environment
+          echo "**Verifying traffic routing...**" >> $GITHUB_STEP_SUMMARY
+
+          # Get current service selector
+          ACTIVE_COLOR=$(kubectl get service hyperpage-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.selector.color}')
+
+          if [ "$ACTIVE_COLOR" = "$NEW_COLOR" ]; then
+            echo "✅ Traffic successfully routed to ${NEW_COLOR} environment" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Traffic routing verification failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          # Check deployment status
+          READY_REPLICAS=$(kubectl get deployment hyperpage-${NEW_COLOR} -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.status.readyReplicas}')
+          DESIRED_REPLICAS=$(kubectl get deployment hyperpage-${NEW_COLOR} -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.replicas}')
+
+          echo "**Replica Status**: ${READY_REPLICAS}/${DESIRED_REPLICAS} ready" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$READY_REPLICAS" = "$DESIRED_REPLICAS" ]; then
+            echo "✅ All replicas are ready" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Some replicas are not ready yet" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Cleanup old environment
+        run: |
+          export KUBECONFIG=kubeconfig
+          CURRENT_COLOR="${{ steps.colors.outputs.current_color }}"
+          NEW_COLOR="${{ steps.colors.outputs.new_color }}"
+
+          echo "### Cleanup Old Environment:" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$CURRENT_COLOR" != "none" ]; then
+            echo "Cleaning up old ${CURRENT_COLOR} environment..." >> $GITHUB_STEP_SUMMARY
+            
+            # Scale down old deployment
+            kubectl scale deployment hyperpage-${CURRENT_COLOR} -n ${{ env.KUBE_NAMESPACE }} --replicas=0
+            
+            # Wait a bit before removing
+            sleep 30
+            
+            # Delete old deployment
+            kubectl delete deployment hyperpage-${CURRENT_COLOR} -n ${{ env.KUBE_NAMESPACE }} --ignore-not-found=true
+            
+            # Delete old service
+            kubectl delete service hyperpage-${CURRENT_COLOR} -n ${{ env.KUBE_NAMESPACE }} --ignore-not-found=true
+            
+            echo "✅ Old ${CURRENT_COLOR} environment cleaned up" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No old environment to clean up" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment Strategy**: Blue-Green" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Active Color**: ${NEW_COLOR}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment Status**: Success" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Monitor application performance for 24 hours" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Review deployment metrics and logs" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Update documentation with new version information" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================
+  # ROLLING UPDATE DEPLOYMENT (Alternative)
+  # ==============================================
+  rolling-update-deployment:
+    name: Rolling Update Deployment
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-validation]
+    if: github.event.inputs.deployment_strategy == 'rolling-update'
+
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Configure kubectl for production cluster
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+        env:
+          KUBECONFIG: kubeconfig
+
+      - name: Execute rolling update
+        run: |
+          export KUBECONFIG=kubeconfig
+
+          echo "## 🔄 Rolling Update Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Apply updated deployment
+          kubectl apply -f k8s/deployment.yaml -n ${{ env.KUBE_NAMESPACE }}
+
+          echo "✅ Deployment manifest applied" >> $GITHUB_STEP_SUMMARY
+
+          # Wait for rollout to complete
+          kubectl rollout status deployment/hyperpage -n ${{ env.KUBE_NAMESPACE }} --timeout=600s
+
+          echo "✅ Rolling update completed successfully" >> $GITHUB_STEP_SUMMARY
+
+      - name: Post-deployment validation
+        run: |
+          export KUBECONFIG=kubeconfig
+
+          echo "### Post-Deployment Validation:" >> $GITHUB_STEP_SUMMARY
+
+          # Check deployment status
+          READY_REPLICAS=$(kubectl get deployment hyperpage -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.status.readyReplicas}')
+          DESIRED_REPLICAS=$(kubectl get deployment hyperpage -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.replicas}')
+
+          echo "**Replica Status**: ${READY_REPLICAS}/${DESIRED_REPLICAS} ready" >> $GITHUB_STEP_SUMMARY
+
+          # Health check
+          SERVICE_IP=$(kubectl get service hyperpage-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || kubectl get service hyperpage-service -n ${{ env.KUBE_NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
+
+          if curl -f "http://${SERVICE_IP}/api/health" &>/dev/null; then
+            echo "✅ Application health check passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Application health check failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo "✅ Rolling update deployment completed successfully" >> $GITHUB_STEP_SUMMARY
+
+  # ==============================================
+  # DEPLOYMENT MONITORING & NOTIFICATIONS
+  # ==============================================
+  deployment-notifications:
+    name: Deployment Notifications
+    runs-on: ubuntu-latest
+    needs: [blue-green-deployment, rolling-update-deployment]
+    if: always()
+
+    steps:
+      - name: Generate deployment report
+        run: |
+          echo "## 📊 Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Blue-Green Result**: ${{ needs.blue-green-deployment.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Rolling Update Result**: ${{ needs.rolling-update-deployment.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.blue-green-deployment.result }}" == "success" || "${{ needs.rolling-update-deployment.result }}" == "success" ]]; then
+            echo "## ✅ Deployment Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Deployment Status: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: "#deployments"
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Update deployment tracking
+        uses: actions/github-script@v7
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          script: |
+            const deployment = {
+              environment: 'production',
+              ref: '${{ github.sha }}',
+              task: 'deploy',
+              initial_status: 'in_progress'
+            };
+
+            const response = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ...deployment
+            });
+
+            console.log('Created deployment:', response.data.id);

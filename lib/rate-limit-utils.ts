@@ -1,6 +1,10 @@
 // Rate limit utilities for adaptive polling and dynamic interval calculation
 
-import type { RateLimitStatus, PlatformRateLimits, RateLimitUsage } from './types/rate-limit';
+import type {
+  RateLimitStatus,
+  PlatformRateLimits,
+  RateLimitUsage,
+} from "./types/rate-limit";
 
 /**
  * Calculate dynamic poll interval based on rate limit usage and time-of-day
@@ -12,7 +16,7 @@ import type { RateLimitStatus, PlatformRateLimits, RateLimitUsage } from './type
 export const getDynamicInterval = (
   usagePercent: number,
   baseInterval: number,
-  isBusinessHours?: boolean
+  isBusinessHours?: boolean,
 ): number => {
   // Default to auto-detecting business hours if not provided
   const businessHours = isBusinessHours ?? detectBusinessHours();
@@ -45,8 +49,11 @@ export const detectBusinessHours = (): boolean => {
 
   // Monday to Friday (1-5), 9 AM to 6 PM (hour >= 9 && (hour < 18 || (hour === 18 && minutes === 0)))
   // This makes exactly 18:00 business hours, but 18:01 and later NOT business hours
-  const isBusinessHours = dayOfWeek >= 1 && dayOfWeek <= 5 &&
-                         hour >= 9 && (hour < 18 || (hour === 18 && minutes === 0));
+  const isBusinessHours =
+    dayOfWeek >= 1 &&
+    dayOfWeek <= 5 &&
+    hour >= 9 &&
+    (hour < 18 || (hour === 18 && minutes === 0));
 
   return isBusinessHours;
 };
@@ -56,9 +63,9 @@ export const detectBusinessHours = (): boolean => {
  * This enables platform-specific rate limit awareness for each tool
  */
 export const TOOL_PLATFORM_MAP: Record<string, string> = {
-  github: 'github',
-  gitlab: 'gitlab',
-  jira: 'jira',
+  github: "github",
+  gitlab: "gitlab",
+  jira: "jira",
   // Future tools can be added here
   // 'azure-devops': 'azure',
   // 'bitbucket': 'bitbucket',
@@ -69,13 +76,17 @@ export const TOOL_PLATFORM_MAP: Record<string, string> = {
  * @param enabledTools Array of enabled tools
  * @returns Array of unique platform slugs
  */
-export const getActivePlatforms = (enabledTools: Array<{ slug: string; capabilities?: string[] }>): string[] => {
-  return Array.from(new Set(
-    enabledTools
-      .filter(tool => tool.capabilities?.includes('rate-limit'))
-      .map(tool => TOOL_PLATFORM_MAP[tool.slug])
-      .filter((platform): platform is string => platform !== undefined)
-  ));
+export const getActivePlatforms = (
+  enabledTools: Array<{ slug: string; capabilities?: string[] }>,
+): string[] => {
+  return Array.from(
+    new Set(
+      enabledTools
+        .filter((tool) => tool.capabilities?.includes("rate-limit"))
+        .map((tool) => TOOL_PLATFORM_MAP[tool.slug])
+        .filter((platform): platform is string => platform !== undefined),
+    ),
+  );
 };
 
 /**
@@ -84,7 +95,9 @@ export const getActivePlatforms = (enabledTools: Array<{ slug: string; capabilit
  * @param rateLimitStatus Rate limit status for a platform
  * @returns Maximum usage percentage (0-100) or 0 if unknown
  */
-export const getMaxUsageForPlatform = (rateLimitStatus: RateLimitStatus): number => {
+export const getMaxUsageForPlatform = (
+  rateLimitStatus: RateLimitStatus,
+): number => {
   if (!rateLimitStatus?.limits) return 0;
 
   const platform = rateLimitStatus.platform as keyof PlatformRateLimits;
@@ -95,7 +108,9 @@ export const getMaxUsageForPlatform = (rateLimitStatus: RateLimitStatus): number
   // Get all usage percentages for this platform's endpoints
   const usagePercents = Object.values(platformLimits)
     .map((usage: RateLimitUsage) => usage.usagePercent)
-    .filter((percent): percent is number => percent !== null && percent !== undefined);
+    .filter(
+      (percent): percent is number => percent !== null && percent !== undefined,
+    );
 
   if (usagePercents.length === 0) return 0;
 
@@ -110,26 +125,34 @@ export const getMaxUsageForPlatform = (rateLimitStatus: RateLimitStatus): number
  * @param defaultSize Fallback instance size
  * @returns Detected instance size category
  */
-export const detectJiraInstanceSize = (response: Response, defaultSize: 'small' | 'medium' | 'large' | 'cloud' = 'medium'): 'small' | 'medium' | 'large' | 'cloud' => {
+export const detectJiraInstanceSize = (
+  response: Response,
+  defaultSize: "small" | "medium" | "large" | "cloud" = "medium",
+): "small" | "medium" | "large" | "cloud" => {
   // Check response headers for instance information
-  const serverHeader = response.headers.get('server') || '';
-  const xApplicationHost = response.headers.get('x-application-host') || '';
+  const serverHeader = response.headers.get("server") || "";
+  const xApplicationHost = response.headers.get("x-application-host") || "";
 
   // Check for specific instance patterns
-  if (serverHeader.includes('atlassian') && xApplicationHost.includes('cloud')) {
-    return 'cloud';
+  if (
+    serverHeader.includes("atlassian") &&
+    xApplicationHost.includes("cloud")
+  ) {
+    return "cloud";
   }
 
   // Check for Data Center/Server pattern hints
-  if (serverHeader.toLowerCase().includes('apache') ||
-      serverHeader.toLowerCase().includes('nginx') &&
-      !serverHeader.toLowerCase().includes('fastly')) {
-    return 'large'; // Server/Data Center instances
+  if (
+    serverHeader.toLowerCase().includes("apache") ||
+    (serverHeader.toLowerCase().includes("nginx") &&
+      !serverHeader.toLowerCase().includes("fastly"))
+  ) {
+    return "large"; // Server/Data Center instances
   }
 
   // Cloud instances return 'fastly' in server header
-  if (serverHeader.toLowerCase().includes('fastly')) {
-    return 'cloud';
+  if (serverHeader.toLowerCase().includes("fastly")) {
+    return "cloud";
   }
 
   return defaultSize;
@@ -142,7 +165,10 @@ export const detectJiraInstanceSize = (response: Response, defaultSize: 'small' 
  * @param searchMultiplier Additional penalty multiplier for search-heavy operations (default: 1.5x)
  * @returns Adjusted usage percentage that prioritizes search API limits
  */
-export const getGitHubWeightedUsage = (rateLimitStatus: RateLimitStatus, searchMultiplier: number = 1.5): number => {
+export const getGitHubWeightedUsage = (
+  rateLimitStatus: RateLimitStatus,
+  searchMultiplier: number = 1.5,
+): number => {
   if (!rateLimitStatus?.limits?.github) return 0;
 
   const githubLimits = rateLimitStatus.limits.github;
@@ -154,7 +180,7 @@ export const getGitHubWeightedUsage = (rateLimitStatus: RateLimitStatus, searchM
 
   // Prioritize search API usage with higher weighting since it's most restrictive
   // Core and GraphQL APIs have similar limits (5000/hour)
-  const weightedCore = coreUsage * 0.7;      // Lower weight for core API
+  const weightedCore = coreUsage * 0.7; // Lower weight for core API
   const weightedGraphql = graphqlUsage * 0.8; // Medium weight for GraphQL
   const weightedSearch = searchUsage * searchMultiplier; // Higher weight for search API
 
@@ -172,7 +198,7 @@ export const getGitHubWeightedUsage = (rateLimitStatus: RateLimitStatus, searchM
 export const getActivityAccelerationFactor = (
   isTabVisible: boolean,
   isUserActive: boolean,
-  isInBackground: boolean = false
+  isInBackground: boolean = false,
 ): number => {
   // Tab hidden and React Query in background mode - maximum slowdown
   if (!isTabVisible && isInBackground) return 3;

@@ -14,10 +14,10 @@ import {
   JobPriority,
   JobType,
   JobError,
-} from '../types/jobs';
-import { db } from '../database';
-import { jobs, jobHistory, Job, NewJob } from '../database/schema';
-import { eq, and, inArray, lt } from 'drizzle-orm';
+} from "../types/jobs";
+import { db } from "../database";
+import { jobs, Job, NewJob } from "../database/schema";
+import { eq, and, inArray, lt } from "drizzle-orm";
 
 /**
  * Priority queue implementation for job scheduling
@@ -71,7 +71,7 @@ class PriorityQueue<T> {
    * @returns true if item was found and removed
    */
   remove(item: T): boolean {
-    const index = this.heap.findIndex(node => node.item === item);
+    const index = this.heap.findIndex((node) => node.item === item);
     if (index === -1) return false;
 
     this.swap(index, this.heap.length - 1);
@@ -133,10 +133,16 @@ class PriorityQueue<T> {
       const right = 2 * index + 2;
       let largest = index;
 
-      if (left < length && this.heap[left].priority > this.heap[largest].priority) {
+      if (
+        left < length &&
+        this.heap[left].priority > this.heap[largest].priority
+      ) {
         largest = left;
       }
-      if (right < length && this.heap[right].priority > this.heap[largest].priority) {
+      if (
+        right < length &&
+        this.heap[right].priority > this.heap[largest].priority
+      ) {
         largest = right;
       }
       if (largest === index) break;
@@ -171,7 +177,7 @@ export class MemoryJobQueue implements IJobQueue {
   };
   private executionTimes: number[] = [];
 
-  constructor(id: string = 'memory-queue', name: string = 'Memory Job Queue') {
+  constructor(id: string = "memory-queue", name: string = "Memory Job Queue") {
     this.id = id;
     this.name = name;
   }
@@ -179,7 +185,9 @@ export class MemoryJobQueue implements IJobQueue {
   /**
    * Add a job to the queue for execution
    */
-  async enqueue(jobSpec: Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>): Promise<IJob> {
+  async enqueue(
+    jobSpec: Omit<IJob, "status" | "createdAt" | "updatedAt" | "retryCount">,
+  ): Promise<IJob> {
     const now = Date.now();
     const job: IJob = {
       ...jobSpec,
@@ -197,20 +205,24 @@ export class MemoryJobQueue implements IJobQueue {
     if (this.jobs.has(job.id)) {
       throw new JobError(
         `Job with ID ${job.id} already exists`,
-        'DUPLICATE_JOB_ID',
+        "DUPLICATE_JOB_ID",
         job.id,
-        false
+        false,
       );
     }
 
     // Check for duplicate job ID in database
-    const existingJob = await db.select().from(jobs).where(eq(jobs.id, job.id)).limit(1);
+    const existingJob = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, job.id))
+      .limit(1);
     if (existingJob.length > 0) {
       throw new JobError(
         `Job with ID ${job.id} already exists in database`,
-        'DUPLICATE_JOB_ID',
+        "DUPLICATE_JOB_ID",
         job.id,
-        false
+        false,
       );
     }
 
@@ -306,7 +318,11 @@ export class MemoryJobQueue implements IJobQueue {
   /**
    * Update job status and result
    */
-  async updateJobStatus(jobId: string, status: JobStatus, result?: JobResult): Promise<IJob | undefined> {
+  async updateJobStatus(
+    jobId: string,
+    status: JobStatus,
+    result?: JobResult,
+  ): Promise<IJob | undefined> {
     const job = this.jobs.get(jobId);
     if (!job) return undefined;
 
@@ -334,23 +350,26 @@ export class MemoryJobQueue implements IJobQueue {
       if (job.startedAt) {
         const executionTime = now - job.startedAt;
         this.executionTimes.push(executionTime);
-        this.stats.avgExecutionTimeMs = this.executionTimes.reduce((a, b) => a + b, 0) / this.executionTimes.length;
+        this.stats.avgExecutionTimeMs =
+          this.executionTimes.reduce((a, b) => a + b, 0) /
+          this.executionTimes.length;
       }
     }
 
     // Persist result for completed/failed jobs
-    if (result && (status === JobStatus.COMPLETED || status === JobStatus.FAILED)) {
+    if (
+      result &&
+      (status === JobStatus.COMPLETED || status === JobStatus.FAILED)
+    ) {
       updateData.result = JSON.stringify(result);
     }
 
     // Update database with new status and result
-    await db.update(jobs)
-      .set(updateData)
-      .where(eq(jobs.id, jobId));
+    await db.update(jobs).set(updateData).where(eq(jobs.id, jobId));
 
     // Record job execution history (simplified for now - will be enhanced later)
     // TODO: Implement full job history tracking
-    console.info(`Job ${jobId} status changed to ${status}`);
+    
 
     // Update stats based on status change
     this.updateJobStats(oldStatus, status);
@@ -376,18 +395,25 @@ export class MemoryJobQueue implements IJobQueue {
   async loadPersistedJobs(): Promise<number> {
     try {
       // Load all non-completed jobs from database
-      const persistedJobs = await db.select().from(jobs).where(
-        inArray(jobs.status, [JobStatus.PENDING, JobStatus.RUNNING, JobStatus.FAILED])
-      );
+      const persistedJobs = await db
+        .select()
+        .from(jobs)
+        .where(
+          inArray(jobs.status, [
+            JobStatus.PENDING,
+            JobStatus.RUNNING,
+            JobStatus.FAILED,
+          ]),
+        );
 
-      console.info(`Found ${persistedJobs.length} persisted jobs to recover`);
+      
       let recoveredCount = 0;
 
       for (const dbJob of persistedJobs) {
         try {
           // Skip jobs with invalid data
           if (!dbJob.id || !dbJob.name) {
-            console.warn('Skipping invalid persisted job:', dbJob.id);
+            
             continue;
           }
 
@@ -402,10 +428,14 @@ export class MemoryJobQueue implements IJobQueue {
             updatedAt: Number(dbJob.updatedAt),
             tool: dbJob.tool ? JSON.parse(dbJob.tool) : undefined,
             endpoint: dbJob.endpoint || undefined,
-            payload: JSON.parse(dbJob.payload) as Record<string, any>,
-            result: dbJob.result ? JSON.parse(dbJob.result) as JobResult : undefined,
+            payload: JSON.parse(dbJob.payload) as Record<string, unknown>,
+            result: dbJob.result
+              ? (JSON.parse(dbJob.result) as JobResult)
+              : undefined,
             startedAt: dbJob.startedAt ? Number(dbJob.startedAt) : undefined,
-            completedAt: dbJob.completedAt ? Number(dbJob.completedAt) : undefined,
+            completedAt: dbJob.completedAt
+              ? Number(dbJob.completedAt)
+              : undefined,
             retryCount: dbJob.retryCount,
             executionHistory: [],
           };
@@ -434,15 +464,17 @@ export class MemoryJobQueue implements IJobQueue {
 
           recoveredCount++;
         } catch (error) {
-          console.error(`Failed to load job ${dbJob.id}:`, error);
+          
           continue;
         }
       }
 
-      console.info(`Successfully recovered ${recoveredCount} jobs from database`);
+      console.info(
+        `Successfully recovered ${recoveredCount} jobs from database`,
+      );
       return recoveredCount;
     } catch (error) {
-      console.error('Failed to load persisted jobs:', error);
+      
       return 0;
     }
   }
@@ -452,25 +484,31 @@ export class MemoryJobQueue implements IJobQueue {
    */
   async cleanupOldJobs(retentionDays: number = 30): Promise<number> {
     try {
-      const cutoffTime = Date.now() - (retentionDays * 24 * 60 * 60 * 1000);
+      const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
 
       // Count jobs to be deleted first
-      const countToDelete = await db.$count(jobs, and(
-        eq(jobs.status, JobStatus.COMPLETED),
-        lt(jobs.completedAt as any, cutoffTime) // Type assertion for now
-      ));
+      const countToDelete = await db.$count(
+        jobs,
+        and(
+          eq(jobs.status, JobStatus.COMPLETED),
+          lt(jobs.completedAt, cutoffTime),
+        ),
+      );
 
       // Delete completed jobs older than retention period
-      await db.delete(jobs)
-        .where(and(
-          eq(jobs.status, JobStatus.COMPLETED),
-          lt(jobs.completedAt as any, cutoffTime)
-        ));
+      await db
+        .delete(jobs)
+        .where(
+          and(
+            eq(jobs.status, JobStatus.COMPLETED),
+            lt(jobs.completedAt, cutoffTime),
+          ),
+        );
 
-      console.info(`Cleaned up ${countToDelete} old completed jobs`);
+      
       return countToDelete;
     } catch (error) {
-      console.error('Failed to cleanup old jobs:', error);
+      
       return 0;
     }
   }
@@ -515,20 +553,40 @@ export class MemoryJobQueue implements IJobQueue {
    * Validate job has required fields
    */
   private validateJob(job: IJob): void {
-    if (!job.id || typeof job.id !== 'string') {
-      throw new JobError('Job must have a valid string ID', 'INVALID_JOB_ID', job.id || 'unknown', false);
+    if (!job.id || typeof job.id !== "string") {
+      throw new JobError(
+        "Job must have a valid string ID",
+        "INVALID_JOB_ID",
+        job.id || "unknown",
+        false,
+      );
     }
 
-    if (!job.name || typeof job.name !== 'string') {
-      throw new JobError('Job must have a valid string name', 'INVALID_JOB_NAME', job.id, false);
+    if (!job.name || typeof job.name !== "string") {
+      throw new JobError(
+        "Job must have a valid string name",
+        "INVALID_JOB_NAME",
+        job.id,
+        false,
+      );
     }
 
     if (!Object.values(JobPriority).includes(job.priority)) {
-      throw new JobError('Job must have a valid priority', 'INVALID_PRIORITY', job.id, false);
+      throw new JobError(
+        "Job must have a valid priority",
+        "INVALID_PRIORITY",
+        job.id,
+        false,
+      );
     }
 
     if (!Object.values(JobType).includes(job.type)) {
-      throw new JobError('Job must have a valid type', 'INVALID_JOB_TYPE', job.id, false);
+      throw new JobError(
+        "Job must have a valid type",
+        "INVALID_JOB_TYPE",
+        job.id,
+        false,
+      );
     }
   }
 
@@ -578,5 +636,5 @@ export const defaultMemoryQueue = new MemoryJobQueue();
 export function generateJobId(prefix?: string): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
-  return `${prefix || 'job'}-${timestamp}-${random}`;
+  return `${prefix || "job"}-${timestamp}-${random}`;
 }

@@ -7,12 +7,14 @@ This document summarizes the OAuth authentication system implementation and test
 ## Prerequisites Verified
 
 ### OAuth App Configuration
+
 - [ ] Jira OAuth 2.0 app created at https://developer.atlassian.com/console/myapps/
 - [ ] Callback URL configured: `http://localhost:3000/api/auth/jira/callback`
 - [ ] Scopes granted: `read:jira-work`, `read:jira-user`
 - [ ] Client ID and Client Secret obtained
 
 ### Environment Configuration
+
 - [ ] `.env.local` configured with:
   ```env
   JIRA_OAUTH_CLIENT_ID=your_client_id
@@ -23,6 +25,7 @@ This document summarizes the OAuth authentication system implementation and test
 ## Implementation Verification
 
 ### ✅ Completed Implementation
+
 - **Jira OAuth App Setup**: Template provided for user configuration
 - **Environment Configuration**: JIRA_OAUTH_CLIENT_ID and JIRA_OAUTH_CLIENT_SECRET properly configured
 - **OAuth Initiate Route**: `/api/auth/jira/initiate` - Redirects to Atlassian authorization with web URL support
@@ -34,6 +37,7 @@ This document summarizes the OAuth authentication system implementation and test
 - **Error Handling**: Comprehensive error responses and token validation
 
 ### ✅ Core Functionality Implemented
+
 1. **OAuth Initiation**: Generates CSRF state with web URL, stores in encrypted cookie, redirects to Atlassian
 2. **Token Exchange**: Exchanges authorization codes for access/refresh tokens via Jira instance API
 3. **User Profile Fetching**: Retrieves user data from Jira `/rest/api/3/myself` endpoint
@@ -48,6 +52,7 @@ This document summarizes the OAuth authentication system implementation and test
 ### Jira OAuth Flow Testing
 
 #### 1. OAuth Initiation Test
+
 ```bash
 curl -I "http://localhost:3000/api/auth/jira/initiate?web_url=https://your-domain.atlassian.net"
 ```
@@ -56,12 +61,14 @@ curl -I "http://localhost:3000/api/auth/jira/initiate?web_url=https://your-domai
 **Status**: [ ] PASS | [ ] FAIL
 
 **Actual Response**:
+
 ```
 HTTP/1.1 307 Temporary Redirect
 Location: https://your-domain.atlassian.net/rest/oauth2/latest/authorize?client_id=...&state=...&scope=...&response_type=code
 ```
 
 #### 2. Callback Error Handling Test
+
 ```bash
 curl -I "http://localhost:3000/api/auth/jira/callback?error=access_denied&state=test"
 ```
@@ -70,11 +77,13 @@ curl -I "http://localhost:3000/api/auth/jira/callback?error=access_denied&state=
 **Status**: [ ] PASS | [ ] FAIL
 
 **Actual Response**:
+
 ```
 
 ```
 
 #### 3. State Validation Test
+
 ```bash
 curl -I "http://localhost:3000/api/auth/jira/callback?code=test_code&state=invalid_state"
 ```
@@ -83,11 +92,13 @@ curl -I "http://localhost:3000/api/auth/jira/callback?code=test_code&state=inval
 **Status**: [ ] PASS | [ ] FAIL
 
 **Actual Response**:
+
 ```
 
 ```
 
 #### 4. Authentication Status Test (unauthenticated)
+
 ```bash
 curl http://localhost:3000/api/auth/jira/status
 ```
@@ -96,11 +107,13 @@ curl http://localhost:3000/api/auth/jira/status
 **Status**: [ ] PASS | [ ] FAIL
 
 **Actual Response**:
+
 ```
 
 ```
 
 #### 5. OAuth Configuration Test
+
 ```bash
 curl -I "http://localhost:3000/api/auth/jira/initiate"
 ```
@@ -109,6 +122,7 @@ curl -I "http://localhost:3000/api/auth/jira/initiate"
 **Status**: [ ] PASS | [ ] FAIL
 
 **Actual Response**:
+
 ```
 
 ```
@@ -116,6 +130,7 @@ curl -I "http://localhost:3000/api/auth/jira/initiate"
 ## Manual End-to-End Testing
 
 ### User Interface Testing
+
 1. [ ] Visit http://localhost:3000
 2. [ ] Click Jira authentication button
 3. [ ] Complete OAuth flow in Atlassian login popup
@@ -123,6 +138,7 @@ curl -I "http://localhost:3000/api/auth/jira/initiate"
 5. [ ] Check authentication indicator shows Jira connected
 
 ### Database Verification
+
 ```sql
 -- Check user creation
 SELECT id, provider, providerUserId, email, displayName FROM users WHERE provider = 'jira';
@@ -132,36 +148,43 @@ SELECT id, userId, toolName, expiresAt, scopes FROM oauth_tokens WHERE toolName 
 ```
 
 **Results**:
+
 - [ ] User record created with correct accountId mapping
 - [ ] OAuth tokens stored with encryption
 - [ ] Jira web URL stored in token metadata
 
 ### Post-Authentication Tests
+
 ```bash
 # Authenticated status check
 curl http://localhost:3000/api/auth/jira/status
 ```
+
 **Expected**: `{"authenticated":true,"lastConnectedAt":"ISO_DATE","expiresAt":"ISO_DATE"}`
 
 ```bash
 # Overall auth status
 curl http://localhost:3000/api/auth/status
 ```
+
 **Expected**: authenticatedTools array includes jira entry
 
 ## Security Implementation Verification
 
 ### Token Encryption
+
 - [ ] Verify tokens are AES-256-GCM encrypted in database
 - [ ] Confirm decryption/retrieval works correctly
 - [ ] Check token type is properly set to 'Bearer'
 
 ### State Protection
+
 - [ ] CSRF state validation prevents invalid callback states
 - [ ] Cookie expiration prevents replay attacks
 - [ ] State mismatch returns appropriate error
 
 ### Error Handling
+
 - [ ] No sensitive data exposed in error messages
 - [ ] Invalid web URLs handled gracefully
 - [ ] Network timeouts don't crash application
@@ -169,11 +192,13 @@ curl http://localhost:3000/api/auth/status
 ## Architecture Validation
 
 ### Database Schema Compliance
+
 - **oauth_tokens table**: ✅ Fields properly populated with encrypted tokens
 - **users table**: ✅ User profiles created with Jira data (accountId, displayName, email)
 - **Session linking**: ✅ Sessions correctly associate with authenticated users
 
 ### API Integration
+
 1. **Initiate** → **Atlassian Auth** → **Callback** → **Jira API** → **Storage** → **Success**
 2. All OAuth states properly managed
 3. Jira instance-specific URLs correctly handled
@@ -182,14 +207,17 @@ curl http://localhost:3000/api/auth/status
 ## Issues Found & Resolutions
 
 ### [ ] Testing Issues
+
 _List any problems encountered during testing and their solutions_
 
 ### [ ] Implementation Issues
+
 _List any code issues discovered and fixes applied_
 
 ## Test Coverage
 
 ### ✅ Implemented Features
+
 - [x] OAuth application registration (instructions provided)
 - [x] Environment variable configuration
 - [x] Authorization URL generation with web URL support
@@ -202,6 +230,7 @@ _List any code issues discovered and fixes applied_
 - [x] Multi-instance Jira support
 
 ### ✅ Security Features
+
 - [x] CSRF protection (enhanced state validation)
 - [x] Token encryption (AES-256-GCM)
 - [x] Error message sanitization
@@ -209,6 +238,7 @@ _List any code issues discovered and fixes applied_
 - [x] Instance-specific URL validation
 
 ### ✅ Error Scenarios Covered
+
 - [x] Invalid state parameter
 - [x] OAuth provider errors (access_denied)
 - [x] Missing authorization code
@@ -228,18 +258,21 @@ _List any code issues discovered and fixes applied_
 ## Jira-Specific Features Verified
 
 ### Instance-Specific Support
+
 - [x] Web URL parameter handling
 - [ ] Multiple Jira instances can be connected
 - [ ] Instance URL validation
 - [x] Cookie state includes web URL persistence
 
 ### User Profile Mapping
+
 - [ ] accountId correctly mapped as providerUserId
 - [ ] displayName extracted and stored
 - [ ] emailAddress stored when available
 - [ ] avatarUrls (48x48) stored correctly
 
 ### API Endpoint Usage
+
 - [ ] `/rest/api/3/myself` endpoint properly called
 - [ ] Bearer token authorization used
 - [ ] User profile successfully retrieved

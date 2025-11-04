@@ -9,6 +9,7 @@ import {
 } from "./types";
 import { registerTool } from "../registry";
 import { createIPv4Fetch } from "../../lib/ipv4-fetch";
+import logger from "../../lib/logger";
 
 export const gitlabTool: Tool = {
   name: "GitLab",
@@ -21,9 +22,10 @@ export const gitlabTool: Tool = {
   widgets: [],
   capabilities: ["merge-requests", "pipelines", "issues", "rate-limit"], // Declares what this tool can provide
   validation: {
-    required: ['GITLAB_WEB_URL', 'GITLAB_TOKEN'],
+    required: ["GITLAB_WEB_URL", "GITLAB_TOKEN"],
     optional: [],
-    description: 'GitLab integration requires instance URL and personal access token'
+    description:
+      "GitLab integration requires instance URL and personal access token",
   },
   apis: {
     "merge-requests": {
@@ -75,7 +77,8 @@ export const gitlabTool: Tool = {
       description: "Get current GitLab API rate limit status",
       response: {
         dataKey: "rateLimit",
-        description: "Current rate limit status for GitLab instance (based on Retry-After headers)",
+        description:
+          "Current rate limit status for GitLab instance (based on Retry-After headers)",
       },
     },
   },
@@ -107,26 +110,30 @@ export const gitlabTool: Tool = {
       if (!response.ok) {
         // Handle rate limiting with fallback to reduced data
         if (response.status === 429) {
-          const retryAfter = response.headers.get('Retry-After');
-          console.warn(`GitLab rate limited for merge requests. Retry after: ${retryAfter}s`);
+          const retryAfter = response.headers.get("Retry-After");
+          logger.warn("GitLab rate limited for merge requests", {
+            retryAfter: retryAfter ? `${retryAfter}s` : "unknown",
+          });
 
           // Return minimal emergency data instead of throwing
           return {
-            mergeRequests: [{
-              id: "!RATE_LIMITED",
-              title: "Rate Limited - Reduced Data",
-              project: "System",
-              status: "limited",
-              author: "System",
-              created: new Date().toLocaleDateString(),
-              url: webUrl,
-              rateLimited: true,
-              message: `Waiting ${retryAfter}s before retry. Showing cached data.`
-            }],
+            mergeRequests: [
+              {
+                id: "!RATE_LIMITED",
+                title: "Rate Limited - Reduced Data",
+                project: "System",
+                status: "limited",
+                author: "System",
+                created: new Date().toLocaleDateString(),
+                url: webUrl,
+                rateLimited: true,
+                message: `Waiting ${retryAfter}s before retry. Showing cached data.`,
+              },
+            ],
             warning: {
               message: "GitLab API rate limited",
-              retryAfter: retryAfter ? parseInt(retryAfter, 10) : 60
-            }
+              retryAfter: retryAfter ? parseInt(retryAfter, 10) : 60,
+            },
           };
         }
 
@@ -237,9 +244,10 @@ export const gitlabTool: Tool = {
         });
 
         if (!userResponse.ok) {
-          console.warn(
-            "Could not fetch GitLab user info, falling back to empty issues array",
-          );
+          logger.warn("Could not fetch GitLab user info, falling back to empty issues array", {
+            status: userResponse.status,
+            statusText: userResponse.statusText,
+          });
           return { issues: results };
         }
 
@@ -258,10 +266,12 @@ export const gitlabTool: Tool = {
 
         if (!issuesResponse.ok) {
           const errorText = await issuesResponse.text();
-          console.warn(
-            `GitLab user issues API error: ${issuesResponse.status} - ${errorText}`,
-          );
-          console.warn("Failed to get user issues, returning empty array");
+          logger.warn("GitLab user issues API error", {
+            status: issuesResponse.status,
+            statusText: issuesResponse.statusText,
+            errorText,
+          });
+          
           return { issues: results }; // Return empty array instead of throwing
         }
 
@@ -288,9 +298,11 @@ export const gitlabTool: Tool = {
         );
 
         results.push(...transformedIssues.slice(0, 15)); // Limit to prevent overwhelming
-      } catch (error) {
-        console.warn("Error fetching GitLab issues:", error);
+      } catch (err) {
         // Return empty array instead of throwing to avoid breaking the portal
+        logger.error("Error fetching GitLab issues", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
 
       return { issues: results };
@@ -327,8 +339,8 @@ export const gitlabTool: Tool = {
             rateLimit: {
               message: "GitLab API rate limit exceeded",
               statusCode: response.status,
-              retryAfter: response.headers.get('Retry-After')
-            }
+              retryAfter: response.headers.get("Retry-After"),
+            },
           };
         }
 
@@ -339,10 +351,11 @@ export const gitlabTool: Tool = {
       // Success - return basic status information
       return {
         rateLimit: {
-          message: "GitLab API accessible - rate limiting status unknown (not exposed by API)",
+          message:
+            "GitLab API accessible - rate limiting status unknown (not exposed by API)",
           statusCode: response.status,
-          serverInfo: "GitLab API connection confirmed"
-        }
+          serverInfo: "GitLab API connection confirmed",
+        },
       };
     },
   },
@@ -356,12 +369,14 @@ export const gitlabTool: Tool = {
       detectHeaders: (response: Response) => ({
         remaining: null, // GitLab doesn't provide remaining count headers
         resetTime: null, // GitLab doesn't provide reset time headers
-        retryAfter: response.headers.get('Retry-After') ? parseInt(response.headers.get('Retry-After')!, 10) : null
+        retryAfter: response.headers.get("Retry-After")
+          ? parseInt(response.headers.get("Retry-After")!, 10)
+          : null,
       }),
       shouldRetry: (response: Response, attemptNumber: number) => {
         // Handle 429 (Too Many Requests) responses with Retry-After header
         if (response.status === 429) {
-          const retryAfter = response.headers.get('Retry-After');
+          const retryAfter = response.headers.get("Retry-After");
           if (retryAfter) {
             // Honor GitLab's requested wait time from Retry-After header
             const retryAfterSeconds = parseInt(retryAfter, 10);
@@ -369,7 +384,10 @@ export const gitlabTool: Tool = {
             // Add jitter (±15%) to prevent thundering herd issues
             const jitter = (Math.random() - 0.5) * 0.3; // -15% to +15%
             const jitterMultiplier = 1 + jitter;
-            const adjustedDelay = Math.max(retryAfterSeconds * jitterMultiplier, 1);
+            const adjustedDelay = Math.max(
+              retryAfterSeconds * jitterMultiplier,
+              1,
+            );
 
             return Math.floor(adjustedDelay * 1000); // Convert to milliseconds
           }
@@ -378,7 +396,10 @@ export const gitlabTool: Tool = {
           // GitLab SaaS: 2000 requests/hour per user across all endpoints
           // Use progressive delays starting from 1 minute
           const baseDelayMinutes = [1, 4, 16, 64, 128]; // Progressive delays in minutes
-          const delayMinutes = baseDelayMinutes[Math.min(attemptNumber, baseDelayMinutes.length - 1)] || 256;
+          const delayMinutes =
+            baseDelayMinutes[
+              Math.min(attemptNumber, baseDelayMinutes.length - 1)
+            ] || 256;
 
           // Add jitter to prevent multiple instances from retrying simultaneously
           const jitter = (Math.random() - 0.5) * 0.2; // -10% to +10%
@@ -390,7 +411,7 @@ export const gitlabTool: Tool = {
         return null; // No retry needed
       },
       maxRetries: 3, // Reduced from 5 - GitLab Premium doesn't increase API limits significantly
-      backoffStrategy: 'linear' // Use linear backoff for progressive delays
+      backoffStrategy: "linear", // Use linear backoff for progressive delays
     },
   },
 };

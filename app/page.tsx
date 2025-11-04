@@ -13,13 +13,13 @@ export default function Home() {
   useEffect(() => {
     async function fetchEnabledTools() {
       try {
-        const response = await fetch('/api/tools/enabled');
+        const response = await fetch("/api/tools/enabled");
         if (response.ok) {
           const data = await response.json();
           setEnabledTools(data.enabledTools || []);
         }
       } catch (error) {
-        console.error('Failed to fetch enabled tools:', error);
+        
       } finally {
         setIsLoading(false);
       }

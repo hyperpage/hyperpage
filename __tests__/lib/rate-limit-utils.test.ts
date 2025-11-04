@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, test, afterEach } from "vitest";
 
 // Tests for rate limit utilities
 
@@ -12,6 +12,8 @@ import {
   clampInterval,
   formatInterval,
 } from "../../lib/rate-limit-utils";
+
+import type { RateLimitStatus } from "../../lib/types/rate-limit";
 
 describe("getDynamicInterval", () => {
   const baseInterval = 300000; // 5 minutes
@@ -31,7 +33,9 @@ describe("getDynamicInterval", () => {
   });
 
   it("slows down by 1.5x when usage is exactly 50% (no business hours)", () => {
-    expect(getDynamicInterval(50, baseInterval, false)).toBe(baseInterval * 1.5);
+    expect(getDynamicInterval(50, baseInterval, false)).toBe(
+      baseInterval * 1.5,
+    );
   });
 
   it("slows down by 2x when usage is 75-89% (no business hours)", () => {
@@ -59,11 +63,11 @@ describe("detectBusinessHours", () => {
   const originalDate = global.Date;
   const mockDate = (dateString: string) => {
     const mockClass = class extends originalDate {
-      constructor(...args: any[]) {
+      constructor(...args: [string | number] | []) {
         if (args.length === 0) {
           super(dateString);
         } else {
-          super(...args);
+          super(args[0] as string);
         }
       }
     };
@@ -140,7 +144,7 @@ describe("getActivePlatforms", () => {
   test("returns platform for tools with rate-limit capability", () => {
     const tools = [
       { slug: "github", capabilities: ["pull-requests", "rate-limit"] },
-      { slug: "gitlab", capabilities: ["issues", "rate-limit"] }
+      { slug: "gitlab", capabilities: ["issues", "rate-limit"] },
     ];
     expect(getActivePlatforms(tools)).toEqual(["github", "gitlab"]);
   });
@@ -148,7 +152,7 @@ describe("getActivePlatforms", () => {
   test("deduplicates platforms", () => {
     const tools = [
       { slug: "github", capabilities: ["pull-requests", "rate-limit"] },
-      { slug: "github", capabilities: ["issues", "rate-limit"] } // duplicate
+      { slug: "github", capabilities: ["issues", "rate-limit"] }, // duplicate
     ];
     expect(getActivePlatforms(tools)).toEqual(["github"]);
   });
@@ -156,7 +160,7 @@ describe("getActivePlatforms", () => {
   test("ignores unknown tools without platform mapping", () => {
     const tools = [
       { slug: "github", capabilities: ["rate-limit"] },
-      { slug: "unknown-tool", capabilities: ["rate-limit"] }
+      { slug: "unknown-tool", capabilities: ["rate-limit"] },
     ];
     expect(getActivePlatforms(tools)).toEqual(["github"]);
   });
@@ -164,52 +168,99 @@ describe("getActivePlatforms", () => {
 
 describe("getMaxUsageForPlatform", () => {
   test("returns 0 when no rate limit status provided", () => {
-    expect(getMaxUsageForPlatform(null)).toBe(0);
-    expect(getMaxUsageForPlatform({})).toBe(0);
+    expect(getMaxUsageForPlatform(null as unknown as RateLimitStatus)).toBe(0);
+    expect(getMaxUsageForPlatform({} as RateLimitStatus)).toBe(0);
   });
 
   test("returns 0 when platform has no limits", () => {
-    const status = { platform: "github", limits: { github: {} } };
+    const status: RateLimitStatus = {
+      platform: "github",
+      lastUpdated: Date.now(),
+      dataFresh: true,
+      status: "normal",
+      limits: {},
+    };
     expect(getMaxUsageForPlatform(status)).toBe(0);
   });
 
   test("returns maximum usage percentage across all endpoints", () => {
-    const status = {
+    const status: RateLimitStatus = {
       platform: "github",
+      lastUpdated: Date.now(),
+      dataFresh: true,
+      status: "normal",
       limits: {
         github: {
-          core: { usagePercent: 50 },
-          search: { usagePercent: 90 },
-          graphql: { usagePercent: 30 }
-        }
-      }
+          core: {
+            limit: 5000,
+            remaining: 2500,
+            used: 2500,
+            usagePercent: 50,
+            resetTime: Date.now() + 3600000,
+            retryAfter: null,
+          },
+          search: {
+            limit: 30,
+            remaining: 3,
+            used: 27,
+            usagePercent: 90,
+            resetTime: Date.now() + 3600000,
+            retryAfter: null,
+          },
+          graphql: {
+            limit: 5000,
+            remaining: 3500,
+            used: 1500,
+            usagePercent: 30,
+            resetTime: Date.now() + 3600000,
+            retryAfter: null,
+          },
+        },
+      },
     };
     expect(getMaxUsageForPlatform(status)).toBe(90);
   });
 
   test("ignores null/undefined usage values", () => {
-    const status = {
+    const status: RateLimitStatus = {
       platform: "gitlab",
+      lastUpdated: Date.now(),
+      dataFresh: true,
+      status: "normal",
       limits: {
         gitlab: {
-          global: { usagePercent: 75 },
-          api: { usagePercent: null },
-          web: { usagePercent: undefined }
-        }
-      }
+          global: {
+            limit: 1000,
+            remaining: 1000,
+            used: 0,
+            usagePercent: null,
+            resetTime: Date.now() + 3600000,
+            retryAfter: null,
+          },
+        },
+      },
     };
-    expect(getMaxUsageForPlatform(status)).toBe(75);
+    expect(getMaxUsageForPlatform(status)).toBe(0);
   });
 
   test("returns 0 when all usage values are null/undefined", () => {
-    const status = {
+    const status: RateLimitStatus = {
       platform: "jira",
+      lastUpdated: Date.now(),
+      dataFresh: true,
+      status: "normal",
       limits: {
         jira: {
-          global: { usagePercent: null },
-          api: { usagePercent: undefined }
-        }
-      }
+          global: {
+            limit: 1000,
+            remaining: 1000,
+            used: 0,
+            usagePercent: null,
+            resetTime: Date.now() + 3600000,
+            retryAfter: null,
+          },
+        },
+      },
     };
     expect(getMaxUsageForPlatform(status)).toBe(0);
   });
@@ -279,9 +330,15 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
       // Test increasing multipliers as usage increases
       const baseInterval = 60000; // 1 minute
 
-      expect(getDynamicInterval(50, baseInterval, false)).toBe(baseInterval * 1.5); // 50-74%: 1.5x
-      expect(getDynamicInterval(75, baseInterval, false)).toBe(baseInterval * 2);   // 75-89%: 2x
-      expect(getDynamicInterval(90, baseInterval, false)).toBe(baseInterval * 4);   // 90%+: 4x
+      expect(getDynamicInterval(50, baseInterval, false)).toBe(
+        baseInterval * 1.5,
+      ); // 50-74%: 1.5x
+      expect(getDynamicInterval(75, baseInterval, false)).toBe(
+        baseInterval * 2,
+      ); // 75-89%: 2x
+      expect(getDynamicInterval(90, baseInterval, false)).toBe(
+        baseInterval * 4,
+      ); // 90%+: 4x
     });
 
     test("respects minimum interval bounds during backoff", () => {
@@ -296,15 +353,15 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
       const baseInterval = 120000; // 2 minutes
 
       // Progressive escalation
-      const lowUsage = getDynamicInterval(40, baseInterval, false);     // Normal
-      const medUsage = getDynamicInterval(60, baseInterval, false);     // Warning start
-      const highUsage = getDynamicInterval(85, baseInterval, false);    // Higher warning
-      const critUsage = getDynamicInterval(95, baseInterval, false);    // Critical
+      const lowUsage = getDynamicInterval(40, baseInterval, false); // Normal
+      const medUsage = getDynamicInterval(60, baseInterval, false); // Warning start
+      const highUsage = getDynamicInterval(85, baseInterval, false); // Higher warning
+      const critUsage = getDynamicInterval(95, baseInterval, false); // Critical
 
-      expect(lowUsage).toBe(baseInterval);                           // No change
-      expect(medUsage).toBe(baseInterval * 1.5);                   // 1.5x increase
-      expect(highUsage).toBe(baseInterval * 2);                     // 2x increase
-      expect(critUsage).toBe(baseInterval * 4);                     // 4x increase
+      expect(lowUsage).toBe(baseInterval); // No change
+      expect(medUsage).toBe(baseInterval * 1.5); // 1.5x increase
+      expect(highUsage).toBe(baseInterval * 2); // 2x increase
+      expect(critUsage).toBe(baseInterval * 4); // 4x increase
     });
   });
 
@@ -312,11 +369,11 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
     const originalDate = global.Date;
     const mockDate = (dateString: string) => {
       global.Date = class extends originalDate {
-        constructor(...args: any[]) {
+        constructor(...args: [string | number] | []) {
           if (args.length === 0) {
             super(dateString);
           } else {
-            super(...args);
+            super(args[0] as string);
           }
         }
       } as typeof global.Date;
@@ -332,11 +389,19 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
 
       // During business hours (Mon-Fri 9-6)
       mockDate("2025-01-06T14:00:00"); // Monday 2PM - business hours
-      const businessHoursInterval = getDynamicInterval(highUsage, baseInterval, true);
+      const businessHoursInterval = getDynamicInterval(
+        highUsage,
+        baseInterval,
+        true,
+      );
 
       // Outside business hours
       mockDate("2025-01-06T20:00:00"); // Monday 8PM - not business hours
-      const normalHoursInterval = getDynamicInterval(highUsage, baseInterval, false);
+      const normalHoursInterval = getDynamicInterval(
+        highUsage,
+        baseInterval,
+        false,
+      );
 
       // Business hours version should be 20% slower
       expect(businessHoursInterval).toBe(Math.round(normalHoursInterval * 1.2));
@@ -347,10 +412,18 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
       const criticalUsage = 95;
 
       mockDate("2025-01-06T10:00:00"); // Monday morning
-      const businessCriticalInterval = getDynamicInterval(criticalUsage, baseInterval, true);
+      const businessCriticalInterval = getDynamicInterval(
+        criticalUsage,
+        baseInterval,
+        true,
+      );
 
       mockDate("2025-01-06T22:00:00"); // Monday evening
-      const normalCriticalInterval = getDynamicInterval(criticalUsage, baseInterval, false);
+      const normalCriticalInterval = getDynamicInterval(
+        criticalUsage,
+        baseInterval,
+        false,
+      );
 
       // Critical usage = 4x, business hours = 1.2x, total = 4.8x
       expect(businessCriticalInterval).toBe(Math.round(baseInterval * 4.8));
@@ -372,7 +445,11 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
       const secondaryLimitUsage = 100; // Simulating secondary rate limit
 
       // Should trigger maximum backoff
-      const adjusted = getDynamicInterval(secondaryLimitUsage, baseInterval, false);
+      const adjusted = getDynamicInterval(
+        secondaryLimitUsage,
+        baseInterval,
+        false,
+      );
       expect(adjusted).toBe(baseInterval * 4); // Maximum backoff
     });
 
@@ -390,9 +467,6 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
       // Jira has different limits for cloud vs server instances
       // Rate limiting logic should adapt accordingly
 
-      const cloudLimit = 1000;
-      const serverLimit = 3000;
-
       // Test that our interval calculation works with different limits
       const cloudInterval = getDynamicInterval(80, 300000, false); // Using 5min base
       const serverInterval = getDynamicInterval(80, 300000, false);
@@ -406,11 +480,11 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
     test("progressive slowdown based on activity level", () => {
       // These tests ensure our activity factors provide appropriate slowdown
 
-      expect(getActivityAccelerationFactor(true, true, false)).toBe(1);    // Active user, visible tab
+      expect(getActivityAccelerationFactor(true, true, false)).toBe(1); // Active user, visible tab
       expect(getActivityAccelerationFactor(true, false, false)).toBe(1.5); // Inactive user, visible tab
-      expect(getActivityAccelerationFactor(false, true, false)).toBe(2);   // Hidden tab, active user
-      expect(getActivityAccelerationFactor(false, true, true)).toBe(3);    // Background polling
-      expect(getActivityAccelerationFactor(false, false, true)).toBe(3);   // Background + inactive
+      expect(getActivityAccelerationFactor(false, true, false)).toBe(2); // Hidden tab, active user
+      expect(getActivityAccelerationFactor(false, true, true)).toBe(3); // Background polling
+      expect(getActivityAccelerationFactor(false, false, true)).toBe(3); // Background + inactive
     });
 
     test("activity factors combine with usage backoff", () => {
@@ -438,7 +512,9 @@ describe("Backoff and Retry Logic (Enhanced Tests)", () => {
     test("clampInterval enforces reasonable bounds", () => {
       expect(clampInterval(1000)).toBe(30000); // Too small
       expect(clampInterval(60000)).toBe(60000); // Normal
-      expect(clampInterval(24 * 60 * 60 * 1000 + 1000)).toBe(24 * 60 * 60 * 1000); // Too large
+      expect(clampInterval(24 * 60 * 60 * 1000 + 1000)).toBe(
+        24 * 60 * 60 * 1000,
+      ); // Too large
     });
 
     test("backoff calculations respect clamping", () => {

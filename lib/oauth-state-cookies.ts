@@ -1,23 +1,23 @@
-import { cookies } from 'next/headers';
+import { cookies } from "next/headers";
 
 /**
  * OAuth State Cookie Management
  * Provides secure cookie-based OAuth state storage for CSRF protection
  */
 
-const OAUTH_STATE_COOKIE_PREFIX = '_oauth_state_';
+const OAUTH_STATE_COOKIE_PREFIX = "_oauth_state_";
 const OAUTH_STATE_MAX_AGE = 600; // 10 minutes
 
 /**
  * Get cookie options for OAuth state storage
  */
 export function getOAuthStateCookieOptions(provider: string) {
-  const secure = process.env.NODE_ENV === 'production';
+  const secure = process.env.NODE_ENV === "production";
 
   return {
     httpOnly: true,
     secure,
-    sameSite: 'lax' as const,
+    sameSite: "lax" as const,
     path: `/api/auth/${provider}/callback`,
     maxAge: OAUTH_STATE_MAX_AGE,
   };
@@ -31,7 +31,7 @@ export function createOAuthStateCookie(provider: string, state: string) {
   const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`;
   const cookieValue = JSON.stringify({
     state,
-    created: Date.now()
+    created: Date.now(),
   });
 
   return {
@@ -44,7 +44,9 @@ export function createOAuthStateCookie(provider: string, state: string) {
 /**
  * Get OAuth state from cookie and validate it
  */
-export async function getOAuthStateCookie(provider: string): Promise<string | null> {
+export async function getOAuthStateCookie(
+  provider: string,
+): Promise<string | null> {
   try {
     const cookieStore = await cookies();
     const cookieName = `${OAUTH_STATE_COOKIE_PREFIX}${provider}`;
@@ -63,8 +65,8 @@ export async function getOAuthStateCookie(provider: string): Promise<string | nu
     }
 
     return state;
-  } catch (error) {
-    console.error('Failed to read OAuth state cookie:', error);
+  } catch {
+    
     return null;
   }
 }
@@ -79,15 +81,15 @@ export function getOAuthStateClearCookieOptions(provider: string) {
   // Set cookie to expire immediately
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
     path: `/api/auth/${provider}/callback`,
     maxAge: 0,
   };
 
   return {
     name: cookieName,
-    value: '',
+    value: "",
     options: cookieOptions,
   };
 }
@@ -95,7 +97,10 @@ export function getOAuthStateClearCookieOptions(provider: string) {
 /**
  * Validate OAuth state parameter against cookie
  */
-export async function validateOAuthState(provider: string, callbackState: string | null): Promise<boolean> {
+export async function validateOAuthState(
+  provider: string,
+  callbackState: string | null,
+): Promise<boolean> {
   if (!callbackState) {
     return false; // State parameter required
   }
@@ -104,13 +109,13 @@ export async function validateOAuthState(provider: string, callbackState: string
     const storedState = await getOAuthStateCookie(provider);
 
     if (!storedState || storedState !== callbackState) {
-      console.error(`${provider} OAuth: Invalid state parameter received`);
+      
       return false;
     }
 
     return true;
-  } catch (error) {
-    console.error(`${provider} OAuth: State validation failed:`, error);
+  } catch {
+    
     return false;
   }
 }

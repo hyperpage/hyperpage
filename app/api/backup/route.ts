@@ -5,7 +5,7 @@
  * Supports automated backups, restore from backup, listing backups, and validation.
  */
 
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 // Note: Database backup functions temporarily disabled for containerization
 // import { createBackup, restoreBackup, listBackups, cleanupOldBackups, validateBackup } from '../../../lib/database/backup.js';
@@ -14,38 +14,50 @@ import { NextResponse } from 'next/server';
  * GET /api/backup - List all available backups with metadata
  */
 export async function GET(): Promise<NextResponse> {
-  return NextResponse.json({
-    error: 'Backup functionality temporarily disabled for containerization',
-    status: 'maintenance'
-  }, { status: 503 });
+  return NextResponse.json(
+    {
+      error: "Backup functionality temporarily disabled for containerization",
+      status: "maintenance",
+    },
+    { status: 503 },
+  );
 }
 
 /**
  * POST /api/backup - Create a new database backup
  */
 export async function POST(): Promise<NextResponse> {
-  return NextResponse.json({
-    error: 'Backup functionality temporarily disabled for containerization',
-    status: 'maintenance'
-  }, { status: 503 });
+  return NextResponse.json(
+    {
+      error: "Backup functionality temporarily disabled for containerization",
+      status: "maintenance",
+    },
+    { status: 503 },
+  );
 }
 
 /**
  * PUT /api/backup?path=/path/to/backup.db - Restore from backup file
  */
 export async function PUT(): Promise<NextResponse> {
-  return NextResponse.json({
-    error: 'Backup functionality temporarily disabled for containerization',
-    status: 'maintenance'
-  }, { status: 503 });
+  return NextResponse.json(
+    {
+      error: "Backup functionality temporarily disabled for containerization",
+      status: "maintenance",
+    },
+    { status: 503 },
+  );
 }
 
 /**
  * DELETE /api/backup?cleanup=true&keep=10 - Cleanup old backups
  */
 export async function DELETE(): Promise<NextResponse> {
-  return NextResponse.json({
-    error: 'Backup functionality temporarily disabled for containerization',
-    status: 'maintenance'
-  }, { status: 503 });
+  return NextResponse.json(
+    {
+      error: "Backup functionality temporarily disabled for containerization",
+      status: "maintenance",
+    },
+    { status: 503 },
+  );
 }

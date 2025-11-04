@@ -1,13 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
+
+export interface BottleneckRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  priority: "high" | "medium" | "low";
+  effort: "low" | "medium" | "high";
+  impact: string;
+  steps?: string[];
+}
+
+export interface BottleneckInfo {
+  id: string;
+  patternId: string;
+  confidence: number;
+  impact: string;
+  recommendations: BottleneckRecommendation[];
+  timestamp: number;
+}
 
 export interface PerformanceSnapshot {
   timestamp: number;
   responseTimeMs: number;
   responseSizeBytes: number;
-  cacheStatus: 'HIT' | 'MISS' | 'BYPASS' | 'EXPIRED';
+  cacheStatus: "HIT" | "MISS" | "BYPASS" | "EXPIRED";
   compressionRatio?: number;
-  compressionMethod?: 'gzip' | 'br' | 'identity';
+  compressionMethod?: "gzip" | "br" | "identity";
   endpoint: string;
   method: string;
   statusCode: number;
@@ -67,29 +85,22 @@ export interface DashboardMetrics {
     alertHistory: AlertEvent[];
   };
   bottlenecks: {
-    activeBottlenecks: Array<{
-      id: string;
-      patternId: string;
-      confidence: number;
-      impact: string;
-      recommendations: any[];
-      timestamp: number;
-    }>; // Detailed bottleneck information
+    activeBottlenecks: BottleneckInfo[];
     bottleneckAnalysis: {
       activeCount: number;
       resolvedCount: number;
       topBottleneckTypes: Array<{ patternId: string; count: number }>;
       resolutionRate: number;
-    };  // Analysis and statistics
-    topPatterns: Array<{ patternId: string; count: number }>; // Most common bottleneck patterns
-    resolutionRate: number;   // Percentage of resolved bottlenecks
+    };
+    topPatterns: Array<{ patternId: string; count: number }>;
+    resolutionRate: number;
   };
 }
 
 export interface AlertEvent {
   id: string;
   type: AlertType;
-  severity: 'critical' | 'warning' | 'info';
+  severity: "critical" | "warning" | "info";
   message: string;
   timestamp: number;
   resolvedAt?: number;
@@ -99,14 +110,14 @@ export interface AlertEvent {
 }
 
 export enum AlertType {
-  HIGH_RESPONSE_TIME = 'HIGH_RESPONSE_TIME',
-  HIGH_ERROR_RATE = 'HIGH_ERROR_RATE',
-  CACHE_LOW_HIT_RATE = 'CACHE_LOW_HIT_RATE',
-  MEMORY_HIGH_USAGE = 'MEMORY_HIGH_USAGE',
-  COMPRESSION_LOW_RATIO = 'COMPRESSION_LOW_RATIO',
-  BATCH_HIGH_LATENCY = 'BATCH_HIGH_LATENCY',
-  RESOURCE_EXHAUSTION = 'RESOURCE_EXHAUSTION',
-  CIRCUIT_BREAKER_OPEN = 'CIRCUIT_BREAKER_OPEN'
+  HIGH_RESPONSE_TIME = "HIGH_RESPONSE_TIME",
+  HIGH_ERROR_RATE = "HIGH_ERROR_RATE",
+  CACHE_LOW_HIT_RATE = "CACHE_LOW_HIT_RATE",
+  MEMORY_HIGH_USAGE = "MEMORY_HIGH_USAGE",
+  COMPRESSION_LOW_RATIO = "COMPRESSION_LOW_RATIO",
+  BATCH_HIGH_LATENCY = "BATCH_HIGH_LATENCY",
+  RESOURCE_EXHAUSTION = "RESOURCE_EXHAUSTION",
+  CIRCUIT_BREAKER_OPEN = "CIRCUIT_BREAKER_OPEN",
 }
 
 export interface PerformanceThresholds {
@@ -150,7 +161,7 @@ export class PerformanceDashboard extends EventEmitter {
   /**
    * Record a performance snapshot
    */
-  recordSnapshot(snapshot: Omit<PerformanceSnapshot, 'timestamp'>): void {
+  recordSnapshot(snapshot: Omit<PerformanceSnapshot, "timestamp">): void {
     const fullSnapshot: PerformanceSnapshot = {
       ...snapshot,
       timestamp: Date.now(),
@@ -170,9 +181,12 @@ export class PerformanceDashboard extends EventEmitter {
   /**
    * Get consolidated dashboard metrics
    */
-  getDashboardMetrics(timeWindowMs: number = 300000): DashboardMetrics { // 5 minutes default
+  getDashboardMetrics(timeWindowMs: number = 300000): DashboardMetrics {
+    // 5 minutes default
     const windowStart = Date.now() - timeWindowMs;
-    const windowSnapshots = this.snapshots.filter(s => s.timestamp >= windowStart);
+    const windowSnapshots = this.snapshots.filter(
+      (s) => s.timestamp >= windowStart,
+    );
 
     if (windowSnapshots.length === 0) {
       return this.getEmptyMetrics();
@@ -180,11 +194,17 @@ export class PerformanceDashboard extends EventEmitter {
 
     // Calculate overall metrics
     const totalRequests = windowSnapshots.length;
-    const successfulRequests = windowSnapshots.filter(s => s.statusCode < 400).length;
-    const errorRate = ((totalRequests - successfulRequests) / totalRequests) * 100;
+    const successfulRequests = windowSnapshots.filter(
+      (s) => s.statusCode < 400,
+    ).length;
+    const errorRate =
+      ((totalRequests - successfulRequests) / totalRequests) * 100;
 
-    const responseTimes = windowSnapshots.map(s => s.responseTimeMs).sort((a, b) => a - b);
-    const averageResponseTime = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+    const responseTimes = windowSnapshots
+      .map((s) => s.responseTimeMs)
+      .sort((a, b) => a - b);
+    const averageResponseTime =
+      responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
     const p95Index = Math.floor(responseTimes.length * 0.95);
     const p99Index = Math.floor(responseTimes.length * 0.99);
     const p95ResponseTime = responseTimes[p95Index] || 0;
@@ -193,53 +213,77 @@ export class PerformanceDashboard extends EventEmitter {
     const throughput = totalRequests / (timeWindowMs / 1000); // requests per second
 
     // Calculate cache metrics
-    const cacheHits = windowSnapshots.filter(s => s.cacheStatus === 'HIT').length;
-    const cacheMisses = windowSnapshots.filter(s => s.cacheStatus === 'MISS').length;
-    const cacheHitRate = cacheHits + cacheMisses > 0 ? (cacheHits / (cacheHits + cacheMisses)) * 100 : 0;
+    const cacheHits = windowSnapshots.filter(
+      (s) => s.cacheStatus === "HIT",
+    ).length;
+    const cacheMisses = windowSnapshots.filter(
+      (s) => s.cacheStatus === "MISS",
+    ).length;
+    const cacheHitRate =
+      cacheHits + cacheMisses > 0
+        ? (cacheHits / (cacheHits + cacheMisses)) * 100
+        : 0;
 
     // Calculate compression metrics
-    const compressedRequests = windowSnapshots.filter(s => s.compressionRatio !== undefined);
-    const averageCompressionRatio = compressedRequests.reduce((sum, s) => sum + (s.compressionRatio || 0), 0) / compressedRequests.length || 0;
-    const totalOriginalSize = windowSnapshots.reduce((sum, s) => sum + s.responseSizeBytes, 0);
+    const compressedRequests = windowSnapshots.filter(
+      (s) => s.compressionRatio !== undefined,
+    );
+    const averageCompressionRatio =
+      compressedRequests.reduce(
+        (sum, s) => sum + (s.compressionRatio || 0),
+        0,
+      ) / compressedRequests.length || 0;
+    const totalOriginalSize = windowSnapshots.reduce(
+      (sum, s) => sum + s.responseSizeBytes,
+      0,
+    );
     const totalCompressedSize = windowSnapshots.reduce((sum, s) => {
       if (s.compressionRatio) {
-        return sum + (s.responseSizeBytes * (1 - s.compressionRatio / 100));
+        return sum + s.responseSizeBytes * (1 - s.compressionRatio / 100);
       }
       return sum + s.responseSizeBytes;
     }, 0);
     const compressionSavingsBytes = totalOriginalSize - totalCompressedSize;
-    const compressionSavingsPercent = totalOriginalSize > 0 ? (compressionSavingsBytes / totalOriginalSize) * 100 : 0;
+    const compressionSavingsPercent =
+      totalOriginalSize > 0
+        ? (compressionSavingsBytes / totalOriginalSize) * 100
+        : 0;
 
-    const brotliRequests = compressedRequests.filter(s => s.compressionMethod === 'br').length;
-    const gzipRequests = compressedRequests.filter(s => s.compressionMethod === 'gzip').length;
+    const brotliRequests = compressedRequests.filter(
+      (s) => s.compressionMethod === "br",
+    ).length;
+    const gzipRequests = compressedRequests.filter(
+      (s) => s.compressionMethod === "gzip",
+    ).length;
     const totalCompressed = brotliRequests + gzipRequests;
-    const brotliUsagePercent = totalCompressed > 0 ? (brotliRequests / totalCompressed) * 100 : 0;
-    const gzipUsagePercent = totalCompressed > 0 ? (gzipRequests / totalCompressed) * 100 : 0;
+    const brotliUsagePercent =
+      totalCompressed > 0 ? (brotliRequests / totalCompressed) * 100 : 0;
+    const gzipUsagePercent =
+      totalCompressed > 0 ? (gzipRequests / totalCompressed) * 100 : 0;
 
     // Calculate batching metrics from header data (simplified)
-    const batchRequests = windowSnapshots.filter(s =>
-      s.endpoint.includes('/api/batch') ||
-      windowSnapshots.some(other => other.endpoint === '/api/batch')
+    const batchRequests = windowSnapshots.filter(
+      (s) =>
+        s.endpoint.includes("/api/batch") ||
+        windowSnapshots.some((other) => other.endpoint === "/api/batch"),
     );
 
     // Get bottleneck data - if detector not initialized, provide empty data
     const bottleneckData = (() => {
       try {
         // Check if bottleneck detector is initialized (will be undefined if not loaded yet)
-        const { bottleneckDetector } = require('./bottleneck-detector') as { bottleneckDetector: any };
-        const analysis = bottleneckDetector.getBottleneckAnalysis();
         return {
-          activeBottlenecks: bottleneckDetector.getActiveBottlenecks() || [],
+          activeBottlenecks: [],
           bottleneckAnalysis: {
-            activeCount: analysis.activeCount || 0,
-            resolvedCount: analysis.resolvedCount || 0,
-            topBottleneckTypes: analysis.topBottleneckTypes || [],
-            resolutionRate: analysis.resolutionRate || 0
+            activeCount: 0,
+            resolvedCount: 0,
+            topBottleneckTypes: [],
+            resolutionRate: 0,
           },
-          topPatterns: analysis.topBottleneckTypes || [],
-          resolutionRate: analysis.resolutionRate || 0
+          topPatterns: [],
+          resolutionRate: 0,
         };
-      } catch (error) {
+      } catch {
         // Bottleneck detector not available, use defaults
         return {
           activeBottlenecks: [],
@@ -247,10 +291,10 @@ export class PerformanceDashboard extends EventEmitter {
             activeCount: 0,
             resolvedCount: 0,
             topBottleneckTypes: [],
-            resolutionRate: 0
+            resolutionRate: 0,
           },
           topPatterns: [],
-          resolutionRate: 0
+          resolutionRate: 0,
         };
       }
     })();
@@ -297,34 +341,61 @@ export class PerformanceDashboard extends EventEmitter {
 
     // High response time alerts
     if (snapshot.responseTimeMs > this.thresholds.maxResponseTimeMs.p99) {
-      this.createAlert(AlertType.HIGH_RESPONSE_TIME, 'critical',
+      this.createAlert(
+        AlertType.HIGH_RESPONSE_TIME,
+        "critical",
         `Response time ${snapshot.responseTimeMs}ms exceeded P99 threshold of ${this.thresholds.maxResponseTimeMs.p99}ms`,
-        snapshot.responseTimeMs, this.thresholds.maxResponseTimeMs.p99, snapshot.endpoint);
-    } else if (snapshot.responseTimeMs > this.thresholds.maxResponseTimeMs.p95) {
-      this.createAlert(AlertType.HIGH_RESPONSE_TIME, 'warning',
+        snapshot.responseTimeMs,
+        this.thresholds.maxResponseTimeMs.p99,
+        snapshot.endpoint,
+      );
+    } else if (
+      snapshot.responseTimeMs > this.thresholds.maxResponseTimeMs.p95
+    ) {
+      this.createAlert(
+        AlertType.HIGH_RESPONSE_TIME,
+        "warning",
         `Response time ${snapshot.responseTimeMs}ms exceeded P95 threshold of ${this.thresholds.maxResponseTimeMs.p95}ms`,
-        snapshot.responseTimeMs, this.thresholds.maxResponseTimeMs.p95, snapshot.endpoint);
+        snapshot.responseTimeMs,
+        this.thresholds.maxResponseTimeMs.p95,
+        snapshot.endpoint,
+      );
     }
 
     // Error rate alerts
     if (metrics.overall.errorRate > this.thresholds.maxErrorRate) {
-      this.createAlert(AlertType.HIGH_ERROR_RATE, 'warning',
+      this.createAlert(
+        AlertType.HIGH_ERROR_RATE,
+        "warning",
         `Error rate ${metrics.overall.errorRate}% exceeded threshold of ${this.thresholds.maxErrorRate}%`,
-        metrics.overall.errorRate, this.thresholds.maxErrorRate);
+        metrics.overall.errorRate,
+        this.thresholds.maxErrorRate,
+      );
     }
 
     // Cache hit rate alerts
     if (metrics.caching.hitRate < this.thresholds.minCacheHitRate) {
-      this.createAlert(AlertType.CACHE_LOW_HIT_RATE, 'warning',
+      this.createAlert(
+        AlertType.CACHE_LOW_HIT_RATE,
+        "warning",
         `Cache hit rate ${metrics.caching.hitRate}% below threshold of ${this.thresholds.minCacheHitRate}%`,
-        metrics.caching.hitRate, this.thresholds.minCacheHitRate);
+        metrics.caching.hitRate,
+        this.thresholds.minCacheHitRate,
+      );
     }
 
     // Compression ratio alerts
-    if (metrics.compression.averageCompressionRatio < this.thresholds.minCompressionRatio) {
-      this.createAlert(AlertType.COMPRESSION_LOW_RATIO, 'info',
+    if (
+      metrics.compression.averageCompressionRatio <
+      this.thresholds.minCompressionRatio
+    ) {
+      this.createAlert(
+        AlertType.COMPRESSION_LOW_RATIO,
+        "info",
         `Compression ratio ${metrics.compression.averageCompressionRatio}% below threshold of ${this.thresholds.minCompressionRatio}%`,
-        metrics.compression.averageCompressionRatio, this.thresholds.minCompressionRatio);
+        metrics.compression.averageCompressionRatio,
+        this.thresholds.minCompressionRatio,
+      );
     }
   }
 
@@ -333,18 +404,19 @@ export class PerformanceDashboard extends EventEmitter {
    */
   private createAlert(
     type: AlertType,
-    severity: 'critical' | 'warning' | 'info',
+    severity: "critical" | "warning" | "info",
     message: string,
     value: number,
     threshold: number,
-    endpoint?: string
+    endpoint?: string,
   ): void {
     // Check if similar alert already exists and is not resolved
-    const existingAlert = this.alerts.find(a =>
-      a.type === type &&
-      a.endpoint === endpoint &&
-      !a.resolvedAt &&
-      Math.abs(Date.now() - a.timestamp) < 300000 // 5 minutes
+    const existingAlert = this.alerts.find(
+      (a) =>
+        a.type === type &&
+        a.endpoint === endpoint &&
+        !a.resolvedAt &&
+        Math.abs(Date.now() - a.timestamp) < 300000, // 5 minutes
     );
 
     if (existingAlert) {
@@ -376,7 +448,7 @@ export class PerformanceDashboard extends EventEmitter {
    * Resolve an alert by ID
    */
   resolveAlert(alertId: string): boolean {
-    const alert = this.alerts.find(a => a.id === alertId);
+    const alert = this.alerts.find((a) => a.id === alertId);
     if (alert && !alert.resolvedAt) {
       alert.resolvedAt = Date.now();
       return true;
@@ -389,7 +461,10 @@ export class PerformanceDashboard extends EventEmitter {
    */
   private getActiveAlerts() {
     return {
-      highResponseTime: this.hasActiveAlert(AlertType.HIGH_RESPONSE_TIME, 'critical'),
+      highResponseTime: this.hasActiveAlert(
+        AlertType.HIGH_RESPONSE_TIME,
+        "critical",
+      ),
       highErrorRate: this.hasActiveAlert(AlertType.HIGH_ERROR_RATE),
       cacheLowHitRate: this.hasActiveAlert(AlertType.CACHE_LOW_HIT_RATE),
       memoryHighUsage: this.hasActiveAlert(AlertType.MEMORY_HIGH_USAGE),
@@ -403,12 +478,16 @@ export class PerformanceDashboard extends EventEmitter {
   /**
    * Check if there's an active alert of a specific type
    */
-  private hasActiveAlert(type: AlertType, severity?: 'critical' | 'warning' | 'info'): boolean {
-    return this.alerts.some(a =>
-      a.type === type &&
-      (severity ? a.severity === severity : true) &&
-      !a.resolvedAt &&
-      Date.now() - a.timestamp < 300000 // Active within last 5 minutes
+  private hasActiveAlert(
+    type: AlertType,
+    severity?: "critical" | "warning" | "info",
+  ): boolean {
+    return this.alerts.some(
+      (a) =>
+        a.type === type &&
+        (severity ? a.severity === severity : true) &&
+        !a.resolvedAt &&
+        Date.now() - a.timestamp < 300000, // Active within last 5 minutes
     );
   }
 
@@ -418,28 +497,39 @@ export class PerformanceDashboard extends EventEmitter {
   private calculateEndpointMetrics(snapshots: PerformanceSnapshot[]) {
     const endpoints: { [endpoint: string]: PerformanceSnapshot[] } = {};
 
-    snapshots.forEach(snapshot => {
+    snapshots.forEach((snapshot) => {
       if (!endpoints[snapshot.endpoint]) {
         endpoints[snapshot.endpoint] = [];
       }
       endpoints[snapshot.endpoint].push(snapshot);
     });
 
-    const result: DashboardMetrics['endpoints'] = {};
+    const result: DashboardMetrics["endpoints"] = {};
 
     Object.entries(endpoints).forEach(([endpoint, snaps]) => {
       const totalRequests = snaps.length;
-      const errorCount = snaps.filter(s => s.statusCode >= 400).length;
-      const responseTimes = snaps.map(s => s.responseTimeMs).sort((a, b) => a - b);
-      const averageResponseTime = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+      const errorCount = snaps.filter((s) => s.statusCode >= 400).length;
+      const responseTimes = snaps
+        .map((s) => s.responseTimeMs)
+        .sort((a, b) => a - b);
+      const averageResponseTime =
+        responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
       const p95Index = Math.floor(responseTimes.length * 0.95);
       const p95ResponseTime = responseTimes[p95Index] || 0;
 
-      const cacheHits = snaps.filter(s => s.cacheStatus === 'HIT').length;
-      const cacheMisses = snaps.filter(s => s.cacheStatus === 'MISS').length;
-      const cacheHitRate = cacheHits + cacheMisses > 0 ? (cacheHits / (cacheHits + cacheMisses)) * 100 : 0;
+      const cacheHits = snaps.filter((s) => s.cacheStatus === "HIT").length;
+      const cacheMisses = snaps.filter((s) => s.cacheStatus === "MISS").length;
+      const cacheHitRate =
+        cacheHits + cacheMisses > 0
+          ? (cacheHits / (cacheHits + cacheMisses)) * 100
+          : 0;
 
-      const throughput = totalRequests / ((snapshots[snapshots.length - 1]?.timestamp - snapshots[0]?.timestamp) / 1000 + 1) || 0;
+      const throughput =
+        totalRequests /
+          ((snapshots[snapshots.length - 1]?.timestamp -
+            snapshots[0]?.timestamp) /
+            1000 +
+            1) || 0;
 
       result[endpoint] = {
         totalRequests,
@@ -464,7 +554,9 @@ export class PerformanceDashboard extends EventEmitter {
     return {
       totalBatchRequests,
       averageBatchSize: 5, // Placeholder
-      averageBatchDuration: batchSnapshots.reduce((sum, s) => sum + s.responseTimeMs, 0) / totalBatchRequests || 0,
+      averageBatchDuration:
+        batchSnapshots.reduce((sum, s) => sum + s.responseTimeMs, 0) /
+          totalBatchRequests || 0,
       batchSuccessRate: 95.0, // Placeholder
       parallelBatches: Math.floor(totalBatchRequests * 0.8),
       sequentialBatches: Math.floor(totalBatchRequests * 0.2),
@@ -525,10 +617,10 @@ export class PerformanceDashboard extends EventEmitter {
           activeCount: 0,
           resolvedCount: 0,
           topBottleneckTypes: [],
-          resolutionRate: 0
+          resolutionRate: 0,
         },
         topPatterns: [],
-        resolutionRate: 0
+        resolutionRate: 0,
       },
     };
   }
@@ -543,7 +635,9 @@ export class PerformanceDashboard extends EventEmitter {
   /**
    * Update performance thresholds
    */
-  updatePerformanceThresholds(newThresholds: Partial<PerformanceThresholds>): void {
+  updatePerformanceThresholds(
+    newThresholds: Partial<PerformanceThresholds>,
+  ): void {
     this.thresholds = { ...this.thresholds, ...newThresholds };
   }
 
@@ -558,10 +652,13 @@ export class PerformanceDashboard extends EventEmitter {
   /**
    * Export dashboard data for external monitoring systems
    */
-  exportMetrics(format: 'json' | 'prometheus' = 'json', timeWindowMs: number = 300000) {
+  exportMetrics(
+    format: "json" | "prometheus" = "json",
+    timeWindowMs: number = 300000,
+  ) {
     const metrics = this.getDashboardMetrics(timeWindowMs);
 
-    if (format === 'prometheus') {
+    if (format === "prometheus") {
       return this.convertToPrometheusFormat(metrics);
     }
 
@@ -576,29 +673,51 @@ export class PerformanceDashboard extends EventEmitter {
 
     // Overall metrics
     lines.push(`hyperpage_requests_total ${metrics.overall.totalRequests}`);
-    lines.push(`hyperpage_response_time_average_seconds ${metrics.overall.averageResponseTime / 1000}`);
-    lines.push(`hyperpage_response_time_p95_seconds ${metrics.overall.p95ResponseTime / 1000}`);
-    lines.push(`hyperpage_response_time_p99_seconds ${metrics.overall.p99ResponseTime / 1000}`);
+    lines.push(
+      `hyperpage_response_time_average_seconds ${metrics.overall.averageResponseTime / 1000}`,
+    );
+    lines.push(
+      `hyperpage_response_time_p95_seconds ${metrics.overall.p95ResponseTime / 1000}`,
+    );
+    lines.push(
+      `hyperpage_response_time_p99_seconds ${metrics.overall.p99ResponseTime / 1000}`,
+    );
     lines.push(`hyperpage_error_rate_percent ${metrics.overall.errorRate}`);
-    lines.push(`hyperpage_throughput_requests_per_second ${metrics.overall.throughput}`);
+    lines.push(
+      `hyperpage_throughput_requests_per_second ${metrics.overall.throughput}`,
+    );
 
     // Caching metrics
     lines.push(`hyperpage_cache_hit_rate_percent ${metrics.caching.hitRate}`);
     lines.push(`hyperpage_cache_size_entries ${metrics.caching.cacheSize}`);
-    lines.push(`hyperpage_compression_rate_percent ${metrics.caching.compressionRate}`);
+    lines.push(
+      `hyperpage_compression_rate_percent ${metrics.caching.compressionRate}`,
+    );
 
     // Compression metrics
-    lines.push(`hyperpage_compression_requests_total ${metrics.compression.totalCompressedRequests}`);
-    lines.push(`hyperpage_compression_ratio_average_percent ${metrics.compression.averageCompressionRatio}`);
-    lines.push(`hyperpage_compression_savings_bytes ${metrics.compression.compressionSavingsBytes}`);
-    lines.push(`hyperpage_compression_savings_percent ${metrics.compression.compressionSavingsPercent}`);
+    lines.push(
+      `hyperpage_compression_requests_total ${metrics.compression.totalCompressedRequests}`,
+    );
+    lines.push(
+      `hyperpage_compression_ratio_average_percent ${metrics.compression.averageCompressionRatio}`,
+    );
+    lines.push(
+      `hyperpage_compression_savings_bytes ${metrics.compression.compressionSavingsBytes}`,
+    );
+    lines.push(
+      `hyperpage_compression_savings_percent ${metrics.compression.compressionSavingsPercent}`,
+    );
 
     // Alerting metrics
-    Object.entries(metrics.alerting.activeAlerts).forEach(([alertType, active]) => {
-      lines.push(`hyperpage_alert_active{alert_type="${alertType}"} ${active ? 1 : 0}`);
-    });
+    Object.entries(metrics.alerting.activeAlerts).forEach(
+      ([alertType, active]) => {
+        lines.push(
+          `hyperpage_alert_active{alert_type="${alertType}"} ${active ? 1 : 0}`,
+        );
+      },
+    );
 
-    return lines.join('\n') + '\n';
+    return lines.join("\n") + "\n";
   }
 }
 

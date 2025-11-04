@@ -6,46 +6,46 @@
  * with priority-based queuing and execution tracking.
  */
 
-import { Tool } from '../../tools/tool-types';
+import { Tool } from "../../tools/tool-types";
 
 /**
  * Job priority levels for scheduling and execution
  */
 export enum JobPriority {
-  LOW = 1,        // Background data refresh, cache warming
-  MEDIUM = 2,     // Standard data updates, maintenance tasks
-  HIGH = 3,       // User-initiated refreshes, rate limit management
-  CRITICAL = 4    // Emergency operations, immediate responses
+  LOW = 1, // Background data refresh, cache warming
+  MEDIUM = 2, // Standard data updates, maintenance tasks
+  HIGH = 3, // User-initiated refreshes, rate limit management
+  CRITICAL = 4, // Emergency operations, immediate responses
 }
 
 /**
  * Job status enumeration for execution tracking
  */
 export enum JobStatus {
-  PENDING = 'pending',     // Job queued, waiting for execution
-  RUNNING = 'running',     // Job currently executing
-  COMPLETED = 'completed', // Job finished successfully
-  FAILED = 'failed',       // Job failed during execution
-  CANCELLED = 'cancelled', // Job was cancelled before completion
-  TIMEOUT = 'timeout'      // Job exceeded time limit
+  PENDING = "pending", // Job queued, waiting for execution
+  RUNNING = "running", // Job currently executing
+  COMPLETED = "completed", // Job finished successfully
+  FAILED = "failed", // Job failed during execution
+  CANCELLED = "cancelled", // Job was cancelled before completion
+  TIMEOUT = "timeout", // Job exceeded time limit
 }
 
 /**
  * Job type enumeration for different job categories
  */
 export enum JobType {
-  CACHE_WARM = 'cache_warm',           // Pre-populate cache with hot data
-  DATA_REFRESH = 'data_refresh',        // Refresh tool data from APIs
-  CACHE_INVALIDATION = 'cache_invalidation', // Clean stale cache entries
-  RATE_LIMIT_UPDATE = 'rate_limit_update', // Update rate limit status
-  MAINTENANCE = 'maintenance',         // System maintenance tasks
-  USER_OPERATION = 'user_operation'    // User-triggered operations
+  CACHE_WARM = "cache_warm", // Pre-populate cache with hot data
+  DATA_REFRESH = "data_refresh", // Refresh tool data from APIs
+  CACHE_INVALIDATION = "cache_invalidation", // Clean stale cache entries
+  RATE_LIMIT_UPDATE = "rate_limit_update", // Update rate limit status
+  MAINTENANCE = "maintenance", // System maintenance tasks
+  USER_OPERATION = "user_operation", // User-triggered operations
 }
 
 /**
  * Result of job execution
  */
-export interface JobResult<T = any> {
+export interface JobResult<T = unknown> {
   /** Whether the job execution was successful */
   success: boolean;
   /** Result data from successful execution */
@@ -68,7 +68,7 @@ export interface JobResult<T = any> {
 /**
  * Job specification and configuration
  */
-export interface IJob<T = any> {
+export interface IJob<T = unknown> {
   /** Unique job identifier */
   id: string;
   /** Job category type */
@@ -78,7 +78,7 @@ export interface IJob<T = any> {
   /** Priority level for scheduling */
   priority: JobPriority;
   /** Tool this job operates on (optional) */
-  tool?: Omit<Tool, 'handlers'>;
+  tool?: Omit<Tool, "handlers">;
   /** Specific endpoint this job targets (optional) */
   endpoint?: string;
 
@@ -144,7 +144,15 @@ export interface IJobQueue {
    * @param job - Job specification
    * @returns Promise resolving to the queued job
    */
-  enqueue(job: Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>): Promise<IJob>;
+  enqueue(
+    job: Omit<
+      IJob<unknown>,
+      "status" | "createdAt" | "updatedAt" | "retryCount"
+    >,
+  ): Promise<IJob<unknown>>;
+  enqueue(
+    job: Omit<IJob, "status" | "createdAt" | "updatedAt" | "retryCount">,
+  ): Promise<IJob>;
 
   /**
    * Remove and return the next job to execute based on priority
@@ -179,7 +187,11 @@ export interface IJobQueue {
    * @param result - Optional execution result
    * @returns Promise resolving to updated job
    */
-  updateJobStatus(jobId: string, status: JobStatus, result?: JobResult): Promise<IJob | undefined>;
+  updateJobStatus(
+    jobId: string,
+    status: JobStatus,
+    result?: JobResult<unknown>,
+  ): Promise<IJob | undefined>;
 
   /**
    * Get queue statistics
@@ -213,7 +225,12 @@ export interface IJobScheduler {
    * @param job - Job specification with schedule configuration
    * @returns Promise resolving to scheduled job
    */
-  schedule(job: Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>): Promise<IJob>;
+  schedule(
+    job: Omit<
+      IJob<unknown>,
+      "status" | "createdAt" | "updatedAt" | "retryCount"
+    >,
+  ): Promise<IJob<unknown>>;
 
   /**
    * Cancel a scheduled job
@@ -255,11 +272,11 @@ export interface JobExecutionContext {
   /** Shared resources and utilities */
   resources: {
     /** Cache instance for data storage */
-    cache?: any; // Will be typed with ICache once imported
+    cache?: unknown;
     /** Logger for job execution tracking */
-    logger?: any;
+    logger?: unknown;
     /** Rate limit monitor for API compliance */
-    rateLimitMonitor?: any;
+    rateLimitMonitor?: unknown;
   };
   /** Execution timeout handle */
   timeout?: NodeJS.Timeout;
@@ -268,8 +285,8 @@ export interface JobExecutionContext {
 /**
  * Job processor function signature
  */
-export type JobProcessor<T = any> = (
-  context: JobExecutionContext
+export type JobProcessor<T = unknown> = (
+  context: JobExecutionContext,
 ) => Promise<JobResult<T>>;
 
 /**
@@ -282,7 +299,10 @@ export interface IJobFactory {
    * @param endpoints - Specific endpoints to warm
    * @returns Job specification
    */
-  createCacheWarmJob(tool: Omit<Tool, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
+  createCacheWarmJob(
+    tool: Omit<Tool, "handlers">,
+    endpoints?: string[],
+  ): Omit<IJob<unknown>, "status" | "createdAt" | "updatedAt" | "retryCount">;
 
   /**
    * Create a data refresh job for a tool
@@ -290,14 +310,19 @@ export interface IJobFactory {
    * @param endpoints - Specific endpoints to refresh
    * @returns Job specification
    */
-  createDataRefreshJob(tool: Omit<Tool, 'handlers'>, endpoints?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
+  createDataRefreshJob(
+    tool: Omit<Tool, "handlers">,
+    endpoints?: string[],
+  ): Omit<IJob<unknown>, "status" | "createdAt" | "updatedAt" | "retryCount">;
 
   /**
    * Create a rate limit update job
    * @param platforms - Platforms to update
    * @returns Job specification
    */
-  createRateLimitUpdateJob(platforms?: string[]): Omit<IJob, 'status' | 'createdAt' | 'updatedAt' | 'retryCount'>;
+  createRateLimitUpdateJob(
+    platforms?: string[],
+  ): Omit<IJob<unknown>, "status" | "createdAt" | "updatedAt" | "retryCount">;
 }
 
 /**
@@ -308,10 +333,10 @@ export class JobError extends Error {
     message: string,
     public readonly code: string,
     public readonly jobId: string,
-    public readonly retryable: boolean = true
+    public readonly retryable: boolean = true,
   ) {
     super(message);
-    this.name = 'JobError';
+    this.name = "JobError";
   }
 }
 

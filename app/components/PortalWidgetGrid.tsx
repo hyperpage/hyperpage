@@ -38,9 +38,7 @@ export function PortalWidgetGrid({
               headers={widget.headers || []}
               data={widget.data}
               tool={widget.toolName}
-              isLoading={
-                loadingStates[`${widget.toolName}-refresh`] || false
-              }
+              isLoading={loadingStates[`${widget.toolName}-refresh`] || false}
               onRefresh={() => {
                 const tool = enabledTools.find(
                   (t) => t.name === widget.toolName,
@@ -51,7 +49,6 @@ export function PortalWidgetGrid({
               }}
             />
           )}
-
         </div>
       ))}
     </div>

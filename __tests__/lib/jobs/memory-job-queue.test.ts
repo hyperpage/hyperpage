@@ -7,21 +7,21 @@
  * - Error handling for invalid inputs
  */
 
-import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
-import { MemoryJobQueue } from '../../../lib/jobs/memory-job-queue';
-import { JobStatus, JobPriority, JobType } from '../../../lib/types/jobs';
-import { generateJobId } from '../../../lib/jobs/memory-job-queue';
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { MemoryJobQueue } from "../../../lib/jobs/memory-job-queue";
+import { JobStatus, JobPriority, JobType } from "../../../lib/types/jobs";
+import { generateJobId } from "../../../lib/jobs/memory-job-queue";
 
 // Mock the database module
-vi.mock('../../../lib/database', () => ({
+vi.mock("../../../lib/database", () => ({
   db: {
     insert: vi.fn(() => ({ values: vi.fn() })),
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: vi.fn(() => ({
-          limit: vi.fn(() => [])
-        }))
-      }))
+          limit: vi.fn(() => []),
+        })),
+      })),
     })),
     update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
     delete: vi.fn(() => ({ where: vi.fn() })),
@@ -29,11 +29,11 @@ vi.mock('../../../lib/database', () => ({
   },
 }));
 
-describe('Memory Job Queue - Basic Operations', () => {
+describe("Memory Job Queue - Basic Operations", () => {
   let queue: MemoryJobQueue;
 
   beforeEach(() => {
-    queue = new MemoryJobQueue('test-queue', 'Test Job Queue');
+    queue = new MemoryJobQueue("test-queue", "Test Job Queue");
   });
 
   afterAll(async () => {
@@ -41,26 +41,26 @@ describe('Memory Job Queue - Basic Operations', () => {
     await queue?.clear();
   });
 
-  describe('Queue Initialization', () => {
-    it('should create a queue with specified ID and name', () => {
-      const customQueue = new MemoryJobQueue('custom-id', 'Custom Name');
-      expect(customQueue.id).toBe('custom-id');
-      expect(customQueue.name).toBe('Custom Name');
+  describe("Queue Initialization", () => {
+    it("should create a queue with specified ID and name", () => {
+      const customQueue = new MemoryJobQueue("custom-id", "Custom Name");
+      expect(customQueue.id).toBe("custom-id");
+      expect(customQueue.name).toBe("Custom Name");
     });
 
-    it('should create a queue with default values', () => {
-      expect(queue.id).toBe('test-queue');
-      expect(queue.name).toBe('Test Job Queue');
+    it("should create a queue with default values", () => {
+      expect(queue.id).toBe("test-queue");
+      expect(queue.name).toBe("Test Job Queue");
     });
   });
 
-  describe('Job Enqueue', () => {
-    it('should enqueue a valid job', async () => {
+  describe("Job Enqueue", () => {
+    it("should enqueue a valid job", async () => {
       const jobSpec = {
-        id: generateJobId('test'),
+        id: generateJobId("test"),
         type: JobType.DATA_REFRESH,
-        name: 'Test Data Refresh',
-        priority: JobPriority.MEDIUM
+        name: "Test Data Refresh",
+        priority: JobPriority.MEDIUM,
       };
 
       const job = await queue.enqueue(jobSpec);
@@ -71,51 +71,51 @@ describe('Memory Job Queue - Basic Operations', () => {
       expect(job.status).toBe(JobStatus.PENDING);
     });
 
-    it('should validate job fields', async () => {
+    it("should validate job fields", async () => {
       const invalidJobSpec = {
-        id: '',
+        id: "",
         type: JobType.DATA_REFRESH,
-        name: 'Invalid Job',
-        priority: JobPriority.LOW
+        name: "Invalid Job",
+        priority: JobPriority.LOW,
       };
 
       await expect(queue.enqueue(invalidJobSpec)).rejects.toThrow();
     });
 
-    it('should reject duplicate job IDs', async () => {
+    it("should reject duplicate job IDs", async () => {
       const jobSpec = {
-        id: 'duplicate-job',
+        id: "duplicate-job",
         type: JobType.CACHE_WARM,
-        name: 'Cache Warming Job',
-        priority: JobPriority.LOW
+        name: "Cache Warming Job",
+        priority: JobPriority.LOW,
       };
 
       await queue.enqueue(jobSpec);
-      await expect(queue.enqueue(jobSpec)).rejects.toThrow('already exists');
+      await expect(queue.enqueue(jobSpec)).rejects.toThrow("already exists");
     });
   });
 
-  describe('Job Dequeue', () => {
-    it('should dequeue jobs by priority (highest first)', async () => {
+  describe("Job Dequeue", () => {
+    it("should dequeue jobs by priority (highest first)", async () => {
       const lowJob = await queue.enqueue({
-        id: generateJobId('low'),
+        id: generateJobId("low"),
         type: JobType.MAINTENANCE,
-        name: 'Low Priority Job',
-        priority: JobPriority.LOW
+        name: "Low Priority Job",
+        priority: JobPriority.LOW,
       });
 
       const highJob = await queue.enqueue({
-        id: generateJobId('high'),
+        id: generateJobId("high"),
         type: JobType.RATE_LIMIT_UPDATE,
-        name: 'High Priority Job',
-        priority: JobPriority.HIGH
+        name: "High Priority Job",
+        priority: JobPriority.HIGH,
       });
 
       const criticalJob = await queue.enqueue({
-        id: generateJobId('critical'),
+        id: generateJobId("critical"),
         type: JobType.USER_OPERATION,
-        name: 'Critical Job',
-        priority: JobPriority.CRITICAL
+        name: "Critical Job",
+        priority: JobPriority.CRITICAL,
       });
 
       // Dequeue should return highest priority first
@@ -129,12 +129,12 @@ describe('Memory Job Queue - Basic Operations', () => {
       expect(thirdDequeued?.id).toBe(lowJob.id);
     });
 
-    it('should update job status when dequeued', async () => {
+    it("should update job status when dequeued", async () => {
       const jobSpec = {
-        id: generateJobId('status-test'),
+        id: generateJobId("status-test"),
         type: JobType.CACHE_INVALIDATION,
-        name: 'Status Test Job',
-        priority: JobPriority.MEDIUM
+        name: "Status Test Job",
+        priority: JobPriority.MEDIUM,
       };
 
       await queue.enqueue(jobSpec);
@@ -144,19 +144,19 @@ describe('Memory Job Queue - Basic Operations', () => {
       expect(dequeued?.startedAt).toBeDefined();
     });
 
-    it('should return undefined when queue is empty', async () => {
+    it("should return undefined when queue is empty", async () => {
       const result = await queue.dequeue();
       expect(result).toBeUndefined();
     });
   });
 
-  describe('Job Peek', () => {
-    it('should peek at the next job without removing it', async () => {
+  describe("Job Peek", () => {
+    it("should peek at the next job without removing it", async () => {
       const job = await queue.enqueue({
-        id: generateJobId('peek-test'),
+        id: generateJobId("peek-test"),
         type: JobType.CACHE_WARM,
-        name: 'Peek Test',
-        priority: JobPriority.MEDIUM
+        name: "Peek Test",
+        priority: JobPriority.MEDIUM,
       });
 
       const peeked = await queue.peek();
@@ -166,19 +166,19 @@ describe('Memory Job Queue - Basic Operations', () => {
       expect(await queue.peek()).toBeDefined();
     });
 
-    it('should return undefined when queue is empty', async () => {
+    it("should return undefined when queue is empty", async () => {
       const result = await queue.peek();
       expect(result).toBeUndefined();
     });
   });
 
-  describe('Job Cancellation', () => {
-    it('should cancel a pending job', async () => {
+  describe("Job Cancellation", () => {
+    it("should cancel a pending job", async () => {
       const job = await queue.enqueue({
-        id: generateJobId('cancel-test'),
+        id: generateJobId("cancel-test"),
         type: JobType.DATA_REFRESH,
-        name: 'Cancel Test',
-        priority: JobPriority.MEDIUM
+        name: "Cancel Test",
+        priority: JobPriority.MEDIUM,
       });
 
       const cancelled = await queue.cancel(job.id);
@@ -188,27 +188,31 @@ describe('Memory Job Queue - Basic Operations', () => {
       expect(jobInfo?.status).toBe(JobStatus.CANCELLED);
     });
 
-    it('should return false for non-existent job ID', async () => {
-      const result = await queue.cancel('non-existent');
+    it("should return false for non-existent job ID", async () => {
+      const result = await queue.cancel("non-existent");
       expect(result).toBe(false);
     });
   });
 
-  describe('Job Status Updates', () => {
-    it('should update job status and result', async () => {
+  describe("Job Status Updates", () => {
+    it("should update job status and result", async () => {
       const job = await queue.enqueue({
-        id: generateJobId('status-update'),
+        id: generateJobId("status-update"),
         type: JobType.CACHE_WARM,
-        name: 'Status Update Test',
-        priority: JobPriority.MEDIUM
+        name: "Status Update Test",
+        priority: JobPriority.MEDIUM,
       });
 
       const result = {
         success: true,
-        metadata: { itemsProcessed: 42 }
+        metadata: { itemsProcessed: 42 },
       };
 
-      const updatedJob = await queue.updateJobStatus(job.id, JobStatus.COMPLETED, result);
+      const updatedJob = await queue.updateJobStatus(
+        job.id,
+        JobStatus.COMPLETED,
+        result,
+      );
 
       expect(updatedJob?.status).toBe(JobStatus.COMPLETED);
       expect(updatedJob?.result).toEqual(result);
@@ -217,22 +221,22 @@ describe('Memory Job Queue - Basic Operations', () => {
     });
   });
 
-  describe('Queue Statistics', () => {
-    it('should track job counts correctly', async () => {
+  describe("Queue Statistics", () => {
+    it("should track job counts correctly", async () => {
       expect((await queue.getStats()).totalJobs).toBe(0);
 
       await queue.enqueue({
-        id: generateJobId('stat-test-1'),
+        id: generateJobId("stat-test-1"),
         type: JobType.DATA_REFRESH,
-        name: 'Stat Test 1',
-        priority: JobPriority.LOW
+        name: "Stat Test 1",
+        priority: JobPriority.LOW,
       });
 
       await queue.enqueue({
-        id: generateJobId('stat-test-2'),
+        id: generateJobId("stat-test-2"),
         type: JobType.CACHE_WARM,
-        name: 'Stat Test 2',
-        priority: JobPriority.MEDIUM
+        name: "Stat Test 2",
+        priority: JobPriority.MEDIUM,
       });
 
       expect((await queue.getStats()).totalJobs).toBe(2);
@@ -247,20 +251,20 @@ describe('Memory Job Queue - Basic Operations', () => {
     });
   });
 
-  describe('Queue Operations', () => {
-    it('should clear all jobs from queue', async () => {
+  describe("Queue Operations", () => {
+    it("should clear all jobs from queue", async () => {
       await queue.enqueue({
-        id: generateJobId('clear-test-1'),
+        id: generateJobId("clear-test-1"),
         type: JobType.DATA_REFRESH,
-        name: 'Clear Test 1',
-        priority: JobPriority.LOW
+        name: "Clear Test 1",
+        priority: JobPriority.LOW,
       });
 
       await queue.enqueue({
-        id: generateJobId('clear-test-2'),
+        id: generateJobId("clear-test-2"),
         type: JobType.CACHE_WARM,
-        name: 'Clear Test 2',
-        priority: JobPriority.LOW
+        name: "Clear Test 2",
+        priority: JobPriority.LOW,
       });
 
       const clearedCount = await queue.clear();
@@ -270,15 +274,17 @@ describe('Memory Job Queue - Basic Operations', () => {
       expect(stats.totalJobs).toBe(0);
     });
 
-    it('should handle concurrent enqueue operations', async () => {
+    it("should handle concurrent enqueue operations", async () => {
       const promises = [];
       for (let i = 0; i < 10; i++) {
-        promises.push(queue.enqueue({
-          id: generateJobId(`concurrent-${i}`),
-          type: JobType.MAINTENANCE,
-          name: `Concurrent Job ${i}`,
-          priority: JobPriority.MEDIUM
-        }));
+        promises.push(
+          queue.enqueue({
+            id: generateJobId(`concurrent-${i}`),
+            type: JobType.MAINTENANCE,
+            name: `Concurrent Job ${i}`,
+            priority: JobPriority.MEDIUM,
+          }),
+        );
       }
 
       const results = await Promise.all(promises);

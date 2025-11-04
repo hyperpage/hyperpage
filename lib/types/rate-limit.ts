@@ -1,12 +1,12 @@
 // Universal rate limit types for all platforms
 
 export interface RateLimitUsage {
-  limit: number | null;        // Maximum requests allowed (null if unknown)
-  remaining: number | null;    // Requests remaining (null if unknown)
-  used: number | null;         // Requests used (calculated as limit - remaining, null if unknown)
+  limit: number | null; // Maximum requests allowed (null if unknown)
+  remaining: number | null; // Requests remaining (null if unknown)
+  used: number | null; // Requests used (calculated as limit - remaining, null if unknown)
   usagePercent: number | null; // Calculated percentage: (used/limit)*100 (null if unknown)
-  resetTime: number | null;    // Timestamp when limits reset (null if unknown)
-  retryAfter: number | null;   // Seconds to wait for next request (null if none)
+  resetTime: number | null; // Timestamp when limits reset (null if unknown)
+  retryAfter: number | null; // Seconds to wait for next request (null if none)
 }
 
 export interface PlatformRateLimits {
@@ -28,10 +28,10 @@ export interface PlatformRateLimits {
 }
 
 export interface RateLimitStatus {
-  platform: string;      // Tool name ('github', 'gitlab', 'jira')
-  lastUpdated: number;   // Timestamp when this data was last fetched
-  dataFresh: boolean;    // True if data is from recent API call (< 5 min old)
-  status: 'normal' | 'warning' | 'critical' | 'unknown'; // Overall status
+  platform: string; // Tool name ('github', 'gitlab', 'jira')
+  lastUpdated: number; // Timestamp when this data was last fetched
+  dataFresh: boolean; // True if data is from recent API call (< 5 min old)
+  status: "normal" | "warning" | "critical" | "unknown"; // Overall status
   limits: PlatformRateLimits;
 }
 

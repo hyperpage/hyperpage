@@ -5,7 +5,12 @@ import { getToolIcon } from "../../tools";
 import { ToolIntegration } from "../../tools/tool-types";
 
 import { Wifi, WifiOff, Zap, UserCheck, UserX } from "lucide-react";
-import { useMultipleRateLimits, getRateLimitStatusColor, getRateLimitStatusBgColor, formatTimeUntilReset } from "./hooks/useRateLimit";
+import {
+  useMultipleRateLimits,
+  getRateLimitStatusColor,
+  getRateLimitStatusBgColor,
+  formatTimeUntilReset,
+} from "./hooks/useRateLimit";
 import { RateLimitStatus } from "../../lib/types/rate-limit";
 
 interface ToolHealthInfo extends ToolIntegration {
@@ -16,15 +21,20 @@ export default function ToolStatusRow() {
   const [toolIntegrations, setToolIntegrations] = useState<ToolHealthInfo[]>(
     [],
   );
-  const [enabledPlatformSlugs, setEnabledPlatformSlugs] = useState<string[]>([]);
+  const [enabledPlatformSlugs, setEnabledPlatformSlugs] = useState<string[]>(
+    [],
+  );
   const [authStatus, setAuthStatus] = useState<{
     authenticated: boolean;
-    authenticatedTools: Record<string, { connected: boolean; connectedAt: Date; lastUsed: Date }>;
+    authenticatedTools: Record<
+      string,
+      { connected: boolean; connectedAt: Date; lastUsed: Date }
+    >;
   }>({ authenticated: false, authenticatedTools: {} });
 
   // Get rate limit status for all enabled tools that support rate limiting - only when we have slugs
   const { statuses: rateLimitStatuses } = useMultipleRateLimits(
-    enabledPlatformSlugs.length > 0 ? enabledPlatformSlugs : ['dummy'] // Use dummy to avoid empty array issues
+    enabledPlatformSlugs.length > 0 ? enabledPlatformSlugs : ["dummy"], // Use dummy to avoid empty array issues
   );
 
   // Load tool integrations, auth status, and health info on component mount
@@ -57,7 +67,11 @@ export default function ToolStatusRow() {
 
           // Collect platform slugs that support rate limiting for monitoring
           const rateLimitEnabledSlugs = data.enabledTools
-            .filter((tool: unknown) => (tool as { capabilities?: string[] }).capabilities?.includes('rate-limit'))
+            .filter((tool: unknown) =>
+              (tool as { capabilities?: string[] }).capabilities?.includes(
+                "rate-limit",
+              ),
+            )
             .map((tool: unknown) => (tool as { slug: string }).slug);
 
           // Set platform slugs first to trigger rate limit loading
@@ -66,14 +80,15 @@ export default function ToolStatusRow() {
           // Set basic integrations (no need for detailed health info)
           setToolIntegrations(basicIntegrations);
         } else {
-          console.error("Failed to fetch enabled tools");
+          
         }
       } catch (error) {
-        console.error("Error loading tool integrations:", error);
+        
       }
     }
 
-    loadIntegrations();  }, []);
+    loadIntegrations();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -122,12 +137,15 @@ export default function ToolStatusRow() {
   /**
    * Generate detailed tooltip text with authentication and rate limit information
    */
-  const generateTooltipText = (tool: ToolHealthInfo, rateLimitStatus: RateLimitStatus | undefined): string => {
+  const generateTooltipText = (
+    tool: ToolHealthInfo,
+    rateLimitStatus: RateLimitStatus | undefined,
+  ): string => {
     const authTool = authStatus.authenticatedTools[tool.slug];
     let tooltip = `${tool.name} - ${tool.status}`;
-    tooltip += `\nAuthentication: ${authTool?.connected ? 'Connected' : 'Not connected'}`;
+    tooltip += `\nAuthentication: ${authTool?.connected ? "Connected" : "Not connected"}`;
 
-    if (!rateLimitStatus || rateLimitStatus.status === 'unknown') {
+    if (!rateLimitStatus || rateLimitStatus.status === "unknown") {
       return tooltip;
     }
 
@@ -163,14 +181,14 @@ export default function ToolStatusRow() {
     };
 
     // GitHub specific APIs
-    if (tool.name.toLowerCase() === 'github' && limits.github) {
-      addApiDetails('Core API', limits.github.core);
-      addApiDetails('Search API', limits.github.search);
-      addApiDetails('GraphQL API', limits.github.graphql);
+    if (tool.name.toLowerCase() === "github" && limits.github) {
+      addApiDetails("Core API", limits.github.core);
+      addApiDetails("Search API", limits.github.search);
+      addApiDetails("GraphQL API", limits.github.graphql);
     }
 
     // GitLab global limits
-    if (tool.name.toLowerCase() === 'gitlab' && limits.gitlab?.global) {
+    if (tool.name.toLowerCase() === "gitlab" && limits.gitlab?.global) {
       const usage = limits.gitlab.global;
       tooltip += `\nGlobal Limit: Active`;
       if (usage.retryAfter) {
@@ -182,7 +200,7 @@ export default function ToolStatusRow() {
     }
 
     // Jira global limits
-    if (tool.name.toLowerCase() === 'jira' && limits.jira?.global) {
+    if (tool.name.toLowerCase() === "jira" && limits.jira?.global) {
       tooltip += `\nInstance Limits: Active`;
     }
 
@@ -217,45 +235,59 @@ export default function ToolStatusRow() {
                   </div>
 
                   {/* Rate limit indicator - show usage percentage if available */}
-                  {rateLimitStatus && rateLimitStatus.status !== 'unknown' && (
-                    <div className={`absolute -bottom-1 -right-1 w-5 h-3 rounded-sm border border-background flex items-center justify-center text-[8px] font-bold ${getRateLimitStatusBgColor(rateLimitStatus.status)} ${getRateLimitStatusColor(rateLimitStatus.status)}`}>
+                  {rateLimitStatus && rateLimitStatus.status !== "unknown" && (
+                    <div
+                      className={`absolute -bottom-1 -right-1 w-5 h-3 rounded-sm border border-background flex items-center justify-center text-[8px] font-bold ${getRateLimitStatusBgColor(rateLimitStatus.status)} ${getRateLimitStatusColor(rateLimitStatus.status)}`}
+                    >
                       {(() => {
                         // Get the highest usage percentage across all limits
                         const allUsages = Object.values(rateLimitStatus.limits)
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          .flatMap((platformLimits: any) => Object.values(platformLimits || {}))
+                          .flatMap((platformLimits: any) =>
+                            Object.values(platformLimits || {}),
+                          )
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           .map((usage: any) => usage.usagePercent)
-                          .filter((percent: number | null) => percent !== null) as number[];
+                          .filter(
+                            (percent: number | null) => percent !== null,
+                          ) as number[];
 
-                        return allUsages.length > 0 ? `${Math.max(...allUsages).toFixed(2)}%` : '?';
+                        return allUsages.length > 0
+                          ? `${Math.max(...allUsages).toFixed(2)}%`
+                          : "?";
                       })()}
                     </div>
                   )}
 
                   {/* Rate limit warning notification badge for GitLab */}
-                  {rateLimitStatus && tool.slug === 'gitlab' && rateLimitStatus.status === 'critical' && (
-                    <div className="absolute -top-2 -left-2">
-                      <div className="bg-red-500 text-white text-[8px] px-1 py-0.5 rounded font-bold animate-pulse">
-                        LIMITED
+                  {rateLimitStatus &&
+                    tool.slug === "gitlab" &&
+                    rateLimitStatus.status === "critical" && (
+                      <div className="absolute -top-2 -left-2">
+                        <div className="bg-red-500 text-white text-[8px] px-1 py-0.5 rounded font-bold animate-pulse">
+                          LIMITED
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* OAuth Authentication indicator - left side */}
                   <div
                     className={`absolute -top-1 -left-1 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center ${getAuthColor(tool.slug)}`}
-                    title={`${tool.name} - ${authStatus.authenticatedTools[tool.slug]?.connected ? 'Authenticated' : 'Not authenticated'}`}
+                    title={`${tool.name} - ${authStatus.authenticatedTools[tool.slug]?.connected ? "Authenticated" : "Not authenticated"}`}
                   >
                     {getAuthIcon(tool.slug)}
                   </div>
 
                   {/* Rate limit warning/critical indicator */}
-                  {rateLimitStatus && (rateLimitStatus.status === 'warning' || rateLimitStatus.status === 'critical') && (
-                    <div className="absolute -top-2 -left-2">
-                      <Zap className={`w-3 h-3 ${getRateLimitStatusColor(rateLimitStatus.status)}`} />
-                    </div>
-                  )}
+                  {rateLimitStatus &&
+                    (rateLimitStatus.status === "warning" ||
+                      rateLimitStatus.status === "critical") && (
+                      <div className="absolute -top-2 -left-2">
+                        <Zap
+                          className={`w-3 h-3 ${getRateLimitStatusColor(rateLimitStatus.status)}`}
+                        />
+                      </div>
+                    )}
                 </div>
 
                 <span className="text-xs text-center mt-2 text-muted-foreground capitalize">
@@ -265,8 +297,6 @@ export default function ToolStatusRow() {
             );
           })}
         </div>
-
-
       </div>
     </div>
   );

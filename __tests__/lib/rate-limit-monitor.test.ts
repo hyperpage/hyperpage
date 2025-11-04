@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   calculateLimitUsage,
   calculateOverallStatus,
@@ -7,103 +7,96 @@ import {
   transformJiraLimits,
   getRateLimitStatus,
   clearRateLimitCache,
-  getCacheStats
-} from '../../lib/rate-limit-monitor';
-import { PlatformRateLimits } from '../../lib/types/rate-limit';
+  getCacheStats,
+} from "../../lib/rate-limit-monitor";
+import { PlatformRateLimits } from "../../lib/types/rate-limit";
 
-import { toolRegistry } from '../../tools/registry';
-import { Tool } from '../../tools/tool-types';
+import { toolRegistry } from "../../tools/registry";
+import { Tool } from "../../tools/tool-types";
 
-// Type-safe mock tool registry
-type MockToolRegistry = { [key: string]: Tool | undefined };
+// TypeScript-safe global fetch access
+const safeGlobal = globalThis as unknown as { fetch?: unknown };
 
-// Mock tool for testing with minimal required properties
-type MockTool = Tool & {
-  handlers: {
-    'rate-limit': ReturnType<typeof vi.fn>;
-  };
-};
-
-describe('Rate Limit Monitor Library', () => {
+describe("Rate Limit Monitor Library", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearRateLimitCache();
     // Ensure global.fetch is not mocked by previous tests
-    delete (global as any).fetch;
+    safeGlobal.fetch = undefined;
   });
 
   afterEach(() => {
     clearRateLimitCache();
   });
 
-  describe('calculateLimitUsage', () => {
-    it('should calculate usage with valid limits and remaining', () => {
+  describe("calculateLimitUsage", () => {
+    it("should calculate usage with valid limits and remaining", () => {
       const result = calculateLimitUsage(1000, 200);
 
       expect(result).toEqual({
         limit: 1000,
         remaining: 200,
         used: 800,
-        usagePercent: 80
+        usagePercent: 80,
       });
     });
 
-    it('should handle null limit', () => {
+    it("should handle null limit", () => {
       const result = calculateLimitUsage(null, 100);
 
       expect(result).toEqual({
         limit: null,
         remaining: 100,
         used: null,
-        usagePercent: null
+        usagePercent: null,
       });
     });
 
-    it('should handle null remaining', () => {
+    it("should handle null remaining", () => {
       const result = calculateLimitUsage(1000, null);
 
       expect(result).toEqual({
         limit: 1000,
         remaining: null,
         used: null,
-        usagePercent: null
+        usagePercent: null,
       });
     });
 
-    it('should handle both null values', () => {
+    it("should handle both null values", () => {
       const result = calculateLimitUsage(null, null);
 
       expect(result).toEqual({
         limit: null,
         remaining: null,
         used: null,
-        usagePercent: null
+        usagePercent: null,
       });
     });
 
-    it('should handle zero limit gracefully', () => {
+    it("should handle zero limit gracefully", () => {
       const result = calculateLimitUsage(0, 10);
 
       expect(result).toEqual({
         limit: 0,
         remaining: 10,
         used: 0,
-        usagePercent: 0
+        usagePercent: 0,
       });
     });
 
-    it('should cap usagePercent at 100%', () => {
+    it("should cap usagePercent at 100%", () => {
       const result = calculateLimitUsage(100, 200); // Used would be -100
 
       expect(result.usagePercent).toBe(0); // Can't go below 0
     });
   });
 
-  describe('calculateOverallStatus', () => {
+  describe("calculateOverallStatus", () => {
     it('should return "unknown" when no usage data', () => {
       const limits: PlatformRateLimits = {};
 
-      expect(calculateOverallStatus(limits)).toBe('unknown');
+      expect(calculateOverallStatus(limits)).toBe("unknown");
     });
 
     it('should return "normal" for low usage', () => {
@@ -115,7 +108,7 @@ describe('Rate Limit Monitor Library', () => {
             used: 150,
             usagePercent: 15,
             resetTime: null,
-            retryAfter: null
+            retryAfter: null,
           },
           search: {
             limit: 1000,
@@ -123,7 +116,7 @@ describe('Rate Limit Monitor Library', () => {
             used: 150,
             usagePercent: 15,
             resetTime: null,
-            retryAfter: null
+            retryAfter: null,
           },
           graphql: {
             limit: 1000,
@@ -131,12 +124,12 @@ describe('Rate Limit Monitor Library', () => {
             used: 150,
             usagePercent: 15,
             resetTime: null,
-            retryAfter: null
-          }
-        }
+            retryAfter: null,
+          },
+        },
       };
 
-      expect(calculateOverallStatus(limits)).toBe('normal');
+      expect(calculateOverallStatus(limits)).toBe("normal");
     });
 
     it('should return "warning" for medium-high usage', () => {
@@ -148,7 +141,7 @@ describe('Rate Limit Monitor Library', () => {
             used: 750,
             usagePercent: 75,
             resetTime: null,
-            retryAfter: null
+            retryAfter: null,
           },
           search: {
             limit: 1000,
@@ -156,7 +149,7 @@ describe('Rate Limit Monitor Library', () => {
             used: 750,
             usagePercent: 75,
             resetTime: null,
-            retryAfter: null
+            retryAfter: null,
           },
           graphql: {
             limit: 1000,
@@ -164,12 +157,12 @@ describe('Rate Limit Monitor Library', () => {
             used: 750,
             usagePercent: 75,
             resetTime: null,
-            retryAfter: null
-          }
-        }
+            retryAfter: null,
+          },
+        },
       };
 
-      expect(calculateOverallStatus(limits)).toBe('warning');
+      expect(calculateOverallStatus(limits)).toBe("warning");
     });
 
     it('should return "critical" for very high usage', () => {
@@ -181,7 +174,7 @@ describe('Rate Limit Monitor Library', () => {
             used: 990,
             usagePercent: 99,
             resetTime: null,
-            retryAfter: null
+            retryAfter: null,
           },
           search: {
             limit: 1000,
@@ -189,7 +182,7 @@ describe('Rate Limit Monitor Library', () => {
             used: 990,
             usagePercent: 99,
             resetTime: null,
-            retryAfter: null
+            retryAfter: null,
           },
           graphql: {
             limit: 1000,
@@ -197,15 +190,15 @@ describe('Rate Limit Monitor Library', () => {
             used: 990,
             usagePercent: 99,
             resetTime: null,
-            retryAfter: null
-          }
-        }
+            retryAfter: null,
+          },
+        },
       };
 
-      expect(calculateOverallStatus(limits)).toBe('critical');
+      expect(calculateOverallStatus(limits)).toBe("critical");
     });
 
-    it('should return highest severity across multiple platforms', () => {
+    it("should return highest severity across multiple platforms", () => {
       const limits: PlatformRateLimits = {
         github: {
           core: {
@@ -214,7 +207,7 @@ describe('Rate Limit Monitor Library', () => {
             used: 100,
             usagePercent: 10,
             resetTime: null,
-            retryAfter: null
+            retryAfter: null,
           },
           search: {
             limit: 1000,
@@ -222,7 +215,7 @@ describe('Rate Limit Monitor Library', () => {
             used: 100,
             usagePercent: 10,
             resetTime: null,
-            retryAfter: null
+            retryAfter: null,
           },
           graphql: {
             limit: 1000,
@@ -230,8 +223,8 @@ describe('Rate Limit Monitor Library', () => {
             used: 100,
             usagePercent: 10,
             resetTime: null,
-            retryAfter: null
-          }
+            retryAfter: null,
+          },
         },
         gitlab: {
           global: {
@@ -240,24 +233,24 @@ describe('Rate Limit Monitor Library', () => {
             used: 900,
             usagePercent: 90,
             resetTime: null,
-            retryAfter: null
-          }
-        }
+            retryAfter: null,
+          },
+        },
       };
 
       const result = calculateOverallStatus(limits);
-      expect(result).toBe('critical');
+      expect(result).toBe("critical");
     });
   });
 
-  describe('transformGitHubLimits', () => {
-    it('should transform GitHub API response to universal format', () => {
+  describe("transformGitHubLimits", () => {
+    it("should transform GitHub API response to universal format", () => {
       const githubResponse = {
         resources: {
           core: { limit: 5000, remaining: 4990, reset: 1640995200 },
           search: { limit: 30, remaining: 27, reset: 1640995200 },
-          graphql: { limit: 5000, remaining: 4995, reset: 1640995200 }
-        }
+          graphql: { limit: 5000, remaining: 4995, reset: 1640995200 },
+        },
       };
 
       const result = transformGitHubLimits(githubResponse);
@@ -269,7 +262,7 @@ describe('Rate Limit Monitor Library', () => {
           used: 10,
           usagePercent: 0.2,
           resetTime: 1640995200 * 1000,
-          retryAfter: null
+          retryAfter: null,
         },
         search: {
           limit: 30,
@@ -277,7 +270,7 @@ describe('Rate Limit Monitor Library', () => {
           used: 3,
           usagePercent: 10,
           resetTime: 1640995200 * 1000,
-          retryAfter: null
+          retryAfter: null,
         },
         graphql: {
           limit: 5000,
@@ -285,15 +278,15 @@ describe('Rate Limit Monitor Library', () => {
           used: 5,
           usagePercent: 0.1,
           resetTime: 1640995200 * 1000,
-          retryAfter: null
-        }
+          retryAfter: null,
+        },
       });
     });
   });
 
-  describe('transformGitLabLimits', () => {
-    it('should return GitLab global limits with retryAfter', () => {
-      const gitlabResponse = { message: 'Rate limit exceeded' };
+  describe("transformGitLabLimits", () => {
+    it("should return GitLab global limits with retryAfter", () => {
+      const gitlabResponse = { message: "Rate limit exceeded" };
 
       const result = transformGitLabLimits(gitlabResponse, 60);
 
@@ -303,13 +296,13 @@ describe('Rate Limit Monitor Library', () => {
           remaining: null,
           used: null,
           usagePercent: 90, // High usage when retry-after is present (indicates API stress)
-          resetTime: Date.now() + (60 * 1000),
-          retryAfter: 60
-        }
+          resetTime: Date.now() + 60 * 1000,
+          retryAfter: 60,
+        },
       });
     });
 
-    it('should handle null retryAfter', () => {
+    it("should handle null retryAfter", () => {
       const result = transformGitLabLimits({}, null);
 
       expect(result.gitlab!.global.resetTime).toBeNull();
@@ -317,9 +310,9 @@ describe('Rate Limit Monitor Library', () => {
     });
   });
 
-  describe('transformJiraLimits', () => {
-    it('should return Jira global limits structure', () => {
-      const jiraResponse = { message: 'Rate limit exceeded' };
+  describe("transformJiraLimits", () => {
+    it("should return Jira global limits structure", () => {
+      const jiraResponse = { message: "Rate limit exceeded" };
 
       const result = transformJiraLimits(jiraResponse);
 
@@ -330,27 +323,27 @@ describe('Rate Limit Monitor Library', () => {
           used: null,
           usagePercent: null,
           resetTime: null,
-          retryAfter: null
-        }
+          retryAfter: null,
+        },
       });
     });
   });
 
-  describe('getRateLimitStatus', () => {
+  describe("getRateLimitStatus", () => {
     const mockRateLimitHandler = vi.fn();
 
     const mockTool: Tool = {
-      name: 'GitHub',
-      slug: 'github',
+      name: "GitHub",
+      slug: "github",
       enabled: true,
-      capabilities: ['rate-limit'],
-      ui: { color: '', icon: 'GitHubIcon' },
+      capabilities: ["rate-limit"],
+      ui: { color: "", icon: "GitHubIcon" },
       widgets: [],
       apis: {},
       config: {},
       handlers: {
-        'rate-limit': mockRateLimitHandler
-      }
+        "rate-limit": mockRateLimitHandler,
+      },
     };
 
     beforeEach(() => {
@@ -360,9 +353,9 @@ describe('Rate Limit Monitor Library', () => {
           resources: {
             core: { limit: 5000, remaining: 4000, reset: 1640995200 },
             search: { limit: 30, remaining: 25, reset: 1640995200 },
-            graphql: { limit: 5000, remaining: 4990, reset: 1640995200 }
-          }
-        }
+            graphql: { limit: 5000, remaining: 4990, reset: 1640995200 },
+          },
+        },
       });
     });
 
@@ -370,129 +363,171 @@ describe('Rate Limit Monitor Library', () => {
       delete (toolRegistry as Record<string, Tool>).github;
     });
 
-    it('should return null for tools without rate-limit capability', async () => {
+    it("should return null for tools without rate-limit capability", async () => {
       const tool = (toolRegistry as Record<string, Tool>).github;
       if (tool) {
         tool.capabilities = [];
       }
 
-      const result = await getRateLimitStatus('github');
+      const result = await getRateLimitStatus("github");
 
       expect(result).toBeNull();
     });
 
-    it('should return null for non-existent tools', async () => {
-      const result = await getRateLimitStatus('nonexistent');
+    it("should return null for non-existent tools", async () => {
+      const result = await getRateLimitStatus("nonexistent");
 
       expect(result).toBeNull();
     });
 
-    it.skip('should fetch fresh rate limit data successfully', async () => {
+    it.skip("should fetch fresh rate limit data successfully", async () => {
       const mockResponseData = {
-        platform: 'github',
+        platform: "github",
         lastUpdated: Date.now(),
         dataFresh: true,
-        status: 'normal' as const,
+        status: "normal" as const,
         limits: {
           github: {
-            core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: 1640995200 * 1000, retryAfter: null },
-            search: { limit: 30, remaining: 25, used: 5, usagePercent: 16.67, resetTime: 1640995200 * 1000, retryAfter: null },
-            graphql: { limit: 5000, remaining: 4990, used: 10, usagePercent: 0.2, resetTime: 1640995200 * 1000, retryAfter: null }
-          }
-        }
+            core: {
+              limit: 5000,
+              remaining: 4000,
+              used: 1000,
+              usagePercent: 20,
+              resetTime: 1640995200 * 1000,
+              retryAfter: null,
+            },
+            search: {
+              limit: 30,
+              remaining: 25,
+              used: 5,
+              usagePercent: 16.67,
+              resetTime: 1640995200 * 1000,
+              retryAfter: null,
+            },
+            graphql: {
+              limit: 5000,
+              remaining: 4990,
+              used: 10,
+              usagePercent: 0.2,
+              resetTime: 1640995200 * 1000,
+              retryAfter: null,
+            },
+          },
+        },
       };
 
       // Mock fetch
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponseData)
+        json: vi.fn().mockResolvedValue(mockResponseData),
       });
-      global.fetch = fetchMock;
+      safeGlobal.fetch = fetchMock;
 
-      const result = await getRateLimitStatus('github');
+      const result = await getRateLimitStatus("github");
 
       expect(result).not.toBeNull();
-      expect(result!.platform).toBe('github');
+      expect(result!.platform).toBe("github");
       expect(result!.dataFresh).toBe(true);
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringMatching(/\/api\/rate-limit\/github/)
+        expect.stringMatching(/\/api\/rate-limit\/github/),
       );
     });
 
-    it.skip('should use cached data when available and fresh', async () => {
+    it.skip("should use cached data when available and fresh", async () => {
       const mockResponseData = {
-        platform: 'github',
+        platform: "github",
         lastUpdated: Date.now(),
         dataFresh: true,
-        status: 'normal' as const,
+        status: "normal" as const,
         limits: {
           github: {
-            core: { limit: 5000, remaining: 4000, used: 1000, usagePercent: 20, resetTime: 1640995200 * 1000, retryAfter: null },
-            search: { limit: 30, remaining: 25, used: 5, usagePercent: 16.67, resetTime: 1640995200 * 1000, retryAfter: null },
-            graphql: { limit: 5000, remaining: 4990, used: 10, usagePercent: 0.2, resetTime: 1640995200 * 1000, retryAfter: null }
-          }
-        }
+            core: {
+              limit: 5000,
+              remaining: 4000,
+              used: 1000,
+              usagePercent: 20,
+              resetTime: 1640995200 * 1000,
+              retryAfter: null,
+            },
+            search: {
+              limit: 30,
+              remaining: 25,
+              used: 5,
+              usagePercent: 16.67,
+              resetTime: 1640995200 * 1000,
+              retryAfter: null,
+            },
+            graphql: {
+              limit: 5000,
+              remaining: 4990,
+              used: 10,
+              usagePercent: 0.2,
+              resetTime: 1640995200 * 1000,
+              retryAfter: null,
+            },
+          },
+        },
       };
 
       // First call to populate cache
-      global.fetch = vi.fn().mockResolvedValue({
+      safeGlobal.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue(mockResponseData)
+        json: vi.fn().mockResolvedValue(mockResponseData),
       });
 
-      await getRateLimitStatus('github');
+      await getRateLimitStatus("github");
 
       // Second call should use cache
-      const result = await getRateLimitStatus('github');
+      const result = await getRateLimitStatus("github");
 
       expect(result).not.toBeNull();
       // Should still be fresh (less than 5 minutes)
       expect(result!.dataFresh).toBe(true);
       // fetch should only be called once
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(safeGlobal.fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle API errors gracefully', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+    it("should handle API errors gracefully", async () => {
+      safeGlobal.fetch = vi.fn().mockResolvedValue({
         ok: false,
-        status: 500
+        status: 500,
       });
 
-      const result = await getRateLimitStatus('github');
+      const result = await getRateLimitStatus("github");
 
       expect(result).toBeNull();
     });
 
-    it('should handle network errors gracefully', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    it("should handle network errors gracefully", async () => {
+      safeGlobal.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
-      const result = await getRateLimitStatus('github');
+      const result = await getRateLimitStatus("github");
 
       expect(result).toBeNull();
     });
 
-    it('should use baseUrl parameter for custom origins', async () => {
-      const customBaseUrl = 'http://custom.example.com';
+    it("should use baseUrl parameter for custom origins", async () => {
+      const customBaseUrl = "http://custom.example.com";
 
       // This test runs separately, so we need to set up the tool
       const testTool: Tool = {
-        name: 'GitHub',
-        slug: 'github',
+        name: "GitHub",
+        slug: "github",
         enabled: true,
-        capabilities: ['rate-limit'],
-        ui: { color: '', icon: 'GitHubIcon' },
+        capabilities: ["rate-limit"],
+        ui: { color: "", icon: "GitHubIcon" },
         widgets: [],
         apis: {},
         handlers: {
-          'rate-limit': vi.fn().mockResolvedValue({
+          "rate-limit": vi.fn().mockResolvedValue({
             rateLimit: {
               resources: {
-                core: { limit: 5000, remaining: 4000, reset: 1640995200 }
-              }
-            }
-          })
-        }
+                core: { limit: 5000, remaining: 4000, reset: 1640995200 },
+              },
+            },
+          }),
+        },
       };
 
       (toolRegistry as Record<string, Tool>).github = testTool;
@@ -500,36 +535,38 @@ describe('Rate Limit Monitor Library', () => {
       const fetchSpy = vi.fn().mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue({
-          platform: 'github',
+          platform: "github",
           lastUpdated: Date.now(),
           dataFresh: true,
-          status: 'normal' as const,
-          limits: {}
-        })
+          status: "normal" as const,
+          limits: {},
+        }),
       });
 
-      global.fetch = fetchSpy;
+      safeGlobal.fetch = fetchSpy;
 
-      await getRateLimitStatus('github', customBaseUrl);
+      await getRateLimitStatus("github", customBaseUrl);
 
-      expect(fetchSpy).toHaveBeenCalledWith(`${customBaseUrl}/api/rate-limit/github`);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        `${customBaseUrl}/api/rate-limit/github`,
+      );
 
       // Clean up
       delete (toolRegistry as Record<string, Tool>).github;
     });
   });
 
-  describe('Cache Management', () => {
-    it('should track cache statistics', () => {
+  describe("Cache Management", () => {
+    it("should track cache statistics", () => {
       const stats = getCacheStats();
 
       expect(stats).toEqual({
         totalEntries: 0,
-        oldestData: null
+        oldestData: null,
       });
     });
 
-    it('should clear cache on demand', () => {
+    it("should clear cache on demand", () => {
       clearRateLimitCache();
       const stats = getCacheStats();
 

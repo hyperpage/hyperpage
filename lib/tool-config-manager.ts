@@ -5,10 +5,11 @@
  * Provides type-safe configuration loading, saving, and management.
  */
 
-import { db } from './database';
-import { toolConfigs, ToolConfig } from './database/schema';
-import { eq } from 'drizzle-orm';
-import { toolRegistry } from '../tools/registry';
+import { db } from "./database";
+import { toolConfigs } from "./database/schema";
+import { eq } from "drizzle-orm";
+import { toolRegistry } from "../tools/registry";
+import logger from "./logger";
 
 /**
  * User-configurable tool settings interface
@@ -17,7 +18,7 @@ export interface UserToolConfig {
   /** Whether the tool is enabled */
   enabled: boolean;
   /** User overrides for tool configuration */
-  config?: Record<string, any>;
+  config?: Record<string, unknown>;
   /** Custom refresh interval (overrides default) */
   refreshInterval?: number;
   /** Whether to show notifications for this tool */
@@ -35,8 +36,6 @@ class ToolConfigManager {
    */
   async loadToolConfigurations(): Promise<number> {
     try {
-      console.info('Loading persisted tool configurations...');
-
       const persistedConfigs = await db.select().from(toolConfigs);
       let loadedCount = 0;
 
@@ -46,8 +45,10 @@ class ToolConfigManager {
           const userConfig: UserToolConfig = {
             enabled: Boolean(config.enabled),
             config: config.config || undefined,
-            refreshInterval: config.refreshInterval ? Number(config.refreshInterval) : undefined,
-            notifications: Boolean(config.notifications)
+            refreshInterval: config.refreshInterval
+              ? Number(config.refreshInterval)
+              : undefined,
+            notifications: Boolean(config.notifications),
           };
 
           // Update the tool registry with persisted configuration
@@ -56,18 +57,21 @@ class ToolConfigManager {
           // Cache for quick access
           this.configCache.set(config.toolName, userConfig);
           loadedCount++;
-
         } catch (error) {
-          console.error(`Failed to load configuration for tool '${config.toolName}':`, error);
+          logger.error(
+            "Failed to load configuration for tool",
+            { toolName: config.toolName, error: error instanceof Error ? error.message : error }
+          );
           continue;
         }
       }
 
-      console.info(`Successfully loaded ${loadedCount} tool configurations`);
       return loadedCount;
-
     } catch (error) {
-      console.error('Failed to load tool configurations from database:', error);
+      logger.error(
+        "Failed to load tool configurations",
+        { error: error instanceof Error ? error.message : error }
+      );
       return 0;
     }
   }
@@ -75,21 +79,26 @@ class ToolConfigManager {
   /**
    * Save tool configuration to database
    */
-  async saveToolConfiguration(toolName: string, config: Partial<UserToolConfig>): Promise<void> {
+  async saveToolConfiguration(
+    toolName: string,
+    config: Partial<UserToolConfig>,
+  ): Promise<void> {
     try {
       // Get current config from cache or defaults
-      const currentConfig = this.configCache.get(toolName) || this.getDefaultConfig();
+      const currentConfig =
+        this.configCache.get(toolName) || this.getDefaultConfig();
       const mergedConfig = { ...currentConfig, ...config };
 
       // Persist to database
-      await db.insert(toolConfigs)
+      await db
+        .insert(toolConfigs)
         .values({
           toolName,
           enabled: mergedConfig.enabled,
           config: mergedConfig.config,
           refreshInterval: mergedConfig.refreshInterval,
           notifications: mergedConfig.notifications,
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
         })
         .onConflictDoUpdate({
           target: toolConfigs.toolName,
@@ -98,8 +107,8 @@ class ToolConfigManager {
             config: mergedConfig.config,
             refreshInterval: mergedConfig.refreshInterval,
             notifications: mergedConfig.notifications,
-            updatedAt: Date.now()
-          }
+            updatedAt: Date.now(),
+          },
         });
 
       // Update cache
@@ -108,10 +117,11 @@ class ToolConfigManager {
       // Apply changes to tool registry
       await this.applyToolConfiguration(toolName, mergedConfig);
 
-      console.info(`Persisted configuration for tool '${toolName}'`);
-
     } catch (error) {
-      console.error(`Failed to save configuration for tool '${toolName}':`, error);
+      logger.error(
+        "Failed to save configuration for tool",
+        { toolName, error: error instanceof Error ? error.message : error }
+      );
       throw error;
     }
   }
@@ -126,7 +136,9 @@ class ToolConfigManager {
     }
 
     // Load from database
-    const result = await db.select().from(toolConfigs)
+    const result = await db
+      .select()
+      .from(toolConfigs)
       .where(eq(toolConfigs.toolName, toolName));
 
     if (result.length > 0) {
@@ -134,8 +146,10 @@ class ToolConfigManager {
       const userConfig: UserToolConfig = {
         enabled: Boolean(config.enabled),
         config: config.config || undefined,
-        refreshInterval: config.refreshInterval ? Number(config.refreshInterval) : undefined,
-        notifications: Boolean(config.notifications)
+        refreshInterval: config.refreshInterval
+          ? Number(config.refreshInterval)
+          : undefined,
+        notifications: Boolean(config.notifications),
       };
 
       // Cache it
@@ -152,8 +166,7 @@ class ToolConfigManager {
   async deleteToolConfiguration(toolName: string): Promise<boolean> {
     try {
       // Perform the delete operation
-      await db.delete(toolConfigs)
-        .where(eq(toolConfigs.toolName, toolName));
+      await db.delete(toolConfigs).where(eq(toolConfigs.toolName, toolName));
 
       // Remove from cache regardless of whether db had the record
       this.configCache.delete(toolName);
@@ -161,13 +174,21 @@ class ToolConfigManager {
       // Reapply default configuration
       await this.applyToolConfiguration(toolName, this.getDefaultConfig());
 
-      console.info(`Deleted configuration for tool '${toolName}'`);
       return true;
-
     } catch (error) {
-      console.error(`Failed to delete configuration for tool '${toolName}':`, error);
+      logger.error(
+        "Failed to delete configuration for tool",
+        { toolName, error: error instanceof Error ? error.message : error }
+      );
       return false;
     }
+  }
+
+  /**
+   * Clear the configuration cache (for testing)
+   */
+  clearCache(): void {
+    this.configCache.clear();
   }
 
   /**
@@ -180,7 +201,10 @@ class ToolConfigManager {
   /**
    * Update refresh interval for a tool
    */
-  async updateToolRefreshInterval(toolName: string, refreshInterval: number): Promise<void> {
+  async updateToolRefreshInterval(
+    toolName: string,
+    refreshInterval: number,
+  ): Promise<void> {
     await this.saveToolConfiguration(toolName, { refreshInterval });
   }
 
@@ -197,8 +221,10 @@ class ToolConfigManager {
       result[config.toolName] = {
         enabled: Boolean(config.enabled),
         config: config.config || undefined,
-        refreshInterval: config.refreshInterval ? Number(config.refreshInterval) : undefined,
-        notifications: Boolean(config.notifications)
+        refreshInterval: config.refreshInterval
+          ? Number(config.refreshInterval)
+          : undefined,
+        notifications: Boolean(config.notifications),
       };
     }
 
@@ -208,10 +234,13 @@ class ToolConfigManager {
   /**
    * Apply tool configuration to the tool registry
    */
-  private async applyToolConfiguration(toolName: string, config: UserToolConfig): Promise<void> {
+  private async applyToolConfiguration(
+    toolName: string,
+    config: UserToolConfig,
+  ): Promise<void> {
     const tool = toolRegistry[toolName];
     if (!tool) {
-      console.warn(`Cannot apply configuration to unknown tool '${toolName}'`);
+      logger.warn("Tool not found in registry", { toolName });
       return;
     }
 
@@ -220,9 +249,9 @@ class ToolConfigManager {
 
     // Update widget refresh intervals (apply to all dynamic widgets for this tool)
     if (config.refreshInterval && config.refreshInterval !== 0) {
-      tool.widgets = tool.widgets.map(widget => ({
+      tool.widgets = tool.widgets.map((widget) => ({
         ...widget,
-        refreshInterval: config.refreshInterval
+        refreshInterval: config.refreshInterval,
       }));
     }
 
@@ -231,9 +260,10 @@ class ToolConfigManager {
       tool.config = { ...tool.config, ...config.config };
     }
 
-    console.debug(`Applied configuration to tool '${toolName}':`, {
+    logger.debug("Applied configuration to tool", {
+      toolName,
       enabled: config.enabled,
-      refreshInterval: config.refreshInterval
+      refreshInterval: config.refreshInterval,
     });
   }
 
@@ -245,7 +275,7 @@ class ToolConfigManager {
       enabled: false, // Tools start disabled by default
       notifications: true,
       config: undefined,
-      refreshInterval: undefined
+      refreshInterval: undefined,
     };
   }
 }
@@ -258,16 +288,21 @@ export const toolConfigManager = new ToolConfigManager();
 /**
  * Convenience functions for external use
  */
-export const loadToolConfigurations = () => toolConfigManager.loadToolConfigurations();
-export const saveToolConfiguration = (toolName: string, config: Partial<UserToolConfig>) =>
-  toolConfigManager.saveToolConfiguration(toolName, config);
+export const loadToolConfigurations = () =>
+  toolConfigManager.loadToolConfigurations();
+export const saveToolConfiguration = (
+  toolName: string,
+  config: Partial<UserToolConfig>,
+) => toolConfigManager.saveToolConfiguration(toolName, config);
 export const getToolConfiguration = (toolName: string) =>
   toolConfigManager.getToolConfiguration(toolName);
 export const deleteToolConfiguration = (toolName: string) =>
   toolConfigManager.deleteToolConfiguration(toolName);
 export const toggleToolState = (toolName: string, enabled: boolean) =>
   toolConfigManager.toggleToolState(toolName, enabled);
-export const updateToolRefreshInterval = (toolName: string, refreshInterval: number) =>
-  toolConfigManager.updateToolRefreshInterval(toolName, refreshInterval);
+export const updateToolRefreshInterval = (
+  toolName: string,
+  refreshInterval: number,
+) => toolConfigManager.updateToolRefreshInterval(toolName, refreshInterval);
 export const getAllToolConfigurations = () =>
   toolConfigManager.getAllToolConfigurations();

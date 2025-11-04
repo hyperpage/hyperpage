@@ -59,7 +59,11 @@ export default function PortalOverview({
         // Use dynamic data if available and widget supports it
         if (widget.dynamic) {
           const toolDynamicData = dynamicData[tool.name];
-          if (toolDynamicData && widget.apiEndpoint && toolDynamicData[widget.apiEndpoint]) {
+          if (
+            toolDynamicData &&
+            widget.apiEndpoint &&
+            toolDynamicData[widget.apiEndpoint]
+          ) {
             // Use API-specific data
             widgetData = toolDynamicData[widget.apiEndpoint];
           }
@@ -67,7 +71,7 @@ export default function PortalOverview({
 
         // Filter data based on search query
         const filteredData = widgetData.filter((item: ToolData) =>
-          matchesSearch(item, searchQuery)
+          matchesSearch(item, searchQuery),
         );
 
         // Sort data by time (most recent first)
@@ -78,13 +82,13 @@ export default function PortalOverview({
           toolName: tool.name,
           data: sortedData,
         };
-      })
+      }),
     );
 
   // Calculate total search results
   const totalSearchResults = toolWidgets.reduce(
     (total, widget) => total + widget.data.length,
-    0
+    0,
   );
 
   return (

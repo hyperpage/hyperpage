@@ -1,7 +1,25 @@
-import { CacheFactory } from '../cache/cache-factory';
-import { CacheBackend } from '../cache/cache-interface';
-import { MemorySessionStore } from './memory-session-store';
-import logger from '../logger';
+import { CacheFactory } from "../cache/cache-factory";
+import { CacheBackend } from "../cache/cache-interface";
+import { MemorySessionStore } from "./memory-session-store";
+import logger from "../logger";
+
+/**
+ * Redis client interface for type safety
+ */
+interface RedisClient {
+  get: (key: string) => Promise<string | null>;
+  set: (
+    key: string,
+    value: string,
+    mode: string,
+    ttlSeconds: number,
+  ) => Promise<"OK">;
+  del: (key: string) => Promise<number>;
+  exists: (key: string) => Promise<number>;
+  expire: (key: string, seconds: number) => Promise<number>;
+  scan: (cursor: number, ...args: string[]) => Promise<[number, string[]]>;
+  getClient: () => RedisClient;
+}
 
 export interface SessionData {
   userId?: string;
@@ -14,7 +32,7 @@ export interface SessionData {
     avatarUrl?: string;
   };
   preferences: {
-    theme: 'light' | 'dark' | 'system';
+    theme: "light" | "dark" | "system";
     timezone: string;
     language: string;
     refreshInterval: number;
@@ -23,12 +41,12 @@ export interface SessionData {
     expandedWidgets: string[];
     lastVisitedTools: string[];
     dashboardLayout: string;
-    filterSettings: Record<string, any>;
+    filterSettings: Record<string, unknown>;
   };
   toolConfigs: {
     [toolId: string]: {
       enabled: boolean;
-      settings: Record<string, any>;
+      settings: Record<string, unknown>;
       lastUsed: Date;
     };
   };
@@ -49,20 +67,22 @@ export interface SessionData {
 }
 
 export class SessionManager {
-  private redisClient: any;
+  private redisClient: RedisClient | null = null;
   private connected = false;
+  private initializing = true;
   private memoryStore: MemorySessionStore;
-  private readonly sessionPrefix = 'hyperpage:session:';
+  private readonly sessionPrefix = "hyperpage:session:";
   private readonly sessionTTL = 24 * 60 * 60; // 24 hours in seconds
   private readonly cleanupInterval = 60 * 60 * 1000; // 1 hour
   private cleanupTimer?: NodeJS.Timeout;
+  private initPromise: Promise<void> | null = null;
 
   constructor(redisUrl?: string) {
     // Create fallback memory store for development
     this.memoryStore = new MemorySessionStore();
 
     // Create a dedicated Redis instance for sessions
-    this.initializeRedis(redisUrl);
+    this.initPromise = this.initializeRedis(redisUrl);
   }
 
   private async initializeRedis(redisUrl?: string) {
@@ -75,18 +95,34 @@ export class SessionManager {
 
       // Get the underlying Redis client - this is a bit hacky but necessary
       // for direct Redis operations like SCAN, DEL, etc.
-      this.redisClient = (cache as any).redisClient.getClient();
+      this.redisClient = (
+        cache as unknown as { getClient: () => RedisClient }
+      ).getClient();
       this.connected = true;
 
       // Start cleanup interval
       this.startCleanupInterval();
 
-      logger.info('Session Manager Redis connection established');
+      logger.info("Session Manager Redis connection established");
     } catch (error) {
-      logger.error('Failed to initialize Redis for sessions, using memory-only mode:', error);
+      logger.error(
+        "Failed to initialize Redis for sessions, using memory-only mode:",
+        error,
+      );
       // Fallback to in-memory implementation
       this.redisClient = null;
       this.connected = false;
+    } finally {
+      this.initializing = false;
+    }
+  }
+
+  /**
+   * Wait for initialization to complete
+   */
+  private async waitForInitialization(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise;
     }
   }
 
@@ -102,29 +138,28 @@ export class SessionManager {
   /**
    * Create a new session with default values
    */
-  createSession(sessionId?: string): SessionData {
-    const id = sessionId || this.generateSessionId();
+  createSession(): SessionData {
     const now = new Date();
 
     return {
       preferences: {
-        theme: 'system',
-        timezone: 'UTC',
-        language: 'en',
+        theme: "system",
+        timezone: "UTC",
+        language: "en",
         refreshInterval: 300000, // 5 minutes
       },
       uiState: {
         expandedWidgets: [],
         lastVisitedTools: [],
-        dashboardLayout: 'default',
+        dashboardLayout: "default",
         filterSettings: {},
       },
       toolConfigs: {},
       authenticatedTools: {},
       lastActivity: now,
       metadata: {
-        ipAddress: '',
-        userAgent: '',
+        ipAddress: "",
+        userAgent: "",
         created: now,
         updated: now,
       },
@@ -135,6 +170,9 @@ export class SessionManager {
    * Get session data by ID
    */
   async getSession(sessionId: string): Promise<SessionData | null> {
+    // Wait for initialization to complete
+    await this.waitForInitialization();
+
     if (this.connected && this.redisClient) {
       try {
         const key = this.buildSessionKey(sessionId);
@@ -144,13 +182,16 @@ export class SessionManager {
           return null;
         }
 
-        return JSON.parse(data);
+        return JSON.parse(data) as SessionData;
       } catch (error) {
-        logger.error('Failed to get session from Redis:', error);
+        logger.error("Failed to get session from Redis:", error);
         return null;
       }
     } else {
-      // Fallback to memory store
+      // Fallback to memory store with debug info
+      logger.debug(
+        `Session Manager not connected to Redis, using memory store. Connected: ${this.connected}, RedisClient: ${!!this.redisClient}`,
+      );
       return this.memoryStore.get(sessionId);
     }
   }
@@ -159,6 +200,9 @@ export class SessionManager {
    * Save session data
    */
   async setSession(sessionId: string, sessionData: SessionData): Promise<void> {
+    // Wait for initialization to complete
+    await this.waitForInitialization();
+
     if (this.connected && this.redisClient) {
       try {
         const key = this.buildSessionKey(sessionId);
@@ -172,11 +216,11 @@ export class SessionManager {
         });
 
         // Set with TTL in seconds
-        await this.redisClient.set(key, data, 'EX', this.sessionTTL);
+        await this.redisClient.set(key, data, "EX", this.sessionTTL);
 
         logger.debug(`Session ${sessionId} saved to Redis`);
       } catch (error) {
-        logger.error('Failed to save session to Redis:', error);
+        logger.error("Failed to save session to Redis:", error);
         throw error;
       }
     } else {
@@ -189,9 +233,12 @@ export class SessionManager {
   /**
    * Update specific session properties
    */
-  async updateSession(sessionId: string, updates: Partial<SessionData>): Promise<void> {
-    const existingSession = await this.getSession(sessionId) ||
-      this.createSession(sessionId);
+  async updateSession(
+    sessionId: string,
+    updates: Partial<SessionData>,
+  ): Promise<void> {
+    const existingSession =
+      (await this.getSession(sessionId)) || this.createSession();
 
     const updatedSession = {
       ...existingSession,
@@ -218,7 +265,7 @@ export class SessionManager {
 
         logger.debug(`Session ${sessionId} deleted from Redis`);
       } catch (error) {
-        logger.error('Failed to delete session from Redis:', error);
+        logger.error("Failed to delete session from Redis:", error);
         throw error;
       }
     } else {
@@ -238,10 +285,16 @@ export class SessionManager {
 
     try {
       // SCAN returns array of [cursor, keys[]]
-      const [cursor, keys] = await this.redisClient.scan(0, 'MATCH', `${this.buildSessionKey('*')}`, 'COUNT', 1000);
+      const [, keys] = await this.redisClient.scan(
+        0,
+        "MATCH",
+        `${this.buildSessionKey("*")}`,
+        "COUNT",
+        "1000",
+      );
       return keys.length;
     } catch (error) {
-      logger.error('Failed to count active sessions:', error);
+      logger.error("Failed to count active sessions:", error);
       return 0;
     }
   }
@@ -254,17 +307,20 @@ export class SessionManager {
       // Redis handles TTL automatically, but we can log expired sessions
       const activeCount = await this.getActiveSessionsCount();
       logger.info(`Active sessions after cleanup: ${activeCount}`);
-    } catch (error) {
-      logger.error('Session cleanup failed:', error);
+    } catch {
+      logger.error("Session cleanup failed");
     }
   }
 
   /**
    * Extend session TTL
    */
-  async extendSession(sessionId: string, additionalSeconds?: number): Promise<void> {
+  async extendSession(
+    sessionId: string,
+    additionalSeconds?: number,
+  ): Promise<void> {
     if (!this.connected || !this.redisClient) {
-      logger.warn('Redis not connected, session operations unavailable');
+      logger.warn("Redis not connected, session operations unavailable");
       return;
     }
 
@@ -274,9 +330,9 @@ export class SessionManager {
 
       await this.redisClient.expire(key, extendBy);
       logger.debug(`Session ${sessionId} extended by ${extendBy} seconds`);
-    } catch (error) {
-      logger.error('Failed to extend session:', error);
-      throw error;
+    } catch (err) {
+      logger.error("Failed to extend session:", err);
+      throw err;
     }
   }
 
@@ -289,7 +345,7 @@ export class SessionManager {
         const key = this.buildSessionKey(sessionId);
         const result = await this.redisClient.exists(key);
         return result === 1;
-      } catch (error) {
+      } catch {
         return false;
       }
     } else {
@@ -310,8 +366,8 @@ export class SessionManager {
    */
   private startCleanupInterval(): void {
     this.cleanupTimer = setInterval(() => {
-      this.cleanupExpiredSessions().catch(error => {
-        logger.error('Cleanup interval failed:', error);
+      void this.cleanupExpiredSessions().catch(() => {
+        logger.error("Cleanup interval failed");
       });
     }, this.cleanupInterval);
   }

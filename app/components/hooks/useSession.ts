@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { SessionData } from '../../../lib/sessions/session-manager';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { SessionData } from "../../../lib/sessions/session-manager";
 
 interface SessionHookReturn {
   session: SessionData | null;
@@ -34,14 +34,17 @@ export const useSession = (): SessionHookReturn => {
       setError(null);
 
       // Try to get existing session from localStorage
-      const storedSessionId = localStorage.getItem('hyperpage_session_id');
+      const storedSessionId = localStorage.getItem("hyperpage_session_id");
 
       if (storedSessionId) {
         // Try to get existing session
-        const getResponse = await fetch(`/api/sessions?sessionId=${storedSessionId}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
+        const getResponse = await fetch(
+          `/api/sessions?sessionId=${storedSessionId}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          },
+        );
 
         if (getResponse.ok) {
           const data = await getResponse.json();
@@ -54,9 +57,9 @@ export const useSession = (): SessionHookReturn => {
       }
 
       // Create new session if no existing session or failed to get
-      const createResponse = await fetch('/api/sessions', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+      const createResponse = await fetch("/api/sessions", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
       });
 
       if (createResponse.ok) {
@@ -64,57 +67,64 @@ export const useSession = (): SessionHookReturn => {
         if (data.success) {
           setSession(data.session);
           setSessionId(data.sessionId);
-          localStorage.setItem('hyperpage_session_id', data.sessionId);
+          localStorage.setItem("hyperpage_session_id", data.sessionId);
         }
       } else {
-        throw new Error('Failed to create session');
+        throw new Error("Failed to create session");
       }
-
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      console.error('Session initialization failed:', err);
+      
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateSession = useCallback(async (updates: Partial<SessionData>) => {
-    if (!sessionId) return;
+  const updateSession = useCallback(
+    async (updates: Partial<SessionData>) => {
+      if (!sessionId) return;
 
-    try {
-      setError(null);
+      try {
+        setError(null);
 
-      const response = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          updates,
-        }),
-      });
+        const response = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            updates,
+          }),
+        });
 
-      if (response.ok) {
-        // Update local state with optimistic update
-        setSession(prev => prev ? {
-          ...prev,
-          ...updates,
-          lastActivity: new Date(),
-          metadata: {
-            ...prev.metadata,
-            ...updates.metadata,
-            updated: new Date(),
-          },
-        } : null);
-      } else {
-        throw new Error('Failed to update session');
+        if (response.ok) {
+          // Update local state with optimistic update
+          setSession((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  ...updates,
+                  lastActivity: new Date(),
+                  metadata: {
+                    ...prev.metadata,
+                    ...updates.metadata,
+                    updated: new Date(),
+                  },
+                }
+              : null,
+          );
+        } else {
+          throw new Error("Failed to update session");
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        setError(errorMessage);
+        
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      console.error('Session update failed:', err);
-    }
-  }, [sessionId]);
+    },
+    [sessionId],
+  );
 
   const refreshSession = useCallback(async () => {
     if (!sessionId) return;
@@ -124,8 +134,8 @@ export const useSession = (): SessionHookReturn => {
       setError(null);
 
       const response = await fetch(`/api/sessions?sessionId=${sessionId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
@@ -133,15 +143,15 @@ export const useSession = (): SessionHookReturn => {
         if (data.success) {
           setSession(data.session);
         } else {
-          throw new Error('Failed to refresh session');
+          throw new Error("Failed to refresh session");
         }
       } else {
-        throw new Error('Failed to refresh session');
+        throw new Error("Failed to refresh session");
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      console.error('Session refresh failed:', err);
+      
     } finally {
       setIsLoading(false);
     }
@@ -154,21 +164,21 @@ export const useSession = (): SessionHookReturn => {
       setError(null);
 
       const response = await fetch(`/api/sessions?sessionId=${sessionId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.ok) {
         setSession(null);
         setSessionId(null);
-        localStorage.removeItem('hyperpage_session_id');
+        localStorage.removeItem("hyperpage_session_id");
       } else {
-        throw new Error('Failed to clear session');
+        throw new Error("Failed to clear session");
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      console.error('Session clear failed:', err);
+      
     }
   }, [sessionId]);
 
@@ -176,9 +186,12 @@ export const useSession = (): SessionHookReturn => {
   useEffect(() => {
     if (!sessionId || !session) return;
 
-    const interval = setInterval(() => {
-      refreshSession();
-    }, 5 * 60 * 1000); // 5 minutes
+    const interval = setInterval(
+      () => {
+        refreshSession();
+      },
+      5 * 60 * 1000,
+    ); // 5 minutes
 
     return () => clearInterval(interval);
   }, [sessionId, refreshSession, session]);
@@ -191,13 +204,13 @@ export const useSession = (): SessionHookReturn => {
       }
     };
 
-    const events = ['click', 'keydown', 'scroll', 'mousemove'];
-    events.forEach(event => {
+    const events = ["click", "keydown", "scroll", "mousemove"];
+    events.forEach((event) => {
       document.addEventListener(event, handleActivity, { passive: true });
     });
 
     return () => {
-      events.forEach(event => {
+      events.forEach((event) => {
         document.removeEventListener(event, handleActivity);
       });
     };

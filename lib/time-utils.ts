@@ -65,9 +65,23 @@ export const sortDataByTime = (data: ToolData[]): ToolData[] => {
 
     // If both have timestamps, sort by time (most recent first)
     if (timeA && timeB) {
-      const dateA = new Date(timeA).getTime();
-      const dateB = new Date(timeB).getTime();
-      return dateB - dateA; // Descending order (newest first)
+      const dateA = new Date(timeA);
+      const dateB = new Date(timeB);
+
+      // Check for invalid dates (NaN from null/undefined timestamps)
+      const timeAValid = !isNaN(dateA.getTime());
+      const timeBValid = !isNaN(dateB.getTime());
+
+      if (timeAValid && timeBValid) {
+        return dateB.getTime() - dateA.getTime(); // Descending order (newest first)
+      }
+
+      // If one is invalid, prioritize the valid one
+      if (timeAValid) return -1; // a is valid, b is invalid → a first
+      if (timeBValid) return 1; // b is valid, a is invalid → b first
+
+      // Both invalid, maintain original order
+      return 0;
     }
 
     // If only one has timestamp, prioritize it

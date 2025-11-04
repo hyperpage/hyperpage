@@ -1,14 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { bottleneckDetector } from '../../../../lib/monitoring/bottleneck-detector';
-import { DetectedBottleneck, BottleneckRecommendation, Correlation, BottleneckResolution, BottleneckPattern } from '../../../../lib/monitoring/bottleneck-detector';
-import { BOTTLENECK_PATTERNS } from '../../../../lib/monitoring/bottleneck-patterns';
+import { NextRequest, NextResponse } from "next/server";
+import { bottleneckDetector } from "../../../../lib/monitoring/bottleneck-detector";
+import {
+  DetectedBottleneck,
+  BottleneckRecommendation,
+  Correlation,
+} from "../../../../lib/monitoring/bottleneck-detector";
+import { BOTTLENECK_PATTERNS } from "../../../../lib/monitoring/bottleneck-patterns";
 
 /**
  * GET /api/bottlenecks/[id] - Get detailed information about a specific bottleneck
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   try {
     const { id } = await context.params;
@@ -16,8 +20,8 @@ export async function GET(
     // Validate ID
     if (!id || id.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Bottleneck ID is required' },
-        { status: 400 }
+        { error: "Bottleneck ID is required" },
+        { status: 400 },
       );
     }
 
@@ -26,8 +30,8 @@ export async function GET(
 
     if (!bottleneck) {
       return NextResponse.json(
-        { error: 'Bottleneck not found' },
-        { status: 404 }
+        { error: "Bottleneck not found" },
+        { status: 404 },
       );
     }
 
@@ -35,7 +39,9 @@ export async function GET(
     const correlationData = bottleneckDetector.getCorrelationData(bottleneck);
 
     // Get pattern details for additional context
-    const pattern = BOTTLENECK_PATTERNS.find(p => p.id === bottleneck.patternId);
+    const pattern = BOTTLENECK_PATTERNS.find(
+      (p) => p.id === bottleneck.patternId,
+    );
 
     // Get related bottlenecks (same pattern in recent history)
     const relatedBottlenecks = getRelatedBottlenecks(bottleneck);
@@ -49,7 +55,7 @@ export async function GET(
         name: pattern?.name,
         description: pattern?.description,
         category: pattern?.category,
-        severity: pattern?.severity
+        severity: pattern?.severity,
       },
       correlationData,
       relatedBottlenecks,
@@ -59,15 +65,14 @@ export async function GET(
         timeToResolve: calculateTimeToResolve(bottleneck),
         confidenceReasoning: generateConfidenceReasoning(bottleneck),
         nextSteps: generateNextSteps(bottleneck),
-        timestamp: Date.now()
-      }
+        timestamp: Date.now(),
+      },
     });
-
   } catch (error) {
-    console.error(`Bottleneck ${context.params} detail error:`, error);
+    
     return NextResponse.json(
-      { error: 'Failed to retrieve bottleneck details' },
-      { status: 500 }
+      { error: "Failed to retrieve bottleneck details" },
+      { status: 500 },
     );
   }
 }
@@ -77,7 +82,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   try {
     const { id } = await context.params;
@@ -85,17 +90,17 @@ export async function PATCH(
 
     const { resolution, actionTaken, followUpActions } = body;
 
-    if (!resolution || !['automatic', 'manual'].includes(resolution)) {
+    if (!resolution || !["automatic", "manual"].includes(resolution)) {
       return NextResponse.json(
-        { error: 'Valid resolution type (automatic/manual) is required' },
-        { status: 400 }
+        { error: "Valid resolution type (automatic/manual) is required" },
+        { status: 400 },
       );
     }
 
-    if (!actionTaken || typeof actionTaken !== 'string') {
+    if (!actionTaken || typeof actionTaken !== "string") {
       return NextResponse.json(
-        { error: 'Action taken description is required' },
-        { status: 400 }
+        { error: "Action taken description is required" },
+        { status: 400 },
       );
     }
 
@@ -104,35 +109,37 @@ export async function PATCH(
       resolvedBy: resolution,
       actionTaken,
       resolutionTime: Date.now(),
-      followUpActions: Array.isArray(followUpActions) ? followUpActions : []
+      followUpActions: Array.isArray(followUpActions) ? followUpActions : [],
     });
 
     if (!resolvedBottleneck) {
       return NextResponse.json(
-        { error: 'Bottleneck not found or already resolved' },
-        { status: 404 }
+        { error: "Bottleneck not found or already resolved" },
+        { status: 404 },
       );
     }
 
     // Log the resolution for auditing
-    console.info('Bottleneck resolved', {
+    console.info("Bottleneck resolved", {
       bottleneckId: id,
       resolutionMethod: resolution,
       actionTaken,
-      resolutionTime: resolvedBottleneck.resolutionTime
+      resolutionTime: resolvedBottleneck.resolutionTime,
     });
 
     return NextResponse.json({
       success: true,
       resolvedBottleneck,
-      message: `Bottleneck ${id} marked as resolved`
+      message: `Bottleneck ${id} marked as resolved`,
     });
-
   } catch (error) {
-    console.error(`Bottleneck ${await context.params} resolution error:`, error);
+    console.error(
+      `Bottleneck ${await context.params} resolution error:`,
+      error,
+    );
     return NextResponse.json(
-      { error: 'Failed to resolve bottleneck' },
-      { status: 500 }
+      { error: "Failed to resolve bottleneck" },
+      { status: 500 },
     );
   }
 }
@@ -142,7 +149,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   try {
     const { id } = await context.params;
@@ -152,15 +159,15 @@ export async function DELETE(
 
     if (!bottleneck) {
       return NextResponse.json(
-        { error: 'Bottleneck not found' },
-        { status: 404 }
+        { error: "Bottleneck not found" },
+        { status: 404 },
       );
     }
 
     if (!bottleneck.resolved) {
       return NextResponse.json(
-        { error: 'Bottleneck must be resolved before deletion' },
-        { status: 400 }
+        { error: "Bottleneck must be resolved before deletion" },
+        { status: 400 },
       );
     }
 
@@ -169,14 +176,13 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: `Resolved bottleneck ${id} acknowledged and removed from active tracking`
+      message: `Resolved bottleneck ${id} acknowledged and removed from active tracking`,
     });
-
   } catch (error) {
-    console.error(`Bottleneck ${await context.params} deletion error:`, error);
+    
     return NextResponse.json(
-      { error: 'Failed to delete bottleneck' },
-      { status: 500 }
+      { error: "Failed to delete bottleneck" },
+      { status: 500 },
     );
   }
 }
@@ -191,20 +197,24 @@ interface RelatedBottleneck {
   confidence: number;
 }
 
-function getRelatedBottlenecks(bottleneck: DetectedBottleneck, pattern?: BottleneckPattern): RelatedBottleneck[] {
+function getRelatedBottlenecks(
+  bottleneck: DetectedBottleneck,
+): RelatedBottleneck[] {
   // Get historical bottlenecks with same pattern within last 24 hours
   const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
   const historical = bottleneckDetector.getHistoricalBottlenecks(50);
 
   return historical
-    .filter(h => h.patternId === bottleneck.patternId && h.detectedAt >= oneDayAgo)
+    .filter(
+      (h) => h.patternId === bottleneck.patternId && h.detectedAt >= oneDayAgo,
+    )
     .sort((a, b) => b.detectedAt - a.detectedAt)
     .slice(0, 5)
-    .map(h => ({
+    .map((h) => ({
       id: h.bottleneckId,
       detectedAt: h.detectedAt,
       resolvedAt: h.resolvedAt,
-      confidence: h.confidence
+      confidence: h.confidence,
     }));
 }
 
@@ -225,16 +235,20 @@ interface PreparedRecommendation {
   };
 }
 
-function prepareRecommendations(bottleneck: DetectedBottleneck): PreparedRecommendation[] {
+function prepareRecommendations(
+  bottleneck: DetectedBottleneck,
+): PreparedRecommendation[] {
   return bottleneck.recommendations.map((rec: BottleneckRecommendation) => ({
     ...rec,
     canExecute: rec.automated === true,
-    executeUrl: rec.automated ? `/api/bottlenecks/${bottleneck.id}/execute/${rec.priority}` : null,
+    executeUrl: rec.automated
+      ? `/api/bottlenecks/${bottleneck.id}/execute/${rec.priority}`
+      : null,
     metadata: {
       categoryBadge: getCategoryBadge(rec.category),
       priorityBadge: getPriorityBadge(rec.priority),
-      timeEstimate: `${rec.estimatedTime ? rec.estimatedTime + 'min' : 'Unknown'}`,
-    }
+      timeEstimate: `${rec.estimatedTime ? rec.estimatedTime + "min" : "Unknown"}`,
+    },
   }));
 }
 
@@ -250,19 +264,25 @@ function generateConfidenceReasoning(bottleneck: DetectedBottleneck): string[] {
   const reasoning: string[] = [];
 
   // Analyze breached conditions for reasoning
-  const breachedCount = Object.values(bottleneck.metrics).filter((m) => m.breached).length;
+  const breachedCount = Object.values(bottleneck.metrics).filter(
+    (m) => m.breached,
+  ).length;
   const totalConditions = Object.values(bottleneck.metrics).length;
 
-  reasoning.push(`${breachedCount}/${totalConditions} conditions were breached`);
+  reasoning.push(
+    `${breachedCount}/${totalConditions} conditions were breached`,
+  );
 
   // Add correlation information if available
   if (bottleneck.correlations && bottleneck.correlations.length > 0) {
     const correlationStrengths = bottleneck.correlations
-      .filter((c: Correlation) => c.strength !== 'weak')
+      .filter((c: Correlation) => c.strength !== "weak")
       .map((c: Correlation) => c.strength);
 
     if (correlationStrengths.length > 0) {
-      reasoning.push(`Strong correlations detected: ${correlationStrengths.join(', ')} patterns`);
+      reasoning.push(
+        `Strong correlations detected: ${correlationStrengths.join(", ")} patterns`,
+      );
     }
   }
 
@@ -271,8 +291,8 @@ function generateConfidenceReasoning(bottleneck: DetectedBottleneck): string[] {
 
 interface NextStep {
   action: string;
-  priority: 'critical' | 'high' | 'medium' | 'low';
-  category: 'immediate' | 'preventative' | 'configuration' | 'monitoring';
+  priority: "critical" | "high" | "medium" | "low";
+  category: "immediate" | "preventative" | "configuration" | "monitoring";
   automated?: boolean;
   timeEstimate?: string | number;
   type?: string;
@@ -284,7 +304,10 @@ function generateNextSteps(bottleneck: DetectedBottleneck): NextStep[] {
   if (!bottleneck.resolved) {
     // Get highest priority recommendations
     const highPriorityRecs = bottleneck.recommendations
-      .filter((r: BottleneckRecommendation) => r.priority === 'critical' || r.priority === 'high')
+      .filter(
+        (r: BottleneckRecommendation) =>
+          r.priority === "critical" || r.priority === "high",
+      )
       .slice(0, 3);
 
     highPriorityRecs.forEach((rec: BottleneckRecommendation) => {
@@ -293,7 +316,7 @@ function generateNextSteps(bottleneck: DetectedBottleneck): NextStep[] {
         priority: rec.priority,
         category: rec.category,
         automated: rec.automated,
-        timeEstimate: rec.estimatedTime || 'Unknown'
+        timeEstimate: rec.estimatedTime || "Unknown",
       });
     });
   } else {
@@ -302,9 +325,9 @@ function generateNextSteps(bottleneck: DetectedBottleneck): NextStep[] {
       bottleneck.resolution.followUpActions.forEach((action: string) => {
         nextSteps.push({
           action,
-          priority: 'medium',
-          category: 'preventative',
-          type: 'follow-up'
+          priority: "medium",
+          category: "preventative",
+          type: "follow-up",
         });
       });
     }
@@ -316,24 +339,34 @@ function generateNextSteps(bottleneck: DetectedBottleneck): NextStep[] {
 /**
  * Badge helpers
  */
-function getCategoryBadge(category: string): { color: string, label: string } {
+function getCategoryBadge(category: string): { color: string; label: string } {
   const categoryMap = {
-    immediate: { color: 'bg-red-500', label: 'Immediate' },
-    preventative: { color: 'bg-blue-500', label: 'Preventative' },
-    configuration: { color: 'bg-purple-500', label: 'Configuration' },
-    monitoring: { color: 'bg-green-500', label: 'Monitoring' }
+    immediate: { color: "bg-red-500", label: "Immediate" },
+    preventative: { color: "bg-blue-500", label: "Preventative" },
+    configuration: { color: "bg-purple-500", label: "Configuration" },
+    monitoring: { color: "bg-green-500", label: "Monitoring" },
   };
 
-  return categoryMap[category as keyof typeof categoryMap] || { color: 'bg-gray-500', label: category };
+  return (
+    categoryMap[category as keyof typeof categoryMap] || {
+      color: "bg-gray-500",
+      label: category,
+    }
+  );
 }
 
-function getPriorityBadge(priority: string): { color: string, label: string } {
+function getPriorityBadge(priority: string): { color: string; label: string } {
   const priorityMap = {
-    critical: { color: 'bg-red-600', label: '🔴 Critical' },
-    high: { color: 'bg-orange-500', label: '🟡 High' },
-    medium: { color: 'bg-yellow-500', label: '🟡 Medium' },
-    low: { color: 'bg-green-500', label: '🟢 Low' }
+    critical: { color: "bg-red-600", label: "🔴 Critical" },
+    high: { color: "bg-orange-500", label: "🟡 High" },
+    medium: { color: "bg-yellow-500", label: "🟡 Medium" },
+    low: { color: "bg-green-500", label: "🟢 Low" },
   };
 
-  return priorityMap[priority as keyof typeof priorityMap] || { color: 'bg-gray-500', label: priority };
+  return (
+    priorityMap[priority as keyof typeof priorityMap] || {
+      color: "bg-gray-500",
+      label: priority,
+    }
+  );
 }
