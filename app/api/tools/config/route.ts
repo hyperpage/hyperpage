@@ -40,7 +40,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(allConfigs);
     }
   } catch (error) {
-    console.error("Error retrieving tool configurations:", error);
+    
     return NextResponse.json(
       { error: "Failed to retrieve tool configurations" },
       { status: 500 },
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       message: `Configuration updated for tool '${toolName}'`,
     });
   } catch (error) {
-    console.error("Error updating tool configuration:", error);
+    
     return NextResponse.json(
       { error: "Failed to update tool configuration" },
       { status: 500 },
@@ -173,7 +173,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       );
     }
   } catch (error) {
-    console.error("Error updating tool state:", error);
+    
     return NextResponse.json(
       { error: "Failed to update tool state" },
       { status: 500 },
@@ -212,7 +212,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       deleted,
     });
   } catch (error) {
-    console.error("Error deleting tool configuration:", error);
+    
     return NextResponse.json(
       { error: "Failed to delete tool configuration" },
       { status: 500 },

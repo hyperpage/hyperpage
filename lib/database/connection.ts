@@ -23,7 +23,7 @@ try {
     fs.mkdirSync(DATABASE_DIR, { recursive: true });
   }
 } catch (error) {
-  console.error("Failed to create database directory:", error);
+  
   // Continue - the database will be created in the current directory if needed
 }
 
@@ -64,7 +64,7 @@ export function getAppDatabase(): {
     // Set up Drizzle with schema
     _appDrizzleDb = drizzle(_appDb, { schema });
 
-    console.info(`Application database initialized at ${dbPath}`);
+    
   }
 
   return { sqlite: _appDb, drizzle: _appDrizzleDb };
@@ -87,7 +87,7 @@ export function getInternalDatabase(): Database.Database {
       _internalDb.pragma("synchronous = NORMAL");
     }
 
-    console.info(`Internal database initialized at ${dbPath}`);
+    
   }
 
   return _internalDb;
@@ -102,14 +102,14 @@ export const appDb = getAppDatabase;
  * Should be called during application shutdown
  */
 export function closeAllConnections(): void {
-  console.info("Closing database connections...");
+  
 
   if (_appDb) {
     try {
       _appDb.close();
-      console.info("Application database connection closed");
+      
     } catch (error) {
-      console.warn("Error closing application database:", error);
+      
     }
     _appDb = null;
     _appDrizzleDb = null;
@@ -118,9 +118,9 @@ export function closeAllConnections(): void {
   if (_internalDb) {
     try {
       _internalDb.close();
-      console.info("Internal database connection closed");
+      
     } catch (error) {
-      console.warn("Error closing internal database:", error);
+      
     }
     _internalDb = null;
   }

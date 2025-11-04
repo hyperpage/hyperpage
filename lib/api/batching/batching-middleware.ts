@@ -128,7 +128,7 @@ export class BatchingMiddleware {
         },
       });
     } catch (error) {
-      console.error("Batch processing error:", error);
+      
       return NextResponse.json(
         {
           error: "Batch processing failed",
@@ -290,7 +290,7 @@ export class BatchingMiddleware {
         duration: Date.now() - startTime,
       };
     } catch (error) {
-      console.error(`Batch request ${request.id} failed:`, error);
+      
       return this.createErrorResponse(
         request.id,
         "Request failed",

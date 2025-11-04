@@ -2,6 +2,7 @@ import React from "react";
 import { GitBranch } from "lucide-react";
 import { Tool, ToolConfig } from "../tool-types";
 import { registerTool } from "../registry";
+import logger from "../../lib/logger";
 
 import { getEnabledTools } from "../index";
 
@@ -70,10 +71,11 @@ export const codeReviewsTool: Tool = {
               results.push(...result.pullRequests);
             }
           } catch (error) {
-            console.warn(
-              `Failed to fetch pull requests from ${tool.name}:`,
-              error,
-            );
+            logger.warn("Failed to fetch pull requests", {
+              tool: tool.name,
+              error: error instanceof Error ? error.message : String(error),
+              type: "code_reviews_fetch_error",
+            });
           }
         } else if (tool.capabilities?.includes("merge-requests")) {
           // This is a GitLab-style tool (provides merge-requests)
@@ -106,10 +108,11 @@ export const codeReviewsTool: Tool = {
               results.push(...transformedMRs);
             }
           } catch (error) {
-            console.warn(
-              `Failed to fetch merge requests from ${tool.name}:`,
-              error,
-            );
+            logger.warn("Failed to fetch merge requests", {
+              tool: tool.name,
+              error: error instanceof Error ? error.message : String(error),
+              type: "code_reviews_fetch_error",
+            });
           }
         }
       }

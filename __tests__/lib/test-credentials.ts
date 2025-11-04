@@ -352,7 +352,7 @@ export class IntegrationTestEnvironment {
           );
         }
       } catch (error) {
-        console.warn(`Session creation attempt ${attempts + 1} failed:`, error);
+        
         sessionId = null; // Retry
       }
 

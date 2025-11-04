@@ -221,12 +221,12 @@ export class MemoryJobScheduler implements IJobScheduler {
 
       // Here would be the job execution logic
       // In a real implementation, this would delegate to a job processor
-      console.log(`Executing scheduled job: ${job.name} (${job.id})`);
+      
 
       // Simulate job execution (in real implementation, this would call a job processor)
       await this.executeJob(job);
     } catch (error) {
-      console.error(`Failed to execute scheduled job ${job.id}:`, error);
+      
 
       // Mark job as failed
       job.status = JobStatus.FAILED;

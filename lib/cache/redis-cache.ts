@@ -124,7 +124,7 @@ export class RedisCache<T = unknown> implements ICache<T> {
       const value = await this.get(key);
       return value !== undefined;
     } catch (error) {
-      console.warn(`Cache has() operation failed for key "${key}":`, error);
+      
       return false;
     }
   }
@@ -238,7 +238,7 @@ export class RedisCache<T = unknown> implements ICache<T> {
         accessTime: Date.now(),
       };
     } catch (error) {
-      console.warn(`Failed to get cache entry for debugging: ${key}`, error);
+      
       return undefined;
     }
   }

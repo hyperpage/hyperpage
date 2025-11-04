@@ -362,7 +362,7 @@ describe("Multi-User Load Testing", () => {
         );
       }
 
-      console.log("Performance degradation pattern:", performanceMetrics);
+      
     });
 
     it("recovers performance after load spike", async () => {

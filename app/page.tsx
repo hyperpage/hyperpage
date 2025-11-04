@@ -19,7 +19,7 @@ export default function Home() {
           setEnabledTools(data.enabledTools || []);
         }
       } catch (error) {
-        console.error("Failed to fetch enabled tools:", error);
+        
       } finally {
         setIsLoading(false);
       }

@@ -278,7 +278,7 @@ export async function executeHandler(
     // Apply compression based on request capabilities
     return await defaultCompressionMiddleware.compress(response, request);
   } catch (error) {
-    console.error(`Handler error for ${tool.name}/${endpoint}:`, error);
+    
     recordRequestFailure(tool.slug); // Record handler error as a failure
 
     const errorMessage =

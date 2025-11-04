@@ -26,7 +26,7 @@ function ensureMigrationTable() {
       !errorMsg.includes("already exists") &&
       !errorMsg.includes("already_exists")
     ) {
-      console.warn("Failed to create migration table:", error);
+      
     }
   }
 }
@@ -81,7 +81,7 @@ async function recordMigrationExecuted(migrationName: string): Promise<void> {
       .run(migrationName);
   } catch (error) {
     if (!(error as Error)?.message?.includes("UNIQUE constraint failed")) {
-      console.error(`Error recording migration ${migrationName}:`, error);
+      
       throw error;
     }
   }
@@ -94,7 +94,7 @@ async function removeMigrationRecord(migrationName: string): Promise<void> {
       .prepare("DELETE FROM schema_migrations WHERE migration_name = ?")
       .run(migrationName);
   } catch (error) {
-    console.error(`Error removing migration record ${migrationName}:`, error);
+    
     throw error;
   }
 }
@@ -125,13 +125,13 @@ async function runMigrationUp(
         recordMigrationExecuted(migrationName);
       })();
 
-      console.info(`✓ Migration ${migrationName} completed successfully`);
+      
     } catch (error) {
-      console.error(`✗ Migration ${migrationName} failed:`, error);
+      
       throw error;
     }
   } else {
-    console.info(`[DRY RUN] Would execute: ${migrationName}`);
+    
   }
 }
 
@@ -164,11 +164,11 @@ async function runMigrationDown(
         `✓ Migration rollback ${migrationName} completed successfully`,
       );
     } catch (error) {
-      console.error(`✗ Migration rollback ${migrationName} failed:`, error);
+      
       throw error;
     }
   } else {
-    console.info(`[DRY RUN] Would rollback: ${migrationName}`);
+    
   }
 }
 
@@ -177,7 +177,7 @@ async function runMigrationDown(
  * @param isDryRun If true, only log what would be done without making changes
  */
 export async function runMigrations(isDryRun = false): Promise<void> {
-  console.info(`${isDryRun ? "[DRY RUN] " : ""}Running database migrations...`);
+  
 
   try {
     // Ensure migration table exists
@@ -185,18 +185,18 @@ export async function runMigrations(isDryRun = false): Promise<void> {
 
     const migrationNames = getMigrationNamesFromRegistry();
     if (migrationNames.length === 0) {
-      console.info("No migration files found");
+      
       return;
     }
 
-    console.info(`Found ${migrationNames.length} migration files`);
+    
 
     for (const migrationName of migrationNames) {
       // Check if already executed
       const executed = await isMigrationExecuted(migrationName);
       if (executed) {
         if (process.env.NODE_ENV === "development") {
-          console.info(`Skipping already executed migration: ${migrationName}`);
+          
         }
         continue;
       }
@@ -206,9 +206,9 @@ export async function runMigrations(isDryRun = false): Promise<void> {
       await runMigrationUp(migrationName, up, isDryRun);
     }
 
-    console.info(`${isDryRun ? "[DRY RUN] " : ""}Migration process completed`);
+    
   } catch (error) {
-    console.error("Migration process failed:", error);
+    
     throw error;
   }
 }
@@ -237,7 +237,7 @@ export async function rollbackMigrations(
       .all(count)) as { migration_name: string }[];
 
     if (executedMigrations.length === 0) {
-      console.info("No migrations to rollback");
+      
       return;
     }
 
@@ -256,9 +256,9 @@ export async function rollbackMigrations(
       }
     }
 
-    console.info(`${isDryRun ? "[DRY RUN] " : ""}Rollback process completed`);
+    
   } catch (error) {
-    console.error("Migration rollback process failed:", error);
+    
     throw error;
   }
 }
@@ -270,21 +270,21 @@ export async function showMigrationStatus(): Promise<void> {
   try {
     ensureMigrationTable();
 
-    console.info("Migration Status:");
-    console.info("=================");
+    
+    
 
     const migrationNames = getMigrationNamesFromRegistry();
     if (migrationNames.length === 0) {
-      console.info("No migration files found");
+      
       return;
     }
 
     for (const migrationName of migrationNames) {
       const executed = await isMigrationExecuted(migrationName);
       const status = executed ? "✅ Executed" : "⏳ Pending";
-      console.info(`${status}: ${migrationName}`);
+      
     }
   } catch (error) {
-    console.error("Failed to show migration status:", error);
+    
   }
 }

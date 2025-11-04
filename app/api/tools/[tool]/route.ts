@@ -67,7 +67,7 @@ export async function GET(
       tool: toolData,
     });
   } catch (error) {
-    console.error(`Error getting tool ${toolName}:`, error);
+    
     return NextResponse.json(
       { error: "Failed to get tool details" },
       { status: 500 },

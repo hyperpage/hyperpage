@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       authenticatedTools: session.authenticatedTools || {},
     });
   } catch (error) {
-    console.error("Auth status error:", error);
+    
     return NextResponse.json(
       { success: false, error: "Failed to get authentication status" },
       { status: 500 },

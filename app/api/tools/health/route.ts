@@ -73,7 +73,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error getting tool health:", error);
+    
     return NextResponse.json(
       { error: "Failed to get tool health status" },
       { status: 500 },

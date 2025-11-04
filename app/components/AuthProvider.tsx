@@ -68,7 +68,7 @@ export function AuthProvider({
           setConfiguredTools(result.configured);
         }
       } catch (error) {
-        console.error("Failed to load OAuth configuration:", error);
+        
       }
     };
 
@@ -99,7 +99,7 @@ export function AuthProvider({
             ),
           );
         } catch (error) {
-          console.error(`Failed to check auth status for ${toolSlug}:`, error);
+          
           setTools((current) =>
             current.map((tool) =>
               tool.toolSlug === toolSlug
@@ -225,7 +225,7 @@ export function AuthProvider({
       // Note: Code after this redirect will not execute
       // Authentication completion is handled by the callback route
     } catch (error) {
-      console.error(`Authentication failed for ${toolSlug}:`, error);
+      
       updateToolState(toolSlug, {
         isLoading: false,
         error: error instanceof Error ? error.message : "Authentication failed",
@@ -256,7 +256,7 @@ export function AuthProvider({
         lastConnectedAt: undefined,
       });
     } catch (error) {
-      console.error(`Disconnect failed for ${toolSlug}:`, error);
+      
       updateToolState(toolSlug, {
         isLoading: false,
         error: error instanceof Error ? error.message : "Disconnect failed",
@@ -283,7 +283,7 @@ export function AuthProvider({
 
       return isAuthenticated;
     } catch (error) {
-      console.error(`Failed to check auth status for ${toolSlug}:`, error);
+      
       updateToolState(toolSlug, {
         isAuthenticated: false,
         isLoading: false,
@@ -331,7 +331,7 @@ export function AuthProvider({
         }
       }
     } catch (error) {
-      console.error("Logout failed:", error);
+      
       // Still clear local state even if API calls fail
       setTools((current) =>
         current.map((tool) => ({

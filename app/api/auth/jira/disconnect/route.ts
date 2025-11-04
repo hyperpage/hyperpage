@@ -59,14 +59,14 @@ export async function POST(request: NextRequest) {
         message: `${PROVIDER_NAME} authentication disconnected successfully`,
       });
     } catch (storageError) {
-      console.error(`${PROVIDER_NAME} disconnect storage error:`, storageError);
+      
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },
         { status: 500 },
       );
     }
   } catch (error) {
-    console.error(`${PROVIDER_NAME} disconnect error:`, error);
+    
     return NextResponse.json(
       { success: false, error: "Failed to disconnect authentication" },
       { status: 500 },

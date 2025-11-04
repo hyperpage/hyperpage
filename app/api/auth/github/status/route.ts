@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         hasRefreshToken: !!tokens.refreshToken && !isRefreshExpired,
       });
     } catch (storageError) {
-      console.error(`${PROVIDER_NAME} status storage error:`, storageError);
+      
       // If storage check fails, assume not authenticated
       return NextResponse.json({
         authenticated: false,
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error(`${PROVIDER_NAME} status error:`, error);
+    
     // Always return valid JSON in case of error
     return NextResponse.json(
       {

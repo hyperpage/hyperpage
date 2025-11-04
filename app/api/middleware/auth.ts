@@ -114,7 +114,7 @@ export async function withAuth(
 
       return handler(authenticatedReq);
     } catch (error) {
-      console.error("Authentication middleware error:", error);
+      
       return NextResponse.json(
         { error: "Authentication service temporarily unavailable" },
         { status: 503 },
@@ -151,7 +151,7 @@ export async function createAuthenticatedResponse(
     try {
       await sessionManager.extendSession(sessionId);
     } catch (error) {
-      console.warn("Failed to extend session:", error);
+      
     }
   }
 
@@ -186,7 +186,7 @@ export async function checkToolAuthentication(
 
     return { authenticated: true, userId: session.userId };
   } catch (error) {
-    console.error("Tool authentication check failed:", error);
+    
     return { authenticated: false, error: "Authentication check failed" };
   }
 }

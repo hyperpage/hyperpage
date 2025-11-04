@@ -3,6 +3,8 @@
  * Centralizes OAuth client configurations, scopes, and provider URLs
  */
 
+import logger from "./logger";
+
 export interface OAuthConfig {
   clientId: string;
   clientSecret: string;
@@ -65,9 +67,7 @@ function getGitHubConfig(): OAuthConfig | null {
   const clientSecret = process.env[OAUTH_ENV_VARS.GITHUB_CLIENT_SECRET];
 
   if (!clientId || !clientSecret) {
-    console.warn(
-      "GitHub OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
-    );
+    logger.warn("GitHub OAuth not configured - missing CLIENT_ID or CLIENT_SECRET");
     return null;
   }
 
@@ -95,9 +95,7 @@ function getGitLabConfig(): OAuthConfig | null {
   const clientSecret = process.env[OAUTH_ENV_VARS.GITLAB_CLIENT_SECRET];
 
   if (!clientId || !clientSecret) {
-    console.warn(
-      "GitLab OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
-    );
+    logger.warn("GitLab OAuth not configured - missing CLIENT_ID or CLIENT_SECRET");
     return null;
   }
 
@@ -124,18 +122,14 @@ function getJiraConfig(instanceUrl?: string): OAuthConfig | null {
   const clientSecret = process.env[OAUTH_ENV_VARS.JIRA_CLIENT_SECRET];
 
   if (!clientId || !clientSecret) {
-    console.warn(
-      "Jira OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
-    );
+    logger.warn("Jira OAuth not configured - missing CLIENT_ID or CLIENT_SECRET");
     return null;
   }
 
   // For Jira, we need an instance URL. If not provided, fall back to environment variable
   const baseUrl = instanceUrl || process.env["JIRA_WEB_URL"];
   if (!baseUrl) {
-    console.warn(
-      "Jira OAuth not configured - missing instance URL (JIRA_WEB_URL)",
-    );
+    logger.warn("Jira OAuth not configured - missing instance URL (JIRA_WEB_URL)");
     return null;
   }
 
@@ -203,21 +197,19 @@ export async function exchangeCodeForTokens(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(
-      `OAuth token exchange failed for ${config.provider}:`,
-      response.status,
-      errorText,
-    );
+    logger.error(`OAuth token exchange failed for ${config.provider}:`, {
+      status: response.status,
+      error: errorText,
+    });
     throw new Error(`Token exchange failed: ${response.status}`);
   }
 
   const tokenData = await response.json();
 
   if (tokenData.error) {
-    console.error(
-      `OAuth response error for ${config.provider}:`,
-      tokenData.error,
-    );
+    logger.error(`OAuth response error for ${config.provider}:`, {
+      error: tokenData.error,
+    });
     throw new Error(`Token response error: ${tokenData.error}`);
   }
 

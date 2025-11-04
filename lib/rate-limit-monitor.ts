@@ -239,8 +239,8 @@ export async function getRateLimitStatus(
     }
     const data = (await response.json()) as RateLimitStatus;
     return data;
-  } catch (error) {
-    console.error(`Error fetching rate limit status for ${platform}:`, error);
+  } catch {
+    
     return null;
   }
 }

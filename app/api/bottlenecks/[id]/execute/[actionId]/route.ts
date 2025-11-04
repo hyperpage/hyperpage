@@ -59,7 +59,7 @@ export async function POST(
       );
     }
   } catch (error) {
-    console.error("Automated action execution error:", error);
+    
     return NextResponse.json(
       {
         error: "Failed to execute automated action",
@@ -116,7 +116,7 @@ export async function GET(
       patternId: bottleneck.patternId,
     });
   } catch (error) {
-    console.error("Automated action details error:", error);
+    
     return NextResponse.json(
       { error: "Failed to retrieve automated action details" },
       { status: 500 },

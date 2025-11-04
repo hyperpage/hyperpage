@@ -369,7 +369,7 @@ export class MemoryJobQueue implements IJobQueue {
 
     // Record job execution history (simplified for now - will be enhanced later)
     // TODO: Implement full job history tracking
-    console.info(`Job ${jobId} status changed to ${status}`);
+    
 
     // Update stats based on status change
     this.updateJobStats(oldStatus, status);
@@ -406,14 +406,14 @@ export class MemoryJobQueue implements IJobQueue {
           ]),
         );
 
-      console.info(`Found ${persistedJobs.length} persisted jobs to recover`);
+      
       let recoveredCount = 0;
 
       for (const dbJob of persistedJobs) {
         try {
           // Skip jobs with invalid data
           if (!dbJob.id || !dbJob.name) {
-            console.warn("Skipping invalid persisted job:", dbJob.id);
+            
             continue;
           }
 
@@ -464,7 +464,7 @@ export class MemoryJobQueue implements IJobQueue {
 
           recoveredCount++;
         } catch (error) {
-          console.error(`Failed to load job ${dbJob.id}:`, error);
+          
           continue;
         }
       }
@@ -474,7 +474,7 @@ export class MemoryJobQueue implements IJobQueue {
       );
       return recoveredCount;
     } catch (error) {
-      console.error("Failed to load persisted jobs:", error);
+      
       return 0;
     }
   }
@@ -505,10 +505,10 @@ export class MemoryJobQueue implements IJobQueue {
           ),
         );
 
-      console.info(`Cleaned up ${countToDelete} old completed jobs`);
+      
       return countToDelete;
     } catch (error) {
-      console.error("Failed to cleanup old jobs:", error);
+      
       return 0;
     }
   }

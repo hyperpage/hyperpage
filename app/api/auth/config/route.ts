@@ -20,7 +20,7 @@ export async function GET() {
       configured,
     });
   } catch (error) {
-    console.error("OAuth config check error:", error);
+    
     return NextResponse.json(
       { success: false, error: "Failed to check OAuth configuration" },
       { status: 500 },

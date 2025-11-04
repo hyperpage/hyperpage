@@ -63,7 +63,7 @@ describe("Jira Tool Integration", () => {
         );
       } catch (error) {
         // Ignore cleanup errors in tests
-        console.log("Cleanup error (ignored):", error);
+        
       }
     }
   });
@@ -203,7 +203,7 @@ describe("Jira Tool Integration", () => {
       const sessionCheck = await fetch(
         `${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`,
       );
-      console.log("Session check status:", sessionCheck.status);
+      
 
       const response = await fetch(`${baseUrl}/api/tools/jira/changelogs`, {
         method: "POST",
@@ -214,9 +214,9 @@ describe("Jira Tool Integration", () => {
         body: JSON.stringify({ issueIds: [] }),
       });
 
-      console.log("Jira changelogs response status:", response.status);
+      
       const responseText = await response.text();
-      console.log("Jira changelogs response body:", responseText);
+      
 
       expect(response.status).toBe(400);
     });

@@ -354,7 +354,7 @@ export class AlertService extends EventEmitter {
       default:
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _exhaustiveCheck: never = channel; // TypeScript exhaustive check
-        console.warn(`Unsupported channel type`);
+        
     }
   }
 

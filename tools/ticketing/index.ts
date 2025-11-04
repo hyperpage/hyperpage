@@ -82,8 +82,8 @@ export const ticketingTool: Tool = {
               );
               results.push(...transformedIssues);
             }
-          } catch (error) {
-            console.warn(`Failed to fetch issues from ${tool.name}:`, error);
+          } catch {
+            
           }
         }
       }

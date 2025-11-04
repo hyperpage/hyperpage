@@ -1,3 +1,5 @@
+import { rateLimitLogger } from "./logger";
+
 // Server-only rate limit service
 // This module should only be used by API routes and server-side code
 
@@ -42,7 +44,7 @@ export async function getServerRateLimitStatus(
   // Call the tool's rate-limit handler directly
   const rateLimitHandler = (tool as Tool).handlers["rate-limit"];
   if (!rateLimitHandler) {
-    console.warn(`Rate limit handler not found for platform ${platform}`);
+    rateLimitLogger.event("warn", platform, "No rate-limit handler found for platform");
     return null;
   }
 
@@ -50,7 +52,7 @@ export async function getServerRateLimitStatus(
     const result = await rateLimitHandler(mockRequest, (tool as Tool).config!);
 
     if (!result.rateLimit) {
-      console.warn(`Tool handler returned no rate limit data for ${platform}`);
+      rateLimitLogger.event("warn", platform, "No rate limit data returned from handler");
       return null;
     }
 
@@ -67,9 +69,7 @@ export async function getServerRateLimitStatus(
         limits = transformJiraLimits(result.rateLimit);
         break;
       default:
-        console.warn(
-          `Rate limit transformation not implemented for platform: ${platform}`,
-        );
+        rateLimitLogger.event("warn", platform, "Rate limit transformation not implemented for platform", { platform });
         return null;
     }
 
@@ -84,8 +84,8 @@ export async function getServerRateLimitStatus(
       status,
       limits,
     };
-  } catch (error) {
-    console.error(`Error fetching rate limit status for ${platform}:`, error);
+  } catch (_error) {
+    rateLimitLogger.event("error", platform, "Failed to get rate limit status", { error: _error });
     return null;
   }
 }
@@ -95,7 +95,7 @@ export async function getServerRateLimitStatus(
  */
 export async function loadPersistedRateLimits(): Promise<number> {
   try {
-    console.info("Loading persisted rate limit data...");
+    rateLimitLogger.event("info", "system", "Loading persisted rate limits from database");
     const persistedLimits = await db.select().from(rateLimits);
 
     let loadedCount = 0;
@@ -251,21 +251,16 @@ export async function loadPersistedRateLimits(): Promise<number> {
         };
 
         loadedCount++;
-      } catch (error) {
-        console.error(
-          `Failed to load persisted rate limit for ${limit.platform}:`,
-          error,
-        );
+      } catch (_error) {
+        rateLimitLogger.event("error", limit.platform, "Failed to load persisted rate limit", { error: _error });
         continue;
       }
     }
 
-    console.info(
-      `Successfully loaded ${loadedCount} persisted rate limit records`,
-    );
+    rateLimitLogger.event("info", "system", `Successfully loaded ${loadedCount} persisted rate limit records`, { loadedCount });
     return loadedCount;
-  } catch (error) {
-    console.error("Failed to load persisted rate limits:", error);
+  } catch (_error) {
+    rateLimitLogger.event("error", "system", "Failed to load persisted rate limits", { error: _error });
     return 0;
   }
 }
@@ -294,9 +289,7 @@ export async function saveRateLimitStatus(
     } else if (platform === "jira" && rateLimitStatus.limits.jira) {
       platformLimits = rateLimitStatus.limits.jira.global || {};
     } else {
-      console.warn(
-        `No rate limit data found for platform ${platform}, skipping persistence`,
-      );
+      rateLimitLogger.event("warn", platform, "No rate limit data found for platform, skipping persistence", { platform });
       return;
     }
 
@@ -329,11 +322,8 @@ export async function saveRateLimitStatus(
       // Use a proper comparison for cleanup - records older than cutoff time
       sql`${rateLimits.lastUpdated} < ${cutoffTime}`,
     );
-  } catch (error) {
-    console.error(
-      `Failed to save rate limit status for ${rateLimitStatus.platform}:`,
-      error,
-    );
+  } catch (_error) {
+    rateLimitLogger.event("error", rateLimitStatus.platform, "Failed to save rate limit status", { error: _error });
     // Don't throw - persistence failures shouldn't break rate limit monitoring
   }
 }

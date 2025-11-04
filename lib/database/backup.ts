@@ -48,7 +48,7 @@ async function ensureBackupDirectory(): Promise<void> {
   try {
     await fs.mkdir(BACKUP_DIR, { recursive: true });
   } catch (error) {
-    console.error("Failed to create backup directory:", error);
+    
     throw new Error("Cannot create backup directory");
   }
 }
@@ -99,7 +99,7 @@ async function getBackupMetadata(backupPath: string): Promise<BackupMetadata> {
       checksum,
     };
   } catch (error) {
-    console.error("Error generating backup metadata:", error);
+    
     throw error;
   }
 }
@@ -150,7 +150,7 @@ export async function createBackup(): Promise<BackupResult> {
     };
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error("Failed to create database backup:", error);
+    
 
     return {
       success: false,
@@ -184,9 +184,9 @@ export async function restoreBackup(
     try {
       await fs.access(dbPath);
       await fs.copyFile(dbPath, tempBackupPath);
-      console.info(`Created safety backup: ${tempBackupPath}`);
+      
     } catch {
-      console.info("No existing database to backup for safety");
+      
     }
 
     // Close current database connections
@@ -195,7 +195,7 @@ export async function restoreBackup(
     try {
       // Restore from backup
       await fs.copyFile(backupPath, dbPath);
-      console.info(`Database restored from ${backupPath}`);
+      
 
       const duration = Date.now() - startTime;
 
@@ -213,7 +213,7 @@ export async function restoreBackup(
             .catch(() => false)
         ) {
           await fs.copyFile(tempBackupPath, dbPath);
-          console.info("Emergency restore: Reverted to original database");
+          
         }
       } catch (revertError) {
         console.error(
@@ -226,15 +226,15 @@ export async function restoreBackup(
     }
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error("Failed to restore database backup:", error);
+    
 
     // Try to load persisted data if database was corrupted
     try {
       await loadPersistedRateLimits();
       await loadToolConfigurations();
-      console.info("Attempted to load persisted data after restore failure");
+      
     } catch (loadError) {
-      console.error("Could not load fallback data:", loadError);
+      
     }
 
     return {
@@ -314,7 +314,7 @@ export async function listBackups(): Promise<
       )
       .sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
-    console.error("Failed to list backups:", error);
+    
     return [];
   }
 }
@@ -341,7 +341,7 @@ export async function cleanupOldBackups(
         await fs.unlink(`${backup.path}.metadata.json`).catch(() => {}); // Ignore if metadata file doesn't exist
         deleted.push(backup.filename);
       } catch (error) {
-        console.error(`Failed to delete backup ${backup.filename}:`, error);
+        
       }
     }
 
@@ -354,7 +354,7 @@ export async function cleanupOldBackups(
       kept: backups.length - deleted.length,
     };
   } catch (error) {
-    console.error("Failed to cleanup old backups:", error);
+    
     return { deleted: [], kept: 0 };
   }
 }

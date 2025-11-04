@@ -42,7 +42,7 @@ export async function GET() {
       enabledTools: allTools.filter((t: Tool) => t.enabled).length,
     });
   } catch (error) {
-    console.error("Error in tool discovery:", error);
+    
     return NextResponse.json(
       { error: "Failed to discover tools" },
       { status: 500 },

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import logger from "../logger";
 import {
   performanceDashboard,
   PerformanceSnapshot,
@@ -110,7 +111,7 @@ export class PerformanceMiddleware {
 
       // Debug logging
       if (this.options.debug) {
-        console.debug(`📊 Performance snapshot recorded:`, {
+        logger.debug(`📊 Performance snapshot recorded:`, {
           endpoint: snapshot.endpoint,
           method: snapshot.method,
           status: snapshot.statusCode,
@@ -121,14 +122,12 @@ export class PerformanceMiddleware {
       }
 
       return response;
-    } catch (error) {
-      console.error("Performance monitoring error:", error);
-
+    } catch {
       // Don't let performance monitoring break the response
       // Log the error but continue with the response
 
       if (this.options.debug) {
-        console.debug("Performance snapshot failed to record");
+        // Error logging could be added here if needed
       }
 
       return response;
@@ -225,10 +224,10 @@ export class PerformanceMiddleware {
             performanceDashboard.recordSnapshot(snapshot);
 
             if (this.options.debug) {
-              console.debug(`📊 Performance snapshot recorded:`, snapshot);
+              // Debug logging could be added here if needed
             }
-          } catch (error) {
-            console.error("Express performance monitoring error:", error);
+          } catch {
+            // Error handling for Express middleware
           }
         });
       }

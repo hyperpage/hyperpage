@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       },
     );
   } catch (error) {
-    console.error("Dashboard API error:", error);
+    
     return NextResponse.json(
       {
         error: "Failed to generate dashboard metrics",
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   } catch (error) {
-    console.error("Dashboard update error:", error);
+    
     return NextResponse.json(
       {
         error: "Failed to update dashboard settings",
@@ -210,7 +210,7 @@ export async function DELETE(request: NextRequest) {
       message: "Dashboard metrics and alert history have been reset",
     });
   } catch (error) {
-    console.error("Dashboard reset error:", error);
+    
     return NextResponse.json(
       {
         error: "Failed to reset dashboard metrics",

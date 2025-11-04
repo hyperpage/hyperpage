@@ -581,7 +581,7 @@ describe("API Response Time Validation Suite", () => {
         responseTimes[platform.name] = endTime - startTime;
       }
 
-      console.log("Cross-platform response times:", responseTimes);
+      
 
       // All platforms should have reasonable response times
       Object.values(responseTimes).forEach((time) => {
@@ -711,7 +711,7 @@ describe("API Response Time Validation Suite", () => {
         };
       }
 
-      console.log("Response time consistency across windows:", windowResults);
+      
 
       // All windows should have reasonable averages
       Object.values(windowResults).forEach((result) => {

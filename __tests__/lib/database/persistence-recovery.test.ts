@@ -43,7 +43,7 @@ describe("Persistence and Recovery System", () => {
         .catch(() => {});
       await fs.mkdir(TEST_BACKUP_DIR, { recursive: true }).catch(() => {});
     } catch (error) {
-      console.error("Cleanup error in beforeAll:", error);
+      
     }
 
     // Create fresh test database with manual schema creation
@@ -72,7 +72,7 @@ describe("Persistence and Recovery System", () => {
     `);
 
     testDb = createTestDrizzle(testSqliteDb);
-    console.log("Test database schema initialized");
+    
   });
 
   afterAll(async () => {
@@ -84,7 +84,7 @@ describe("Persistence and Recovery System", () => {
         .rm(TEST_BACKUP_DIR, { recursive: true, force: true })
         .catch(() => {});
     } catch (error) {
-      console.error("Cleanup error in afterAll:", error);
+      
     }
   });
 
@@ -101,7 +101,7 @@ describe("Persistence and Recovery System", () => {
       await testDb.delete(toolConfigs);
       await testDb.delete(rateLimits);
     } catch (error) {
-      console.error("Cleanup error in beforeEach:", error);
+      
     }
   });
 
@@ -112,7 +112,7 @@ describe("Persistence and Recovery System", () => {
         .rm(TEST_BACKUP_DIR, { recursive: true, force: true })
         .catch(() => {});
     } catch (error) {
-      console.error("Cleanup error in afterEach:", error);
+      
     }
   });
 

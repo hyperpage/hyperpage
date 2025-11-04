@@ -63,7 +63,7 @@ describe("GitHub Tool Integration", () => {
         );
       } catch (error) {
         // Log cleanup errors for debugging but don't fail tests
-        console.warn("Test cleanup error:", error);
+        
       }
     }
   });

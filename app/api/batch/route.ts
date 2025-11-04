@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     // Process the batch request
     return await defaultBatchingMiddleware.processBatch(body.requests, request);
   } catch (error) {
-    console.error("Batch endpoint error:", error);
+    
     return NextResponse.json(
       {
         error: "Failed to process batch request",

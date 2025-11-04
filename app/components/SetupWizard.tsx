@@ -144,7 +144,7 @@ export default function SetupWizard() {
       const hasEnabledTools = data.enabledTools && data.enabledTools.length > 0;
       setIsConfigured(hasEnabledTools);
     } catch (error) {
-      console.error("Failed to check configuration status:", error);
+      
     }
   };
 

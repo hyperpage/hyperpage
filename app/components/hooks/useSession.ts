@@ -75,7 +75,7 @@ export const useSession = (): SessionHookReturn => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      console.error("Session initialization failed:", err);
+      
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +120,7 @@ export const useSession = (): SessionHookReturn => {
         const errorMessage =
           err instanceof Error ? err.message : "Unknown error";
         setError(errorMessage);
-        console.error("Session update failed:", err);
+        
       }
     },
     [sessionId],
@@ -151,7 +151,7 @@ export const useSession = (): SessionHookReturn => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      console.error("Session refresh failed:", err);
+      
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +178,7 @@ export const useSession = (): SessionHookReturn => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      console.error("Session clear failed:", err);
+      
     }
   }, [sessionId]);
 

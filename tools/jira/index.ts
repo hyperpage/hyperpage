@@ -6,6 +6,7 @@ import { registerTool } from "../registry";
 import { detectJiraInstanceSize } from "../../lib/rate-limit-utils";
 import { MemoryCache } from "../../lib/cache/memory-cache";
 import { createIPv4Fetch } from "../../lib/ipv4-fetch";
+import logger from "../../lib/logger";
 
 // Advisory locking for concurrent requests to prevent API storms
 class RequestDeduper<T = unknown> {
@@ -422,7 +423,7 @@ export const jiraTool: Tool = {
           };
         }
       } catch (cacheError) {
-        console.warn("Cache read error:", cacheError);
+        logger.warn("Cache read error", { error: cacheError });
         // Continue with API call if cache fails
       }
 
@@ -525,7 +526,7 @@ export const jiraTool: Tool = {
           try {
             cache.set(cacheKey, projects, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
           } catch (cacheError) {
-            console.warn("Cache write error:", cacheError);
+            logger.warn("Cache write error", { error: cacheError });
             // Continue even if caching fails
           }
 

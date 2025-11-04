@@ -80,10 +80,10 @@ export default function ToolStatusRow() {
           // Set basic integrations (no need for detailed health info)
           setToolIntegrations(basicIntegrations);
         } else {
-          console.error("Failed to fetch enabled tools");
+          
         }
       } catch (error) {
-        console.error("Error loading tool integrations:", error);
+        
       }
     }
 

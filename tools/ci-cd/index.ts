@@ -94,8 +94,8 @@ export const ciCdTool: Tool = {
               });
               results.push(...transformedPipelines);
             }
-          } catch (error) {
-            console.warn(`Failed to fetch pipelines from ${tool.name}:`, error);
+          } catch {
+            
           }
         } else if (tool.capabilities?.includes("workflows")) {
           // This is a GitHub-style tool (provides workflows)
@@ -128,8 +128,8 @@ export const ciCdTool: Tool = {
               });
               results.push(...transformedWorkflows);
             }
-          } catch (error) {
-            console.warn(`Failed to fetch workflows from ${tool.name}:`, error);
+          } catch {
+            
           }
         }
       }

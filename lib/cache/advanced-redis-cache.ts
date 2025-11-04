@@ -308,7 +308,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       const value = await this.get(key);
       return value !== undefined;
     } catch (error) {
-      console.warn(`Cache has() operation failed for key "${key}":`, error);
+      
       return false;
     }
   }
@@ -434,7 +434,7 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
         accessTime: Date.now(),
       };
     } catch (error) {
-      console.warn(`Failed to get cache entry for debugging: ${key}`, error);
+      
       return undefined;
     }
   }
@@ -497,10 +497,10 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       try {
         const health = await this.redisClient.getHealth();
         if (!health.connected || !health.ready) {
-          console.warn("Redis health check failed:", health);
+          
         }
       } catch (error) {
-        console.warn("Redis health monitoring error:", error);
+        
       }
     }, this.poolConfig.healthCheckInterval || 30000);
   }

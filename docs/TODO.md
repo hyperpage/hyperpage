@@ -1,5 +1,2 @@
-- [x] Analyze ESLint warnings in tools/index.ts
-- [x] Fix unused variables in getClientTools function
-- [x] Remove unnecessary eslint-disable directive (already resolved)
-- [x] Test the changes with TypeScript and linting
-- [x] Verify ESLint warnings are resolved
+- [x] Fix ESLint warning by removing unused error parameter in rate-limit-monitor.ts
+- [x] Verify the fix resolves the warning

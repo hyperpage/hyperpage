@@ -65,8 +65,8 @@ export async function getOAuthStateCookie(
     }
 
     return state;
-  } catch (error) {
-    console.error("Failed to read OAuth state cookie:", error);
+  } catch {
+    
     return null;
   }
 }
@@ -109,13 +109,13 @@ export async function validateOAuthState(
     const storedState = await getOAuthStateCookie(provider);
 
     if (!storedState || storedState !== callbackState) {
-      console.error(`${provider} OAuth: Invalid state parameter received`);
+      
       return false;
     }
 
     return true;
-  } catch (error) {
-    console.error(`${provider} OAuth: State validation failed:`, error);
+  } catch {
+    
     return false;
   }
 }

@@ -68,7 +68,7 @@ describe("Redis Client", () => {
         const pingResult = await redisClient.ping();
         expect(pingResult).toBe(true);
       } catch (error) {
-        console.log(error);
+        
         // This is expected when Redis isn't running
         expect(error).toBeInstanceOf(Error);
         expect((error as Error).message).toContain("Redis connection");
@@ -113,7 +113,7 @@ describe("Redis Client", () => {
       try {
         await redisClient.connect();
       } catch (error) {
-        console.log(error);
+        
         // Expected to fail without Redis running
         const health = await redisClient.getHealth();
         expect(health.lastError).toBeDefined();

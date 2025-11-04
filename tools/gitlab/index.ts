@@ -9,6 +9,7 @@ import {
 } from "./types";
 import { registerTool } from "../registry";
 import { createIPv4Fetch } from "../../lib/ipv4-fetch";
+import logger from "../../lib/logger";
 
 export const gitlabTool: Tool = {
   name: "GitLab",
@@ -110,9 +111,9 @@ export const gitlabTool: Tool = {
         // Handle rate limiting with fallback to reduced data
         if (response.status === 429) {
           const retryAfter = response.headers.get("Retry-After");
-          console.warn(
-            `GitLab rate limited for merge requests. Retry after: ${retryAfter}s`,
-          );
+          logger.warn("GitLab rate limited for merge requests", {
+            retryAfter: retryAfter ? `${retryAfter}s` : "unknown",
+          });
 
           // Return minimal emergency data instead of throwing
           return {
@@ -243,9 +244,10 @@ export const gitlabTool: Tool = {
         });
 
         if (!userResponse.ok) {
-          console.warn(
-            "Could not fetch GitLab user info, falling back to empty issues array",
-          );
+          logger.warn("Could not fetch GitLab user info, falling back to empty issues array", {
+            status: userResponse.status,
+            statusText: userResponse.statusText,
+          });
           return { issues: results };
         }
 
@@ -264,10 +266,12 @@ export const gitlabTool: Tool = {
 
         if (!issuesResponse.ok) {
           const errorText = await issuesResponse.text();
-          console.warn(
-            `GitLab user issues API error: ${issuesResponse.status} - ${errorText}`,
-          );
-          console.warn("Failed to get user issues, returning empty array");
+          logger.warn("GitLab user issues API error", {
+            status: issuesResponse.status,
+            statusText: issuesResponse.statusText,
+            errorText,
+          });
+          
           return { issues: results }; // Return empty array instead of throwing
         }
 
@@ -294,9 +298,11 @@ export const gitlabTool: Tool = {
         );
 
         results.push(...transformedIssues.slice(0, 15)); // Limit to prevent overwhelming
-      } catch (error) {
-        console.warn("Error fetching GitLab issues:", error);
+      } catch (err) {
         // Return empty array instead of throwing to avoid breaking the portal
+        logger.error("Error fetching GitLab issues", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
 
       return { issues: results };

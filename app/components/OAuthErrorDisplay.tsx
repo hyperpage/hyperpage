@@ -200,10 +200,10 @@ export default function OAuthErrorDisplay({
                     .writeText(JSON.stringify(errorDetails, null, 2))
                     .then(() => {
                       // Could show a toast notification here
-                      console.log("Error details copied to clipboard");
+                      
                     })
                     .catch(() => {
-                      console.log("Failed to copy error details");
+                      
                     });
                 }}
                 className="text-xs"

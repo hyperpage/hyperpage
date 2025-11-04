@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Bottlenecks API error:", error);
+    
     return NextResponse.json(
       { error: "Failed to retrieve bottleneck data" },
       { status: 500 },
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error("Bottlenecks POST error:", error);
+    
     return NextResponse.json(
       { error: "Failed to trigger bottleneck analysis" },
       { status: 500 },

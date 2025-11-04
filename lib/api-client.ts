@@ -92,7 +92,7 @@ export async function makeRetryRequest(
       // No retry needed according to tool logic, return immediately
       break;
     } catch (error) {
-      console.warn(`Request failed on attempt ${attemptNumber + 1}:`, error);
+      
       attemptNumber++;
       if (attemptNumber > maxRetries) {
         throw error;
@@ -152,7 +152,7 @@ export async function makeRetryRequestLegacy(
       // No retry needed according to tool logic, return immediately
       break;
     } catch (error) {
-      console.warn(`Request failed on attempt ${attemptNumber + 1}:`, error);
+      
       attemptNumber++;
       if (attemptNumber > maxRetries) {
         throw error;

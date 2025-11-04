@@ -69,7 +69,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error(`Bottleneck ${context.params} detail error:`, error);
+    
     return NextResponse.json(
       { error: "Failed to retrieve bottleneck details" },
       { status: 500 },
@@ -179,7 +179,7 @@ export async function DELETE(
       message: `Resolved bottleneck ${id} acknowledged and removed from active tracking`,
     });
   } catch (error) {
-    console.error(`Bottleneck ${await context.params} deletion error:`, error);
+    
     return NextResponse.json(
       { error: "Failed to delete bottleneck" },
       { status: 500 },

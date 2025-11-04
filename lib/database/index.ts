@@ -38,18 +38,18 @@ export function closeDatabase(): void {
  */
 export async function initializeDatabase(): Promise<void> {
   try {
-    console.info("Initializing database...");
+    
 
     // Run migrations to ensure schema is up to date
     await runMigrations();
 
     // Load persisted rate limit data into memory cache
     const loadedRateLimits = await loadPersistedRateLimits();
-    console.info(`Loaded ${loadedRateLimits} persisted rate limit records`);
+    
 
     // Load persisted tool configurations and apply to registry
     const loadedToolConfigs = await loadToolConfigurations();
-    console.info(`Loaded ${loadedToolConfigs} tool configuration records`);
+    
 
     // Verify database connectivity
     const connectivityCheck = checkDatabaseConnectivity();
@@ -59,9 +59,9 @@ export async function initializeDatabase(): Promise<void> {
       );
     }
 
-    console.info("Database initialized successfully");
+    
   } catch (error) {
-    console.error("Failed to initialize database:", error);
+    
     throw new Error(
       `Database initialization failed: ${(error as Error).message}`,
     );

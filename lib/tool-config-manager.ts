@@ -9,6 +9,7 @@ import { db } from "./database";
 import { toolConfigs } from "./database/schema";
 import { eq } from "drizzle-orm";
 import { toolRegistry } from "../tools/registry";
+import logger from "./logger";
 
 /**
  * User-configurable tool settings interface
@@ -35,8 +36,6 @@ class ToolConfigManager {
    */
   async loadToolConfigurations(): Promise<number> {
     try {
-      console.info("Loading persisted tool configurations...");
-
       const persistedConfigs = await db.select().from(toolConfigs);
       let loadedCount = 0;
 
@@ -59,18 +58,20 @@ class ToolConfigManager {
           this.configCache.set(config.toolName, userConfig);
           loadedCount++;
         } catch (error) {
-          console.error(
-            `Failed to load configuration for tool '${config.toolName}':`,
-            error,
+          logger.error(
+            "Failed to load configuration for tool",
+            { toolName: config.toolName, error: error instanceof Error ? error.message : error }
           );
           continue;
         }
       }
 
-      console.info(`Successfully loaded ${loadedCount} tool configurations`);
       return loadedCount;
     } catch (error) {
-      console.error("Failed to load tool configurations from database:", error);
+      logger.error(
+        "Failed to load tool configurations",
+        { error: error instanceof Error ? error.message : error }
+      );
       return 0;
     }
   }
@@ -116,11 +117,10 @@ class ToolConfigManager {
       // Apply changes to tool registry
       await this.applyToolConfiguration(toolName, mergedConfig);
 
-      console.info(`Persisted configuration for tool '${toolName}'`);
     } catch (error) {
-      console.error(
-        `Failed to save configuration for tool '${toolName}':`,
-        error,
+      logger.error(
+        "Failed to save configuration for tool",
+        { toolName, error: error instanceof Error ? error.message : error }
       );
       throw error;
     }
@@ -174,12 +174,11 @@ class ToolConfigManager {
       // Reapply default configuration
       await this.applyToolConfiguration(toolName, this.getDefaultConfig());
 
-      console.info(`Deleted configuration for tool '${toolName}'`);
       return true;
     } catch (error) {
-      console.error(
-        `Failed to delete configuration for tool '${toolName}':`,
-        error,
+      logger.error(
+        "Failed to delete configuration for tool",
+        { toolName, error: error instanceof Error ? error.message : error }
       );
       return false;
     }
@@ -241,7 +240,7 @@ class ToolConfigManager {
   ): Promise<void> {
     const tool = toolRegistry[toolName];
     if (!tool) {
-      console.warn(`Cannot apply configuration to unknown tool '${toolName}'`);
+      logger.warn("Tool not found in registry", { toolName });
       return;
     }
 
@@ -261,7 +260,8 @@ class ToolConfigManager {
       tool.config = { ...tool.config, ...config.config };
     }
 
-    console.debug(`Applied configuration to tool '${toolName}':`, {
+    logger.debug("Applied configuration to tool", {
+      toolName,
       enabled: config.enabled,
       refreshInterval: config.refreshInterval,
     });

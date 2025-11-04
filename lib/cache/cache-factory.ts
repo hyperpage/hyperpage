@@ -107,7 +107,7 @@ export class CacheFactory {
             // Try Redis first
             cache = new RedisCache<T>(config.redisUrl, cacheOptions);
           } catch (error) {
-            console.warn("Redis connection failed, using memory cache:", error);
+            
             cache = new MemoryCache<T>(cacheOptions);
           }
           break;
@@ -164,7 +164,7 @@ export class CacheFactory {
     } else {
       // No Redis configured, use memory
       if (defaultMemory) {
-        console.info("No REDIS_URL configured, using memory cache");
+        
         return await this.create<T>({
           backend: CacheBackend.MEMORY,
         });
@@ -203,7 +203,7 @@ export class CacheFactory {
   static clearInstances(): void {
     this.instances.clear();
     this.metrics.clear();
-    console.info("All cache instances cleared from factory management");
+    
   }
 
   /**
@@ -220,13 +220,13 @@ export class CacheFactory {
           promises.push(cache.disconnect());
         }
       } catch (error) {
-        console.warn(`Error disposing cache ${key}:`, error);
+        
       }
     }
 
     await Promise.allSettled(promises);
     this.clearInstances();
-    console.info("All cache instances disposed");
+    
   }
 
   /**

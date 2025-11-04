@@ -58,28 +58,28 @@ export class RedisClient {
     this.client.on("connect", () => {
       this.connectionStartTime = Date.now();
       this.lastError = null;
-      console.debug("Redis client connected");
+      
     });
 
     this.client.on("ready", () => {
       this.isConnecting = false;
-      console.debug("Redis client ready");
+      
     });
 
     this.client.on("error", (error) => {
       this.lastError = error.message;
       this.isConnecting = false;
-      console.error("Redis client error:", error.message);
+      
     });
 
     this.client.on("close", () => {
       this.connectionStartTime = null;
       this.isConnecting = false;
-      console.debug("Redis client closed");
+      
     });
 
     this.client.on("reconnecting", () => {
-      console.debug("Redis client reconnecting...");
+      
     });
   }
 
@@ -96,13 +96,13 @@ export class RedisClient {
       if (!this.client) throw new Error("Redis client not initialized");
 
       await this.client.connect();
-      console.info("Successfully connected to Redis");
+      
     } catch (error) {
       this.isConnecting = false;
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.lastError = errorMessage;
-      console.error("Failed to connect to Redis:", errorMessage);
+      
 
       // Don't throw - graceful degradation to memory-only mode
       throw new Error(`Redis connection failed: ${errorMessage}`);
@@ -117,9 +117,9 @@ export class RedisClient {
 
     try {
       await this.client.quit();
-      console.debug("Redis client disconnected");
+      
     } catch (error) {
-      console.warn("Error during Redis disconnection:", error);
+      
       // Force disconnect if quit fails
       this.client.disconnect();
     } finally {

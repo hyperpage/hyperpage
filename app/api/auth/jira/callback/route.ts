@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     // Check for OAuth errors
     if (error) {
-      console.error(`${PROVIDER_NAME} OAuth error:`, error);
+      
       const errorDescription =
         searchParams.get("error_description") || "Unknown error";
       return NextResponse.redirect(
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME);
     if (!oauthConfig) {
-      console.error(`${PROVIDER_NAME} OAuth not configured`);
+      
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_not_configured`,
       );
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     const tokenResponse = await exchangeCodeForTokens(oauthConfig, code);
 
     if (!tokenResponse.access_token) {
-      console.error(`${PROVIDER_NAME} OAuth: Failed to obtain access token`);
+      
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_token_exchange_failed`,
       );
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       const finalWebUrl = webUrl || process.env.JIRA_WEB_URL;
 
       if (!finalWebUrl) {
-        console.error(`${PROVIDER_NAME} OAuth: Web URL not configured`);
+        
         return NextResponse.redirect(
           `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_web_url_missing`,
         );
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
       });
 
       if (!userResponse.ok) {
-        console.error(`${PROVIDER_NAME} OAuth: Failed to fetch user profile`);
+        
         return NextResponse.redirect(
           `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_user_fetch_failed`,
         );
@@ -231,9 +231,9 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      console.log(`${PROVIDER_NAME} OAuth successful for user: ${userId}`);
+      
     } catch (storageError) {
-      console.error(`${PROVIDER_NAME} OAuth storage error:`, storageError);
+      
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_storage_error`,
       );
@@ -260,7 +260,7 @@ export async function GET(request: NextRequest) {
 
     return successResponse;
   } catch (error) {
-    console.error(`${PROVIDER_NAME} OAuth callback error:`, error);
+    
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_internal_error`,
     );

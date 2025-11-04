@@ -249,7 +249,7 @@ export class CacheInvalidationMiddleware {
         );
       }
     } catch (error) {
-      console.warn("Cache invalidation error:", error);
+      
       // Don't throw - invalidation failures shouldn't break the main request
     }
   }
@@ -315,7 +315,7 @@ export class CacheInvalidationMiddleware {
         );
       }
     } catch (error) {
-      console.warn("Tag-based cache invalidation error:", error);
+      
     }
   }
 

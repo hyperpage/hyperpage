@@ -41,7 +41,7 @@ export async function GET(
     const response = await executeHandler(request, tool, endpoint);
     return await performanceMiddleware.recordPerformance(request, response);
   } catch (error) {
-    console.error(`Error in tool API ${toolName}/${endpoint}:`, error);
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
@@ -87,7 +87,7 @@ export async function POST(
     const response = await executeHandler(request, tool, endpoint);
     return await performanceMiddleware.recordPerformance(request, response);
   } catch (error) {
-    console.error(`Error in tool API ${toolName}/${endpoint}:`, error);
+    
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

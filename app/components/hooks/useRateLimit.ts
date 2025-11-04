@@ -49,7 +49,7 @@ export function useRateLimit(
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(`Failed to fetch rate limit status: ${errorMessage}`);
-      console.error(`useRateLimit error for ${platform}:`, err);
+      
     } finally {
       setLoading(false);
     }

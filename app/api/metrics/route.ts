@@ -327,12 +327,12 @@ async function updateMetrics() {
       // In a real implementation, this would increment per request
       connectionPoolRequestsTotal.inc(poolMetrics.totalConnections);
     } catch (error) {
-      console.error("Failed to update connection pool metrics:", error);
+      
       // Set error states
       connectionPoolHealthStatusGauge.set(0); // Unhealthy
     }
   } catch (error) {
-    console.error("Failed to update metrics:", error);
+    
   }
 }
 
@@ -353,7 +353,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Metrics endpoint error:", error);
+    
     return NextResponse.json(
       { error: "Failed to generate metrics" },
       { status: 500 },

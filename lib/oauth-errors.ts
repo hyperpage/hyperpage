@@ -3,6 +3,8 @@
  * Comprehensive error management for OAuth flows with user-friendly messaging
  */
 
+import logger from "./logger";
+
 export enum OAuthErrorType {
   CONFIGURATION_ERROR = "CONFIGURATION_ERROR",
   NETWORK_ERROR = "NETWORK_ERROR",
@@ -330,9 +332,9 @@ export function logOAuthError(error: OAuthError, context?: string): void {
     error.type === OAuthErrorType.PERMISSION_DENIED ||
     error.type === OAuthErrorType.AUTHENTICATION_FAILED
   ) {
-    console.warn("OAuth Warning:", error.message, logData);
+    logger.warn("OAuth Error", logData);
   } else {
-    console.error("OAuth Error:", error.message, logData);
+    logger.error("OAuth Error", logData);
   }
 }
 

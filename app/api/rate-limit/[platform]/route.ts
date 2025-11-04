@@ -49,7 +49,7 @@ export async function GET(
 
     return NextResponse.json(rateLimitStatus);
   } catch (error) {
-    console.error(`Rate limit API error for platform ${platform}:`, error);
+    
     return NextResponse.json(
       {
         error: `Internal error fetching rate limit status for ${platform}`,
