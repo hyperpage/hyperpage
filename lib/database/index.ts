@@ -44,11 +44,10 @@ export async function initializeDatabase(): Promise<void> {
     await runMigrations();
 
     // Load persisted rate limit data into memory cache
-    const loadedRateLimits = await loadPersistedRateLimits();
-    
+    await loadPersistedRateLimits();
 
     // Load persisted tool configurations and apply to registry
-    const loadedToolConfigs = await loadToolConfigurations();
+    await loadToolConfigurations();
     
 
     // Verify database connectivity

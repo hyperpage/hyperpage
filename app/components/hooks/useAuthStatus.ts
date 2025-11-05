@@ -7,10 +7,23 @@ const CACHE_TTL = 30 * 1000; // 30 seconds
 const CACHE_KEY = "auth-status-cache";
 
 // Request deduplication map
-const pendingRequests = new Map<string, Promise<any>>();
+const pendingRequests = new Map<string, Promise<unknown>>();
+
+interface ToolConnectionStatus {
+  connected: boolean;
+  connectedAt: Date;
+  lastUsed: Date;
+}
+
+interface ToolAuthStatus {
+  connected: boolean;
+  connectedAt?: string;
+  lastUsed?: string;
+  [key: string]: unknown;
+}
 
 interface CacheEntry {
-  data: any;
+  data: unknown;
   timestamp: number;
 }
 
@@ -25,11 +38,11 @@ interface AuthStatusCache {
 export function useAuthStatus() {
   const [authStatus, setAuthStatus] = useState<{
     authenticated: boolean;
-    authenticatedTools: Record<string, { connected: boolean; connectedAt: Date; lastUsed: Date }>;
-    user: any;
+    authenticatedTools: Record<string, ToolConnectionStatus>;
+    user: unknown;
   }>({ authenticated: false, authenticatedTools: {}, user: null });
   
-  const [toolStatuses, setToolStatuses] = useState<Record<string, any>>({});
+  const [toolStatuses, setToolStatuses] = useState<Record<string, ToolAuthStatus>>({});
   const [configuredTools, setConfiguredTools] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

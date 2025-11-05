@@ -6,6 +6,7 @@ import type {
   CacheStats,
 } from "./cache-interface";
 import { CacheBackend, CacheError } from "./cache-interface";
+import logger from "../logger";
 
 /**
  * Configuration for advanced Redis connection pooling.
@@ -308,7 +309,10 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       const value = await this.get(key);
       return value !== undefined;
     } catch (error) {
-      
+      logger.warn("Failed to check cache key existence", { 
+        key, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   }
@@ -434,7 +438,10 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
         accessTime: Date.now(),
       };
     } catch (error) {
-      
+      logger.warn("Failed to get cache entry", { 
+        key, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return undefined;
     }
   }
@@ -497,10 +504,14 @@ export class AdvancedRedisCache<T = unknown> implements ICache<T> {
       try {
         const health = await this.redisClient.getHealth();
         if (!health.connected || !health.ready) {
-          
+          logger.debug("Redis health check detected unhealthy connection", { 
+            health 
+          });
         }
       } catch (error) {
-        
+        logger.debug("Redis health check failed", { 
+          error: error instanceof Error ? error.message : String(error) 
+        });
       }
     }, this.poolConfig.healthCheckInterval || 30000);
   }

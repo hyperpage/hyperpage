@@ -414,7 +414,11 @@ export class MemoryJobQueue implements IJobQueue {
         try {
           // Skip jobs with invalid data
           if (!dbJob.id || !dbJob.name) {
-            
+            logger.warn("Skipping job with missing required fields", {
+              jobId: dbJob.id,
+              jobName: dbJob.name,
+              requiredFields: ["id", "name"],
+            });
             continue;
           }
 
@@ -465,7 +469,11 @@ export class MemoryJobQueue implements IJobQueue {
 
           recoveredCount++;
         } catch (error) {
-          
+          logger.error("Failed to process individual job during recovery", {
+            jobId: dbJob.id,
+            jobName: dbJob.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
           continue;
         }
       }
@@ -482,7 +490,9 @@ export class MemoryJobQueue implements IJobQueue {
       );
       return recoveredCount;
     } catch (error) {
-      
+      logger.error("Failed to load persisted jobs from database", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return 0;
     }
   }
@@ -513,10 +523,17 @@ export class MemoryJobQueue implements IJobQueue {
           ),
         );
 
-      
+      logger.info("Successfully cleaned up old jobs from database", {
+        countDeleted: countToDelete,
+        retentionDays,
+        cutoffTime,
+      });
       return countToDelete;
     } catch (error) {
-      
+      logger.error("Failed to cleanup old jobs from database", {
+        retentionDays,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return 0;
     }
   }

@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import logger from "../logger";
 
 export interface RedisClientOptions {
   host?: string;
@@ -70,6 +71,24 @@ export class RedisClient {
       this.lastError = error.message;
       this.isConnecting = false;
       
+      // Log the full error object with pino for better debugging
+      const redisError = error as { 
+        message: string; 
+        stack?: string; 
+        code?: string; 
+        errno?: number; 
+        syscall?: string; 
+        hostname?: string;
+      };
+      
+      logger.error("Redis client error", { 
+        error: error.message, 
+        stack: error.stack,
+        code: redisError.code,
+        errno: redisError.errno,
+        syscall: redisError.syscall,
+        hostname: redisError.hostname
+      });
     });
 
     this.client.on("close", () => {
@@ -103,6 +122,24 @@ export class RedisClient {
         error instanceof Error ? error.message : String(error);
       this.lastError = errorMessage;
       
+      // Log connection failure with detailed error information
+      const redisError = error as { 
+        message: string; 
+        stack?: string; 
+        code?: string; 
+        errno?: number; 
+        syscall?: string; 
+        hostname?: string;
+      };
+      
+      logger.error("Redis connection failed", { 
+        error: errorMessage, 
+        stack: (error as Error)?.stack,
+        code: redisError.code,
+        errno: redisError.errno,
+        syscall: redisError.syscall,
+        hostname: redisError.hostname
+      });
 
       // Don't throw - graceful degradation to memory-only mode
       throw new Error(`Redis connection failed: ${errorMessage}`);
@@ -119,6 +156,18 @@ export class RedisClient {
       await this.client.quit();
       
     } catch (error) {
+      // Log disconnect error but continue with forced disconnect
+      const redisError = error as { 
+        message: string; 
+        stack?: string; 
+        code?: string; 
+      };
+      
+      logger.error("Redis disconnect error", { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: (error as Error)?.stack,
+        code: redisError.code
+      });
       
       // Force disconnect if quit fails
       this.client.disconnect();
