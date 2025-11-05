@@ -9,41 +9,90 @@ import { CacheBackend, CacheError } from "./cache-interface";
 import logger from "../logger";
 
 /**
- * Redis-based cache implementation.
- * Provides persistent, distributed caching with TTL support.
+ * Configuration for advanced Redis features.
+ */
+export interface RedisCacheConfig {
+  /** Redis connection URL */
+  redisUrl?: string;
+  /** Enable pipeline operations for better performance */
+  enablePipeline?: boolean;
+  /** Enable advanced metrics tracking */
+  enableMetrics?: boolean;
+  /** Enable batch operations */
+  enableBatch?: boolean;
+  /** Health check interval in milliseconds */
+  healthCheckInterval?: number;
+}
+
+/**
+ * Performance metrics for cache operations.
+ */
+export interface CachePerformanceMetrics {
+  averageResponseTime: number;
+  hitRate: number;
+  throughput: number;
+}
+
+/**
+ * Redis-based cache implementation with both basic and advanced features.
+ * Provides persistent, distributed caching with TTL support, pipeline operations,
+ * metrics tracking, and connection management.
  * Implements the ICache interface for unified caching across backends.
  */
 export class RedisCache<T = unknown> implements ICache<T> {
   private redisClient: RedisClient;
   private readonly backend = CacheBackend.REDIS;
   private readonly defaultTtl: number;
+  private config: RedisCacheConfig;
   private stats = {
     hits: 0,
     misses: 0,
     expiries: 0,
-    evictions: 0, // Redis handles eviction internally
+    evictions: 0,
   };
+  private performanceMetrics = {
+    totalOperations: 0,
+    totalResponseTime: 0,
+    averageResponseTime: 0,
+    successfulOperations: 0,
+    failedOperations: 0,
+  };
+  private operationStartTimes = new Map<string, number>();
+  private healthCheckTimer?: NodeJS.Timeout;
 
   constructor(
     redisUrl?: string,
     options: CacheOptions = { maxSize: 10000, enableLru: false },
+    config: RedisCacheConfig = {},
   ) {
     this.redisClient = new RedisClient(redisUrl);
+    this.config = {
+      redisUrl,
+      enablePipeline: config.enablePipeline ?? true,
+      enableMetrics: config.enableMetrics ?? true,
+      enableBatch: config.enableBatch ?? true,
+      healthCheckInterval: config.healthCheckInterval ?? 30000,
+    };
     this.defaultTtl = options.defaultTtl || 600000; // 10 minutes default
+
+    // Start health monitoring if enabled
+    if (this.config.enableMetrics) {
+      this.startHealthMonitoring();
+    }
   }
 
   /**
-   * Store a value in Redis with a TTL (time-to-live).
-   * Data must be JSON-serializable for Redis storage.
-   * @param key - Cache key (should be URL-safe)
-   * @param data - Data to cache (must be JSON-serializable)
-   * @param ttlMs - Time to live in milliseconds
-   * @throws CacheError if Redis operation fails
+   * Store a value in Redis with enhanced error handling and metrics.
    */
   async set(key: string, data: T, ttlMs: number): Promise<void> {
+    const operationId = `set-${key}-${Date.now()}`;
+    if (this.config.enableMetrics) {
+      this.operationStartTimes.set(operationId, Date.now());
+    }
+
     try {
       if (!this.redisClient.isConnected) {
-        await this.redisClient.connect();
+        await this.ensureConnection();
       }
 
       // Create cache entry with metadata
@@ -59,7 +108,10 @@ export class RedisCache<T = unknown> implements ICache<T> {
       // Use Redis SET with EX (TTL in seconds)
       const ttlSeconds = Math.ceil(ttlMs / 1000);
       await client.set(key, entryString, "EX", ttlSeconds);
+
+      this.updatePerformanceMetrics("success");
     } catch (error) {
+      this.updatePerformanceMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to set cache entry: ${message}`,
@@ -67,26 +119,33 @@ export class RedisCache<T = unknown> implements ICache<T> {
         "set",
         true,
       );
+    } finally {
+      if (this.config.enableMetrics) {
+        this.operationStartTimes.delete(operationId);
+      }
     }
   }
 
   /**
-   * Retrieve a value from Redis if it exists and hasn't expired.
-   * @param key - Cache key
-   * @returns Cached data or undefined if not found/expired
-   * @throws CacheError if Redis operation fails but is recoverable
+   * Retrieve a value from Redis with performance optimization.
    */
   async get(key: string): Promise<T | undefined> {
+    const operationId = `get-${key}-${Date.now()}`;
+    if (this.config.enableMetrics) {
+      this.operationStartTimes.set(operationId, Date.now());
+    }
+
     try {
       if (!this.redisClient.isConnected) {
-        await this.redisClient.connect();
+        await this.ensureConnection();
       }
 
       const client = this.redisClient.getClient();
       const entryString = await client.get(key);
 
-      if (!entryString) {
+      if (!entryString || typeof entryString !== "string") {
         this.stats.misses++;
+        this.updatePerformanceMetrics("success");
         return undefined; // Cache miss
       }
 
@@ -98,12 +157,15 @@ export class RedisCache<T = unknown> implements ICache<T> {
         // Remove expired entry
         await client.del(key);
         this.stats.expiries++;
+        this.updatePerformanceMetrics("success");
         return undefined;
       }
 
       this.stats.hits++;
+      this.updatePerformanceMetrics("success");
       return entry.data;
     } catch (error) {
+      this.updatePerformanceMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to get cache entry: ${message}`,
@@ -111,14 +173,143 @@ export class RedisCache<T = unknown> implements ICache<T> {
         "get",
         true,
       );
+    } finally {
+      if (this.config.enableMetrics) {
+        this.operationStartTimes.delete(operationId);
+      }
+    }
+  }
+
+  /**
+   * Pipeline multiple get operations for better performance (advanced feature).
+   */
+  async getMultiple(keys: string[]): Promise<Map<string, T>> {
+    if (!this.config.enableBatch) {
+      throw new CacheError(
+        "Batch operations are disabled. Enable enableBatch in RedisCacheConfig.",
+        this.backend,
+        "getMultiple",
+        true,
+      );
+    }
+
+    const operationId = `getMultiple-${Date.now()}`;
+    if (this.config.enableMetrics) {
+      this.operationStartTimes.set(operationId, Date.now());
+    }
+
+    try {
+      if (!this.redisClient.isConnected) {
+        await this.ensureConnection();
+      }
+
+      const client = this.redisClient.getClient();
+      const pipeline = client.multi();
+
+      // Add all get commands to pipeline
+      keys.forEach((key) => {
+        pipeline.get(key);
+      });
+
+      const results = await pipeline.exec();
+      const resultMap = new Map<string, T>();
+
+      keys.forEach((key, index) => {
+        const result = results?.[index]?.[1]; // Redis pipeline result format
+        if (result && typeof result === "string") {
+          try {
+            const entry: CacheEntry<T> = JSON.parse(result);
+            if (Date.now() <= entry.expiresAt) {
+              resultMap.set(key, entry.data);
+            }
+          } catch {
+            // Skip invalid entries
+          }
+        }
+      });
+
+      this.stats.hits += resultMap.size;
+      this.stats.misses += keys.length - resultMap.size;
+      this.updatePerformanceMetrics("success");
+
+      return resultMap;
+    } catch (error) {
+      this.updatePerformanceMetrics("failure");
+      const message = error instanceof Error ? error.message : String(error);
+      throw new CacheError(
+        `Failed to get multiple cache entries: ${message}`,
+        this.backend,
+        "getMultiple",
+        true,
+      );
+    } finally {
+      if (this.config.enableMetrics) {
+        this.operationStartTimes.delete(operationId);
+      }
+    }
+  }
+
+  /**
+   * Set multiple entries in a pipeline for better performance (advanced feature).
+   */
+  async setMultiple(
+    entries: Map<string, { data: T; ttlMs: number }>,
+  ): Promise<void> {
+    if (!this.config.enableBatch) {
+      throw new CacheError(
+        "Batch operations are disabled. Enable enableBatch in RedisCacheConfig.",
+        this.backend,
+        "setMultiple",
+        true,
+      );
+    }
+
+    const operationId = `setMultiple-${Date.now()}`;
+    if (this.config.enableMetrics) {
+      this.operationStartTimes.set(operationId, Date.now());
+    }
+
+    try {
+      if (!this.redisClient.isConnected) {
+        await this.ensureConnection();
+      }
+
+      const client = this.redisClient.getClient();
+      const pipeline = client.multi();
+
+      for (const [key, { data, ttlMs }] of entries) {
+        const entry: CacheEntry<T> = {
+          data,
+          expiresAt: Date.now() + ttlMs,
+          accessTime: Date.now(),
+        };
+
+        const entryString = JSON.stringify(entry);
+        const ttlSeconds = Math.ceil(ttlMs / 1000);
+        pipeline.set(key, entryString, "EX", ttlSeconds);
+      }
+
+      await pipeline.exec();
+      this.updatePerformanceMetrics("success");
+    } catch (error) {
+      this.updatePerformanceMetrics("failure");
+      const message = error instanceof Error ? error.message : String(error);
+      throw new CacheError(
+        `Failed to set multiple cache entries: ${message}`,
+        this.backend,
+        "setMultiple",
+        true,
+      );
+    } finally {
+      if (this.config.enableMetrics) {
+        this.operationStartTimes.delete(operationId);
+      }
     }
   }
 
   /**
    * Check if a key exists and is not expired without retrieving the full value.
    * More efficient than get() when only existence is needed.
-   * @param key - Cache key
-   * @returns true if found and valid
    */
   async has(key: string): Promise<boolean> {
     try {
@@ -133,19 +324,24 @@ export class RedisCache<T = unknown> implements ICache<T> {
 
   /**
    * Remove a specific entry from Redis.
-   * @param key - Cache key
-   * @returns true if entry existed and was removed
    */
   async delete(key: string): Promise<boolean> {
+    const operationId = `delete-${key}-${Date.now()}`;
+    if (this.config.enableMetrics) {
+      this.operationStartTimes.set(operationId, Date.now());
+    }
+
     try {
       if (!this.redisClient.isConnected) {
-        await this.redisClient.connect();
+        await this.ensureConnection();
       }
 
       const client = this.redisClient.getClient();
       const result = await client.del(key);
-      return result === 1; // Redis DEL returns number of keys deleted
+      this.updatePerformanceMetrics("success");
+      return result === 1;
     } catch (error) {
+      this.updatePerformanceMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to delete cache entry: ${message}`,
@@ -153,6 +349,10 @@ export class RedisCache<T = unknown> implements ICache<T> {
         "delete",
         true,
       );
+    } finally {
+      if (this.config.enableMetrics) {
+        this.operationStartTimes.delete(operationId);
+      }
     }
   }
 
@@ -161,14 +361,21 @@ export class RedisCache<T = unknown> implements ICache<T> {
    * Use with caution - this affects all keys in the current Redis database.
    */
   async clear(): Promise<void> {
+    const operationId = `clear-${Date.now()}`;
+    if (this.config.enableMetrics) {
+      this.operationStartTimes.set(operationId, Date.now());
+    }
+
     try {
       if (!this.redisClient.isConnected) {
-        await this.redisClient.connect();
+        await this.ensureConnection();
       }
 
       const client = this.redisClient.getClient();
       await client.flushdb(); // Clear current database only
+      this.updatePerformanceMetrics("success");
     } catch (error) {
+      this.updatePerformanceMetrics("failure");
       const message = error instanceof Error ? error.message : String(error);
       throw new CacheError(
         `Failed to clear cache: ${message}`,
@@ -176,25 +383,32 @@ export class RedisCache<T = unknown> implements ICache<T> {
         "clear",
         true,
       );
+    } finally {
+      if (this.config.enableMetrics) {
+        this.operationStartTimes.delete(operationId);
+      }
     }
   }
 
   /**
-   * Get comprehensive cache statistics including Redis-specific metrics.
-   * @returns current cache stats
+   * Get comprehensive cache statistics including performance metrics.
    */
-  async getStats(): Promise<CacheStats> {
+  async getStats(): Promise<
+    CacheStats & {
+      performance: CachePerformanceMetrics;
+    }
+  > {
     try {
       if (!this.redisClient.isConnected) {
-        await this.redisClient.connect();
+        await this.ensureConnection();
       }
 
       const client = this.redisClient.getClient();
-
-      // Parse Redis stats to extract relevant metrics
-      // Note: In a real implementation, parse the info string for detailed metrics
+      await client.info("stats");
       const totalKeys = await client.dbsize();
 
+      const hitRate = this.stats.hits / (this.stats.hits + this.stats.misses);
+      
       return {
         size: totalKeys,
         hits: this.stats.hits,
@@ -202,6 +416,11 @@ export class RedisCache<T = unknown> implements ICache<T> {
         expiries: this.stats.expiries,
         evictions: this.stats.evictions,
         backend: this.backend,
+        performance: {
+          averageResponseTime: this.performanceMetrics.averageResponseTime,
+          hitRate,
+          throughput: this.performanceMetrics.totalOperations,
+        },
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -216,12 +435,8 @@ export class RedisCache<T = unknown> implements ICache<T> {
 
   /**
    * Force cleanup of expired entries.
-   * In Redis, this is mostly handled automatically, but we can scan for expired entries.
-   * @returns number of entries removed (approximate)
    */
   async cleanupExpired(): Promise<number> {
-    // Redis handles TTL expiration automatically
-    // But we can track our own expiries through client operations
     return this.stats.expiries;
   }
 
@@ -233,35 +448,33 @@ export class RedisCache<T = unknown> implements ICache<T> {
       const value = await this.get(key);
       if (value === undefined) return undefined;
 
-      // Reconstruct entry (this is simplified - real implementation might store metadata separately)
       return {
         data: value,
-        expiresAt: Date.now() + this.defaultTtl, // Approximate
+        expiresAt: Date.now() + this.defaultTtl,
         accessTime: Date.now(),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      logger.warn("Cache getEntry operation failed", { key, error: message });
+      logger.warn("Failed to get cache entry", {
+        key,
+        error: message,
+      });
       return undefined;
     }
   }
 
   /**
    * Get the current number of keys in Redis database.
-   * Note: This includes all keys, not just cache entries.
    */
   get size(): number {
-    // Async operation, return 0 synchronously and get accurate count via getStats()
-    return 0;
+    return 0; // Async operation, use getStats()
   }
 
   /**
    * Get snapshot of all cache keys.
-   * Warning: This can be expensive in production - use getStats() instead.
    */
   get keys(): readonly string[] {
-    // Async operation, return empty array synchronously
-    return [];
+    return []; // Async operation
   }
 
   /**
@@ -272,9 +485,104 @@ export class RedisCache<T = unknown> implements ICache<T> {
   }
 
   /**
-   * Disconnect from Redis gracefully.
+   * Disconnect from Redis gracefully and cleanup monitoring.
    */
   async disconnect(): Promise<void> {
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+    }
     await this.redisClient.disconnect();
   }
+
+  // Private methods for connection management and metrics
+
+  private async ensureConnection(): Promise<void> {
+    if (this.redisClient.isConnected) {
+      return;
+    }
+
+    try {
+      await this.redisClient.connect();
+    } catch (error) {
+      throw new CacheError(
+        `Failed to connect to Redis: ${error}`,
+        this.backend,
+        "connect",
+        false,
+      );
+    }
+  }
+
+  private startHealthMonitoring(): void {
+    this.healthCheckTimer = setInterval(async () => {
+      try {
+        const health = await this.redisClient.getHealth();
+        if (!health.connected || !health.ready) {
+          logger.debug("Redis health check detected unhealthy connection", {
+            health,
+          });
+        }
+      } catch (error) {
+        logger.debug("Redis health check failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }, this.config.healthCheckInterval || 30000);
+  }
+
+  private updatePerformanceMetrics(
+    outcome: "success" | "failure",
+  ): void {
+    if (!this.config.enableMetrics) return;
+
+    this.performanceMetrics.totalOperations++;
+
+    // Track success/failure metrics separately
+    if (outcome === "success") {
+      this.performanceMetrics.successfulOperations = 
+        (this.performanceMetrics.successfulOperations || 0) + 1;
+    } else {
+      this.performanceMetrics.failedOperations = 
+        (this.performanceMetrics.failedOperations || 0) + 1;
+    }
+
+    // Update average response time for successful operations only
+    if (outcome === "success" && this.operationStartTimes.size > 0) {
+      const firstStartTime = this.operationStartTimes.values().next().value;
+      if (firstStartTime !== undefined) {
+        const responseTime = Date.now() - firstStartTime;
+        this.performanceMetrics.totalResponseTime += responseTime;
+        this.performanceMetrics.averageResponseTime =
+          this.performanceMetrics.totalResponseTime / this.performanceMetrics.totalOperations;
+      }
+    }
+  }
+}
+
+// Factory functions for different Redis configurations (migrated from advanced cache)
+
+export function createBasicRedisCache<T>(redisUrl?: string): RedisCache<T> {
+  return new RedisCache<T>(redisUrl, { maxSize: 10000, enableLru: false }, {
+    enablePipeline: false,
+    enableMetrics: false,
+    enableBatch: false,
+  });
+}
+
+export function createAdvancedRedisCache<T>(redisUrl?: string): RedisCache<T> {
+  return new RedisCache<T>(redisUrl, { maxSize: 10000, enableLru: false }, {
+    enablePipeline: true,
+    enableMetrics: true,
+    enableBatch: true,
+    healthCheckInterval: 30000,
+  });
+}
+
+export function createPerformanceRedisCache<T>(redisUrl?: string): RedisCache<T> {
+  return new RedisCache<T>(redisUrl, { maxSize: 10000, enableLru: false }, {
+    enablePipeline: true,
+    enableMetrics: true,
+    enableBatch: true,
+    healthCheckInterval: 20000,
+  });
 }
