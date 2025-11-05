@@ -66,7 +66,6 @@ export async function getOAuthStateCookie(
 
     return state;
   } catch {
-    
     return null;
   }
 }
@@ -109,13 +108,11 @@ export async function validateOAuthState(
     const storedState = await getOAuthStateCookie(provider);
 
     if (!storedState || storedState !== callbackState) {
-      
       return false;
     }
 
     return true;
   } catch {
-    
     return false;
   }
 }

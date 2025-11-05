@@ -70,8 +70,11 @@ describe("Redis Client", () => {
         expect(pingResult).toBe(true);
       } catch (error) {
         // Log the connection error for debugging
-        logger.debug({ error }, 'Expected Redis connection failure during test');
-        
+        logger.debug(
+          { error },
+          "Expected Redis connection failure during test",
+        );
+
         // This is expected when Redis isn't running
         expect(error).toBeInstanceOf(Error);
         expect((error as Error).message).toContain("Redis connection");
@@ -117,8 +120,8 @@ describe("Redis Client", () => {
         await redisClient.connect();
       } catch (error) {
         // Log the connection attempt error for debugging
-        logger.debug({ error }, 'Expected Redis connection attempt failure');
-        
+        logger.debug({ error }, "Expected Redis connection attempt failure");
+
         // Expected to fail without Redis running
         const health = await redisClient.getHealth();
         expect(health.lastError).toBeDefined();

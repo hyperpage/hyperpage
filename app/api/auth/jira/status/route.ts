@@ -79,12 +79,15 @@ export async function GET(request: NextRequest) {
       });
     } catch (storageError) {
       logger.warn("Failed to check Jira token storage", {
-        error: storageError instanceof Error ? storageError.message : String(storageError),
+        error:
+          storageError instanceof Error
+            ? storageError.message
+            : String(storageError),
         stack: storageError instanceof Error ? storageError.stack : undefined,
         userId,
         provider: PROVIDER_NAME,
       });
-      
+
       // If storage check fails, assume not authenticated
       return NextResponse.json({
         authenticated: false,
@@ -99,7 +102,7 @@ export async function GET(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
       provider: PROVIDER_NAME,
     });
-    
+
     // Always return valid JSON in case of error
     return NextResponse.json(
       {

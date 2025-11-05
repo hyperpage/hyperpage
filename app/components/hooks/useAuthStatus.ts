@@ -41,9 +41,13 @@ export function useAuthStatus() {
     authenticatedTools: Record<string, ToolConnectionStatus>;
     user: unknown;
   }>({ authenticated: false, authenticatedTools: {}, user: null });
-  
-  const [toolStatuses, setToolStatuses] = useState<Record<string, ToolAuthStatus>>({});
-  const [configuredTools, setConfiguredTools] = useState<Record<string, boolean>>({});
+
+  const [toolStatuses, setToolStatuses] = useState<
+    Record<string, ToolAuthStatus>
+  >({});
+  const [configuredTools, setConfiguredTools] = useState<
+    Record<string, boolean>
+  >({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,52 +104,55 @@ export function useAuthStatus() {
   }, []);
 
   // Make authenticated request with deduplication
-  const makeRequest = useCallback(async (endpoint: string, url: string) => {
-    // Check if request is already pending
-    if (pendingRequests.has(endpoint)) {
-      return pendingRequests.get(endpoint);
-    }
+  const makeRequest = useCallback(
+    async (endpoint: string, url: string) => {
+      // Check if request is already pending
+      if (pendingRequests.has(endpoint)) {
+        return pendingRequests.get(endpoint);
+      }
 
-    // Check cache first
-    const cachedData = getCachedData(endpoint);
-    if (cachedData) {
-      return cachedData;
-    }
+      // Check cache first
+      const cachedData = getCachedData(endpoint);
+      if (cachedData) {
+        return cachedData;
+      }
 
-    // Check if we should make the request (not spam)
-    if (!shouldCallEndpoint(endpoint)) {
-      return getCachedData(endpoint);
-    }
+      // Check if we should make the request (not spam)
+      if (!shouldCallEndpoint(endpoint)) {
+        return getCachedData(endpoint);
+      }
 
-    // Create new request
-    const requestPromise = fetch(url)
-      .then(async (response) => {
-        const data = await response.json();
+      // Create new request
+      const requestPromise = fetch(url)
+        .then(async (response) => {
+          const data = await response.json();
 
-        // Update cache
-        const currentCache = cacheRef.current || {};
-        currentCache[endpoint] = {
-          data,
-          timestamp: Date.now(),
-        };
-        saveCache(currentCache);
+          // Update cache
+          const currentCache = cacheRef.current || {};
+          currentCache[endpoint] = {
+            data,
+            timestamp: Date.now(),
+          };
+          saveCache(currentCache);
 
-        // Remove from pending requests
-        pendingRequests.delete(endpoint);
+          // Remove from pending requests
+          pendingRequests.delete(endpoint);
 
-        return data;
-      })
-      .catch((error) => {
-        // Remove from pending requests on error
-        pendingRequests.delete(endpoint);
-        throw error;
-      });
+          return data;
+        })
+        .catch((error) => {
+          // Remove from pending requests on error
+          pendingRequests.delete(endpoint);
+          throw error;
+        });
 
-    // Store pending request
-    pendingRequests.set(endpoint, requestPromise);
+      // Store pending request
+      pendingRequests.set(endpoint, requestPromise);
 
-    return requestPromise;
-  }, [getCachedData, shouldCallEndpoint, saveCache]);
+      return requestPromise;
+    },
+    [getCachedData, shouldCallEndpoint, saveCache],
+  );
 
   // Fetch general auth status
   const fetchGeneralAuthStatus = useCallback(async () => {
@@ -154,7 +161,7 @@ export function useAuthStatus() {
       setError(null);
 
       const data = await makeRequest("general", "/api/auth/status");
-      
+
       setAuthStatus({
         authenticated: data.authenticated,
         authenticatedTools: data.authenticatedTools || {},
@@ -173,27 +180,33 @@ export function useAuthStatus() {
   }, [makeRequest]);
 
   // Fetch specific tool auth status
-  const fetchToolAuthStatus = useCallback(async (toolSlug: string) => {
-    try {
-      const data = await makeRequest(toolSlug, `/api/auth/${toolSlug}/status`);
-      
-      setToolStatuses((prev) => ({
-        ...prev,
-        [toolSlug]: data,
-      }));
+  const fetchToolAuthStatus = useCallback(
+    async (toolSlug: string) => {
+      try {
+        const data = await makeRequest(
+          toolSlug,
+          `/api/auth/${toolSlug}/status`,
+        );
 
-      return data;
-    } catch (err) {
-      console.error(`Failed to fetch ${toolSlug} auth status:`, err);
-      return null;
-    }
-  }, [makeRequest]);
+        setToolStatuses((prev) => ({
+          ...prev,
+          [toolSlug]: data,
+        }));
+
+        return data;
+      } catch (err) {
+        console.error(`Failed to fetch ${toolSlug} auth status:`, err);
+        return null;
+      }
+    },
+    [makeRequest],
+  );
 
   // Fetch OAuth configuration status for tools
   const fetchAuthConfig = useCallback(async () => {
     try {
       const data = await makeRequest("config", "/api/auth/config");
-      
+
       if (data && data.success) {
         setConfiguredTools(data.configured);
       }
@@ -206,38 +219,43 @@ export function useAuthStatus() {
   }, [makeRequest]);
 
   // Refresh all auth data
-  const refreshAuthStatus = useCallback(async (tools: string[] = ["github", "gitlab", "jira"]) => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const refreshAuthStatus = useCallback(
+    async (tools: string[] = ["github", "gitlab", "jira"]) => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      // Clear cache to force fresh requests
-      localStorage.removeItem(CACHE_KEY);
-      cacheRef.current = null;
-      pendingRequests.clear();
+        // Clear cache to force fresh requests
+        localStorage.removeItem(CACHE_KEY);
+        cacheRef.current = null;
+        pendingRequests.clear();
 
-      // Fetch general auth status, all tools, and configuration in parallel
-      const results = await Promise.allSettled([
-        fetchGeneralAuthStatus(),
-        ...tools.map(toolSlug => fetchToolAuthStatus(toolSlug)),
-        fetchAuthConfig()
-      ]);
+        // Fetch general auth status, all tools, and configuration in parallel
+        const results = await Promise.allSettled([
+          fetchGeneralAuthStatus(),
+          ...tools.map((toolSlug) => fetchToolAuthStatus(toolSlug)),
+          fetchAuthConfig(),
+        ]);
 
-      // Check if any requests failed
-      const failedRequests = results.filter(result => result.status === "rejected");
-      if (failedRequests.length > 0) {
-        setError("Some authentication requests failed");
+        // Check if any requests failed
+        const failedRequests = results.filter(
+          (result) => result.status === "rejected",
+        );
+        if (failedRequests.length > 0) {
+          setError("Some authentication requests failed");
+        }
+
+        return results;
+      } catch (err) {
+        setError("Failed to refresh authentication status");
+        console.error("Auth refresh error:", err);
+        return null;
+      } finally {
+        setIsLoading(false);
       }
-
-      return results;
-    } catch (err) {
-      setError("Failed to refresh authentication status");
-      console.error("Auth refresh error:", err);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchGeneralAuthStatus, fetchToolAuthStatus, fetchAuthConfig]);
+    },
+    [fetchGeneralAuthStatus, fetchToolAuthStatus, fetchAuthConfig],
+  );
 
   // Clear cache manually
   const clearCache = useCallback(() => {
@@ -253,8 +271,9 @@ export function useAuthStatus() {
 
   // Auto-refresh auth status on mount if cache is stale
   useEffect(() => {
-    const needsRefresh = !cacheRef.current || Object.keys(cacheRef.current).length === 0;
-    
+    const needsRefresh =
+      !cacheRef.current || Object.keys(cacheRef.current).length === 0;
+
     if (needsRefresh) {
       refreshAuthStatus();
     }
@@ -271,24 +290,24 @@ export function useAuthStatus() {
   return {
     // General auth status (from /api/auth/status)
     authStatus,
-    
+
     // Individual tool statuses (from /api/auth/{tool}/status)
     toolStatuses,
-    
+
     // OAuth configuration status (from /api/auth/config)
     configuredTools,
-    
+
     // Loading and error states
     isLoading,
     error,
-    
+
     // Actions
     fetchGeneralAuthStatus,
     fetchToolAuthStatus,
     fetchAuthConfig,
     refreshAuthStatus,
     clearCache,
-    
+
     // Cache utilities
     getCachedData,
     shouldCallEndpoint: shouldCallEndpoint,

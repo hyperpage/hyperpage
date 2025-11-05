@@ -13,7 +13,7 @@ The infinite render loop was caused by circular dependencies between `useAuthSta
 
 1. **Circular Dependency Chain**:
    - `AuthProvider` used the `useAuthStatus` hook
-   - `useAuthStatus` has a `useEffect` that calls `refreshAuthStatus()` 
+   - `useAuthStatus` has a `useEffect` that calls `refreshAuthStatus()`
    - `refreshAuthStatus` updates `toolStatuses` state in `useAuthStatus`
    - `toolStatuses` was in the dependency array `[toolStatuses, initialTools]` of a `useEffect` in `AuthProvider`
    - When `toolStatuses` changed, it triggered `setTools()` which caused a re-render
@@ -29,7 +29,7 @@ The infinite render loop was caused by circular dependencies between `useAuthSta
        const toolStatus = toolStatuses[toolSlug];
        if (toolStatus) {
          setTools((current) => // This causes re-render
-           current.map((tool) => 
+           current.map((tool) =>
              tool.toolSlug === toolSlug
                ? { ...tool, isAuthenticated: toolStatus.authenticated || false, ... }
                : tool
@@ -43,6 +43,7 @@ The infinite render loop was caused by circular dependencies between `useAuthSta
 ## Solution Implemented
 
 ### Fix Strategy
+
 1. **Removed the problematic second `useEffect`** that was listening for `toolStatuses` changes
 2. **Simplified the first `useEffect`** to only handle configuration loading and OAuth handling
 3. **Preserved authentication logic** in individual functions like `checkAuthStatus`, `authenticate`, and `disconnect`
@@ -65,6 +66,7 @@ The infinite render loop was caused by circular dependencies between `useAuthSta
 ## Before vs After
 
 ### Before (Problematic)
+
 ```typescript
 // Two useEffects creating circular dependency
 useEffect(() => {
@@ -73,12 +75,13 @@ useEffect(() => {
 }, [initialTools, toolStatuses, fetchToolAuthStatus]);
 
 useEffect(() => {
-  // Sync tool states when auth status changes  
+  // Sync tool states when auth status changes
   // This updates tools state, causing re-render
 }, [toolStatuses, initialTools]); // ← Infinite loop source
 ```
 
 ### After (Fixed)
+
 ```typescript
 // Single useEffect without circular dependency
 useEffect(() => {
@@ -106,6 +109,7 @@ useEffect(() => {
 ## Impact Assessment
 
 ### What Still Works
+
 - ✅ Tool configuration loading (`/api/auth/config`)
 - ✅ OAuth flow initialization and callbacks
 - ✅ Manual auth status checking via `checkAuthStatus()`
@@ -114,6 +118,7 @@ useEffect(() => {
 - ✅ All authentication API endpoints
 
 ### Performance Improvements
+
 - ✅ Eliminated infinite re-render cycles
 - ✅ Reduced unnecessary state updates
 - ✅ Improved component lifecycle stability
@@ -122,13 +127,16 @@ useEffect(() => {
 ## Technical Details
 
 ### Files Modified
+
 - `app/components/AuthProvider.tsx` - Main fix applied
 
 ### Files Unchanged
+
 - `app/components/hooks/useAuthStatus.ts` - Hook continues to work as designed
 - All API routes and backend logic remain intact
 
 ### Dependencies Affected
+
 - None external to the component
 - Internal state management simplified
 

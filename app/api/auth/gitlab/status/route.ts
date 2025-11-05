@@ -80,10 +80,10 @@ export async function GET(request: NextRequest) {
         hasRefreshToken: !!tokens.refreshToken && !isRefreshExpired,
       });
     } catch (storageError) {
-      logger.error("Failed to check GitLab authentication status in storage", { 
-        storageError, 
-        userId, 
-        provider: PROVIDER_NAME 
+      logger.error("Failed to check GitLab authentication status in storage", {
+        storageError,
+        userId,
+        provider: PROVIDER_NAME,
       });
       // If storage check fails, assume not authenticated
       return NextResponse.json({
@@ -94,10 +94,10 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    logger.error("Failed to get GitLab authentication status", { 
-      error, 
-      sessionId: sessionCookie?.value, 
-      provider: PROVIDER_NAME 
+    logger.error("Failed to get GitLab authentication status", {
+      error,
+      sessionId: sessionCookie?.value,
+      provider: PROVIDER_NAME,
     });
     // Always return valid JSON in case of error
     return NextResponse.json(

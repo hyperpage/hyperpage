@@ -45,7 +45,7 @@ describe("Persistence and Recovery System", () => {
       await fs.mkdir(TEST_BACKUP_DIR, { recursive: true }).catch(() => {});
     } catch (error) {
       // Log cleanup error at debug level - these are expected in cleanup scenarios
-      logger.debug({ error }, 'Test setup cleanup error (expected)');
+      logger.debug({ error }, "Test setup cleanup error (expected)");
     }
 
     // Create fresh test database with manual schema creation
@@ -74,7 +74,6 @@ describe("Persistence and Recovery System", () => {
     `);
 
     testDb = createTestDrizzle(testSqliteDb);
-    
   });
 
   afterAll(async () => {
@@ -87,7 +86,7 @@ describe("Persistence and Recovery System", () => {
         .catch(() => {});
     } catch (error) {
       // Log cleanup error at debug level - these are expected in cleanup scenarios
-      logger.debug({ error }, 'Test teardown cleanup error (expected)');
+      logger.debug({ error }, "Test teardown cleanup error (expected)");
     }
   });
 
@@ -105,7 +104,7 @@ describe("Persistence and Recovery System", () => {
       await testDb.delete(rateLimits);
     } catch (error) {
       // Log cleanup error at debug level - these are expected in cleanup scenarios
-      logger.debug({ error }, 'Test beforeEach cleanup error (expected)');
+      logger.debug({ error }, "Test beforeEach cleanup error (expected)");
     }
   });
 
@@ -117,7 +116,7 @@ describe("Persistence and Recovery System", () => {
         .catch(() => {});
     } catch (error) {
       // Log cleanup error at debug level - these are expected in cleanup scenarios
-      logger.debug({ error }, 'Test afterEach cleanup error (expected)');
+      logger.debug({ error }, "Test afterEach cleanup error (expected)");
     }
   });
 

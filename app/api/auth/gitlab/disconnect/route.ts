@@ -62,10 +62,10 @@ export async function POST(request: NextRequest) {
         message: `${PROVIDER_NAME} authentication disconnected successfully`,
       });
     } catch (storageError) {
-      logger.error("Failed to remove authentication data from secure storage", { 
-        storageError, 
-        userId, 
-        provider: PROVIDER_NAME 
+      logger.error("Failed to remove authentication data from secure storage", {
+        storageError,
+        userId,
+        provider: PROVIDER_NAME,
       });
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },
@@ -73,10 +73,10 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    logger.error("Failed to disconnect GitLab authentication", { 
-      error, 
-      sessionId: sessionCookie?.value, 
-      provider: PROVIDER_NAME 
+    logger.error("Failed to disconnect GitLab authentication", {
+      error,
+      sessionId: sessionCookie?.value,
+      provider: PROVIDER_NAME,
     });
     return NextResponse.json(
       { success: false, error: "Failed to disconnect authentication" },

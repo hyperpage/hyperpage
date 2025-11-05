@@ -67,16 +67,19 @@ export async function GET(request: NextRequest) {
 
     // Add response caching headers to reduce spam
     const response = NextResponse.json(result);
-    
+
     // Cache for 30 seconds to reduce server load
-    response.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
-    
+    response.headers.set(
+      "Cache-Control",
+      "public, max-age=30, stale-while-revalidate=60",
+    );
+
     // Add ETag for conditional requests
-    const etag = `"auth-status-${sessionId || 'anonymous'}-${Date.now()}"`;
-    response.headers.set('ETag', etag);
+    const etag = `"auth-status-${sessionId || "anonymous"}-${Date.now()}"`;
+    response.headers.set("ETag", etag);
 
     // Handle If-None-Match for conditional requests
-    const ifNoneMatch = request.headers.get('if-none-match');
+    const ifNoneMatch = request.headers.get("if-none-match");
     if (ifNoneMatch && ifNoneMatch === etag) {
       return new NextResponse(null, {
         status: 304,
@@ -86,14 +89,11 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch (error) {
-    logger.error(
-      "Failed to get authentication status",
-      {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    );
-    
+    logger.error("Failed to get authentication status", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
       { success: false, error: "Failed to get authentication status" },
       { status: 500 },

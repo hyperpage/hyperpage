@@ -473,14 +473,11 @@ export class AdvancedMemoryCache<T = unknown> implements ICache<T> {
     // This would be called asynchronously on startup
     if (this.options.warmKeys) {
       // Implementation would depend on the specific warming strategy
-      logger.info(
-        `Cache warming enabled`,
-        {
-          warmKeyCount: this.options.warmKeys.length,
-          warmKeys: this.options.warmKeys,
-          cacheType: this.options.evictionPolicy,
-        },
-      );
+      logger.info(`Cache warming enabled`, {
+        warmKeyCount: this.options.warmKeys.length,
+        warmKeys: this.options.warmKeys,
+        cacheType: this.options.evictionPolicy,
+      });
     }
   }
 }

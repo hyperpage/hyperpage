@@ -74,16 +74,13 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    logger.error(
-      "Failed to get tool health status",
-      {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        detailed,
-        connectivity,
-      },
-    );
-    
+    logger.error("Failed to get tool health status", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      detailed,
+      connectivity,
+    });
+
     return NextResponse.json(
       { error: "Failed to get tool health status" },
       { status: 500 },

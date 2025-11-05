@@ -141,10 +141,10 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Data consistency test: ${concurrentWrites} concurrent writes completed successfully`,
         {
-          type: 'data_consistency_test',
+          type: "data_consistency_test",
           concurrentWrites,
           operationIds: operationIds.slice(0, 5), // Log first 5 for brevity
-          allOperationsSuccessful: writeResults.every(r => r.dataUpdated),
+          allOperationsSuccessful: writeResults.every((r) => r.dataUpdated),
         },
       );
     });
@@ -205,11 +205,11 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Read consistency test: ${concurrentReads} concurrent reads completed without corruption`,
         {
-          type: 'read_consistency_test',
+          type: "read_consistency_test",
           concurrentReads,
           nullReads: nullReads.length,
           dataWithIntegrity: dataWithIntegrity.length,
-          allReadsSuccessful: readResults.every(r => r.data !== null),
+          allReadsSuccessful: readResults.every((r) => r.data !== null),
         },
       );
     });
@@ -304,11 +304,11 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Transaction isolation test: ${operations} mixed operations with isolation validation`,
         {
-          type: 'transaction_isolation_test',
+          type: "transaction_isolation_test",
           totalOperations: operations,
           writeOperations: writeOperations.length,
           readOperations: readOperations.length,
-          allOperationsSuccessful: operationResults.every(r => r.success),
+          allOperationsSuccessful: operationResults.every((r) => r.success),
         },
       );
     });
@@ -384,7 +384,7 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         "Recovery mechanism test: System failure and recovery completed successfully",
         {
-          type: 'recovery_mechanism_test',
+          type: "recovery_mechanism_test",
           recoveryAttempt: true,
           initialState: "created",
           timestamp: recoveredData?.recoveredTimestamp,
@@ -446,10 +446,11 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         "Session recreation test: Data persistence across session boundaries validated",
         {
-          type: 'session_recreation_test',
+          type: "session_recreation_test",
           persistentId: persistentData.persistentId,
           modificationHistoryLength: finalData?.modificationHistory.length,
-          dataPersisted: finalData?.persistentId === persistentData.persistentId,
+          dataPersisted:
+            finalData?.persistentId === persistentData.persistentId,
         },
       );
     });
@@ -519,7 +520,7 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Batch operation recovery test: ${successfulOps.length}/${batchSize} operations successful after partial failure`,
         {
-          type: 'batch_operation_recovery_test',
+          type: "batch_operation_recovery_test",
           batchSize,
           successfulOps: successfulOps.length,
           failedOps: failedOps.length,
@@ -616,10 +617,12 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Session integrity test: ${sessionCount} sessions with ${operationsPerSession} operations each`,
         {
-          type: 'session_integrity_test',
+          type: "session_integrity_test",
           sessionCount,
           operationsPerSession,
-          allSessionsSuccessful: sessionResults.every(r => r.allOperationsSuccessful),
+          allSessionsSuccessful: sessionResults.every(
+            (r) => r.allOperationsSuccessful,
+          ),
         },
       );
     });
@@ -690,7 +693,7 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         "Time persistence test: Session data maintained across time periods",
         {
-          type: 'time_persistence_test',
+          type: "time_persistence_test",
           startTime: initialTime,
           checkpoints: checkpoints.length,
           duration: lastCheckpoint?.timeElapsed,
@@ -792,10 +795,13 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Session lifecycle test: ${concurrentSessions} concurrent session invalidation/recreation cycles`,
         {
-          type: 'session_lifecycle_test',
+          type: "session_lifecycle_test",
           concurrentSessions,
-          recreationSuccessful: lifecycleResults.every(r => r.recreationSuccessful),
-          originalPhasePreserved: capturedActivePhases.length === concurrentSessions,
+          recreationSuccessful: lifecycleResults.every(
+            (r) => r.recreationSuccessful,
+          ),
+          originalPhasePreserved:
+            capturedActivePhases.length === concurrentSessions,
         },
       );
     });
@@ -899,11 +905,15 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Peak usage integrity test: ${peakLoad} concurrent access operations completed with full integrity`,
         {
-          type: 'peak_usage_integrity_test',
+          type: "peak_usage_integrity_test",
           peakLoad,
-          allOperationsSuccessful: peakResults.every(r => r.read1 && r.write && r.read2 && r.update),
+          allOperationsSuccessful: peakResults.every(
+            (r) => r.read1 && r.write && r.read2 && r.update,
+          ),
           dataIntegrityVerified: verifiedUsers.every((user) => {
-            const userPeakLoadTest = (user as TestUser & { peakLoadTest?: PeakLoadTest })?.peakLoadTest;
+            const userPeakLoadTest = (
+              user as TestUser & { peakLoadTest?: PeakLoadTest }
+            )?.peakLoadTest;
             return userPeakLoadTest?.peakLoadPhase === "updated";
           }),
         },
@@ -976,11 +986,16 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Referential integrity test: ${relationshipCount} complex relationships with integrity validation`,
         {
-          type: 'referential_integrity_test',
+          type: "referential_integrity_test",
           relationshipCount,
-          allRelationshipsValid: relationshipResults.every(r => r.referentialIntegrity),
-          primaryCreated: relationshipResults.filter(r => r.primaryCreated).length,
-          referencesCreated: relationshipResults.filter(r => r.referencesCreated).length,
+          allRelationshipsValid: relationshipResults.every(
+            (r) => r.referentialIntegrity,
+          ),
+          primaryCreated: relationshipResults.filter((r) => r.primaryCreated)
+            .length,
+          referencesCreated: relationshipResults.filter(
+            (r) => r.referencesCreated,
+          ).length,
         },
       );
     });
@@ -1076,10 +1091,12 @@ describe("Database Persistence & Recovery Testing", () => {
       logger.info(
         `Concurrent migration test: ${migrationSessions} concurrent data migrations with access validation`,
         {
-          type: 'concurrent_migration_test',
+          type: "concurrent_migration_test",
           migrationSessions,
-          migrationSuccessful: migrationResults.every(r => r.migrationSuccessful),
-          readAccessAvailable: migrationResults.every(r => !!r.readAccess),
+          migrationSuccessful: migrationResults.every(
+            (r) => r.migrationSuccessful,
+          ),
+          readAccessAvailable: migrationResults.every((r) => !!r.readAccess),
         },
       );
     });

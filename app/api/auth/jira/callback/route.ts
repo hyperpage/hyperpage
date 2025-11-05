@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
 
     // Check for OAuth errors
     if (error) {
-      
       const errorDescription =
         searchParams.get("error_description") || "Unknown error";
       return NextResponse.redirect(
@@ -50,7 +49,6 @@ export async function GET(request: NextRequest) {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME);
     if (!oauthConfig) {
-      
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_not_configured`,
       );
@@ -112,7 +110,6 @@ export async function GET(request: NextRequest) {
     const tokenResponse = await exchangeCodeForTokens(oauthConfig, code);
 
     if (!tokenResponse.access_token) {
-      
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_token_exchange_failed`,
       );
@@ -124,7 +121,6 @@ export async function GET(request: NextRequest) {
       const finalWebUrl = webUrl || process.env.JIRA_WEB_URL;
 
       if (!finalWebUrl) {
-        
         return NextResponse.redirect(
           `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_web_url_missing`,
         );
@@ -138,7 +134,6 @@ export async function GET(request: NextRequest) {
       });
 
       if (!userResponse.ok) {
-        
         return NextResponse.redirect(
           `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_user_fetch_failed`,
         );
@@ -231,19 +226,14 @@ export async function GET(request: NextRequest) {
           },
         },
       });
-
-      
     } catch (storageError) {
-      unifiedLogger.error(
-        `${PROVIDER_NAME} OAuth: Storage operation failed`,
-        { 
-          storageError,
-          provider: PROVIDER_NAME,
-          operation: 'oauth_storage',
-          sessionId 
-        }
-      );
-      
+      unifiedLogger.error(`${PROVIDER_NAME} OAuth: Storage operation failed`, {
+        storageError,
+        provider: PROVIDER_NAME,
+        operation: "oauth_storage",
+        sessionId,
+      });
+
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_storage_error`,
       );
@@ -270,15 +260,12 @@ export async function GET(request: NextRequest) {
 
     return successResponse;
   } catch (error) {
-    unifiedLogger.error(
-      `${PROVIDER_NAME} OAuth: Internal callback error`,
-      { 
-        error,
-        provider: PROVIDER_NAME,
-        operation: 'oauth_callback'
-      }
-    );
-    
+    unifiedLogger.error(`${PROVIDER_NAME} OAuth: Internal callback error`, {
+      error,
+      provider: PROVIDER_NAME,
+      operation: "oauth_callback",
+    });
+
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_internal_error`,
     );

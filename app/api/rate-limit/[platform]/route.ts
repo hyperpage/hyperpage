@@ -53,7 +53,7 @@ export async function GET(
     logger.error("Rate limit status fetch error", {
       error: error instanceof Error ? error.message : String(error),
       platform,
-      operation: "getServerRateLimitStatus"
+      operation: "getServerRateLimitStatus",
     });
     return NextResponse.json(
       {

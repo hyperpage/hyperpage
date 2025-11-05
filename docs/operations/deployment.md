@@ -90,27 +90,30 @@ Hyperpage supports CI/CD automation through GitHub Actions:
 
 #### Available Workflows
 
-| Workflow File | Purpose | Features |
-| --- | --- | --- |
-| ci-cd.yml | Main CI/CD Pipeline | Build, test, security scanning, deployment |
-| test-environments.yml | Test Environment Provisioning | Test environments for validation |
-| container-registry.yml | Container Management | Container builds and security scanning |
-| production-deployment.yml | Production Deployment | Deployment workflows |
-| cicd-monitoring.yml | Monitoring & Reporting | Pipeline metrics and monitoring |
+| Workflow File             | Purpose                       | Features                                   |
+| ------------------------- | ----------------------------- | ------------------------------------------ |
+| ci-cd.yml                 | Main CI/CD Pipeline           | Build, test, security scanning, deployment |
+| test-environments.yml     | Test Environment Provisioning | Test environments for validation           |
+| container-registry.yml    | Container Management          | Container builds and security scanning     |
+| production-deployment.yml | Production Deployment         | Deployment workflows                       |
+| cicd-monitoring.yml       | Monitoring & Reporting        | Pipeline metrics and monitoring            |
 
 #### Key Features
 
 **Automation:**
+
 - CI/CD pipeline from code to deployment
 - Automated testing and security scanning
 - Environment provisioning and resource management
 
 **Security:**
+
 - Security scanning with multiple tools
 - Vulnerability detection and validation
 - Container security checks
 
 **Environment Management:**
+
 - Test environment provisioning for validation
 - Deployment strategies and environment isolation
 - Resource allocation and monitoring
@@ -118,27 +121,32 @@ Hyperpage supports CI/CD automation through GitHub Actions:
 #### Workflow Details
 
 **Main CI/CD Pipeline:**
+
 - Build, test, security scan, and deploy stages
 - Automated dependency checking
 - Performance testing integration
 - Rollback capabilities for deployments
 
 **Test Environment Provisioning:**
+
 - Test environment creation and configuration
 - Resource management and isolation
 - Health monitoring and cleanup
 
 **Container Registry Management:**
+
 - Multi-architecture container builds
 - Security scanning integration
 - Versioning and tagging workflows
 
 **Production Deployment:**
+
 - Infrastructure-as-code deployment
 - Deployment strategies available
 - Deployment monitoring and notifications
 
 **CI/CD Monitoring:**
+
 - Metrics collection and DORA calculations
 - Pipeline health monitoring
 - Automated reporting and notifications
@@ -146,12 +154,14 @@ Hyperpage supports CI/CD automation through GitHub Actions:
 #### Metrics & Monitoring
 
 **DORA Metrics:**
+
 - Deployment frequency tracking
 - Lead time measurement
 - Mean time to recovery monitoring
 - Change failure rate tracking
 
 **Pipeline Health:**
+
 - Failure pattern analysis
 - Success rate monitoring
 - Performance tracking
@@ -160,6 +170,7 @@ Hyperpage supports CI/CD automation through GitHub Actions:
 #### Setup Requirements
 
 **Repository Secrets:**
+
 ```bash
 # GitHub Actions Secrets
 GITHUB_TOKEN=your_github_token
@@ -175,6 +186,7 @@ KUBERNETES_NAMESPACE=production
 ```
 
 **Workflow Triggers:**
+
 - Main Pipeline: Push to main, pull requests
 - Test Environments: Pull requests, manual triggers
 - Container Registry: Push to main, version tags
@@ -184,18 +196,21 @@ KUBERNETES_NAMESPACE=production
 #### Best Practices
 
 **Security:**
+
 - Minimal required permissions for workflows
 - Encrypted secret storage
 - Security scanning before deployment
 - Container vulnerability scanning
 
 **Reliability:**
+
 - Automated rollback on failures
 - Health checks for services
 - Deployment testing before production
 - Minimized downtime strategies
 
 **Observability:**
+
 - Comprehensive logging and monitoring
 - Performance metrics tracking
 - Failure pattern analysis
@@ -474,6 +489,7 @@ echo $NODE_ENV  # Should be 'production'
 ### Emergency Procedures
 
 Document contact information for:
+
 - Development team leads
 - Infrastructure administrators
 - Security team for breach incidents
@@ -491,4 +507,4 @@ The Hyperpage platform implements various security practices focused on practica
 - **Input Validation**: Parameter validation and sanitization
 - **Error Handling**: Generic error responses without sensitive information disclosure
 
-*Note: The project follows security best practices, but specific compliance certifications should be verified separately when required.*
+_Note: The project follows security best practices, but specific compliance certifications should be verified separately when required._

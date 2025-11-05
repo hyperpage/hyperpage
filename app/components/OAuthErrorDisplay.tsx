@@ -200,11 +200,8 @@ export default function OAuthErrorDisplay({
                     .writeText(JSON.stringify(errorDetails, null, 2))
                     .then(() => {
                       // Could show a toast notification here
-                      
                     })
-                    .catch(() => {
-                      
-                    });
+                    .catch(() => {});
                 }}
                 className="text-xs"
               >

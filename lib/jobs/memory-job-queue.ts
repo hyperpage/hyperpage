@@ -370,7 +370,6 @@ export class MemoryJobQueue implements IJobQueue {
 
     // Record job execution history (simplified for now - will be enhanced later)
     // TODO: Implement full job history tracking
-    
 
     // Update stats based on status change
     this.updateJobStats(oldStatus, status);
@@ -407,7 +406,6 @@ export class MemoryJobQueue implements IJobQueue {
           ]),
         );
 
-      
       let recoveredCount = 0;
 
       for (const dbJob of persistedJobs) {
@@ -478,16 +476,13 @@ export class MemoryJobQueue implements IJobQueue {
         }
       }
 
-      logger.info(
-        "Successfully recovered jobs from database",
-        {
-          recoveredCount,
-          totalJobs: this.stats.totalJobs,
-          pendingJobs: this.stats.pendingJobs,
-          runningJobs: this.stats.runningJobs,
-          failedJobs: this.stats.failedJobs,
-        },
-      );
+      logger.info("Successfully recovered jobs from database", {
+        recoveredCount,
+        totalJobs: this.stats.totalJobs,
+        pendingJobs: this.stats.pendingJobs,
+        runningJobs: this.stats.runningJobs,
+        failedJobs: this.stats.failedJobs,
+      });
       return recoveredCount;
     } catch (error) {
       logger.error("Failed to load persisted jobs from database", {

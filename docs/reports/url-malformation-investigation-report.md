@@ -32,6 +32,7 @@ const response = await fetch(`/api/tools/${tool.slug}/${endpoint}`);
 ```
 
 This generates proper URLs like:
+
 - `/api/tools/code-reviews/pull-requests` ✅
 - `/api/tools/github/pull-requests` ✅
 - `/api/tools/jira/issues` ✅
@@ -92,11 +93,12 @@ The application is functioning correctly. The malformed URL display is external 
 
 ## Conclusion
 
-**The malformed URL `:3000/api/tools/code-reviews/pull-requests:1` is NOT originating from our Hyperpage application.** 
+**The malformed URL `:3000/api/tools/code-reviews/pull-requests:1` is NOT originating from our Hyperpage application.**
 
 The application is functioning correctly with:
+
 - Proper API endpoint URLs
-- Working authentication system  
+- Working authentication system
 - Comprehensive error handling
 - Stable development server
 
@@ -105,6 +107,7 @@ This appears to be a browser display or extension issue that does not affect the
 ## Technical Evidence
 
 ### Working API Responses
+
 ```json
 // Authentication status
 {
@@ -121,6 +124,7 @@ This appears to be a browser display or extension issue that does not affect the
 ```
 
 ### Correct URL Construction
+
 ```typescript
 // In useToolQueries.ts - Verified correct
 const response = await fetch(`/api/tools/${tool.slug}/${endpoint}`);

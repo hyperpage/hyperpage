@@ -66,17 +66,14 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error(
-      "Failed to retrieve bottleneck data",
-      {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        includeHistory,
-        limit,
-        timeRange,
-      },
-    );
-    
+    logger.error("Failed to retrieve bottleneck data", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      includeHistory,
+      limit,
+      timeRange,
+    });
+
     return NextResponse.json(
       { error: "Failed to retrieve bottleneck data" },
       { status: 500 },
@@ -110,17 +107,14 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now(),
     });
   } catch (error) {
-    logger.error(
-      "Failed to trigger bottleneck analysis",
-      {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        timeRange,
-        categories,
-        severities,
-      },
-    );
-    
+    logger.error("Failed to trigger bottleneck analysis", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timeRange,
+      categories,
+      severities,
+    });
+
     return NextResponse.json(
       { error: "Failed to trigger bottleneck analysis" },
       { status: 500 },

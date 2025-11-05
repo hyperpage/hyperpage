@@ -161,7 +161,12 @@ describe("Bottlenecks Individual API - GET /api/bottlenecks/[id]", () => {
         {
           metric: "memory.usage",
           values: [80, 85, 90, 95],
-          timestamps: [Date.now() - 300000, Date.now() - 200000, Date.now() - 100000, Date.now()],
+          timestamps: [
+            Date.now() - 300000,
+            Date.now() - 200000,
+            Date.now() - 100000,
+            Date.now(),
+          ],
           trend: "rising",
         },
       ],
@@ -172,8 +177,10 @@ describe("Bottlenecks Individual API - GET /api/bottlenecks/[id]", () => {
   });
 
   it("should return detailed bottleneck information for valid ID", async () => {
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1");
-    
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+    );
+
     // Mock the context.params
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await GET(request, { params: mockParams });
@@ -197,7 +204,7 @@ describe("Bottlenecks Individual API - GET /api/bottlenecks/[id]", () => {
   it("should return 400 for missing bottleneck ID", async () => {
     const request = new NextRequest("http://localhost:3000/api/bottlenecks/");
     const mockParams = Promise.resolve({ id: "" });
-    
+
     const response = await GET(request, { params: mockParams });
     const data = await response.json();
 
@@ -207,10 +214,12 @@ describe("Bottlenecks Individual API - GET /api/bottlenecks/[id]", () => {
 
   it("should return 404 for non-existent bottleneck", async () => {
     vi.mocked(bottleneckDetector.getBottleneck).mockReturnValue(null);
-    
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/non-existent");
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/non-existent",
+    );
     const mockParams = Promise.resolve({ id: "non-existent" });
-    
+
     const response = await GET(request, { params: mockParams });
     const data = await response.json();
 
@@ -223,7 +232,9 @@ describe("Bottlenecks Individual API - GET /api/bottlenecks/[id]", () => {
       throw new Error("Database connection failed");
     });
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1");
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+    );
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
 
     const response = await GET(request, { params: mockParams });
@@ -234,9 +245,11 @@ describe("Bottlenecks Individual API - GET /api/bottlenecks/[id]", () => {
   });
 
   it("should include metadata with bottleneck age and time to resolve", async () => {
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1");
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+    );
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
-    
+
     const response = await GET(request, { params: mockParams });
     const data = await response.json();
 
@@ -250,11 +263,15 @@ describe("Bottlenecks Individual API - GET /api/bottlenecks/[id]", () => {
   });
 
   it("should return resolved bottleneck with proper metadata", async () => {
-    vi.mocked(bottleneckDetector.getBottleneck).mockReturnValue(mockResolvedBottleneck);
+    vi.mocked(bottleneckDetector.getBottleneck).mockReturnValue(
+      mockResolvedBottleneck,
+    );
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-2");
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-2",
+    );
     const mockParams = Promise.resolve({ id: "test-bottleneck-2" });
-    
+
     const response = await GET(request, { params: mockParams });
     const data = await response.json();
 
@@ -274,7 +291,9 @@ describe("Bottlenecks Individual API - GET /api/bottlenecks/[id]", () => {
 describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(bottleneckDetector.resolveBottleneck).mockReturnValue(mockResolvedBottleneck);
+    vi.mocked(bottleneckDetector.resolveBottleneck).mockReturnValue(
+      mockResolvedBottleneck,
+    );
   });
 
   it("should resolve bottleneck with automatic resolution", async () => {
@@ -284,13 +303,16 @@ describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
       followUpActions: ["Monitor for 1 hour"],
     };
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1", {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json",
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await PATCH(request, { params: mockParams });
@@ -299,7 +321,9 @@ describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
     expect(data.resolvedBottleneck).toEqual(mockResolvedBottleneck);
-    expect(data.message).toBe("Bottleneck test-bottleneck-1 marked as resolved");
+    expect(data.message).toBe(
+      "Bottleneck test-bottleneck-1 marked as resolved",
+    );
 
     expect(bottleneckDetector.resolveBottleneck).toHaveBeenCalledWith(
       "test-bottleneck-1",
@@ -318,13 +342,16 @@ describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
       actionTaken: "Manual intervention completed",
     };
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1", {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json",
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await PATCH(request, { params: mockParams });
@@ -348,20 +375,25 @@ describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
       actionTaken: "Test action",
     };
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1", {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json",
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await PATCH(request, { params: mockParams });
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Valid resolution type (automatic/manual) is required");
+    expect(data.error).toBe(
+      "Valid resolution type (automatic/manual) is required",
+    );
   });
 
   it("should return 400 for invalid resolution type", async () => {
@@ -370,20 +402,25 @@ describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
       actionTaken: "Test action",
     };
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1", {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json",
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await PATCH(request, { params: mockParams });
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Valid resolution type (automatic/manual) is required");
+    expect(data.error).toBe(
+      "Valid resolution type (automatic/manual) is required",
+    );
   });
 
   it("should return 400 for missing action taken", async () => {
@@ -391,13 +428,16 @@ describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
       resolution: "automatic" as const,
     };
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1", {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json",
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await PATCH(request, { params: mockParams });
@@ -415,13 +455,16 @@ describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
       actionTaken: "Test action",
     };
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/non-existent", {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json",
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/non-existent",
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const mockParams = Promise.resolve({ id: "non-existent" });
     const response = await PATCH(request, { params: mockParams });
@@ -441,13 +484,16 @@ describe("Bottlenecks Individual API - PATCH /api/bottlenecks/[id]", () => {
       actionTaken: "Test action",
     };
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1", {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "application/json",
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await PATCH(request, { params: mockParams });
@@ -464,11 +510,16 @@ describe("Bottlenecks Individual API - DELETE /api/bottlenecks/[id]", () => {
   });
 
   it("should remove resolved bottleneck from active tracking", async () => {
-    vi.mocked(bottleneckDetector.getBottleneck).mockReturnValue(mockResolvedBottleneck);
+    vi.mocked(bottleneckDetector.getBottleneck).mockReturnValue(
+      mockResolvedBottleneck,
+    );
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-2", {
-      method: "DELETE",
-    });
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-2",
+      {
+        method: "DELETE",
+      },
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-2" });
     const response = await DELETE(request, { params: mockParams });
@@ -476,15 +527,20 @@ describe("Bottlenecks Individual API - DELETE /api/bottlenecks/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
-    expect(data.message).toBe("Resolved bottleneck test-bottleneck-2 acknowledged and removed from active tracking");
+    expect(data.message).toBe(
+      "Resolved bottleneck test-bottleneck-2 acknowledged and removed from active tracking",
+    );
   });
 
   it("should return 404 for non-existent bottleneck", async () => {
     vi.mocked(bottleneckDetector.getBottleneck).mockReturnValue(null);
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/non-existent", {
-      method: "DELETE",
-    });
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/non-existent",
+      {
+        method: "DELETE",
+      },
+    );
 
     const mockParams = Promise.resolve({ id: "non-existent" });
     const response = await DELETE(request, { params: mockParams });
@@ -497,9 +553,12 @@ describe("Bottlenecks Individual API - DELETE /api/bottlenecks/[id]", () => {
   it("should return 400 for unresolved bottleneck", async () => {
     vi.mocked(bottleneckDetector.getBottleneck).mockReturnValue(mockBottleneck);
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1", {
-      method: "DELETE",
-    });
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+      {
+        method: "DELETE",
+      },
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await DELETE(request, { params: mockParams });
@@ -514,9 +573,12 @@ describe("Bottlenecks Individual API - DELETE /api/bottlenecks/[id]", () => {
       throw new Error("Database connection failed");
     });
 
-    const request = new NextRequest("http://localhost:3000/api/bottlenecks/test-bottleneck-1", {
-      method: "DELETE",
-    });
+    const request = new NextRequest(
+      "http://localhost:3000/api/bottlenecks/test-bottleneck-1",
+      {
+        method: "DELETE",
+      },
+    );
 
     const mockParams = Promise.resolve({ id: "test-bottleneck-1" });
     const response = await DELETE(request, { params: mockParams });

@@ -5,7 +5,7 @@
  * for integration testing across GitHub, GitLab, and Jira.
  */
 
-import logger from '../../lib/logger';
+import logger from "../../lib/logger";
 
 /**
  * Check if the test server is available
@@ -24,14 +24,11 @@ export async function isServerAvailable(baseUrl: string): Promise<boolean> {
     const response = await Promise.race([fetchPromise, timeoutPromise]);
     return response.ok;
   } catch (error) {
-    logger.info(
-      "Server not available",
-      { 
-        baseUrl, 
-        error: error instanceof Error ? error.message : String(error),
-        type: 'server_unavailable'
-      }
-    );
+    logger.info("Server not available", {
+      baseUrl,
+      error: error instanceof Error ? error.message : String(error),
+      type: "server_unavailable",
+    });
     return false;
   }
 }
@@ -348,36 +345,27 @@ export class IntegrationTestEnvironment {
           `${baseUrl}/api/sessions?sessionId=${sessionId}`,
         );
         if (!verifyResponse.ok) {
-          logger.warn(
-            "Session verification attempt failed",
-            { 
-              attemptNumber: attempts + 1, 
-              sessionId, 
-              type: 'session_verification_failed' 
-            }
-          );
+          logger.warn("Session verification attempt failed", {
+            attemptNumber: attempts + 1,
+            sessionId,
+            type: "session_verification_failed",
+          });
           sessionId = null; // Retry
         } else {
-          logger.info(
-            "Successfully created and verified test session",
-            { 
-              sessionId, 
-              provider, 
-              attemptNumber: attempts + 1,
-              type: 'session_created' 
-            }
-          );
+          logger.info("Successfully created and verified test session", {
+            sessionId,
+            provider,
+            attemptNumber: attempts + 1,
+            type: "session_created",
+          });
         }
       } catch (error) {
-        logger.error(
-          "Session creation error",
-          { 
-            error: error instanceof Error ? error.message : String(error),
-            attemptNumber: attempts + 1,
-            provider,
-            type: 'session_creation_error'
-          }
-        );
+        logger.error("Session creation error", {
+          error: error instanceof Error ? error.message : String(error),
+          attemptNumber: attempts + 1,
+          provider,
+          type: "session_creation_error",
+        });
         sessionId = null; // Retry
       }
 

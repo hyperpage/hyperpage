@@ -140,15 +140,12 @@ describe("Cache Integration", () => {
           backendType = stats.backend;
         } catch (error) {
           // Expected when Redis is unavailable - fallback should be working for basic operations
-          logger.info(
-            "Expected Redis operation failure in test environment",
-            {
-              type: 'cache_integration_test',
-              test: 'redis_fallback_graceful_degradation',
-              error: error instanceof Error ? error.message : "unknown",
-              backend: 'fallback'
-            },
-          );
+          logger.info("Expected Redis operation failure in test environment", {
+            type: "cache_integration_test",
+            test: "redis_fallback_graceful_degradation",
+            error: error instanceof Error ? error.message : "unknown",
+            backend: "fallback",
+          });
           backendType = "fallback"; // Indicates graceful degradation
         }
         expect(["memory", "fallback"]).toContain(backendType);
@@ -166,15 +163,12 @@ describe("Cache Integration", () => {
         } catch (error) {
           // If operations fail due to Redis unavailability, it's still valid behavior
           // The cache system is designed to fail gracefully in this context
-          logger.info(
-            "Expected Redis operation failure in test environment",
-            {
-              type: 'cache_integration_test',
-              test: 'redis_graceful_failure',
-              error: error instanceof Error ? error.message : "unknown",
-              testPhase: 'hybrid_fallback_test'
-            },
-          );
+          logger.info("Expected Redis operation failure in test environment", {
+            type: "cache_integration_test",
+            test: "redis_graceful_failure",
+            error: error instanceof Error ? error.message : "unknown",
+            testPhase: "hybrid_fallback_test",
+          });
 
           // Verify the cache instance is still functional (just not Redis-backed)
           expect(envCache).toBeDefined();

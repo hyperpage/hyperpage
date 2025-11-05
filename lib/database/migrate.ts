@@ -27,12 +27,9 @@ function ensureMigrationTable() {
       !errorMsg.includes("already exists") &&
       !errorMsg.includes("already_exists")
     ) {
-      logger.error(
-        "Failed to create migration tracking table",
-        {
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
+      logger.error("Failed to create migration tracking table", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }
@@ -71,13 +68,10 @@ async function isMigrationExecuted(migrationName: string): Promise<boolean> {
 
     return !!result;
   } catch (error) {
-    logger.warn(
-      `Error checking migration status for ${migrationName}`,
-      {
-        error: error instanceof Error ? error.message : String(error),
-        migrationName,
-      },
-    );
+    logger.warn(`Error checking migration status for ${migrationName}`, {
+      error: error instanceof Error ? error.message : String(error),
+      migrationName,
+    });
     return false;
   }
 }
@@ -90,13 +84,10 @@ async function recordMigrationExecuted(migrationName: string): Promise<void> {
       .run(migrationName);
   } catch (error) {
     if (!(error as Error)?.message?.includes("UNIQUE constraint failed")) {
-      logger.error(
-        "Failed to record migration execution",
-        {
-          error: error instanceof Error ? error.message : String(error),
-          migrationName,
-        },
-      );
+      logger.error("Failed to record migration execution", {
+        error: error instanceof Error ? error.message : String(error),
+        migrationName,
+      });
       throw error;
     }
   }
@@ -109,13 +100,10 @@ async function removeMigrationRecord(migrationName: string): Promise<void> {
       .prepare("DELETE FROM schema_migrations WHERE migration_name = ?")
       .run(migrationName);
   } catch (error) {
-    logger.error(
-      "Failed to remove migration record",
-      {
-        error: error instanceof Error ? error.message : String(error),
-        migrationName,
-      },
-    );
+    logger.error("Failed to remove migration record", {
+      error: error instanceof Error ? error.message : String(error),
+      migrationName,
+    });
     throw error;
   }
 }
@@ -126,14 +114,11 @@ async function runMigrationUp(
   sqlQuery: unknown,
   isDryRun = false,
 ): Promise<void> {
-  logger.info(
-    `Running migration up: ${migrationName}`,
-    {
-      migrationName,
-      isDryRun,
-      queryType: typeof sqlQuery,
-    },
-  );
+  logger.info(`Running migration up: ${migrationName}`, {
+    migrationName,
+    isDryRun,
+    queryType: typeof sqlQuery,
+  });
 
   if (!isDryRun) {
     try {
@@ -151,25 +136,20 @@ async function runMigrationUp(
         recordMigrationExecuted(migrationName);
       })();
 
-      logger.info(
-        `✓ Migration ${migrationName} completed successfully`,
-        { migrationName },
-      );
+      logger.info(`✓ Migration ${migrationName} completed successfully`, {
+        migrationName,
+      });
     } catch (error) {
-      logger.error(
-        `Failed to execute migration ${migrationName}`,
-        {
-          error: error instanceof Error ? error.message : String(error),
-          migrationName,
-        },
-      );
+      logger.error(`Failed to execute migration ${migrationName}`, {
+        error: error instanceof Error ? error.message : String(error),
+        migrationName,
+      });
       throw error;
     }
   } else {
-    logger.info(
-      `[DRY RUN] Migration ${migrationName} would be executed`,
-      { migrationName },
-    );
+    logger.info(`[DRY RUN] Migration ${migrationName} would be executed`, {
+      migrationName,
+    });
   }
 }
 
@@ -179,14 +159,11 @@ async function runMigrationDown(
   sqlQuery: unknown,
   isDryRun = false,
 ): Promise<void> {
-  logger.info(
-    `Rolling back migration: ${migrationName}`,
-    {
-      migrationName,
-      isDryRun,
-      queryType: typeof sqlQuery,
-    },
-  );
+  logger.info(`Rolling back migration: ${migrationName}`, {
+    migrationName,
+    isDryRun,
+    queryType: typeof sqlQuery,
+  });
 
   if (!isDryRun) {
     try {
@@ -208,13 +185,10 @@ async function runMigrationDown(
         { migrationName },
       );
     } catch (error) {
-      logger.error(
-        `Failed to rollback migration ${migrationName}`,
-        {
-          error: error instanceof Error ? error.message : String(error),
-          migrationName,
-        },
-      );
+      logger.error(`Failed to rollback migration ${migrationName}`, {
+        error: error instanceof Error ? error.message : String(error),
+        migrationName,
+      });
       throw error;
     }
   } else {
@@ -230,10 +204,7 @@ async function runMigrationDown(
  * @param isDryRun If true, only log what would be done without making changes
  */
 export async function runMigrations(isDryRun = false): Promise<void> {
-  logger.info(
-    "Starting database migration process",
-    { isDryRun },
-  );
+  logger.info("Starting database migration process", { isDryRun });
 
   try {
     // Ensure migration table exists
@@ -245,10 +216,10 @@ export async function runMigrations(isDryRun = false): Promise<void> {
       return;
     }
 
-    logger.info(
-      `Found ${migrationNames.length} migration(s) to process`,
-      { migrationCount: migrationNames.length, migrationNames },
-    );
+    logger.info(`Found ${migrationNames.length} migration(s) to process`, {
+      migrationCount: migrationNames.length,
+      migrationNames,
+    });
 
     for (const migrationName of migrationNames) {
       // Check if already executed
@@ -268,18 +239,14 @@ export async function runMigrations(isDryRun = false): Promise<void> {
       await runMigrationUp(migrationName, up, isDryRun);
     }
 
-    logger.info(
-      "Database migration process completed successfully",
-      { isDryRun },
-    );
+    logger.info("Database migration process completed successfully", {
+      isDryRun,
+    });
   } catch (error) {
-    logger.error(
-      "Database migration process failed",
-      {
-        error: error instanceof Error ? error.message : String(error),
-        isDryRun,
-      },
-    );
+    logger.error("Database migration process failed", {
+      error: error instanceof Error ? error.message : String(error),
+      isDryRun,
+    });
     throw error;
   }
 }
@@ -293,10 +260,7 @@ export async function rollbackMigrations(
   count = 1,
   isDryRun = false,
 ): Promise<void> {
-  logger.info(
-    `Rolling back ${count} migration(s)`,
-    { count, isDryRun },
-  );
+  logger.info(`Rolling back ${count} migration(s)`, { count, isDryRun });
 
   try {
     ensureMigrationTable();
@@ -320,30 +284,21 @@ export async function rollbackMigrations(
         const { down } = loadMigrationFromRegistry(migrationName);
         await runMigrationDown(migrationName, down, isDryRun);
       } catch (error) {
-        logger.error(
-          "Failed to rollback migration",
-          {
-            error: error instanceof Error ? error.message : String(error),
-            migrationName,
-          },
-        );
+        logger.error("Failed to rollback migration", {
+          error: error instanceof Error ? error.message : String(error),
+          migrationName,
+        });
         continue;
       }
     }
 
-    logger.info(
-      "Migration rollback process completed",
-      { count, isDryRun },
-    );
+    logger.info("Migration rollback process completed", { count, isDryRun });
   } catch (error) {
-    logger.error(
-      "Migration rollback process failed",
-      {
-        error: error instanceof Error ? error.message : String(error),
-        count,
-        isDryRun,
-      },
-    );
+    logger.error("Migration rollback process failed", {
+      error: error instanceof Error ? error.message : String(error),
+      count,
+      isDryRun,
+    });
     throw error;
   }
 }
@@ -356,7 +311,7 @@ export async function showMigrationStatus(): Promise<void> {
     ensureMigrationTable();
 
     logger.info("Database migration status:");
-    
+
     const migrationNames = getMigrationNamesFromRegistry();
     if (migrationNames.length === 0) {
       logger.info("No migrations found in registry");
@@ -369,9 +324,8 @@ export async function showMigrationStatus(): Promise<void> {
       logger.info(`${status} - ${migrationName}`);
     }
   } catch (error) {
-    logger.error(
-      "Failed to show migration status",
-      { error: error instanceof Error ? error.message : String(error) },
-    );
+    logger.error("Failed to show migration status", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }

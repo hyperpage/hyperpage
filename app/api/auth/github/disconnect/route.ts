@@ -60,23 +60,26 @@ export async function POST(request: NextRequest) {
         message: `${PROVIDER_NAME} authentication disconnected successfully`,
       });
     } catch (storageError) {
-      logger.error("Failed to remove authentication tokens during disconnect", { 
-        provider: PROVIDER_NAME, 
+      logger.error("Failed to remove authentication tokens during disconnect", {
+        provider: PROVIDER_NAME,
         userId,
-        error: storageError instanceof Error ? storageError.message : String(storageError) 
+        error:
+          storageError instanceof Error
+            ? storageError.message
+            : String(storageError),
       });
-      
+
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },
         { status: 500 },
       );
     }
   } catch (error) {
-    logger.error("Failed to disconnect GitHub authentication", { 
+    logger.error("Failed to disconnect GitHub authentication", {
       error: error instanceof Error ? error.message : String(error),
-      provider: PROVIDER_NAME 
+      provider: PROVIDER_NAME,
     });
-    
+
     return NextResponse.json(
       { success: false, error: "Failed to disconnect authentication" },
       { status: 500 },

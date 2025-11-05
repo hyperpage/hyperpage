@@ -35,42 +35,42 @@ Each tool owns its complete integration:
 Create `tools/newtool/index.ts` with complete tool definition:
 
 ```typescript
-import { ToolDefinition } from '../tool-types';
+import { ToolDefinition } from "../tool-types";
 
 export const newtool: ToolDefinition = {
-  name: 'newtool',
-  displayName: 'New Tool',
-  description: 'Description of the new tool',
-  enabled: process.env.ENABLE_NEWTOOL === 'true',
-  
+  name: "newtool",
+  displayName: "New Tool",
+  description: "Description of the new tool",
+  enabled: process.env.ENABLE_NEWTOOL === "true",
+
   // API endpoints
   apis: {
-    'data': {
-      method: 'GET',
-      endpoint: '/api/v1/data',
-      dataKey: 'items'
-    }
+    data: {
+      method: "GET",
+      endpoint: "/api/v1/data",
+      dataKey: "items",
+    },
   },
-  
+
   // Widget definitions
   widgets: [
     {
-      title: 'New Tool Data',
-      description: 'Display of new tool data',
-      size: 'medium',
+      title: "New Tool Data",
+      description: "Display of new tool data",
+      size: "medium",
       dynamic: true,
-      apiEndpoint: 'data',
-      refreshInterval: 300000 // 5 minutes
-    }
+      apiEndpoint: "data",
+      refreshInterval: 300000, // 5 minutes
+    },
   ],
-  
+
   // API handlers
   handlers: {
     async data() {
       // Business logic implementation
       return { items: [] };
-    }
-  }
+    },
+  },
 };
 ```
 
@@ -95,7 +95,7 @@ export interface NewToolResponse {
 Add to `tools/index.ts`:
 
 ```typescript
-export { newtool } from './newtool';
+export { newtool } from "./newtool";
 ```
 
 And register in the tools registry:
@@ -103,7 +103,7 @@ And register in the tools registry:
 ```typescript
 export const tools = [
   // ... existing tools
-  newtool
+  newtool,
 ];
 ```
 
@@ -123,6 +123,7 @@ NEWTOOL_API_TOKEN=your_api_token_here
 ### Widget Requirements
 
 All widgets must include:
+
 - **Title**: Display name for the widget
 - **Data Source**: Configurable data source with refresh capabilities
 - **Loading States**: Appropriate loading and error states
@@ -135,12 +136,12 @@ Widgets can be marked as `dynamic: true` to enable server-side API data fetching
 ```typescript
 widgets: [
   {
-    title: 'Dynamic Data',
+    title: "Dynamic Data",
     dynamic: true,
-    apiEndpoint: 'data',
-    refreshInterval: 300000
-  }
-]
+    apiEndpoint: "data",
+    refreshInterval: 300000,
+  },
+];
 ```
 
 **Important**: All dynamic widgets must specify `apiEndpoint` property that matches a defined API handler in the tool's `apis` object.
@@ -148,6 +149,7 @@ widgets: [
 ### Auto-Refresh Configuration
 
 Widgets support configurable `refreshInterval` (in milliseconds) for automatic background polling. Example intervals:
+
 - GitHub/Jira: 300000ms (5 minutes)
 - Performance monitoring: 60000ms (1 minute)
 - System metrics: 30000ms (30 seconds)
@@ -199,6 +201,7 @@ All tool API calls route through `/api/tools/[tool]/[endpoint]` which uses `tool
 ### Automatic Integration
 
 Adding/generating a tool automatically provides:
+
 - UI widgets in the portal
 - API endpoints for data access
 - Sidebar status indicators
@@ -207,6 +210,7 @@ Adding/generating a tool automatically provides:
 ### UI Filtering
 
 Only enabled tools appear in:
+
 - Portal UI widgets
 - Sidebar navigation
 - API endpoint discovery
@@ -217,6 +221,7 @@ Only enabled tools appear in:
 ### API Endpoint Testing
 
 Test API endpoints at `/api/tools/[tool]/[endpoint]`:
+
 - Verify data structure matches TypeScript types
 - Test error handling and edge cases
 - Validate authentication and authorization
@@ -224,6 +229,7 @@ Test API endpoints at `/api/tools/[tool]/[endpoint]`:
 ### Widget Testing
 
 Verify widgets in the portal:
+
 - Confirm widgets appear only for enabled tools
 - Test dynamic data loading and refresh functionality
 - Validate responsive design and error states

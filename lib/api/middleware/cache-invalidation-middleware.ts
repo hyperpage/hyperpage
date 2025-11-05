@@ -241,26 +241,20 @@ export class CacheInvalidationMiddleware {
 
       // Delete matched keys
       if (keysToDelete.length > 0) {
-        logger.debug(
-          "Invalidating cache entries by rule",
-          {
-            rulePattern: rule.pattern,
-            invalidatedCount: keysToDelete.length,
-            keysToDelete,
-          },
-        );
+        logger.debug("Invalidating cache entries by rule", {
+          rulePattern: rule.pattern,
+          invalidatedCount: keysToDelete.length,
+          keysToDelete,
+        });
         await Promise.allSettled(
           keysToDelete.map((key) => defaultCache.delete(key)),
         );
       }
     } catch (error) {
-      logger.warn(
-        "Cache invalidation by rule failed",
-        {
-          error: error instanceof Error ? error.message : String(error),
-          rulePattern: rule.pattern,
-        },
-      );
+      logger.warn("Cache invalidation by rule failed", {
+        error: error instanceof Error ? error.message : String(error),
+        rulePattern: rule.pattern,
+      });
       // Don't throw - invalidation failures shouldn't break the main request
     }
   }
@@ -317,26 +311,20 @@ export class CacheInvalidationMiddleware {
       }
 
       if (keysToDelete.length > 0) {
-        logger.debug(
-          "Invalidating cache entries by tags",
-          {
-            tags,
-            invalidatedCount: keysToDelete.length,
-            keysToDelete,
-          },
-        );
+        logger.debug("Invalidating cache entries by tags", {
+          tags,
+          invalidatedCount: keysToDelete.length,
+          keysToDelete,
+        });
         await Promise.allSettled(
           keysToDelete.map((key) => defaultCache.delete(key)),
         );
       }
     } catch (error) {
-      logger.warn(
-        "Cache invalidation by tags failed",
-        {
-          tags,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
+      logger.warn("Cache invalidation by tags failed", {
+        tags,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

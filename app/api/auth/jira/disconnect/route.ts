@@ -62,30 +62,27 @@ export async function POST(request: NextRequest) {
     } catch (storageError) {
       unifiedLogger.error(
         `${PROVIDER_NAME} OAuth disconnect: Storage operation failed`,
-        { 
+        {
           storageError,
           provider: PROVIDER_NAME,
-          operation: 'oauth_disconnect_storage',
+          operation: "oauth_disconnect_storage",
           userId,
-          sessionId
-        }
+          sessionId,
+        },
       );
-      
+
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },
         { status: 500 },
       );
     }
   } catch (error) {
-    unifiedLogger.error(
-      `${PROVIDER_NAME} OAuth disconnect: Internal error`,
-      { 
-        error,
-        provider: PROVIDER_NAME,
-        operation: 'oauth_disconnect'
-      }
-    );
-    
+    unifiedLogger.error(`${PROVIDER_NAME} OAuth disconnect: Internal error`, {
+      error,
+      provider: PROVIDER_NAME,
+      operation: "oauth_disconnect",
+    });
+
     return NextResponse.json(
       { success: false, error: "Failed to disconnect authentication" },
       { status: 500 },

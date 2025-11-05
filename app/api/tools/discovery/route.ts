@@ -45,7 +45,7 @@ export async function GET() {
   } catch (error) {
     // Log the error with pino for debugging
     logger.error("Failed to discover tools", { error });
-    
+
     return NextResponse.json(
       { error: "Failed to discover tools" },
       { status: 500 },

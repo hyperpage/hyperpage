@@ -22,59 +22,63 @@ class AuthRateLimiter {
    */
   private getClientId(request: NextRequest): string {
     // Try IP first, then fall back to session ID
-    const ip = request.headers.get('x-forwarded-for') || 
-               request.headers.get('x-real-ip') || 
-               'unknown';
-    
-    const sessionId = request.cookies.get('hyperpage-session')?.value;
-    
+    const ip =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+
+    const sessionId = request.cookies.get("hyperpage-session")?.value;
+
     if (sessionId) {
       return `session:${sessionId}`;
     }
-    
+
     return `ip:${ip}`;
   }
 
   /**
    * Check if request is rate limited
    */
-  isRateLimited(request: NextRequest): { allowed: boolean; resetTime?: number } {
+  isRateLimited(request: NextRequest): {
+    allowed: boolean;
+    resetTime?: number;
+  } {
     const clientId = this.getClientId(request);
     const now = Date.now();
-    
+
     // Clean up expired entries
     this.cleanupExpiredEntries();
-    
+
     const entry = this.requests.get(clientId);
-    
+
     if (!entry) {
       // First request from this client
       this.requests.set(clientId, {
         count: 1,
-        resetTime: now + this.windowMs
+        resetTime: now + this.windowMs,
       });
       return { allowed: true };
     }
-    
+
     // Check if window has reset
     if (now > entry.resetTime) {
       this.requests.set(clientId, {
         count: 1,
-        resetTime: now + this.windowMs
+        resetTime: now + this.windowMs,
       });
       return { allowed: true };
     }
-    
+
     // Check if under limit
     if (entry.count < this.maxRequests) {
       entry.count++;
       return { allowed: true };
     }
-    
+
     // Rate limited
-    return { 
-      allowed: false, 
-      resetTime: entry.resetTime 
+    return {
+      allowed: false,
+      resetTime: entry.resetTime,
     };
   }
 
@@ -96,12 +100,12 @@ class AuthRateLimiter {
   getRetryDelaySeconds(request: NextRequest): number {
     const clientId = this.getClientId(request);
     const entry = this.requests.get(clientId);
-    
+
     if (!entry) return 0;
-    
+
     const now = Date.now();
     const remaining = entry.resetTime - now;
-    
+
     return Math.max(0, Math.ceil(remaining / 1000));
   }
 }
@@ -114,28 +118,28 @@ export const authRateLimiter = new AuthRateLimiter(30, 60000);
  */
 export function checkAuthRateLimit(request: NextRequest): Response | null {
   const result = authRateLimiter.isRateLimited(request);
-  
+
   if (!result.allowed) {
     const retryAfter = authRateLimiter.getRetryDelaySeconds(request);
-    
+
     return new Response(
       JSON.stringify({
         success: false,
         error: "Too many requests",
-        retryAfter
+        retryAfter,
       }),
       {
         status: 429,
         headers: {
-          'Content-Type': 'application/json',
-          'Retry-After': retryAfter.toString(),
-          'X-RateLimit-Limit': '30',
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': result.resetTime?.toString() || '0'
-        }
-      }
+          "Content-Type": "application/json",
+          "Retry-After": retryAfter.toString(),
+          "X-RateLimit-Limit": "30",
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": result.resetTime?.toString() || "0",
+        },
+      },
     );
   }
-  
+
   return null;
 }

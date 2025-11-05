@@ -94,9 +94,7 @@ export const ciCdTool: Tool = {
               });
               results.push(...transformedPipelines);
             }
-          } catch {
-            
-          }
+          } catch {}
         } else if (tool.capabilities?.includes("workflows")) {
           // This is a GitHub-style tool (provides workflows)
           try {
@@ -128,9 +126,7 @@ export const ciCdTool: Tool = {
               });
               results.push(...transformedWorkflows);
             }
-          } catch {
-            
-          }
+          } catch {}
         }
       }
 

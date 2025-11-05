@@ -38,8 +38,6 @@ export function closeDatabase(): void {
  */
 export async function initializeDatabase(): Promise<void> {
   try {
-    
-
     // Run migrations to ensure schema is up to date
     await runMigrations();
 
@@ -48,7 +46,6 @@ export async function initializeDatabase(): Promise<void> {
 
     // Load persisted tool configurations and apply to registry
     await loadToolConfigurations();
-    
 
     // Verify database connectivity
     const connectivityCheck = checkDatabaseConnectivity();
@@ -57,10 +54,7 @@ export async function initializeDatabase(): Promise<void> {
         `Database connectivity check failed: ${connectivityCheck.details.message}`,
       );
     }
-
-    
   } catch (error) {
-    
     throw new Error(
       `Database initialization failed: ${(error as Error).message}`,
     );

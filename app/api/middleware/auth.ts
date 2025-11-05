@@ -115,10 +115,10 @@ export async function withAuth(
 
       return handler(authenticatedReq);
     } catch (error) {
-      logger.error("Authentication middleware error", { 
+      logger.error("Authentication middleware error", {
         error: error instanceof Error ? error.message : String(error),
-        operation: "withAuth", 
-        hasSessionId: !!sessionId 
+        operation: "withAuth",
+        hasSessionId: !!sessionId,
       });
       return NextResponse.json(
         { error: "Authentication service temporarily unavailable" },
@@ -159,7 +159,7 @@ export async function createAuthenticatedResponse(
       logger.error("Failed to extend session", {
         error: error instanceof Error ? error.message : String(error),
         sessionId: sessionId ? "present" : "missing",
-        operation: "extendSession"
+        operation: "extendSession",
       });
     }
   }
@@ -199,7 +199,7 @@ export async function checkToolAuthentication(
       error: error instanceof Error ? error.message : String(error),
       sessionId: sessionId ? "present" : "missing",
       toolName,
-      operation: "checkToolAuthentication"
+      operation: "checkToolAuthentication",
     });
     return { authenticated: false, error: "Authentication check failed" };
   }

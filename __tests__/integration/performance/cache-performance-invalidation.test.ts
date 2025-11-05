@@ -84,12 +84,12 @@ describe("Cache Performance & Invalidation Testing", () => {
         logger.info(
           `Cache key ${key}: ${stats.hits}/${totalAccess} hits (${(calculatedHitRate * 100).toFixed(1)}% hit rate)`,
           {
-            type: 'cache_hit_rate',
+            type: "cache_hit_rate",
             key,
             hits: stats.hits,
             totalAccess,
             hitRate: `${(calculatedHitRate * 100).toFixed(1)}%`,
-            accessPattern: 'sequential',
+            accessPattern: "sequential",
           },
         );
       });
@@ -108,12 +108,12 @@ describe("Cache Performance & Invalidation Testing", () => {
       logger.info(
         `Sequential access test: ${totalHits}/${totalHits + totalMisses} overall hits (${(overallHitRate * 100).toFixed(1)}% hit rate)`,
         {
-          type: 'sequential_access_summary',
+          type: "sequential_access_summary",
           totalHits,
           totalMisses,
           totalOperations: totalHits + totalMisses,
           overallHitRate: `${(overallHitRate * 100).toFixed(1)}%`,
-          accessPattern: 'sequential',
+          accessPattern: "sequential",
         },
       );
     });
@@ -169,12 +169,12 @@ describe("Cache Performance & Invalidation Testing", () => {
         logger.info(
           `Random access - ${key}: ${stats.hits}/${totalAccess} hits, avg ${avgResponseTime.toFixed(2)}ms response time`,
           {
-            type: 'random_access_performance',
+            type: "random_access_performance",
             key,
             hits: stats.hits,
             totalAccess,
             avgResponseTime: `${avgResponseTime.toFixed(2)}ms`,
-            accessPattern: 'random',
+            accessPattern: "random",
           },
         );
 
@@ -197,11 +197,11 @@ describe("Cache Performance & Invalidation Testing", () => {
       logger.info(
         `Random access test: ${overallHitRate >= 0.7 ? "PASSED" : "FAILED"} - ${(overallHitRate * 100).toFixed(1)}% hit rate`,
         {
-          type: 'random_access_test_result',
+          type: "random_access_test_result",
           overallHitRate: `${(overallHitRate * 100).toFixed(1)}%`,
           status: overallHitRate >= 0.7 ? "PASSED" : "FAILED",
           threshold: "70%",
-          accessPattern: 'random',
+          accessPattern: "random",
         },
       );
     });
@@ -261,13 +261,13 @@ describe("Cache Performance & Invalidation Testing", () => {
         logger.info(
           `Burst ${burstIndex + 1}: ${hits}/${burstSize} hits (${(burstHitRate * 100).toFixed(1)}% hit rate), ${burstAvgResponseTime.toFixed(2)}ms avg response`,
           {
-            type: 'burst_access_performance',
+            type: "burst_access_performance",
             burstIndex: burstIndex + 1,
             hits,
             burstSize,
             hitRate: `${(burstHitRate * 100).toFixed(1)}%`,
             avgResponseTime: `${burstAvgResponseTime.toFixed(2)}ms`,
-            accessPattern: 'burst',
+            accessPattern: "burst",
           },
         );
       }
@@ -290,10 +290,10 @@ describe("Cache Performance & Invalidation Testing", () => {
       logger.info(
         `Burst access test: ${(overallHitRate * 100).toFixed(1)}% overall hit rate, ${overallAvgResponseTime.toFixed(2)}ms avg response time`,
         {
-          type: 'burst_access_summary',
+          type: "burst_access_summary",
           overallHitRate: `${(overallHitRate * 100).toFixed(1)}%`,
           overallAvgResponseTime: `${overallAvgResponseTime.toFixed(2)}ms`,
-          accessPattern: 'burst',
+          accessPattern: "burst",
         },
       );
     });
@@ -354,11 +354,11 @@ describe("Cache Performance & Invalidation Testing", () => {
       logger.info(
         `Cache invalidation timing test: Invalidated after ${invalidationTime}ms (expected ${cacheTimeout}ms TTL)`,
         {
-          type: 'cache_invalidation_timing',
+          type: "cache_invalidation_timing",
           invalidationTime: `${invalidationTime}ms`,
           expectedTimeout: `${cacheTimeout}ms`,
           cacheKey,
-          testType: 'timing_accuracy',
+          testType: "timing_accuracy",
         },
       );
     });
@@ -444,9 +444,9 @@ describe("Cache Performance & Invalidation Testing", () => {
       logger.info(
         "Selective invalidation test: Cache entries expired at correct intervals",
         {
-          type: 'selective_cache_invalidation',
-          testType: 'ttl_based_invalidation',
-          cacheKeys: ['short_ttl', 'medium_ttl', 'long_ttl'],
+          type: "selective_cache_invalidation",
+          testType: "ttl_based_invalidation",
+          cacheKeys: ["short_ttl", "medium_ttl", "long_ttl"],
           ttlValues: [50, 100, 200],
         },
       );
@@ -501,8 +501,8 @@ describe("Cache Performance & Invalidation Testing", () => {
       logger.info(
         "Cache invalidation on data update test: Cache properly updated and expired",
         {
-          type: 'cache_update_invalidation',
-          testType: 'data_update_invalidation',
+          type: "cache_update_invalidation",
+          testType: "data_update_invalidation",
           cacheKey,
           initialVersion: 1,
           updatedVersion: 2,

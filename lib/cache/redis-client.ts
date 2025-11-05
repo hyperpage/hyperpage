@@ -59,47 +59,42 @@ export class RedisClient {
     this.client.on("connect", () => {
       this.connectionStartTime = Date.now();
       this.lastError = null;
-      
     });
 
     this.client.on("ready", () => {
       this.isConnecting = false;
-      
     });
 
     this.client.on("error", (error) => {
       this.lastError = error.message;
       this.isConnecting = false;
-      
+
       // Log the full error object with pino for better debugging
-      const redisError = error as { 
-        message: string; 
-        stack?: string; 
-        code?: string; 
-        errno?: number; 
-        syscall?: string; 
+      const redisError = error as {
+        message: string;
+        stack?: string;
+        code?: string;
+        errno?: number;
+        syscall?: string;
         hostname?: string;
       };
-      
-      logger.error("Redis client error", { 
-        error: error.message, 
+
+      logger.error("Redis client error", {
+        error: error.message,
         stack: error.stack,
         code: redisError.code,
         errno: redisError.errno,
         syscall: redisError.syscall,
-        hostname: redisError.hostname
+        hostname: redisError.hostname,
       });
     });
 
     this.client.on("close", () => {
       this.connectionStartTime = null;
       this.isConnecting = false;
-      
     });
 
-    this.client.on("reconnecting", () => {
-      
-    });
+    this.client.on("reconnecting", () => {});
   }
 
   /**
@@ -115,30 +110,29 @@ export class RedisClient {
       if (!this.client) throw new Error("Redis client not initialized");
 
       await this.client.connect();
-      
     } catch (error) {
       this.isConnecting = false;
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.lastError = errorMessage;
-      
+
       // Log connection failure with detailed error information
-      const redisError = error as { 
-        message: string; 
-        stack?: string; 
-        code?: string; 
-        errno?: number; 
-        syscall?: string; 
+      const redisError = error as {
+        message: string;
+        stack?: string;
+        code?: string;
+        errno?: number;
+        syscall?: string;
         hostname?: string;
       };
-      
-      logger.error("Redis connection failed", { 
-        error: errorMessage, 
+
+      logger.error("Redis connection failed", {
+        error: errorMessage,
         stack: (error as Error)?.stack,
         code: redisError.code,
         errno: redisError.errno,
         syscall: redisError.syscall,
-        hostname: redisError.hostname
+        hostname: redisError.hostname,
       });
 
       // Don't throw - graceful degradation to memory-only mode
@@ -154,21 +148,20 @@ export class RedisClient {
 
     try {
       await this.client.quit();
-      
     } catch (error) {
       // Log disconnect error but continue with forced disconnect
-      const redisError = error as { 
-        message: string; 
-        stack?: string; 
-        code?: string; 
+      const redisError = error as {
+        message: string;
+        stack?: string;
+        code?: string;
       };
-      
-      logger.error("Redis disconnect error", { 
+
+      logger.error("Redis disconnect error", {
         error: error instanceof Error ? error.message : String(error),
         stack: (error as Error)?.stack,
-        code: redisError.code
+        code: redisError.code,
       });
-      
+
       // Force disconnect if quit fails
       this.client.disconnect();
     } finally {

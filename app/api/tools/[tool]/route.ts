@@ -69,7 +69,7 @@ export async function GET(
     });
   } catch (error) {
     logger.error("Error getting tool details", { error, tool: toolName });
-    
+
     return NextResponse.json(
       { error: "Failed to get tool details" },
       { status: 500 },

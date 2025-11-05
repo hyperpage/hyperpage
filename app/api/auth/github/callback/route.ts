@@ -31,15 +31,12 @@ export async function GET(request: NextRequest) {
     if (error) {
       const errorDescription =
         searchParams.get("error_description") || "Unknown error";
-      logger.warn(
-        "GitHub OAuth callback error from provider",
-        {
-          provider: PROVIDER_NAME,
-          error,
-          errorDescription,
-          state,
-        },
-      );
+      logger.warn("GitHub OAuth callback error from provider", {
+        provider: PROVIDER_NAME,
+        error,
+        errorDescription,
+        state,
+      });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_${error}&description=${encodeURIComponent(errorDescription)}`,
       );
@@ -47,14 +44,11 @@ export async function GET(request: NextRequest) {
 
     // Validate required parameters
     if (!code) {
-      logger.error(
-        "GitHub OAuth callback: Missing authorization code",
-        {
-          provider: PROVIDER_NAME,
-          state,
-          hasCode: !!code,
-        },
-      );
+      logger.error("GitHub OAuth callback: Missing authorization code", {
+        provider: PROVIDER_NAME,
+        state,
+        hasCode: !!code,
+      });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_missing_code`,
       );
@@ -63,13 +57,10 @@ export async function GET(request: NextRequest) {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME);
     if (!oauthConfig) {
-      logger.error(
-        "GitHub OAuth not configured",
-        {
-          provider: PROVIDER_NAME,
-          hasConfig: !!oauthConfig,
-        },
-      );
+      logger.error("GitHub OAuth not configured", {
+        provider: PROVIDER_NAME,
+        hasConfig: !!oauthConfig,
+      });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_not_configured`,
       );
@@ -79,14 +70,11 @@ export async function GET(request: NextRequest) {
     const isValidState = await validateOAuthState(PROVIDER_NAME, state);
 
     if (!isValidState) {
-      logger.warn(
-        "GitHub OAuth state validation failed",
-        {
-          provider: PROVIDER_NAME,
-          hasState: !!state,
-          isValidState,
-        },
-      );
+      logger.warn("GitHub OAuth state validation failed", {
+        provider: PROVIDER_NAME,
+        hasState: !!state,
+        isValidState,
+      });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_invalid_state`,
       );
@@ -100,14 +88,11 @@ export async function GET(request: NextRequest) {
     const tokenResponse = await exchangeCodeForTokens(oauthConfig, code);
 
     if (!tokenResponse.access_token) {
-      logger.error(
-        "GitHub OAuth token exchange failed",
-        {
-          provider: PROVIDER_NAME,
-          hasAccessToken: !!tokenResponse.access_token,
-          tokenType: tokenResponse.token_type,
-        },
-      );
+      logger.error("GitHub OAuth token exchange failed", {
+        provider: PROVIDER_NAME,
+        hasAccessToken: !!tokenResponse.access_token,
+        tokenType: tokenResponse.token_type,
+      });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_token_exchange_failed`,
       );
@@ -123,14 +108,11 @@ export async function GET(request: NextRequest) {
       });
 
       if (!userResponse.ok) {
-        logger.error(
-          "Failed to fetch user profile from GitHub",
-          {
-            provider: PROVIDER_NAME,
-            status: userResponse.status,
-            statusText: userResponse.statusText,
-          },
-        );
+        logger.error("Failed to fetch user profile from GitHub", {
+          provider: PROVIDER_NAME,
+          status: userResponse.status,
+          statusText: userResponse.statusText,
+        });
         return NextResponse.redirect(
           `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_user_fetch_failed`,
         );
@@ -222,26 +204,23 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      logger.info(
-        "GitHub OAuth successfully connected",
-        {
-          provider: PROVIDER_NAME,
-          userId,
-          username: userProfile.login,
-          sessionId,
-          isNewUser: existingUser.length === 0,
-        },
-      );
+      logger.info("GitHub OAuth successfully connected", {
+        provider: PROVIDER_NAME,
+        userId,
+        username: userProfile.login,
+        sessionId,
+        isNewUser: existingUser.length === 0,
+      });
     } catch (storageError) {
-      logger.error(
-        "Failed to store GitHub OAuth tokens and user data",
-        {
-          provider: PROVIDER_NAME,
-          sessionId,
-          error: storageError instanceof Error ? storageError.message : String(storageError),
-          stack: storageError instanceof Error ? storageError.stack : undefined,
-        },
-      );
+      logger.error("Failed to store GitHub OAuth tokens and user data", {
+        provider: PROVIDER_NAME,
+        sessionId,
+        error:
+          storageError instanceof Error
+            ? storageError.message
+            : String(storageError),
+        stack: storageError instanceof Error ? storageError.stack : undefined,
+      });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_storage_error`,
       );
@@ -268,14 +247,11 @@ export async function GET(request: NextRequest) {
 
     return successResponse;
   } catch (error) {
-    logger.error(
-      "GitHub OAuth callback internal error",
-      {
-        provider: PROVIDER_NAME,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    );
+    logger.error("GitHub OAuth callback internal error", {
+      provider: PROVIDER_NAME,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_internal_error`,
     );

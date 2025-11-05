@@ -69,7 +69,10 @@ export default function ToolStatusRow() {
           setToolIntegrations(basicIntegrations);
         }
       } catch (error) {
-        logger.error("Failed to load tool integrations", { error, stack: error instanceof Error ? error.stack : undefined });
+        logger.error("Failed to load tool integrations", {
+          error,
+          stack: error instanceof Error ? error.stack : undefined,
+        });
       }
     }
 

@@ -57,32 +57,25 @@ export async function createIPv4Fetch(
             timeout: timeoutMs, // Set connection timeout at agent level too
             keepAlive: false, // Disable keep-alive to avoid connection pooling issues
           });
-          logger.info(
-            "IPv4 fetch configured",
-            {
-              url,
-              agentType: enhancedOptions.agent?.constructor.name || "unknown",
-              timeoutMs,
-              family: 4,
-            },
-          );
+          logger.info("IPv4 fetch configured", {
+            url,
+            agentType: enhancedOptions.agent?.constructor.name || "unknown",
+            timeoutMs,
+            family: 4,
+          });
         }
       } catch (error) {
         // If modules aren't available, log but continue with standard fetch
-        logger.warn(
-          "IPv4 forcing failed, using standard fetch",
-          {
-            url,
-            error: error instanceof Error ? error.message : String(error),
-            timeoutMs,
-          },
-        );
+        logger.warn("IPv4 forcing failed, using standard fetch", {
+          url,
+          error: error instanceof Error ? error.message : String(error),
+          timeoutMs,
+        });
       }
     } else {
-      logger.info(
-        "IPv4 fetch skipped - running in browser environment",
-        { url },
-      );
+      logger.info("IPv4 fetch skipped - running in browser environment", {
+        url,
+      });
     }
 
     const fetchPromise = fetch(url, enhancedOptions);

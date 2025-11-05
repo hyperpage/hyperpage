@@ -127,9 +127,9 @@ describe("Multi-User Load Testing", () => {
       logger.info(
         `Load test completed: ${simulatedUsers.length} user types processed`,
         {
-          type: 'load_test_completion',
+          type: "load_test_completion",
           userTypes: simulatedUsers.length,
-          userTypeDetails: simulatedUsers.map(u => ({
+          userTypeDetails: simulatedUsers.map((u) => ({
             type: u.userType,
             totalTime: `${u.totalTime.toFixed(2)}ms`,
             successfulRequests: u.successfulRequests,
@@ -218,7 +218,7 @@ describe("Multi-User Load Testing", () => {
       logger.info(
         `Resource allocation test: ${concurrentUsers} users across ${providerStats.size} providers`,
         {
-          type: 'resource_allocation_test',
+          type: "resource_allocation_test",
           concurrentUsers,
           providerCount: providerStats.size,
           providerStats: Object.fromEntries(
@@ -312,7 +312,7 @@ describe("Multi-User Load Testing", () => {
       logger.info(
         `Extreme load test: ${successfulOperations.length}/${extremeUserCount} operations successful`,
         {
-          type: 'extreme_load_test',
+          type: "extreme_load_test",
           totalUsers: extremeUserCount,
           successfulOperations: successfulOperations.length,
           failedOperations: failedOperations.length,
@@ -473,7 +473,7 @@ describe("Multi-User Load Testing", () => {
       logger.info(
         `Load spike test: Normal=${normalLoadTime.toFixed(2)}ms, Spike=${spikeLoadTime.toFixed(2)}ms, Recovery=${recoveryLoadTime.toFixed(2)}ms`,
         {
-          type: 'load_spike_test',
+          type: "load_spike_test",
           normalLoadTime: `${normalLoadTime.toFixed(2)}ms`,
           spikeLoadTime: `${spikeLoadTime.toFixed(2)}ms`,
           recoveryLoadTime: `${recoveryLoadTime.toFixed(2)}ms`,
@@ -558,7 +558,7 @@ describe("Multi-User Load Testing", () => {
       expect(responseTimeConsistency).toBeLessThan(5);
 
       logger.info("User experience metrics:", {
-        type: 'user_experience_metrics',
+        type: "user_experience_metrics",
         totalUsers: concurrentUsers,
         successfulSessions,
         averageSessionCreationTime: `${averageSessionCreationTime.toFixed(2)}ms`,
@@ -639,18 +639,15 @@ describe("Multi-User Load Testing", () => {
 
       expect(timeVariation).toBeLessThan(20); // Allow for realistic user pattern diversity with varied timing
 
-      logger.info(
-        "Pattern service quality:",
-        {
-          type: 'pattern_service_quality',
-          patterns: patternResults.map((p) => ({
-            pattern: p.pattern,
-            successRate: `${(p.successRate * 100).toFixed(1)}%`,
-            avgTime: `${p.averageTime.toFixed(2)}ms`,
-          })),
-          timeVariation: `${timeVariation.toFixed(1)}%`,
-        },
-      );
+      logger.info("Pattern service quality:", {
+        type: "pattern_service_quality",
+        patterns: patternResults.map((p) => ({
+          pattern: p.pattern,
+          successRate: `${(p.successRate * 100).toFixed(1)}%`,
+          avgTime: `${p.averageTime.toFixed(2)}ms`,
+        })),
+        timeVariation: `${timeVariation.toFixed(1)}%`,
+      });
     });
   });
 });

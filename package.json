@@ -9,6 +9,8 @@
     "start": "next start",
     "type-check": "npx tsc --noEmit",
     "lint": "eslint .",
+    "prettier": "npx prettier --check .",
+    "prettier:fix": "npx prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

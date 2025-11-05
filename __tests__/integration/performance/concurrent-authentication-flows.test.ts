@@ -20,7 +20,6 @@ interface TestSession {
   credentials: OAuthTestCredentials;
 }
 
-
 describe("Concurrent Authentication Flow Testing", () => {
   let testEnv: IntegrationTestEnvironment;
 
@@ -401,7 +400,7 @@ describe("Concurrent Authentication Flow Testing", () => {
       logger.info(
         `Stress test: ${totalOperations} operations in ${totalStressTime.toFixed(2)}ms`,
         {
-          type: 'stress_test',
+          type: "stress_test",
           totalOperations,
           totalStressTime: `${totalStressTime.toFixed(2)}ms`,
           averageTimePerOperation: `${averageTimePerOperation.toFixed(2)}ms`,

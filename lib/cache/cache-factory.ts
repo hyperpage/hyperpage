@@ -149,14 +149,11 @@ export class CacheFactory {
       // Initialize metrics tracking
       this.initializeMetrics(cacheKey, cache);
 
-      logger.info(
-        "Cache instance created",
-        {
-          cacheKey,
-          backend: config.backend,
-          cacheOptions,
-        },
-      );
+      logger.info("Cache instance created", {
+        cacheKey,
+        backend: config.backend,
+        cacheOptions,
+      });
 
       return cache;
     } catch (error) {
@@ -191,10 +188,9 @@ export class CacheFactory {
     } else {
       // No Redis configured, use memory
       if (defaultMemory) {
-        logger.info(
-          "No Redis URL configured, using memory cache",
-          { defaultMemory },
-        );
+        logger.info("No Redis URL configured, using memory cache", {
+          defaultMemory,
+        });
         return await this.create<T>({
           backend: CacheBackend.MEMORY,
         });
@@ -234,11 +230,8 @@ export class CacheFactory {
     const instanceCount = this.instances.size;
     this.instances.clear();
     this.metrics.clear();
-    
-    logger.info(
-      "Cache factory instances cleared",
-      { instanceCount },
-    );
+
+    logger.info("Cache factory instances cleared", { instanceCount });
   }
 
   /**
@@ -255,19 +248,16 @@ export class CacheFactory {
           promises.push(cache.disconnect());
         }
       } catch (error) {
-        logger.warn(
-          "Error during cache disposal",
-          {
-            cacheKey,
-            error: error instanceof Error ? error.message : String(error),
-          },
-        );
+        logger.warn("Error during cache disposal", {
+          cacheKey,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
     await Promise.allSettled(promises);
     this.clearInstances();
-    
+
     logger.info("All cache instances disposed successfully");
   }
 
@@ -313,13 +303,10 @@ export class CacheFactory {
 
       this.metrics.set(cacheKey, metrics);
     } catch (error) {
-      logger.warn(
-        "Failed to initialize metrics for cache",
-        {
-          cacheKey,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
+      logger.warn("Failed to initialize metrics for cache", {
+        cacheKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       endpoint: "/api/batch",
       method: "POST",
     });
-    
+
     return NextResponse.json(
       {
         error: "Failed to process batch request",

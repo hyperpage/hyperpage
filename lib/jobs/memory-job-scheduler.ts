@@ -222,13 +222,10 @@ export class MemoryJobScheduler implements IJobScheduler {
 
       // Here would be the job execution logic
       // In a real implementation, this would delegate to a job processor
-      
 
       // Simulate job execution (in real implementation, this would call a job processor)
       await this.executeJob(job);
     } catch (error) {
-      
-
       // Mark job as failed
       job.status = JobStatus.FAILED;
       job.updatedAt = Date.now();
@@ -289,16 +286,13 @@ export class MemoryJobScheduler implements IJobScheduler {
       timestamp: Date.now(),
     });
 
-    logger.info(
-      `Scheduled job completed`,
-      {
-        jobId: job.id,
-        jobName: job.name,
-        executionTimeMs: executionTime.toFixed(0),
-        jobType: job.type,
-        priority: job.priority,
-      },
-    );
+    logger.info(`Scheduled job completed`, {
+      jobId: job.id,
+      jobName: job.name,
+      executionTimeMs: executionTime.toFixed(0),
+      jobType: job.type,
+      priority: job.priority,
+    });
   }
 
   /**

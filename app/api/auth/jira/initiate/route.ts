@@ -13,12 +13,11 @@ const PROVIDER_NAME = "jira";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const webUrl = searchParams.get("web_url");
-  
+
   try {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME, webUrl || undefined);
     if (!oauthConfig) {
-      
       return NextResponse.json(
         { error: `${PROVIDER_NAME} OAuth not configured` },
         { status: 500 },
@@ -68,7 +67,7 @@ export async function GET(request: NextRequest) {
       webUrl,
       provider: PROVIDER_NAME,
     });
-    
+
     return NextResponse.json(
       { error: "Failed to initiate OAuth flow" },
       { status: 500 },

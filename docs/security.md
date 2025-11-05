@@ -56,7 +56,7 @@ The platform implements comprehensive OAuth 2.0 authentication:
 ```typescript
 // Example: Secure token handling
 interface SecureToken {
-  encryptedToken: string;  // AES-256-GCM encrypted
+  encryptedToken: string; // AES-256-GCM encrypted
   metadata: {
     provider: string;
     scope: string;
@@ -135,18 +135,18 @@ const validateParameter = (param: string): boolean => {
 
 ```typescript
 // Example: OAuth security testing
-describe('OAuth Security', () => {
-  it('should validate state parameter', async () => {
+describe("OAuth Security", () => {
+  it("should validate state parameter", async () => {
     const response = await oauthHandler({
-      state: 'invalid-state'
+      state: "invalid-state",
     });
     expect(response.status).toBe(400);
   });
 
-  it('should encrypt tokens with AES-256-GCM', async () => {
+  it("should encrypt tokens with AES-256-GCM", async () => {
     const token = await encryptToken(oauthToken);
     expect(token).toBeDefined();
-    expect(token).not.toContain('plaintext');
+    expect(token).not.toContain("plaintext");
   });
 });
 ```
@@ -155,15 +155,15 @@ describe('OAuth Security', () => {
 
 ```typescript
 // Example: API security testing
-describe('API Security', () => {
-  it('should reject invalid parameters', async () => {
-    const response = await request('/api/tools/invalid<tool>/data');
+describe("API Security", () => {
+  it("should reject invalid parameters", async () => {
+    const response = await request("/api/tools/invalid<tool>/data");
     expect(response.status).toBe(400);
   });
 
-  it('should not expose sensitive data', async () => {
-    const response = await request('/api/tools/jira/issues');
-    expect(response.body).not.toContain('apiToken');
+  it("should not expose sensitive data", async () => {
+    const response = await request("/api/tools/jira/issues");
+    expect(response.body).not.toContain("apiToken");
   });
 });
 ```
@@ -199,7 +199,7 @@ The Hyperpage platform implements security practices focused on practical implem
 - **Input Validation**: Comprehensive parameter validation and sanitization
 - **Error Handling**: Generic error responses without sensitive information disclosure
 
-*Note: Compliance certifications mentioned in previous versions of this document were not substantiated. Actual compliance certifications should be verified and documented separately when obtained.*
+_Note: Compliance certifications mentioned in previous versions of this document were not substantiated. Actual compliance certifications should be verified and documented separately when obtained._
 
 ## Security Best Practices
 

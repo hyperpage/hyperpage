@@ -12,7 +12,10 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -31,7 +34,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       const error = this.state.error;
       const errorMessage = error?.message || "An unexpected error occurred";
       const isAuthError = errorMessage.toLowerCase().includes("authentication");
-      
+
       if (this.props.fallback) {
         return this.props.fallback;
       }
@@ -41,18 +44,29 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="max-w-md w-full text-center">
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
               <div className="text-red-600 dark:text-red-400 mb-4">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-12 h-12 mx-auto"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <h2 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
-                {isAuthError ? "Authentication Required" : "Something went wrong"}
+                {isAuthError
+                  ? "Authentication Required"
+                  : "Something went wrong"}
               </h2>
               <p className="text-red-600 dark:text-red-300 text-sm mb-4">
-                {isAuthError 
+                {isAuthError
                   ? "Please authenticate to access the portal data."
-                  : errorMessage
-                }
+                  : errorMessage}
               </p>
               <button
                 onClick={() => window.location.reload()}

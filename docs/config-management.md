@@ -133,9 +133,9 @@ For new tools, use this template:
 The platform automatically detects environment using `NODE_ENV`:
 
 ```typescript
-const isDevelopment = process.env.NODE_ENV === 'development';
-const isProduction = process.env.NODE_ENV === 'production';
-const isTest = process.env.NODE_ENV === 'test';
+const isDevelopment = process.env.NODE_ENV === "development";
+const isProduction = process.env.NODE_ENV === "production";
+const isTest = process.env.NODE_ENV === "test";
 ```
 
 ## Configuration Management Best Practices
@@ -193,14 +193,10 @@ All configuration is validated during application startup:
 
 ```typescript
 // Required environment variables
-const requiredVars = [
-  'NODE_ENV',
-  'ENABLE_JIRA',
-  'ENABLE_GITHUB'
-];
+const requiredVars = ["NODE_ENV", "ENABLE_JIRA", "ENABLE_GITHUB"];
 
 // Validate required variables
-requiredVars.forEach(varName => {
+requiredVars.forEach((varName) => {
   if (!process.env[varName]) {
     throw new Error(`Missing required environment variable: ${varName}`);
   }

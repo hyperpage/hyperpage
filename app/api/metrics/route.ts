@@ -278,10 +278,10 @@ async function updateMetrics() {
           });
         }
       } catch (error) {
-        logger.error(`Failed to fetch rate limit status for ${platform}`, { 
+        logger.error(`Failed to fetch rate limit status for ${platform}`, {
           error: error instanceof Error ? error.message : String(error),
           platform,
-          endpoint: "/api/metrics" 
+          endpoint: "/api/metrics",
         });
         // Set status to unknown for failed platforms
         rateLimitStatusGauge.set({ platform }, 3);
@@ -329,19 +329,19 @@ async function updateMetrics() {
       // In a real implementation, this would increment per request
       connectionPoolRequestsTotal.inc(poolMetrics.totalConnections);
     } catch (error) {
-      logger.error("Failed to update connection pool metrics", { 
+      logger.error("Failed to update connection pool metrics", {
         error: error instanceof Error ? error.message : String(error),
         endpoint: "/api/metrics",
-        component: "connection_pool" 
+        component: "connection_pool",
       });
       // Set error states
       connectionPoolHealthStatusGauge.set(0); // Unhealthy
     }
   } catch (error) {
-    logger.error("Failed to update metrics", { 
+    logger.error("Failed to update metrics", {
       error: error instanceof Error ? error.message : String(error),
       endpoint: "/api/metrics",
-      function: "updateMetrics" 
+      function: "updateMetrics",
     });
   }
 }
@@ -363,12 +363,12 @@ export async function GET() {
       },
     });
   } catch (error) {
-    logger.error("Failed to generate metrics", { 
+    logger.error("Failed to generate metrics", {
       error: error instanceof Error ? error.message : String(error),
       endpoint: "/api/metrics",
-      method: "GET" 
+      method: "GET",
     });
-    
+
     return NextResponse.json(
       { error: "Failed to generate metrics" },
       { status: 500 },

@@ -70,14 +70,11 @@ export async function GET(
       },
     });
   } catch (error) {
-    logger.error(
-      "Failed to retrieve bottleneck details",
-      {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    );
-    
+    logger.error("Failed to retrieve bottleneck details", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
       { error: "Failed to retrieve bottleneck details" },
       { status: 500 },
@@ -130,15 +127,12 @@ export async function PATCH(
     }
 
     // Log the resolution for auditing
-    logger.info(
-      "Bottleneck resolved",
-      {
-        bottleneckId: id,
-        resolutionMethod: resolution,
-        actionTaken,
-        resolutionTime: resolvedBottleneck.resolutionTime,
-      },
-    );
+    logger.info("Bottleneck resolved", {
+      bottleneckId: id,
+      resolutionMethod: resolution,
+      actionTaken,
+      resolutionTime: resolvedBottleneck.resolutionTime,
+    });
 
     return NextResponse.json({
       success: true,
@@ -146,14 +140,11 @@ export async function PATCH(
       message: `Bottleneck ${id} marked as resolved`,
     });
   } catch (error) {
-    logger.error(
-      "Bottleneck resolution error",
-      {
-        bottleneckId: id,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    );
+    logger.error("Bottleneck resolution error", {
+      bottleneckId: id,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: "Failed to resolve bottleneck" },
       { status: 500 },
@@ -196,15 +187,12 @@ export async function DELETE(
       message: `Resolved bottleneck ${id} acknowledged and removed from active tracking`,
     });
   } catch (error) {
-    logger.error(
-      "Failed to delete bottleneck",
-      {
-        bottleneckId: id,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    );
-    
+    logger.error("Failed to delete bottleneck", {
+      bottleneckId: id,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
       { error: "Failed to delete bottleneck" },
       { status: 500 },

@@ -258,7 +258,6 @@ describe("API Response Time Validation Suite", () => {
           const endTime = performance.now();
           const responseTime = endTime - startTime;
 
-
           // Verify the result structure is correct
           expect(result).toBeDefined();
 
@@ -322,7 +321,6 @@ describe("API Response Time Validation Suite", () => {
           0,
         ) / responseTimes.length;
       const standardDeviation = Math.sqrt(variance);
-
 
       // Performance consistency validations
       expect(avgResponseTime).toBeLessThan(200); // Average should be fast
@@ -389,7 +387,6 @@ describe("API Response Time Validation Suite", () => {
 
           const endTime = performance.now();
           const responseTime = endTime - startTime;
-
 
           // Verify result structure
           expect(result).toBeDefined();
@@ -479,7 +476,6 @@ describe("API Response Time Validation Suite", () => {
 
           const endTime = performance.now();
           const responseTime = endTime - startTime;
-
 
           // Verify result structure
           expect(result).toBeDefined();
@@ -638,7 +634,6 @@ describe("API Response Time Validation Suite", () => {
       const p99 = sortedTimes[Math.floor(sampleSize * 0.99)];
       const avg =
         responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
-
 
       // Performance distribution validations
       expect(p50).toBeLessThan(100); // 50th percentile should be fast

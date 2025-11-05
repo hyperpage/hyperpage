@@ -126,7 +126,7 @@ export class RedisCache<T = unknown> implements ICache<T> {
       return value !== undefined;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      logger.warn('Cache has operation failed', { key, error: message });
+      logger.warn("Cache has operation failed", { key, error: message });
       return false;
     }
   }
@@ -241,7 +241,7 @@ export class RedisCache<T = unknown> implements ICache<T> {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      logger.warn('Cache getEntry operation failed', { key, error: message });
+      logger.warn("Cache getEntry operation failed", { key, error: message });
       return undefined;
     }
   }

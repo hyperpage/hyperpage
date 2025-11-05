@@ -58,20 +58,19 @@ class ToolConfigManager {
           this.configCache.set(config.toolName, userConfig);
           loadedCount++;
         } catch (error) {
-          logger.error(
-            "Failed to load configuration for tool",
-            { toolName: config.toolName, error: error instanceof Error ? error.message : error }
-          );
+          logger.error("Failed to load configuration for tool", {
+            toolName: config.toolName,
+            error: error instanceof Error ? error.message : error,
+          });
           continue;
         }
       }
 
       return loadedCount;
     } catch (error) {
-      logger.error(
-        "Failed to load tool configurations",
-        { error: error instanceof Error ? error.message : error }
-      );
+      logger.error("Failed to load tool configurations", {
+        error: error instanceof Error ? error.message : error,
+      });
       return 0;
     }
   }
@@ -116,12 +115,11 @@ class ToolConfigManager {
 
       // Apply changes to tool registry
       await this.applyToolConfiguration(toolName, mergedConfig);
-
     } catch (error) {
-      logger.error(
-        "Failed to save configuration for tool",
-        { toolName, error: error instanceof Error ? error.message : error }
-      );
+      logger.error("Failed to save configuration for tool", {
+        toolName,
+        error: error instanceof Error ? error.message : error,
+      });
       throw error;
     }
   }
@@ -176,10 +174,10 @@ class ToolConfigManager {
 
       return true;
     } catch (error) {
-      logger.error(
-        "Failed to delete configuration for tool",
-        { toolName, error: error instanceof Error ? error.message : error }
-      );
+      logger.error("Failed to delete configuration for tool", {
+        toolName,
+        error: error instanceof Error ? error.message : error,
+      });
       return false;
     }
   }

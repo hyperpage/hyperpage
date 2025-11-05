@@ -16,8 +16,8 @@ export async function GET() {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME);
     if (!oauthConfig) {
-      logger.error("GitLab OAuth configuration not found", { 
-        provider: PROVIDER_NAME 
+      logger.error("GitLab OAuth configuration not found", {
+        provider: PROVIDER_NAME,
       });
       return NextResponse.json(
         { error: `${PROVIDER_NAME} OAuth not configured` },
@@ -44,9 +44,9 @@ export async function GET() {
     // Redirect to GitLab authorization
     return response;
   } catch (error) {
-    logger.error("Failed to initiate GitLab OAuth flow", { 
-      error, 
-      provider: PROVIDER_NAME 
+    logger.error("Failed to initiate GitLab OAuth flow", {
+      error,
+      provider: PROVIDER_NAME,
     });
     return NextResponse.json(
       { error: "Failed to initiate OAuth flow" },

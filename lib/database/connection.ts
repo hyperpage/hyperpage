@@ -69,14 +69,11 @@ export function getAppDatabase(): {
     // Set up Drizzle with schema
     _appDrizzleDb = drizzle(_appDb, { schema });
 
-    logger.info(
-      "Application database connection established",
-      {
-        dbPath,
-        isTestEnvironment: IS_TEST_ENV,
-        isWALMode: !IS_TEST_ENV,
-      },
-    );
+    logger.info("Application database connection established", {
+      dbPath,
+      isTestEnvironment: IS_TEST_ENV,
+      isWALMode: !IS_TEST_ENV,
+    });
   }
 
   return { sqlite: _appDb, drizzle: _appDrizzleDb };
@@ -97,13 +94,10 @@ export function getInternalDatabase(): Database.Database {
       _internalDb.pragma("synchronous = NORMAL");
     }
 
-    logger.debug(
-      "Internal database connection established",
-      {
-        dbPath,
-        isTestEnvironment: IS_TEST_ENV,
-      },
-    );
+    logger.debug("Internal database connection established", {
+      dbPath,
+      isTestEnvironment: IS_TEST_ENV,
+    });
   }
 
   return _internalDb;
@@ -125,12 +119,9 @@ export function closeAllConnections(): void {
       _appDb.close();
       logger.debug("Application database connection closed");
     } catch (error) {
-      logger.error(
-        "Failed to close application database connection",
-        {
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
+      logger.error("Failed to close application database connection", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
     _appDb = null;
     _appDrizzleDb = null;
@@ -141,12 +132,9 @@ export function closeAllConnections(): void {
       _internalDb.close();
       logger.debug("Internal database connection closed");
     } catch (error) {
-      logger.error(
-        "Failed to close internal database connection",
-        {
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
+      logger.error("Failed to close internal database connection", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
     _internalDb = null;
   }

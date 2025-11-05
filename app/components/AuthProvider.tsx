@@ -55,13 +55,8 @@ export function AuthProvider({
   );
 
   // Use the shared auth status hook with caching to prevent duplicate requests
-  const { 
- 
-    configuredTools, 
-    fetchToolAuthStatus, 
-    fetchAuthConfig,
-    clearCache 
-  } = useAuthStatus();
+  const { configuredTools, fetchToolAuthStatus, fetchAuthConfig, clearCache } =
+    useAuthStatus();
 
   // Initialize configuration on mount using cached data
   useEffect(() => {
@@ -198,7 +193,7 @@ export function AuthProvider({
     try {
       // Use the shared hook to prevent duplicate requests
       const result = await fetchToolAuthStatus(toolSlug);
-      
+
       if (result) {
         const isAuthenticated = result.authenticated;
         updateToolState(toolSlug, {

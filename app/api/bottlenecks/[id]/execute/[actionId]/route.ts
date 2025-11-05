@@ -10,7 +10,7 @@ export async function POST(
   context: { params: Promise<{ id: string; actionId: string }> },
 ): Promise<NextResponse> {
   const { id: bottleneckId, actionId } = await context.params;
-  
+
   try {
     // Validate inputs
     if (!bottleneckId || !actionId) {
@@ -66,7 +66,7 @@ export async function POST(
       bottleneckId,
       actionId,
     });
-    
+
     return NextResponse.json(
       {
         error: "Failed to execute automated action",
@@ -85,7 +85,7 @@ export async function GET(
   context: { params: Promise<{ id: string; actionId: string }> },
 ): Promise<NextResponse> {
   const { id: bottleneckId, actionId } = await context.params;
-  
+
   try {
     // Get bottleneck details
     const bottleneck = bottleneckDetector.getBottleneck(bottleneckId);
@@ -129,7 +129,7 @@ export async function GET(
       bottleneckId,
       actionId,
     });
-    
+
     return NextResponse.json(
       { error: "Failed to retrieve automated action details" },
       { status: 500 },

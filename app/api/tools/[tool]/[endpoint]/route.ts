@@ -43,7 +43,7 @@ export async function GET(
     return await performanceMiddleware.recordPerformance(request, response);
   } catch (error) {
     logger.error("Error in GET handler", { error, tool: toolName, endpoint });
-    
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
@@ -90,7 +90,7 @@ export async function POST(
     return await performanceMiddleware.recordPerformance(request, response);
   } catch (error) {
     logger.error("Error in POST handler", { error, tool: toolName, endpoint });
-    
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

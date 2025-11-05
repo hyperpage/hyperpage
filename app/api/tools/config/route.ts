@@ -43,7 +43,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     // Log the error with pino for debugging
     logger.error("Failed to retrieve tool configurations", { error });
-    
+
     return NextResponse.json(
       { error: "Failed to retrieve tool configurations" },
       { status: 500 },
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     // Log the error with pino for debugging
     logger.error("Failed to update tool configuration", { error });
-    
+
     return NextResponse.json(
       { error: "Failed to update tool configuration" },
       { status: 500 },
@@ -180,7 +180,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     // Log the error with pino for debugging
     logger.error("Failed to update tool state", { error });
-    
+
     return NextResponse.json(
       { error: "Failed to update tool state" },
       { status: 500 },
@@ -221,7 +221,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     // Log the error with pino for debugging
     logger.error("Failed to delete tool configuration", { error });
-    
+
     return NextResponse.json(
       { error: "Failed to delete tool configuration" },
       { status: 500 },
