@@ -11,6 +11,7 @@ import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import { users } from "@/lib/database/schema";
 import { eq } from "drizzle-orm";
 import unifiedLogger from "@/lib/logger";
+import logger from "@/lib/logger";
 
 /**
  * Jira OAuth 2.0 Callback Handler
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // Validate required parameters
     if (!code) {
-      console.error(
+      logger.error(
         `${PROVIDER_NAME} OAuth callback: Missing authorization code`,
       );
       return NextResponse.redirect(
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
         const storedCookieValue = await getOAuthStateCookie(PROVIDER_NAME);
 
         if (!storedCookieValue) {
-          console.error(
+          logger.error(
             `${PROVIDER_NAME} OAuth: Invalid state parameter - no cookie found`,
           );
           return NextResponse.redirect(
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
 
         // Validate state matches cookie
         if (storedCookieValue !== state) {
-          console.error(
+          logger.error(
             `${PROVIDER_NAME} OAuth: Invalid state parameter - state mismatch`,
           );
           return NextResponse.redirect(
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
           webUrl = cookieData.webUrl || null;
         }
       } catch (cookieError) {
-        console.error(
+        logger.error(
           `${PROVIDER_NAME} OAuth: Cookie validation failed:`,
           cookieError,
         );

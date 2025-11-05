@@ -28,7 +28,7 @@ export async function POST(
 
     if (result.success) {
       // Log successful execution for auditing
-      console.info("Automated action executed", {
+      logger.info("Automated action executed", {
         bottleneckId,
         actionId,
         result: result.result,
@@ -43,7 +43,7 @@ export async function POST(
       });
     } else {
       // Log failed execution
-      console.warn("Automated action failed", {
+      logger.warn("Automated action failed", {
         bottleneckId,
         actionId,
         message: result.message,

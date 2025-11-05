@@ -5,6 +5,7 @@ import Portal from "./components/Portal";
 import { Tool } from "../tools/tool-types";
 import { PortalEmptyState } from "./components/PortalEmptyState";
 import SetupWizard from "./components/SetupWizard";
+import logger from "@/lib/logger";
 
 export default function Home() {
   const [enabledTools, setEnabledTools] = useState<Tool[]>([]);
@@ -19,7 +20,7 @@ export default function Home() {
           setEnabledTools(data.enabledTools || []);
         }
       } catch (error) {
-        console.error("Failed to fetch enabled tools:", error);
+        logger.error("Failed to fetch enabled tools:", error);
         // Set empty array on error to prevent infinite loading
         setEnabledTools([]);
       } finally {

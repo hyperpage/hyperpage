@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Validate required parameters
     if (!code) {
-      console.error(
+      logger.error(
         `${PROVIDER_NAME} OAuth callback: Missing authorization code`,
       );
       return NextResponse.redirect(

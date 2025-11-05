@@ -71,8 +71,8 @@ describe("Redis Client", () => {
       } catch (error) {
         // Log the connection error for debugging
         logger.debug(
-          { error },
           "Expected Redis connection failure during test",
+          { error },
         );
 
         // This is expected when Redis isn't running
@@ -120,7 +120,7 @@ describe("Redis Client", () => {
         await redisClient.connect();
       } catch (error) {
         // Log the connection attempt error for debugging
-        logger.debug({ error }, "Expected Redis connection attempt failure");
+        logger.debug("Expected Redis connection attempt failure", { error });
 
         // Expected to fail without Redis running
         const health = await redisClient.getHealth();

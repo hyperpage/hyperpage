@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import logger from "@/lib/logger";
 
 // Cache configuration
 const CACHE_TTL = 30 * 1000; // 30 seconds
@@ -172,7 +173,7 @@ export function useAuthStatus() {
     } catch (err) {
       const errorMessage = "Failed to fetch authentication status";
       setError(errorMessage);
-      console.error("Auth status error:", err);
+      logger.error("Auth status error:", err);
       return null;
     } finally {
       setIsLoading(false);
@@ -195,7 +196,7 @@ export function useAuthStatus() {
 
         return data;
       } catch (err) {
-        console.error(`Failed to fetch ${toolSlug} auth status:`, err);
+        logger.error(`Failed to fetch ${toolSlug} auth status:`, err);
         return null;
       }
     },
@@ -213,7 +214,7 @@ export function useAuthStatus() {
 
       return data;
     } catch (err) {
-      console.error("Failed to fetch auth configuration:", err);
+      logger.error("Failed to fetch auth configuration:", err);
       return null;
     }
   }, [makeRequest]);
@@ -248,7 +249,7 @@ export function useAuthStatus() {
         return results;
       } catch (err) {
         setError("Failed to refresh authentication status");
-        console.error("Auth refresh error:", err);
+        logger.error("Auth refresh error:", err);
         return null;
       } finally {
         setIsLoading(false);

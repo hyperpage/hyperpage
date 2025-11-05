@@ -8,6 +8,7 @@ import {
   ReactNode,
 } from "react";
 import { useAuthStatus } from "./hooks/useAuthStatus";
+import logger from "@/lib/logger";
 
 interface AuthToolState {
   toolSlug: string;
@@ -68,7 +69,7 @@ export function AuthProvider({
           await fetchAuthConfig();
         }
       } catch (error) {
-        console.error("Failed to load auth configuration:", error);
+        logger.error("Failed to load auth configuration:", error);
       }
     };
 
@@ -89,7 +90,7 @@ export function AuthProvider({
         successParam.includes(tool),
       );
       if (toolMatch) {
-        console.log(
+        logger.info(
           `OAuth success detected for ${toolMatch}, refreshing status...`,
         );
         // Refresh authentication status after OAuth success
@@ -146,7 +147,7 @@ export function AuthProvider({
       // Note: Code after this redirect will not execute
       // Authentication completion is handled by the callback route
     } catch (error) {
-      console.error("Authentication error:", error);
+      logger.error("Authentication error:", error);
       updateToolState(toolSlug, {
         isLoading: false,
         error: error instanceof Error ? error.message : "Authentication failed",
@@ -180,7 +181,7 @@ export function AuthProvider({
       // Clear cache to reflect the change
       clearCache();
     } catch (error) {
-      console.error("Disconnect error:", error);
+      logger.error("Disconnect error:", error);
       updateToolState(toolSlug, {
         isLoading: false,
         error: error instanceof Error ? error.message : "Disconnect failed",
@@ -209,7 +210,7 @@ export function AuthProvider({
 
       return false;
     } catch (error) {
-      console.error("Auth status check error:", error);
+      logger.error("Auth status check error:", error);
       updateToolState(toolSlug, {
         isAuthenticated: false,
         isLoading: false,
@@ -260,7 +261,7 @@ export function AuthProvider({
         }
       }
     } catch (error) {
-      console.error("Clear auth error:", error);
+      logger.error("Clear auth error:", error);
       // Still clear local state even if API calls fail
       setTools((current) =>
         current.map((tool) => ({
