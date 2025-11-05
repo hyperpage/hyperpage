@@ -1,3 +1,0 @@
-- [ ] Check current git status and identify changes
-- [ ] Create a new branch for the changes
-- [ ] Push the new branch to remote repository

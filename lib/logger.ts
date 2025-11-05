@@ -2,7 +2,9 @@ import pino from 'pino';
 
 // State-of-the-art TypeScript interfaces for unified logging
 // Extend LoggerMetadata to handle unknown types (common for error objects)
-export type LoggerMetadata = Record<string, any> | unknown;
+export type LoggerMetadata = Record<string, unknown> | unknown;
+export type LogMetadata = Record<string, unknown>;
+export type SafeMetadata = Record<string, unknown>;
 
 export interface LogLevel {
   error: (message: string, meta?: LoggerMetadata) => void;
@@ -24,12 +26,21 @@ export interface RateLimitLogger {
     level: 'info' | 'warn' | 'error',
     platform: string,
     message: string,
-    metadata?: Record<string, any>,
+    metadata?: LogMetadata,
   ) => void;
 }
 
 export interface LogStream {
   write: (message: string) => void;
+}
+
+export interface SafeLoggerMethods {
+  error: (meta: SafeMetadata, msg: string) => void;
+  warn: (meta: SafeMetadata, msg: string) => void;
+  info: (meta: SafeMetadata, msg: string) => void;
+  debug: (meta: SafeMetadata, msg: string) => void;
+  fatal: (meta: SafeMetadata, msg: string) => void;
+  trace: (meta: SafeMetadata, msg: string) => void;
 }
 
 // Simple transport-free logger configuration
@@ -64,79 +75,82 @@ try {
 }
 
 // Helper function to safely merge metadata
-const mergeMetadata = (base: Record<string, any>, data?: LoggerMetadata): Record<string, any> => {
+const mergeMetadata = (base: LogMetadata, data?: LoggerMetadata): LogMetadata => {
   if (!data) return base;
   if (typeof data === 'object' && data !== null) {
-    return { ...base, ...data };
+    return { ...base, ...data as LogMetadata };
   }
   return base;
 };
 
 // Create a safe logging wrapper that catches all errors
-const createSafeLogger = (logger: pino.Logger): pino.Logger => {
-  const safeLogger = {
-    error: (meta: Record<string, any>, msg: string) => {
+const createSafeLogger = (logger: pino.Logger): SafeLoggerMethods => {
+  const safeLogger: SafeLoggerMethods = {
+    error: (meta: SafeMetadata, msg: string) => {
       try {
         logger.error(meta, msg);
       } catch (error) {
-        // Silently handle logger errors to avoid cascading failures
+        // Log internal logger errors to help with debugging
         try {
-          console.error(`[HYPERPAGE ERROR] ${msg}`, meta);
+          console.error(`[HYPERPAGE ERROR] ${msg}`, meta, 'Internal error:', error);
         } catch {
-          // Final fallback
+          // Final fallback if even console logging fails
+          console.log(`[CRITICAL] Failed to log error: ${error}`);
         }
       }
     },
-    warn: (meta: Record<string, any>, msg: string) => {
+    warn: (meta: SafeMetadata, msg: string) => {
       try {
         logger.warn(meta, msg);
       } catch (error) {
         try {
-          console.warn(`[HYPERPAGE WARN] ${msg}`, meta);
+          console.warn(`[HYPERPAGE WARN] ${msg}`, meta, 'Internal error:', error);
         } catch {
-          // Final fallback
+          console.log(`[WARNING] Failed to log warning: ${error}`);
         }
       }
     },
-    info: (meta: Record<string, any>, msg: string) => {
+    info: (meta: SafeMetadata, msg: string) => {
       try {
         logger.info(meta, msg);
       } catch (error) {
         try {
-          console.info(`[HYPERPAGE INFO] ${msg}`, meta);
+          console.info(`[HYPERPAGE INFO] ${msg}`, meta, 'Internal error:', error);
         } catch {
-          // Final fallback
+          console.log(`[INFO] Failed to log info: ${error}`);
         }
       }
     },
-    debug: (meta: Record<string, any>, msg: string) => {
+    debug: (meta: SafeMetadata, msg: string) => {
       try {
         logger.debug(meta, msg);
       } catch (error) {
-        // Silently ignore debug errors to avoid clutter
+        // Log debug errors but keep them minimal
+        console.debug(`[DEBUG] Logger error for "${msg}":`, error);
       }
     },
-    fatal: (meta: Record<string, any>, msg: string) => {
+    fatal: (meta: SafeMetadata, msg: string) => {
       try {
         logger.fatal(meta, msg);
       } catch (error) {
         try {
-          console.error(`[HYPERPAGE FATAL] ${msg}`, meta);
+          console.error(`[HYPERPAGE FATAL] ${msg}`, meta, 'Fatal internal error:', error);
         } catch {
-          // Final fallback
+          console.log(`[FATAL] Failed to log fatal error: ${error}`);
         }
       }
     },
-    trace: (meta: Record<string, any>, msg: string) => {
+    trace: (meta: SafeMetadata, msg: string) => {
       try {
         logger.trace(meta, msg);
       } catch (error) {
-        // Silently ignore trace errors
+        // Log trace errors minimally
+        console.debug(`[TRACE] Logger error for "${msg}":`, error);
       }
     },
   };
 
-  return safeLogger as unknown as pino.Logger;
+  return safeLogger;
 };
 
 // Use the safe logger wrapper
@@ -150,7 +164,7 @@ const rateLimitLogger: RateLimitLogger = {
         { 
           platform, 
           type: 'rate_limit_hit'
-        },
+        } as LogMetadata,
         data
       ),
       'RATE_LIMIT_HIT'
@@ -170,7 +184,7 @@ const rateLimitLogger: RateLimitLogger = {
           retryAfter,
           attemptNumber,
           type: 'rate_limit_backoff',
-        },
+        } as LogMetadata,
         data
       ),
       'RATE_LIMIT_BACKOFF'
@@ -184,7 +198,7 @@ const rateLimitLogger: RateLimitLogger = {
           platform,
           attemptNumber,
           type: 'rate_limit_retry',
-        },
+        } as LogMetadata,
         data
       ),
       'RATE_LIMIT_RETRY'
@@ -195,17 +209,15 @@ const rateLimitLogger: RateLimitLogger = {
     level: 'info' | 'warn' | 'error',
     platform: string,
     message: string,
-    metadata?: Record<string, any>,
+    metadata?: LogMetadata,
   ) => {
-    safePinoInstance[level](
-      {
-        platform,
-        message,
-        type: 'rate_limit_event',
-        ...metadata,
-      },
-      'RATE_LIMIT_EVENT'
-    );
+    const eventMetadata: LogMetadata = {
+      platform,
+      message,
+      type: 'rate_limit_event',
+      ...metadata,
+    };
+    safePinoInstance[level](eventMetadata, 'RATE_LIMIT_EVENT');
   },
 };
 
@@ -213,13 +225,14 @@ const rateLimitLogger: RateLimitLogger = {
 const stream: LogStream = {
   write: (message: string) => {
     try {
-      safePinoInstance.info({ message: message.trim() }, 'HTTP');
+      safePinoInstance.info({ message: message.trim() } as LogMetadata, 'HTTP');
     } catch (error) {
-      // Fallback to console if logger fails
+      // Log the error but still try to write to console as fallback
+      console.warn(`[HTTP_STREAM] Failed to log via pino, writing directly:`, error);
       try {
         console.log(message.trim());
       } catch {
-        // Final fallback - do nothing
+        console.log(`[CRITICAL] HTTP stream completely failed: ${error}`);
       }
     }
   },
@@ -235,7 +248,7 @@ export const logApiRequest = (
   rateLimitReset?: number,
 ) => {
   try {
-    safePinoInstance.info({
+    const requestMetadata: LogMetadata = {
       platform,
       endpoint,
       statusCode,
@@ -243,9 +256,11 @@ export const logApiRequest = (
       rateLimitRemaining,
       rateLimitReset,
       type: 'api_request',
-    }, 'API_REQUEST');
+    };
+    safePinoInstance.info(requestMetadata, 'API_REQUEST');
   } catch (error) {
-    // Silent fallback
+    // Log the failure but don't throw - this is a utility function
+    console.debug(`[LOG_API_REQUEST] Failed to log request for ${platform}:${endpoint}:`, error);
   }
 };
 
@@ -254,18 +269,20 @@ export const logRateLimitStatus = (
   platform: string,
   usagePercent: number,
   status: 'normal' | 'warning' | 'critical' | 'unknown',
-  metadata?: Record<string, any>,
+  metadata?: LogMetadata,
 ) => {
   try {
-    safePinoInstance.info({
+    const statusMetadata: LogMetadata = {
       platform,
       usagePercent,
       status,
       type: 'rate_limit_status',
       ...metadata,
-    }, 'RATE_LIMIT_STATUS');
+    };
+    safePinoInstance.info(statusMetadata, 'RATE_LIMIT_STATUS');
   } catch (error) {
-    // Silent fallback
+    // Log the failure but don't throw - this is a utility function
+    console.debug(`[LOG_RATE_LIMIT_STATUS] Failed to log status for ${platform}:`, error);
   }
 };
 
@@ -273,42 +290,43 @@ export const logRateLimitStatus = (
 const unifiedLogger: LogLevel = {
   error: (message: string, meta?: LoggerMetadata) => {
     try {
-      safePinoInstance.error(meta || {}, message);
+      safePinoInstance.error((meta as LogMetadata) || {}, message);
     } catch (error) {
       try {
-        console.error(message, meta || {});
+        console.error(message, meta || {}, 'Logger error:', error);
       } catch {
-        // Final fallback - do nothing
+        console.log(`[CRITICAL] Unified logger error handling failed: ${error}`);
       }
     }
   },
   warn: (message: string, meta?: LoggerMetadata) => {
     try {
-      safePinoInstance.warn(meta || {}, message);
+      safePinoInstance.warn((meta as LogMetadata) || {}, message);
     } catch (error) {
       try {
-        console.warn(message, meta || {});
+        console.warn(message, meta || {}, 'Logger error:', error);
       } catch {
-        // Final fallback - do nothing
+        console.log(`[WARNING] Unified logger warn handling failed: ${error}`);
       }
     }
   },
   info: (message: string, meta?: LoggerMetadata) => {
     try {
-      safePinoInstance.info(meta || {}, message);
+      safePinoInstance.info((meta as LogMetadata) || {}, message);
     } catch (error) {
       try {
-        console.info(message, meta || {});
+        console.info(message, meta || {}, 'Logger error:', error);
       } catch {
-        // Final fallback - do nothing
+        console.log(`[INFO] Unified logger info handling failed: ${error}`);
       }
     }
   },
   debug: (message: string, meta?: LoggerMetadata) => {
     try {
-      safePinoInstance.debug(meta || {}, message);
+      safePinoInstance.debug((meta as LogMetadata) || {}, message);
     } catch (error) {
-      // Silent fallback for debug
+      // Log debug errors but keep them minimal
+      console.debug(`[DEBUG] Unified logger debug error for "${message}":`, error);
     }
   },
 };
@@ -317,7 +335,4 @@ const unifiedLogger: LogLevel = {
 export default unifiedLogger;
 
 // Export existing interface objects for backward compatibility
-export { rateLimitLogger, stream };
-
-// Export Pino logger instance for advanced usage (wrapped in safe logger)
-export { safePinoInstance as pinoLogger };
+export { rateLimitLogger, stream, safePinoInstance as pinoLogger };
