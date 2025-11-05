@@ -4,20 +4,21 @@ import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import logger from "@/lib/logger";
 
 /**
- * GitLab OAuth Disconnect Handler
- * Disconnects GitLab authentication for the current user
+ * Unified OAuth Disconnect Handler
+ * Disconnects authentication for any provider (GitHub, GitLab, Jira)
  */
 
-const PROVIDER_NAME = "gitlab";
-
-// POST /api/auth/gitlab/disconnect - Disconnect OAuth authentication
-export async function POST(request: NextRequest) {
-  let sessionCookie: { value: string } | undefined;
+// POST /api/auth/disconnect/{provider} - Disconnect OAuth authentication
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ provider: string }> }
+) {
+  const { provider } = await params;
 
   try {
     // Get session ID from cookies
     const cookies = request.cookies;
-    sessionCookie = cookies.get("hyperpage-session");
+    const sessionCookie = cookies.get("hyperpage-session");
 
     if (!sessionCookie) {
       return NextResponse.json(
@@ -38,10 +39,10 @@ export async function POST(request: NextRequest) {
 
     const userId = session.userId;
 
-    // Check if user is authenticated with GitLab
-    if (session.user?.provider !== PROVIDER_NAME) {
+    // Check if user is authenticated with the specified provider
+    if (session.user?.provider !== provider) {
       return NextResponse.json(
-        { success: false, error: `Not authenticated with ${PROVIDER_NAME}` },
+        { success: false, error: `Not authenticated with ${provider}` },
         { status: 400 },
       );
     }
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     try {
       // Remove tokens from secure storage
       const tokenStorage = new SecureTokenStorage();
-      await tokenStorage.removeTokens(userId, PROVIDER_NAME);
+      await tokenStorage.removeTokens(userId, provider);
 
       // Update session to remove user authentication
       await sessionManager.updateSession(sessionId, {
@@ -59,25 +60,26 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `${PROVIDER_NAME} authentication disconnected successfully`,
+        message: `${provider} authentication disconnected successfully`,
       });
     } catch (storageError) {
-      logger.error("Failed to remove authentication data from secure storage", {
-        storageError,
+      logger.error(`Failed to remove ${provider} authentication tokens during disconnect`, {
+        provider,
         userId,
-        provider: PROVIDER_NAME,
+        error: storageError instanceof Error ? storageError.message : String(storageError),
       });
+
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },
         { status: 500 },
       );
     }
   } catch (error) {
-    logger.error("Failed to disconnect GitLab authentication", {
-      error,
-      sessionId: sessionCookie?.value,
-      provider: PROVIDER_NAME,
+    logger.error(`Failed to disconnect ${provider} authentication`, {
+      error: error instanceof Error ? error.message : String(error),
+      provider,
     });
+
     return NextResponse.json(
       { success: false, error: "Failed to disconnect authentication" },
       { status: 500 },
