@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
+import logger from "@/lib/logger";
 
 /**
  * Jira OAuth Status Handler
@@ -77,6 +78,12 @@ export async function GET(request: NextRequest) {
         hasRefreshToken: !!tokens.refreshToken && !isRefreshExpired,
       });
     } catch (storageError) {
+      logger.warn("Failed to check Jira token storage", {
+        error: storageError instanceof Error ? storageError.message : String(storageError),
+        stack: storageError instanceof Error ? storageError.stack : undefined,
+        userId,
+        provider: PROVIDER_NAME,
+      });
       
       // If storage check fails, assume not authenticated
       return NextResponse.json({
@@ -87,6 +94,11 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
+    logger.error("Failed to get Jira authentication status", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      provider: PROVIDER_NAME,
+    });
     
     // Always return valid JSON in case of error
     return NextResponse.json(

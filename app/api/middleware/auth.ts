@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import logger from "../../../lib/logger";
 import {
   sessionManager,
   SessionData,
@@ -37,9 +38,9 @@ export async function withAuth(
   options: AuthMiddlewareOptions = {},
 ): Promise<(req: NextRequest) => Promise<NextResponse>> {
   return async (req: NextRequest): Promise<NextResponse> => {
-    try {
-      const { sessionId } = parseSessionCookies(req);
+    const { sessionId } = parseSessionCookies(req);
 
+    try {
       if (!sessionId) {
         if (options.required || options.tools?.length || options.toolRequired) {
           return NextResponse.json(
@@ -114,7 +115,11 @@ export async function withAuth(
 
       return handler(authenticatedReq);
     } catch (error) {
-      
+      logger.error("Authentication middleware error", { 
+        error: error instanceof Error ? error.message : String(error),
+        operation: "withAuth", 
+        hasSessionId: !!sessionId 
+      });
       return NextResponse.json(
         { error: "Authentication service temporarily unavailable" },
         { status: 503 },
@@ -151,7 +156,11 @@ export async function createAuthenticatedResponse(
     try {
       await sessionManager.extendSession(sessionId);
     } catch (error) {
-      
+      logger.error("Failed to extend session", {
+        error: error instanceof Error ? error.message : String(error),
+        sessionId: sessionId ? "present" : "missing",
+        operation: "extendSession"
+      });
     }
   }
 
@@ -186,7 +195,12 @@ export async function checkToolAuthentication(
 
     return { authenticated: true, userId: session.userId };
   } catch (error) {
-    
+    logger.error("Authentication check failed", {
+      error: error instanceof Error ? error.message : String(error),
+      sessionId: sessionId ? "present" : "missing",
+      toolName,
+      operation: "checkToolAuthentication"
+    });
     return { authenticated: false, error: "Authentication check failed" };
   }
 }

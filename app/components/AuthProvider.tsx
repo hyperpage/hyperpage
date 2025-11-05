@@ -56,7 +56,7 @@ export function AuthProvider({
 
   // Use the shared auth status hook with caching to prevent duplicate requests
   const { 
-    toolStatuses, 
+ 
     configuredTools, 
     fetchToolAuthStatus, 
     fetchAuthConfig,

@@ -213,12 +213,6 @@ describe("Jira Tool Integration", () => {
     });
 
     it("should validate batch request parameters", async () => {
-      // First verify the session exists by checking the sessions endpoint
-      const sessionCheck = await fetch(
-        `${baseUrl}/api/sessions?sessionId=${testSession.sessionId}`,
-      );
-      
-
       const response = await fetch(`${baseUrl}/api/tools/jira/changelogs`, {
         method: "POST",
         headers: {
@@ -227,10 +221,6 @@ describe("Jira Tool Integration", () => {
         },
         body: JSON.stringify({ issueIds: [] }),
       });
-
-      
-      const responseText = await response.text();
-      
 
       expect(response.status).toBe(400);
     });

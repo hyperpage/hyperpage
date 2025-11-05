@@ -3,6 +3,7 @@ import {
   performanceDashboard,
   PerformanceThresholds,
 } from "../../../lib/monitoring/performance-dashboard";
+import logger from "../../../lib/logger";
 
 /**
  * GET /api/dashboard - Get real-time performance dashboard metrics
@@ -55,6 +56,11 @@ export async function GET(request: NextRequest) {
       },
     );
   } catch (error) {
+    logger.error("Failed to generate dashboard metrics", { 
+      error: error instanceof Error ? error.message : String(error),
+      endpoint: "/api/dashboard",
+      method: "GET" 
+    });
     
     return NextResponse.json(
       {
@@ -170,6 +176,12 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   } catch (error) {
+    logger.error("Failed to update dashboard settings", { 
+      error: error instanceof Error ? error.message : String(error),
+      endpoint: "/api/dashboard",
+      method: "POST",
+      action: "thresholds" 
+    });
     
     return NextResponse.json(
       {
@@ -210,6 +222,12 @@ export async function DELETE(request: NextRequest) {
       message: "Dashboard metrics and alert history have been reset",
     });
   } catch (error) {
+    logger.error("Failed to reset dashboard metrics", { 
+      error: error instanceof Error ? error.message : String(error),
+      endpoint: "/api/dashboard",
+      method: "DELETE",
+      action: "reset" 
+    });
     
     return NextResponse.json(
       {

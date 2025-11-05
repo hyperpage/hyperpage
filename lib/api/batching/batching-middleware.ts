@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 // Types for batch requests
 export interface BatchRequest {
@@ -128,6 +129,12 @@ export class BatchingMiddleware {
         },
       });
     } catch (error) {
+      logger.error("Batch processing failed", { 
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        batchSize: requests.length,
+        duration: Date.now() - startTime
+      });
       
       return NextResponse.json(
         {
@@ -290,6 +297,14 @@ export class BatchingMiddleware {
         duration: Date.now() - startTime,
       };
     } catch (error) {
+      logger.error("Single request execution failed", { 
+        requestId: request.id,
+        path: request.path,
+        method: request.method,
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        duration: Date.now() - startTime
+      });
       
       return this.createErrorResponse(
         request.id,

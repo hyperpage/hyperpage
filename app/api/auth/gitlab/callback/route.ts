@@ -10,6 +10,7 @@ import { getAppDatabase } from "@/lib/database/connection";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import { users } from "@/lib/database/schema";
 import { eq } from "drizzle-orm";
+import logger from "@/lib/logger";
 
 /**
  * GitLab OAuth Callback Handler
@@ -182,6 +183,10 @@ export async function GET(request: NextRequest) {
 
       
     } catch (storageError) {
+      logger.error("GitLab OAuth token storage failed", { 
+        error: storageError, 
+        provider: PROVIDER_NAME 
+      });
       
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_storage_error`,
@@ -213,6 +218,10 @@ export async function GET(request: NextRequest) {
 
     return successResponse;
   } catch (error) {
+    logger.error("GitLab OAuth callback failed", { 
+      error, 
+      provider: PROVIDER_NAME 
+    });
     
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_internal_error`,

@@ -10,7 +10,6 @@ import {
 } from "vitest";
 import { clearRateLimitCache } from "../../../lib/rate-limit-monitor";
 import { toolRegistry } from "../../../tools/registry";
-import logger from "../../../lib/logger";
 
 describe("API Response Time Validation Suite", () => {
   // Create spy for global.fetch

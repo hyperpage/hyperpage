@@ -10,6 +10,7 @@ import { getAppDatabase } from "@/lib/database/connection";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import { users } from "@/lib/database/schema";
 import { eq } from "drizzle-orm";
+import unifiedLogger from "@/lib/logger";
 
 /**
  * Jira OAuth 2.0 Callback Handler
@@ -233,6 +234,15 @@ export async function GET(request: NextRequest) {
 
       
     } catch (storageError) {
+      unifiedLogger.error(
+        `${PROVIDER_NAME} OAuth: Storage operation failed`,
+        { 
+          storageError,
+          provider: PROVIDER_NAME,
+          operation: 'oauth_storage',
+          sessionId 
+        }
+      );
       
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_storage_error`,
@@ -260,6 +270,14 @@ export async function GET(request: NextRequest) {
 
     return successResponse;
   } catch (error) {
+    unifiedLogger.error(
+      `${PROVIDER_NAME} OAuth: Internal callback error`,
+      { 
+        error,
+        provider: PROVIDER_NAME,
+        operation: 'oauth_callback'
+      }
+    );
     
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_internal_error`,

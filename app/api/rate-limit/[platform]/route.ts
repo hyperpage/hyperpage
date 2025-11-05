@@ -1,6 +1,7 @@
 // Rate limit monitoring endpoint for all platforms
 
 import { NextRequest, NextResponse } from "next/server";
+import logger from "../../../../lib/logger";
 import { toolRegistry } from "../../../../tools/registry";
 import { getServerRateLimitStatus } from "../../../../lib/rate-limit-service";
 import { Tool } from "../../../../tools/tool-types";
@@ -49,7 +50,11 @@ export async function GET(
 
     return NextResponse.json(rateLimitStatus);
   } catch (error) {
-    
+    logger.error("Rate limit status fetch error", {
+      error: error instanceof Error ? error.message : String(error),
+      platform,
+      operation: "getServerRateLimitStatus"
+    });
     return NextResponse.json(
       {
         error: `Internal error fetching rate limit status for ${platform}`,

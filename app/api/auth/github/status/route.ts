@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
+import logger from "@/lib/logger";
 
 /**
  * GitHub OAuth Status Handler
@@ -77,6 +78,11 @@ export async function GET(request: NextRequest) {
         hasRefreshToken: !!tokens.refreshToken && !isRefreshExpired,
       });
     } catch (storageError) {
+      logger.error("GitHub OAuth token storage check failed", { 
+        error: storageError, 
+        userId, 
+        provider: PROVIDER_NAME 
+      });
       
       // If storage check fails, assume not authenticated
       return NextResponse.json({
@@ -87,6 +93,10 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
+    logger.error("GitHub OAuth status check failed", { 
+      error, 
+      provider: PROVIDER_NAME 
+    });
     
     // Always return valid JSON in case of error
     return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
+import logger from "@/lib/logger";
 
 /**
  * GitHub OAuth Disconnect Handler
@@ -59,6 +60,11 @@ export async function POST(request: NextRequest) {
         message: `${PROVIDER_NAME} authentication disconnected successfully`,
       });
     } catch (storageError) {
+      logger.error("Failed to remove authentication tokens during disconnect", { 
+        provider: PROVIDER_NAME, 
+        userId,
+        error: storageError instanceof Error ? storageError.message : String(storageError) 
+      });
       
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },
@@ -66,6 +72,10 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
+    logger.error("Failed to disconnect GitHub authentication", { 
+      error: error instanceof Error ? error.message : String(error),
+      provider: PROVIDER_NAME 
+    });
     
     return NextResponse.json(
       { success: false, error: "Failed to disconnect authentication" },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateInput, validateTool, executeHandler } from "./shared";
 import { performanceMiddleware } from "../../../../../lib/monitoring/performance-middleware";
+import logger from "../../../../../lib/logger";
 
 // Centralized API handler that routes through the tool registry
 export async function GET(
@@ -41,6 +42,7 @@ export async function GET(
     const response = await executeHandler(request, tool, endpoint);
     return await performanceMiddleware.recordPerformance(request, response);
   } catch (error) {
+    logger.error("Error in GET handler", { error, tool: toolName, endpoint });
     
     return NextResponse.json(
       { error: "Internal server error" },
@@ -87,6 +89,7 @@ export async function POST(
     const response = await executeHandler(request, tool, endpoint);
     return await performanceMiddleware.recordPerformance(request, response);
   } catch (error) {
+    logger.error("Error in POST handler", { error, tool: toolName, endpoint });
     
     return NextResponse.json(
       { error: "Internal server error" },

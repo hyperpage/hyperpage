@@ -129,13 +129,13 @@ describe("Database Persistence & Recovery Testing", () => {
       const operationIds = writeResults.map(
         (result, index) => `op_${index}_${result.sessionId}`,
       );
-      sessions.forEach((user, index) => {
+      sessions.forEach((user, _index) => {
         expect(user).toBeDefined();
         const sessionData =
           user &&
           (user as TestUser & { sessionData?: SessionData }).sessionData;
         expect(sessionData).toBeDefined();
-        expect(sessionData?.operationId).toBe(operationIds[index]);
+        expect(sessionData?.operationId).toBe(operationIds[_index]);
       });
 
       logger.info(
@@ -902,7 +902,7 @@ describe("Database Persistence & Recovery Testing", () => {
           type: 'peak_usage_integrity_test',
           peakLoad,
           allOperationsSuccessful: peakResults.every(r => r.read1 && r.write && r.read2 && r.update),
-          dataIntegrityVerified: verifiedUsers.every((user, index) => {
+          dataIntegrityVerified: verifiedUsers.every((user) => {
             const userPeakLoadTest = (user as TestUser & { peakLoadTest?: PeakLoadTest })?.peakLoadTest;
             return userPeakLoadTest?.peakLoadPhase === "updated";
           }),

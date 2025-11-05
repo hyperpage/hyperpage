@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToolByName, getAllTools } from "../../../../tools";
 import { ToolWidget, ToolApi } from "../../../../tools/tool-types";
+import logger from "../../../../lib/logger";
 
 // Get details about a specific tool
 export async function GET(
@@ -67,6 +68,7 @@ export async function GET(
       tool: toolData,
     });
   } catch (error) {
+    logger.error("Error getting tool details", { error, tool: toolName });
     
     return NextResponse.json(
       { error: "Failed to get tool details" },

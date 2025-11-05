@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
+import logger from "@/lib/logger";
 
 /**
  * GitLab OAuth Status Handler
@@ -11,10 +12,12 @@ const PROVIDER_NAME = "gitlab";
 
 // GET /api/auth/gitlab/status - Get OAuth authentication status
 export async function GET(request: NextRequest) {
+  let sessionCookie: { value: string } | undefined;
+
   try {
     // Get session ID from cookies
     const cookies = request.cookies;
-    const sessionCookie = cookies.get("hyperpage-session");
+    sessionCookie = cookies.get("hyperpage-session");
 
     if (!sessionCookie) {
       return NextResponse.json({
@@ -77,7 +80,11 @@ export async function GET(request: NextRequest) {
         hasRefreshToken: !!tokens.refreshToken && !isRefreshExpired,
       });
     } catch (storageError) {
-      
+      logger.error("Failed to check GitLab authentication status in storage", { 
+        storageError, 
+        userId, 
+        provider: PROVIDER_NAME 
+      });
       // If storage check fails, assume not authenticated
       return NextResponse.json({
         authenticated: false,
@@ -87,7 +94,11 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    
+    logger.error("Failed to get GitLab authentication status", { 
+      error, 
+      sessionId: sessionCookie?.value, 
+      provider: PROVIDER_NAME 
+    });
     // Always return valid JSON in case of error
     return NextResponse.json(
       {

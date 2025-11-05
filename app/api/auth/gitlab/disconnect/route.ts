@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
+import logger from "@/lib/logger";
 
 /**
  * GitLab OAuth Disconnect Handler
@@ -11,10 +12,12 @@ const PROVIDER_NAME = "gitlab";
 
 // POST /api/auth/gitlab/disconnect - Disconnect OAuth authentication
 export async function POST(request: NextRequest) {
+  let sessionCookie: { value: string } | undefined;
+
   try {
     // Get session ID from cookies
     const cookies = request.cookies;
-    const sessionCookie = cookies.get("hyperpage-session");
+    sessionCookie = cookies.get("hyperpage-session");
 
     if (!sessionCookie) {
       return NextResponse.json(
@@ -59,14 +62,22 @@ export async function POST(request: NextRequest) {
         message: `${PROVIDER_NAME} authentication disconnected successfully`,
       });
     } catch (storageError) {
-      
+      logger.error("Failed to remove authentication data from secure storage", { 
+        storageError, 
+        userId, 
+        provider: PROVIDER_NAME 
+      });
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },
         { status: 500 },
       );
     }
   } catch (error) {
-    
+    logger.error("Failed to disconnect GitLab authentication", { 
+      error, 
+      sessionId: sessionCookie?.value, 
+      provider: PROVIDER_NAME 
+    });
     return NextResponse.json(
       { success: false, error: "Failed to disconnect authentication" },
       { status: 500 },

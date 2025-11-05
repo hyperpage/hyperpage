@@ -10,8 +10,16 @@ import {
 import {
   IntegrationTestEnvironment,
   TestUserManager,
+  OAuthTestCredentials,
 } from "../../lib/test-credentials";
 import logger from "../../../lib/logger";
+// Define interface for test session data to replace 'any' types
+interface TestSession {
+  userId: string;
+  sessionId: string;
+  credentials: OAuthTestCredentials;
+}
+
 
 describe("Concurrent Authentication Flow Testing", () => {
   let testEnv: IntegrationTestEnvironment;
@@ -37,7 +45,7 @@ describe("Concurrent Authentication Flow Testing", () => {
 
       expect(sessions).toHaveLength(3);
 
-      sessions.forEach((session: any) => {
+      sessions.forEach((session: TestSession) => {
         expect(session.userId).toBeDefined();
         expect(session.sessionId).toBeDefined();
         expect(session.credentials).toBeDefined();
@@ -45,7 +53,7 @@ describe("Concurrent Authentication Flow Testing", () => {
       });
 
       // Ensure unique user IDs
-      const userIds = sessions.map((s: any) => s.userId);
+      const userIds = sessions.map((s: TestSession) => s.userId);
       expect(new Set(userIds).size).toBe(userIds.length);
     });
 
@@ -61,12 +69,12 @@ describe("Concurrent Authentication Flow Testing", () => {
       );
 
       // Each session should be completely isolated
-      sessions.forEach((session: any, index: number) => {
+      sessions.forEach((session: TestSession, index: number) => {
         const otherSessions = sessions.filter(
           (_, otherIndex: number) => otherIndex !== index,
         );
         const hasCollision = otherSessions.some(
-          (other: any) =>
+          (other: TestSession) =>
             other.sessionId === session.sessionId ||
             other.userId === session.userId,
         );
@@ -199,7 +207,7 @@ describe("Concurrent Authentication Flow Testing", () => {
       ];
 
       const accessAttempts = [
-        ...legitimateSessions.map((session: any) => ({
+        ...legitimateSessions.map((session: TestSession) => ({
           sessionId: session.sessionId,
           isMalicious: false,
           expectedUser: session.userId,

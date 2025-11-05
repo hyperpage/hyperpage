@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getToolIcon } from "../../tools";
 import { ToolIntegration } from "../../tools/tool-types";
+import logger from "../../lib/logger";
 
 import { Wifi, WifiOff, Zap, UserCheck, UserX } from "lucide-react";
 import {
@@ -27,7 +28,7 @@ export default function ToolStatusRow() {
   );
 
   // Use the shared auth status hook to prevent duplicate requests
-  const { authStatus, isLoading: authLoading } = useAuthStatus();
+  const { authStatus } = useAuthStatus();
 
   // Get rate limit status for all enabled tools that support rate limiting - only when we have slugs
   const { statuses: rateLimitStatuses } = useMultipleRateLimits(
@@ -68,7 +69,7 @@ export default function ToolStatusRow() {
           setToolIntegrations(basicIntegrations);
         }
       } catch (error) {
-        console.error("Failed to load tool integrations:", error);
+        logger.error("Failed to load tool integrations", { error, stack: error instanceof Error ? error.stack : undefined });
       }
     }
 

@@ -8,6 +8,7 @@ import { performanceDashboard } from "../../../lib/monitoring/performance-dashbo
 import { defaultHttpClient } from "../../../lib/connection-pool";
 import { DashboardMetrics } from "../../../lib/monitoring/performance-dashboard";
 import { Tool } from "../../../tools/tool-types";
+import logger from "../../../lib/logger";
 const register = new promClient.Registry();
 
 // Add default metrics (process, heap, etc.)
@@ -277,10 +278,11 @@ async function updateMetrics() {
           });
         }
       } catch (error) {
-        console.error(
-          `Failed to fetch rate limit status for ${platform}:`,
-          error,
-        );
+        logger.error(`Failed to fetch rate limit status for ${platform}`, { 
+          error: error instanceof Error ? error.message : String(error),
+          platform,
+          endpoint: "/api/metrics" 
+        });
         // Set status to unknown for failed platforms
         rateLimitStatusGauge.set({ platform }, 3);
       }
@@ -327,12 +329,20 @@ async function updateMetrics() {
       // In a real implementation, this would increment per request
       connectionPoolRequestsTotal.inc(poolMetrics.totalConnections);
     } catch (error) {
-      
+      logger.error("Failed to update connection pool metrics", { 
+        error: error instanceof Error ? error.message : String(error),
+        endpoint: "/api/metrics",
+        component: "connection_pool" 
+      });
       // Set error states
       connectionPoolHealthStatusGauge.set(0); // Unhealthy
     }
   } catch (error) {
-    
+    logger.error("Failed to update metrics", { 
+      error: error instanceof Error ? error.message : String(error),
+      endpoint: "/api/metrics",
+      function: "updateMetrics" 
+    });
   }
 }
 
@@ -353,6 +363,11 @@ export async function GET() {
       },
     });
   } catch (error) {
+    logger.error("Failed to generate metrics", { 
+      error: error instanceof Error ? error.message : String(error),
+      endpoint: "/api/metrics",
+      method: "GET" 
+    });
     
     return NextResponse.json(
       { error: "Failed to generate metrics" },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
+import unifiedLogger from "@/lib/logger";
 
 /**
  * Jira OAuth Disconnect Handler
@@ -59,6 +60,16 @@ export async function POST(request: NextRequest) {
         message: `${PROVIDER_NAME} authentication disconnected successfully`,
       });
     } catch (storageError) {
+      unifiedLogger.error(
+        `${PROVIDER_NAME} OAuth disconnect: Storage operation failed`,
+        { 
+          storageError,
+          provider: PROVIDER_NAME,
+          operation: 'oauth_disconnect_storage',
+          userId,
+          sessionId
+        }
+      );
       
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },
@@ -66,6 +77,14 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
+    unifiedLogger.error(
+      `${PROVIDER_NAME} OAuth disconnect: Internal error`,
+      { 
+        error,
+        provider: PROVIDER_NAME,
+        operation: 'oauth_disconnect'
+      }
+    );
     
     return NextResponse.json(
       { success: false, error: "Failed to disconnect authentication" },

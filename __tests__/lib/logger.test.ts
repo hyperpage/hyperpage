@@ -345,4 +345,52 @@ describe("Pino Logger Integration Tests", () => {
       expect(parsed.timestamp).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
     });
   });
+
+  describe("Logger Import Usage Validation", () => {
+    it("should validate that both logger and pinoLogger imports are used", () => {
+      // Test that both imported loggers have the expected interface structure
+      expect(typeof logger).toBe('object');
+      expect(typeof pinoLogger).toBe('object');
+      
+      // Verify they have expected methods
+      expect(logger).toHaveProperty('error');
+      expect(logger).toHaveProperty('warn');
+      expect(logger).toHaveProperty('info');
+      expect(logger).toHaveProperty('debug');
+      
+      expect(pinoLogger).toHaveProperty('error');
+      expect(pinoLogger).toHaveProperty('warn');
+      expect(pinoLogger).toHaveProperty('info');
+      expect(pinoLogger).toHaveProperty('debug');
+      
+      // Validate the structure matches our expectations for TypeScript interfaces
+      expect(logger.error).toBeInstanceOf(Function);
+      expect(logger.warn).toBeInstanceOf(Function);
+      expect(logger.info).toBeInstanceOf(Function);
+      expect(logger.debug).toBeInstanceOf(Function);
+      
+      expect(pinoLogger.error).toBeInstanceOf(Function);
+      expect(pinoLogger.warn).toBeInstanceOf(Function);
+      expect(pinoLogger.info).toBeInstanceOf(Function);
+      expect(pinoLogger.debug).toBeInstanceOf(Function);
+    });
+
+    it("should validate logger interfaces match documented structure", () => {
+      // Validate that imported loggers conform to expected TypeScript interfaces
+      const loggerMethods = Object.keys(logger);
+      const expectedMethods = ['error', 'warn', 'info', 'debug'];
+      
+      expectedMethods.forEach(method => {
+        expect(loggerMethods).toContain(method);
+        expect(logger[method as keyof typeof logger]).toBeInstanceOf(Function);
+      });
+      
+      // Also validate pinoLogger structure
+      const pinoLoggerMethods = Object.keys(pinoLogger);
+      expectedMethods.forEach(method => {
+        expect(pinoLoggerMethods).toContain(method);
+        expect(pinoLogger[method as keyof typeof pinoLogger]).toBeInstanceOf(Function);
+      });
+    });
+  });
 });

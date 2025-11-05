@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { RedisClient } from "../../../lib/cache/redis-client";
+import { pinoLogger as logger } from "../../../lib/logger";
 
 describe("Redis Client", () => {
   let redisClient: RedisClient;
@@ -68,6 +69,8 @@ describe("Redis Client", () => {
         const pingResult = await redisClient.ping();
         expect(pingResult).toBe(true);
       } catch (error) {
+        // Log the connection error for debugging
+        logger.debug({ error }, 'Expected Redis connection failure during test');
         
         // This is expected when Redis isn't running
         expect(error).toBeInstanceOf(Error);
@@ -113,6 +116,8 @@ describe("Redis Client", () => {
       try {
         await redisClient.connect();
       } catch (error) {
+        // Log the connection attempt error for debugging
+        logger.debug({ error }, 'Expected Redis connection attempt failure');
         
         // Expected to fail without Redis running
         const health = await redisClient.getHealth();
