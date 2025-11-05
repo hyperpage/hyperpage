@@ -7,6 +7,8 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+import { useAuthStatus } from "./hooks/useAuthStatus";
+import logger from "@/lib/logger";
 
 interface AuthToolState {
   toolSlug: string;
@@ -53,69 +55,26 @@ export function AuthProvider({
     })),
   );
 
-  const [configuredTools, setConfiguredTools] = useState<
-    Record<string, boolean>
-  >({});
+  // Use the shared auth status hook with caching to prevent duplicate requests
+  const { configuredTools, fetchToolAuthStatus, fetchAuthConfig, clearCache } =
+    useAuthStatus();
 
-  // Initialize configuration and authentication status on mount
+  // Initialize configuration on mount using cached data
   useEffect(() => {
     const initializeConfig = async () => {
       try {
-        const response = await fetch("/api/auth/config");
-        const result = await response.json();
-
-        if (result.success) {
-          setConfiguredTools(result.configured);
+        // Use the cached configuration from the hook
+        // If not available in cache, fetch it once
+        if (Object.keys(configuredTools).length === 0) {
+          await fetchAuthConfig();
         }
       } catch (error) {
-        
+        logger.error("Failed to load auth configuration:", error);
       }
     };
 
     // Load configuration
     initializeConfig();
-
-    // Check authentication status for all tools
-    initialTools.forEach((toolSlug) => {
-      // Inline function to avoid dependency issues
-      const checkStatus = async () => {
-        try {
-          const response = await fetch(`/api/auth/${toolSlug}/status`);
-          const result = await response.json();
-          const isAuthenticated = response.ok && result.authenticated;
-          setTools((current) =>
-            current.map((tool) =>
-              tool.toolSlug === toolSlug
-                ? {
-                    ...tool,
-                    isAuthenticated,
-                    isLoading: false,
-                    error: null,
-                    lastConnectedAt: result.lastConnectedAt
-                      ? new Date(result.lastConnectedAt)
-                      : undefined,
-                  }
-                : tool,
-            ),
-          );
-        } catch (error) {
-          
-          setTools((current) =>
-            current.map((tool) =>
-              tool.toolSlug === toolSlug
-                ? {
-                    ...tool,
-                    isAuthenticated: false,
-                    isLoading: false,
-                    error: "Failed to check authentication status",
-                  }
-                : tool,
-            ),
-          );
-        }
-      };
-      checkStatus();
-    });
 
     // Check for OAuth success indicators on page load
     const urlParams = new URLSearchParams(window.location.search);
@@ -131,52 +90,12 @@ export function AuthProvider({
         successParam.includes(tool),
       );
       if (toolMatch) {
-        console.log(
+        logger.info(
           `OAuth success detected for ${toolMatch}, refreshing status...`,
         );
         // Refresh authentication status after OAuth success
-        setTimeout(() => {
-          // Inline function to avoid dependency issues
-          const checkStatus = async () => {
-            try {
-              const response = await fetch(`/api/auth/${toolMatch}/status`);
-              const result = await response.json();
-              const isAuthenticated = response.ok && result.authenticated;
-              setTools((current) =>
-                current.map((tool) =>
-                  tool.toolSlug === toolMatch
-                    ? {
-                        ...tool,
-                        isAuthenticated,
-                        isLoading: false,
-                        error: null,
-                        lastConnectedAt: result.lastConnectedAt
-                          ? new Date(result.lastConnectedAt)
-                          : undefined,
-                      }
-                    : tool,
-                ),
-              );
-            } catch (error) {
-              console.error(
-                `Failed to check auth status for ${toolMatch}:`,
-                error,
-              );
-              setTools((current) =>
-                current.map((tool) =>
-                  tool.toolSlug === toolMatch
-                    ? {
-                        ...tool,
-                        isAuthenticated: false,
-                        isLoading: false,
-                        error: "Failed to check authentication status",
-                      }
-                    : tool,
-                ),
-              );
-            }
-          };
-          checkStatus();
+        setTimeout(async () => {
+          await fetchToolAuthStatus(toolMatch);
         }, 100);
 
         // Clean up URL parameters
@@ -187,9 +106,9 @@ export function AuthProvider({
       }
     }
 
-    // Cleanup (empty for now, reserved for future use)
+    // Cleanup
     return () => {};
-  }, [initialTools]);
+  }, [initialTools, fetchToolAuthStatus, fetchAuthConfig, configuredTools]);
 
   const updateToolState = (
     toolSlug: string,
@@ -216,6 +135,9 @@ export function AuthProvider({
         sessionStorage.setItem("currentAuthTool", toolSlug);
       }
 
+      // Clear cache to ensure fresh auth status after OAuth
+      clearCache();
+
       // Initiate OAuth flow with redirect
       const initiateUrl = `/api/auth/${toolSlug}/initiate`;
 
@@ -225,7 +147,7 @@ export function AuthProvider({
       // Note: Code after this redirect will not execute
       // Authentication completion is handled by the callback route
     } catch (error) {
-      
+      logger.error("Authentication error:", error);
       updateToolState(toolSlug, {
         isLoading: false,
         error: error instanceof Error ? error.message : "Authentication failed",
@@ -255,8 +177,11 @@ export function AuthProvider({
         error: null,
         lastConnectedAt: undefined,
       });
+
+      // Clear cache to reflect the change
+      clearCache();
     } catch (error) {
-      
+      logger.error("Disconnect error:", error);
       updateToolState(toolSlug, {
         isLoading: false,
         error: error instanceof Error ? error.message : "Disconnect failed",
@@ -267,23 +192,25 @@ export function AuthProvider({
 
   const checkAuthStatus = async (toolSlug: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/auth/${toolSlug}/status`);
-      const result = await response.json();
+      // Use the shared hook to prevent duplicate requests
+      const result = await fetchToolAuthStatus(toolSlug);
 
-      const isAuthenticated = response.ok && result.authenticated;
+      if (result) {
+        const isAuthenticated = result.authenticated;
+        updateToolState(toolSlug, {
+          isAuthenticated,
+          isLoading: false,
+          error: null,
+          lastConnectedAt: result.lastConnectedAt
+            ? new Date(result.lastConnectedAt)
+            : undefined,
+        });
+        return isAuthenticated;
+      }
 
-      updateToolState(toolSlug, {
-        isAuthenticated,
-        isLoading: false,
-        error: null,
-        lastConnectedAt: result.lastConnectedAt
-          ? new Date(result.lastConnectedAt)
-          : undefined,
-      });
-
-      return isAuthenticated;
+      return false;
     } catch (error) {
-      
+      logger.error("Auth status check error:", error);
       updateToolState(toolSlug, {
         isAuthenticated: false,
         isLoading: false,
@@ -320,6 +247,9 @@ export function AuthProvider({
         })),
       );
 
+      // Clear cache to reflect the change
+      clearCache();
+
       // Restore redirect URL for post-logout redirect if needed
       if (typeof window !== "undefined") {
         const redirectUrl = sessionStorage.getItem("postLogoutUrl");
@@ -331,7 +261,7 @@ export function AuthProvider({
         }
       }
     } catch (error) {
-      
+      logger.error("Clear auth error:", error);
       // Still clear local state even if API calls fail
       setTools((current) =>
         current.map((tool) => ({
@@ -346,7 +276,7 @@ export function AuthProvider({
   };
 
   const isConfigured = (toolSlug: string): boolean => {
-    // Check if OAuth configuration exists for the tool
+    // Check if OAuth configuration exists for the tool using cached data
     return configuredTools[toolSlug] || false;
   };
 

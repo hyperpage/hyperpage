@@ -11,6 +11,7 @@ import {
   IntegrationTestEnvironment,
   TestUserManager,
 } from "../../lib/test-credentials";
+import logger from "../../../lib/logger";
 import {
   TestUser,
   SessionData,
@@ -128,17 +129,23 @@ describe("Database Persistence & Recovery Testing", () => {
       const operationIds = writeResults.map(
         (result, index) => `op_${index}_${result.sessionId}`,
       );
-      sessions.forEach((user, index) => {
+      sessions.forEach((user, _index) => {
         expect(user).toBeDefined();
         const sessionData =
           user &&
           (user as TestUser & { sessionData?: SessionData }).sessionData;
         expect(sessionData).toBeDefined();
-        expect(sessionData?.operationId).toBe(operationIds[index]);
+        expect(sessionData?.operationId).toBe(operationIds[_index]);
       });
 
-      console.log(
+      logger.info(
         `Data consistency test: ${concurrentWrites} concurrent writes completed successfully`,
+        {
+          type: "data_consistency_test",
+          concurrentWrites,
+          operationIds: operationIds.slice(0, 5), // Log first 5 for brevity
+          allOperationsSuccessful: writeResults.every((r) => r.dataUpdated),
+        },
       );
     });
 
@@ -195,8 +202,15 @@ describe("Database Persistence & Recovery Testing", () => {
       );
       expect(dataWithIntegrity.length).toBe(concurrentReads);
 
-      console.log(
+      logger.info(
         `Read consistency test: ${concurrentReads} concurrent reads completed without corruption`,
+        {
+          type: "read_consistency_test",
+          concurrentReads,
+          nullReads: nullReads.length,
+          dataWithIntegrity: dataWithIntegrity.length,
+          allReadsSuccessful: readResults.every((r) => r.data !== null),
+        },
       );
     });
 
@@ -287,8 +301,15 @@ describe("Database Persistence & Recovery Testing", () => {
         }
       });
 
-      console.log(
+      logger.info(
         `Transaction isolation test: ${operations} mixed operations with isolation validation`,
+        {
+          type: "transaction_isolation_test",
+          totalOperations: operations,
+          writeOperations: writeOperations.length,
+          readOperations: readOperations.length,
+          allOperationsSuccessful: operationResults.every((r) => r.success),
+        },
       );
     });
   });
@@ -360,8 +381,14 @@ describe("Database Persistence & Recovery Testing", () => {
       expect(recoveredData?.recoveryAttempt).toBe(true);
       expect(recoveredData?.initialState).toBe("created");
 
-      console.log(
+      logger.info(
         "Recovery mechanism test: System failure and recovery completed successfully",
+        {
+          type: "recovery_mechanism_test",
+          recoveryAttempt: true,
+          initialState: "created",
+          timestamp: recoveredData?.recoveredTimestamp,
+        },
       );
     });
 
@@ -416,8 +443,15 @@ describe("Database Persistence & Recovery Testing", () => {
           .persistentData;
       expect(finalData?.modificationHistory).toHaveLength(2);
 
-      console.log(
+      logger.info(
         "Session recreation test: Data persistence across session boundaries validated",
+        {
+          type: "session_recreation_test",
+          persistentId: persistentData.persistentId,
+          modificationHistoryLength: finalData?.modificationHistory.length,
+          dataPersisted:
+            finalData?.persistentId === persistentData.persistentId,
+        },
       );
     });
 
@@ -483,8 +517,15 @@ describe("Database Persistence & Recovery Testing", () => {
         expect(success.sessionId).toBeDefined();
       });
 
-      console.log(
+      logger.info(
         `Batch operation recovery test: ${successfulOps.length}/${batchSize} operations successful after partial failure`,
+        {
+          type: "batch_operation_recovery_test",
+          batchSize,
+          successfulOps: successfulOps.length,
+          failedOps: failedOps.length,
+          successRate: `${((successfulOps.length / batchSize) * 100).toFixed(1)}%`,
+        },
       );
     });
   });
@@ -573,8 +614,16 @@ describe("Database Persistence & Recovery Testing", () => {
         );
       });
 
-      console.log(
+      logger.info(
         `Session integrity test: ${sessionCount} sessions with ${operationsPerSession} operations each`,
+        {
+          type: "session_integrity_test",
+          sessionCount,
+          operationsPerSession,
+          allSessionsSuccessful: sessionResults.every(
+            (r) => r.allOperationsSuccessful,
+          ),
+        },
       );
     });
 
@@ -641,8 +690,14 @@ describe("Database Persistence & Recovery Testing", () => {
       expect(lastCheckpoint?.timeElapsed).toBeGreaterThan(0);
       expect(lastCheckpoint?.checkpoint).toBe(checkpoints.length);
 
-      console.log(
+      logger.info(
         "Time persistence test: Session data maintained across time periods",
+        {
+          type: "time_persistence_test",
+          startTime: initialTime,
+          checkpoints: checkpoints.length,
+          duration: lastCheckpoint?.timeElapsed,
+        },
       );
     });
 
@@ -737,8 +792,17 @@ describe("Database Persistence & Recovery Testing", () => {
       );
       expect(capturedActivePhases.length).toBe(concurrentSessions);
 
-      console.log(
+      logger.info(
         `Session lifecycle test: ${concurrentSessions} concurrent session invalidation/recreation cycles`,
+        {
+          type: "session_lifecycle_test",
+          concurrentSessions,
+          recreationSuccessful: lifecycleResults.every(
+            (r) => r.recreationSuccessful,
+          ),
+          originalPhasePreserved:
+            capturedActivePhases.length === concurrentSessions,
+        },
       );
     });
   });
@@ -838,8 +902,21 @@ describe("Database Persistence & Recovery Testing", () => {
         expect(userPeakLoadTest).toBeDefined();
       });
 
-      console.log(
+      logger.info(
         `Peak usage integrity test: ${peakLoad} concurrent access operations completed with full integrity`,
+        {
+          type: "peak_usage_integrity_test",
+          peakLoad,
+          allOperationsSuccessful: peakResults.every(
+            (r) => r.read1 && r.write && r.read2 && r.update,
+          ),
+          dataIntegrityVerified: verifiedUsers.every((user) => {
+            const userPeakLoadTest = (
+              user as TestUser & { peakLoadTest?: PeakLoadTest }
+            )?.peakLoadTest;
+            return userPeakLoadTest?.peakLoadPhase === "updated";
+          }),
+        },
       );
     });
 
@@ -906,8 +983,20 @@ describe("Database Persistence & Recovery Testing", () => {
         expect(result.referentialIntegrity).toBe(true);
       });
 
-      console.log(
+      logger.info(
         `Referential integrity test: ${relationshipCount} complex relationships with integrity validation`,
+        {
+          type: "referential_integrity_test",
+          relationshipCount,
+          allRelationshipsValid: relationshipResults.every(
+            (r) => r.referentialIntegrity,
+          ),
+          primaryCreated: relationshipResults.filter((r) => r.primaryCreated)
+            .length,
+          referencesCreated: relationshipResults.filter(
+            (r) => r.referencesCreated,
+          ).length,
+        },
       );
     });
 
@@ -999,8 +1088,16 @@ describe("Database Persistence & Recovery Testing", () => {
         expect(result.migrationSuccessful).toBe(true);
       });
 
-      console.log(
+      logger.info(
         `Concurrent migration test: ${migrationSessions} concurrent data migrations with access validation`,
+        {
+          type: "concurrent_migration_test",
+          migrationSessions,
+          migrationSuccessful: migrationResults.every(
+            (r) => r.migrationSuccessful,
+          ),
+          readAccessAvailable: migrationResults.every((r) => !!r.readAccess),
+        },
       );
     });
   });

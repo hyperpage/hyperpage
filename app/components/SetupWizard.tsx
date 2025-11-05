@@ -18,6 +18,7 @@ import {
   Copy,
   AlertCircle,
 } from "lucide-react";
+import logger from "@/lib/logger";
 
 interface SetupStep {
   id: string;
@@ -144,7 +145,7 @@ export default function SetupWizard() {
       const hasEnabledTools = data.enabledTools && data.enabledTools.length > 0;
       setIsConfigured(hasEnabledTools);
     } catch (error) {
-      
+      logger.error("Failed to check configuration status", { error });
     }
   };
 

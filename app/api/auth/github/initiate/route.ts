@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOAuthConfig, buildAuthorizationUrl } from "@/lib/oauth-config";
 import { createOAuthStateCookie } from "@/lib/oauth-state-cookies";
+import logger from "@/lib/logger";
 
 /**
  * GitHub OAuth Initiate Handler
@@ -15,7 +16,6 @@ export async function GET() {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME);
     if (!oauthConfig) {
-      
       return NextResponse.json(
         { error: `${PROVIDER_NAME} OAuth not configured` },
         { status: 500 },
@@ -41,7 +41,11 @@ export async function GET() {
     // Redirect to GitHub authorization
     return response;
   } catch (error) {
-    
+    logger.error("GitHub OAuth initiation failed", {
+      error,
+      provider: PROVIDER_NAME,
+    });
+
     return NextResponse.json(
       { error: "Failed to initiate OAuth flow" },
       { status: 500 },

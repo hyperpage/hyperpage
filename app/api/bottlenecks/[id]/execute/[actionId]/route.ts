@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bottleneckDetector } from "../../../../../../lib/monitoring/bottleneck-detector";
+import logger from "@/lib/logger";
 
 /**
  * POST /api/bottlenecks/[id]/execute/[actionId] - Execute an automated action for a bottleneck
@@ -8,11 +9,11 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string; actionId: string }> },
 ): Promise<NextResponse> {
-  try {
-    const { id, actionId } = await context.params;
+  const { id: bottleneckId, actionId } = await context.params;
 
+  try {
     // Validate inputs
-    if (!id || !actionId) {
+    if (!bottleneckId || !actionId) {
       return NextResponse.json(
         { error: "Bottleneck ID and action ID are required" },
         { status: 400 },
@@ -21,14 +22,14 @@ export async function POST(
 
     // Execute the automated action
     const result = await bottleneckDetector.executeAutomatedAction(
-      id,
+      bottleneckId,
       actionId,
     );
 
     if (result.success) {
       // Log successful execution for auditing
-      console.info("Automated action executed", {
-        bottleneckId: id,
+      logger.info("Automated action executed", {
+        bottleneckId,
         actionId,
         result: result.result,
         timestamp: Date.now(),
@@ -42,8 +43,8 @@ export async function POST(
       });
     } else {
       // Log failed execution
-      console.warn("Automated action failed", {
-        bottleneckId: id,
+      logger.warn("Automated action failed", {
+        bottleneckId,
         actionId,
         message: result.message,
         timestamp: Date.now(),
@@ -59,7 +60,13 @@ export async function POST(
       );
     }
   } catch (error) {
-    
+    logger.error("Failed to execute automated action for bottleneck", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      bottleneckId,
+      actionId,
+    });
+
     return NextResponse.json(
       {
         error: "Failed to execute automated action",
@@ -77,11 +84,11 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string; actionId: string }> },
 ): Promise<NextResponse> {
-  try {
-    const { id, actionId } = await context.params;
+  const { id: bottleneckId, actionId } = await context.params;
 
+  try {
     // Get bottleneck details
-    const bottleneck = bottleneckDetector.getBottleneck(id);
+    const bottleneck = bottleneckDetector.getBottleneck(bottleneckId);
 
     if (!bottleneck) {
       return NextResponse.json(
@@ -112,11 +119,17 @@ export async function GET(
       recommendation: action.recommendation,
       canExecute: true, // If we have the endpoint, it's executable
       status: "ready_for_execution",
-      bottleneckId: id,
+      bottleneckId,
       patternId: bottleneck.patternId,
     });
   } catch (error) {
-    
+    logger.error("Failed to retrieve automated action details", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      bottleneckId,
+      actionId,
+    });
+
     return NextResponse.json(
       { error: "Failed to retrieve automated action details" },
       { status: 500 },

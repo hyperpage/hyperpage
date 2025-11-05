@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOAuthConfig, buildAuthorizationUrl } from "@/lib/oauth-config";
+import logger from "@/lib/logger";
 
 /**
  * Jira OAuth 2.0 Initiate Handler
@@ -10,14 +11,13 @@ const PROVIDER_NAME = "jira";
 
 // GET /api/auth/jira/initiate - Initiate OAuth flow
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const webUrl = searchParams.get("web_url");
+  const { searchParams } = new URL(request.url);
+  const webUrl = searchParams.get("web_url");
 
+  try {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME, webUrl || undefined);
     if (!oauthConfig) {
-      
       return NextResponse.json(
         { error: `${PROVIDER_NAME} OAuth not configured` },
         { status: 500 },
@@ -61,7 +61,13 @@ export async function GET(request: NextRequest) {
     // Redirect to Atlassian authorization
     return response;
   } catch (error) {
-    
+    logger.error("Failed to initiate Jira OAuth flow", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      webUrl,
+      provider: PROVIDER_NAME,
+    });
+
     return NextResponse.json(
       { error: "Failed to initiate OAuth flow" },
       { status: 500 },

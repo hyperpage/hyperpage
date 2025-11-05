@@ -44,7 +44,11 @@ export async function getServerRateLimitStatus(
   // Call the tool's rate-limit handler directly
   const rateLimitHandler = (tool as Tool).handlers["rate-limit"];
   if (!rateLimitHandler) {
-    rateLimitLogger.event("warn", platform, "No rate-limit handler found for platform");
+    rateLimitLogger.event(
+      "warn",
+      platform,
+      "No rate-limit handler found for platform",
+    );
     return null;
   }
 
@@ -52,7 +56,11 @@ export async function getServerRateLimitStatus(
     const result = await rateLimitHandler(mockRequest, (tool as Tool).config!);
 
     if (!result.rateLimit) {
-      rateLimitLogger.event("warn", platform, "No rate limit data returned from handler");
+      rateLimitLogger.event(
+        "warn",
+        platform,
+        "No rate limit data returned from handler",
+      );
       return null;
     }
 
@@ -69,7 +77,12 @@ export async function getServerRateLimitStatus(
         limits = transformJiraLimits(result.rateLimit);
         break;
       default:
-        rateLimitLogger.event("warn", platform, "Rate limit transformation not implemented for platform", { platform });
+        rateLimitLogger.event(
+          "warn",
+          platform,
+          "Rate limit transformation not implemented for platform",
+          { platform },
+        );
         return null;
     }
 
@@ -85,7 +98,12 @@ export async function getServerRateLimitStatus(
       limits,
     };
   } catch (_error) {
-    rateLimitLogger.event("error", platform, "Failed to get rate limit status", { error: _error });
+    rateLimitLogger.event(
+      "error",
+      platform,
+      "Failed to get rate limit status",
+      { error: _error },
+    );
     return null;
   }
 }
@@ -95,7 +113,11 @@ export async function getServerRateLimitStatus(
  */
 export async function loadPersistedRateLimits(): Promise<number> {
   try {
-    rateLimitLogger.event("info", "system", "Loading persisted rate limits from database");
+    rateLimitLogger.event(
+      "info",
+      "system",
+      "Loading persisted rate limits from database",
+    );
     const persistedLimits = await db.select().from(rateLimits);
 
     let loadedCount = 0;
@@ -252,15 +274,30 @@ export async function loadPersistedRateLimits(): Promise<number> {
 
         loadedCount++;
       } catch (_error) {
-        rateLimitLogger.event("error", limit.platform, "Failed to load persisted rate limit", { error: _error });
+        rateLimitLogger.event(
+          "error",
+          limit.platform,
+          "Failed to load persisted rate limit",
+          { error: _error },
+        );
         continue;
       }
     }
 
-    rateLimitLogger.event("info", "system", `Successfully loaded ${loadedCount} persisted rate limit records`, { loadedCount });
+    rateLimitLogger.event(
+      "info",
+      "system",
+      `Successfully loaded ${loadedCount} persisted rate limit records`,
+      { loadedCount },
+    );
     return loadedCount;
   } catch (_error) {
-    rateLimitLogger.event("error", "system", "Failed to load persisted rate limits", { error: _error });
+    rateLimitLogger.event(
+      "error",
+      "system",
+      "Failed to load persisted rate limits",
+      { error: _error },
+    );
     return 0;
   }
 }
@@ -289,7 +326,12 @@ export async function saveRateLimitStatus(
     } else if (platform === "jira" && rateLimitStatus.limits.jira) {
       platformLimits = rateLimitStatus.limits.jira.global || {};
     } else {
-      rateLimitLogger.event("warn", platform, "No rate limit data found for platform, skipping persistence", { platform });
+      rateLimitLogger.event(
+        "warn",
+        platform,
+        "No rate limit data found for platform, skipping persistence",
+        { platform },
+      );
       return;
     }
 
@@ -323,7 +365,12 @@ export async function saveRateLimitStatus(
       sql`${rateLimits.lastUpdated} < ${cutoffTime}`,
     );
   } catch (_error) {
-    rateLimitLogger.event("error", rateLimitStatus.platform, "Failed to save rate limit status", { error: _error });
+    rateLimitLogger.event(
+      "error",
+      rateLimitStatus.platform,
+      "Failed to save rate limit status",
+      { error: _error },
+    );
     // Don't throw - persistence failures shouldn't break rate limit monitoring
   }
 }

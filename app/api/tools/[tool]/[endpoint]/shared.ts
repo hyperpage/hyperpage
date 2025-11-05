@@ -10,23 +10,44 @@ import { defaultCache } from "../../../../../lib/cache/cache-factory";
 import { generateCacheKey } from "../../../../../lib/cache/memory-cache";
 import { defaultCompressionMiddleware } from "../../../../../lib/api/compression/compression-middleware";
 import { sessionManager } from "../../../../../lib/sessions/session-manager";
+import logger from "../../../../../lib/logger";
 
-// Session validation helper
+// Session validation helper with consistent cookie handling
 async function validateSession(
   request: NextRequest,
+  tool: Tool,
 ): Promise<NextResponse | null> {
-  // TEMPORARY: Skip session validation in test environment to allow parameter validation testing
-  // This is needed because session validation has issues in the test environment
+  // Skip session validation in test environment
   if (process.env.NODE_ENV === "test") {
     return null;
   }
 
-  const cookieHeader = request.headers.get("cookie");
+  // Check if tool has proper API configuration that should bypass session validation
+  const hasApiConfig = hasValidApiConfiguration(tool);
 
-  const sessionId = cookieHeader?.match(/sessionId=([^;]+)/)?.[1];
+  // Allow tools with valid API configurations to bypass session validation
+  // This enables tools like GitLab to use API tokens instead of sessions
+  if (hasApiConfig) {
+    logger.debug("Tool with API config bypassing session validation", {
+      toolName: tool.name,
+      toolSlug: tool.slug,
+    });
+    return null;
+  }
+
+  const cookies = request.cookies;
+
+  // Try different possible cookie names - matching auth.ts middleware
+  const sessionId =
+    cookies.get("hyperpage-session")?.value ||
+    cookies.get("sessionId")?.value ||
+    cookies.get("session-id")?.value;
 
   if (!sessionId) {
-    return NextResponse.json({ error: "Session ID required" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Authentication required - no session found" },
+      { status: 401 },
+    );
   }
 
   // Check if session actually exists in session manager
@@ -40,6 +61,45 @@ async function validateSession(
   }
 
   return null; // Session exists and is valid
+}
+
+// Helper to check if a tool has valid API configuration
+function hasValidApiConfiguration(tool: Tool): boolean {
+  // Check if tool has validation requirements and they pass
+  if (tool.validation) {
+    const { required = [] } = tool.validation;
+
+    // Check if all required environment variables are set
+    for (const envVar of required) {
+      const envValue = process.env[envVar];
+      if (!envValue || envValue.trim() === "") {
+        return false; // Missing required configuration
+      }
+    }
+
+    // If all required vars are set, this tool can use API auth instead of session
+    return true;
+  }
+
+  // For tools without explicit validation requirements, check for common patterns
+  const toolSlug = tool.slug?.toUpperCase() || tool.name.toUpperCase();
+  const tokenVar = `${toolSlug}_TOKEN`;
+  const apiUrlVar = `${toolSlug}_WEB_URL`;
+
+  const hasToken =
+    !!process.env[tokenVar] && process.env[tokenVar]!.trim() !== "";
+  const hasApiUrl =
+    !!process.env[apiUrlVar] && process.env[apiUrlVar]!.trim() !== "";
+
+  // Tool has API configuration if it has either token + API URL, or is marked as aggregation tool
+  const isAggregationTool =
+    tool.capabilities?.includes("aggregate") ||
+    tool.capabilities?.includes("combined") ||
+    // Check if tool name suggests aggregation (CI/CD, Ticketing, Code Reviews)
+    /^(ci[-/ ]?cd|ticketing|code[-/ ]?reviews)$/i.test(tool.name) ||
+    /^(ci[-/ ]?cd|ticketing|code[-/ ]?reviews)$/i.test(tool.slug || "");
+
+  return (hasToken && hasApiUrl) || isAggregationTool;
 }
 
 // Input validation helper
@@ -155,9 +215,11 @@ export async function executeHandler(
 ): Promise<NextResponse> {
   // Check circuit breaker before executing
   if (!canExecuteRequest(tool.slug)) {
-    console.warn(
-      `Circuit breaker open for tool '${tool.slug}' - blocking request`,
-    );
+    logger.warn("Circuit breaker open for tool - blocking request", {
+      toolSlug: tool.slug,
+      toolName: tool.name,
+      endpoint,
+    });
     return NextResponse.json(
       { error: "Service temporarily unavailable", circuitBreaker: "open" },
       { status: 503 },
@@ -165,7 +227,7 @@ export async function executeHandler(
   }
 
   // Validate session exists and is valid
-  const sessionValidation = await validateSession(request);
+  const sessionValidation = await validateSession(request, tool);
   if (sessionValidation) {
     return sessionValidation;
   }
@@ -187,7 +249,13 @@ export async function executeHandler(
   if (!skipCache) {
     const cachedData = await defaultCache.get(cacheKey);
     if (cachedData) {
-      console.debug(`Cache hit for ${tool.slug}/${endpoint} (${cacheKey})`);
+      logger.debug("Cache hit for tool endpoint", {
+        toolSlug: tool.slug,
+        toolName: tool.name,
+        endpoint,
+        cacheKey,
+        cacheStatus: "HIT",
+      });
       return NextResponse.json(cachedData, {
         headers: {
           "Cache-Control": "private, max-age=30", // Brief client-side caching
@@ -198,7 +266,13 @@ export async function executeHandler(
     }
   }
 
-  console.debug(`Cache miss for ${tool.slug}/${endpoint} (${cacheKey})`);
+  logger.debug("Cache miss for tool endpoint", {
+    toolSlug: tool.slug,
+    toolName: tool.name,
+    endpoint,
+    cacheKey,
+    cacheStatus: "MISS",
+  });
 
   // Route to tool-specific handler from registry
   const handler = tool.handlers[endpoint];
@@ -243,9 +317,14 @@ export async function executeHandler(
       // Default TTL: 5 minutes for activity endpoints, 10 minutes for others
       const ttlMs = endpoint.includes("activity") ? 300000 : 600000;
       defaultCache.set(cacheKey, data, ttlMs);
-      console.debug(
-        `Cached response for ${tool.slug}/${endpoint} (${cacheKey}) with TTL ${ttlMs}ms`,
-      );
+      logger.debug("Cached response for tool endpoint", {
+        toolSlug: tool.slug,
+        toolName: tool.name,
+        endpoint,
+        cacheKey,
+        cacheStatus: "CACHED",
+        ttlMs,
+      });
     }
 
     // Create response with caching headers and rate limit headers for GitHub
@@ -278,7 +357,6 @@ export async function executeHandler(
     // Apply compression based on request capabilities
     return await defaultCompressionMiddleware.compress(response, request);
   } catch (error) {
-    
     recordRequestFailure(tool.slug); // Record handler error as a failure
 
     const errorMessage =

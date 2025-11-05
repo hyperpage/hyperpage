@@ -6,6 +6,7 @@ import type {
   CacheStats,
 } from "./cache-interface";
 import { CacheBackend, CacheError } from "./cache-interface";
+import logger from "../logger";
 
 /**
  * Redis-based cache implementation.
@@ -124,7 +125,8 @@ export class RedisCache<T = unknown> implements ICache<T> {
       const value = await this.get(key);
       return value !== undefined;
     } catch (error) {
-      
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn("Cache has operation failed", { key, error: message });
       return false;
     }
   }
@@ -238,7 +240,8 @@ export class RedisCache<T = unknown> implements ICache<T> {
         accessTime: Date.now(),
       };
     } catch (error) {
-      
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn("Cache getEntry operation failed", { key, error: message });
       return undefined;
     }
   }

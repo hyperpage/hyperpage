@@ -6,6 +6,7 @@ import type {
 import { MemoryCache } from "./memory-cache";
 import { RedisCache } from "./redis-cache";
 import { CacheBackend, CacheError } from "./cache-interface";
+import logger from "../logger";
 
 /**
  * Factory for creating and managing cache instances across different backends.
@@ -81,9 +82,14 @@ export class CacheFactory {
             cache = new RedisCache<T>(config.redisUrl, cacheOptions);
           } catch (error) {
             if (config.enableFallback) {
-              console.warn(
-                "Redis connection failed, falling back to memory cache:",
-                error,
+              logger.warn(
+                "Redis connection failed, falling back to memory cache",
+                {
+                  cacheKey,
+                  backend: config.backend,
+                  error: error instanceof Error ? error.message : String(error),
+                  redisUrl: config.redisUrl || "not_provided",
+                },
               );
               cache = new MemoryCache<T>(cacheOptions);
             } else {
@@ -106,8 +112,24 @@ export class CacheFactory {
           try {
             // Try Redis first
             cache = new RedisCache<T>(config.redisUrl, cacheOptions);
+            logger.info(
+              "Hybrid cache: Redis primary cache created successfully",
+              {
+                cacheKey,
+                backend: config.backend,
+                redisUrl: config.redisUrl,
+              },
+            );
           } catch (error) {
-            
+            logger.warn(
+              "Hybrid cache: Redis failed, falling back to memory cache",
+              {
+                cacheKey,
+                backend: config.backend,
+                error: error instanceof Error ? error.message : String(error),
+                redisUrl: config.redisUrl,
+              },
+            );
             cache = new MemoryCache<T>(cacheOptions);
           }
           break;
@@ -127,9 +149,11 @@ export class CacheFactory {
       // Initialize metrics tracking
       this.initializeMetrics(cacheKey, cache);
 
-      console.info(
-        `Cache instance created with backend '${config.backend}' (key: ${cacheKey})`,
-      );
+      logger.info("Cache instance created", {
+        cacheKey,
+        backend: config.backend,
+        cacheOptions,
+      });
 
       return cache;
     } catch (error) {
@@ -164,7 +188,9 @@ export class CacheFactory {
     } else {
       // No Redis configured, use memory
       if (defaultMemory) {
-        
+        logger.info("No Redis URL configured, using memory cache", {
+          defaultMemory,
+        });
         return await this.create<T>({
           backend: CacheBackend.MEMORY,
         });
@@ -201,9 +227,11 @@ export class CacheFactory {
    * Instances remain functional but are no longer tracked by factory.
    */
   static clearInstances(): void {
+    const instanceCount = this.instances.size;
     this.instances.clear();
     this.metrics.clear();
-    
+
+    logger.info("Cache factory instances cleared", { instanceCount });
   }
 
   /**
@@ -213,20 +241,24 @@ export class CacheFactory {
   static async disposeAll(): Promise<void> {
     const promises: Promise<void>[] = [];
 
-    for (const [key, cache] of this.instances.entries()) {
+    for (const [cacheKey, cache] of this.instances.entries()) {
       try {
         // Redis caches need disconnection, memory caches are no-ops
         if ("disconnect" in cache && typeof cache.disconnect === "function") {
           promises.push(cache.disconnect());
         }
       } catch (error) {
-        
+        logger.warn("Error during cache disposal", {
+          cacheKey,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
     await Promise.allSettled(promises);
     this.clearInstances();
-    
+
+    logger.info("All cache instances disposed successfully");
   }
 
   /**
@@ -271,10 +303,10 @@ export class CacheFactory {
 
       this.metrics.set(cacheKey, metrics);
     } catch (error) {
-      console.warn(
-        `Failed to initialize metrics for cache ${cacheKey}:`,
-        error,
-      );
+      logger.warn("Failed to initialize metrics for cache", {
+        cacheKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

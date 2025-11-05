@@ -1,3 +1,5 @@
+import logger from "./logger";
+
 /**
  * IPv4-forced fetch utility for IPv6-only network environments
  *
@@ -55,22 +57,25 @@ export async function createIPv4Fetch(
             timeout: timeoutMs, // Set connection timeout at agent level too
             keepAlive: false, // Disable keep-alive to avoid connection pooling issues
           });
-          console.log(
-            `IPv4 fetch configured for ${url} - agent with IPv4 family:`,
-            enhancedOptions.agent?.constructor.name || "unknown",
-          );
+          logger.info("IPv4 fetch configured", {
+            url,
+            agentType: enhancedOptions.agent?.constructor.name || "unknown",
+            timeoutMs,
+            family: 4,
+          });
         }
       } catch (error) {
         // If modules aren't available, log but continue with standard fetch
-        console.warn(
-          `IPv4 forcing failed for ${url}, using standard fetch:`,
-          error,
-        );
+        logger.warn("IPv4 forcing failed, using standard fetch", {
+          url,
+          error: error instanceof Error ? error.message : String(error),
+          timeoutMs,
+        });
       }
     } else {
-      console.log(
-        `IPv4 fetch skipped for ${url} - running in browser environment`,
-      );
+      logger.info("IPv4 fetch skipped - running in browser environment", {
+        url,
+      });
     }
 
     const fetchPromise = fetch(url, enhancedOptions);

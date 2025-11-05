@@ -18,6 +18,7 @@ import {
 import { db } from "../database";
 import { jobs, Job, NewJob } from "../database/schema";
 import { eq, and, inArray, lt } from "drizzle-orm";
+import logger from "../logger";
 
 /**
  * Priority queue implementation for job scheduling
@@ -369,7 +370,6 @@ export class MemoryJobQueue implements IJobQueue {
 
     // Record job execution history (simplified for now - will be enhanced later)
     // TODO: Implement full job history tracking
-    
 
     // Update stats based on status change
     this.updateJobStats(oldStatus, status);
@@ -406,14 +406,17 @@ export class MemoryJobQueue implements IJobQueue {
           ]),
         );
 
-      
       let recoveredCount = 0;
 
       for (const dbJob of persistedJobs) {
         try {
           // Skip jobs with invalid data
           if (!dbJob.id || !dbJob.name) {
-            
+            logger.warn("Skipping job with missing required fields", {
+              jobId: dbJob.id,
+              jobName: dbJob.name,
+              requiredFields: ["id", "name"],
+            });
             continue;
           }
 
@@ -464,17 +467,27 @@ export class MemoryJobQueue implements IJobQueue {
 
           recoveredCount++;
         } catch (error) {
-          
+          logger.error("Failed to process individual job during recovery", {
+            jobId: dbJob.id,
+            jobName: dbJob.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
           continue;
         }
       }
 
-      console.info(
-        `Successfully recovered ${recoveredCount} jobs from database`,
-      );
+      logger.info("Successfully recovered jobs from database", {
+        recoveredCount,
+        totalJobs: this.stats.totalJobs,
+        pendingJobs: this.stats.pendingJobs,
+        runningJobs: this.stats.runningJobs,
+        failedJobs: this.stats.failedJobs,
+      });
       return recoveredCount;
     } catch (error) {
-      
+      logger.error("Failed to load persisted jobs from database", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return 0;
     }
   }
@@ -505,10 +518,17 @@ export class MemoryJobQueue implements IJobQueue {
           ),
         );
 
-      
+      logger.info("Successfully cleaned up old jobs from database", {
+        countDeleted: countToDelete,
+        retentionDays,
+        cutoffTime,
+      });
       return countToDelete;
     } catch (error) {
-      
+      logger.error("Failed to cleanup old jobs from database", {
+        retentionDays,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return 0;
     }
   }

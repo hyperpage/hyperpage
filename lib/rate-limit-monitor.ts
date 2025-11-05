@@ -240,7 +240,6 @@ export async function getRateLimitStatus(
     const data = (await response.json()) as RateLimitStatus;
     return data;
   } catch {
-    
     return null;
   }
 }

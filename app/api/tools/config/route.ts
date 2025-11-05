@@ -14,6 +14,7 @@ import {
   toggleToolState,
 } from "../../../../lib/tool-config-manager";
 import { toolRegistry } from "../../../../tools/registry";
+import logger from "../../../../lib/logger";
 
 /**
  * GET /api/tools/config - Get all tool configurations or specific tool config
@@ -40,7 +41,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(allConfigs);
     }
   } catch (error) {
-    
+    // Log the error with pino for debugging
+    logger.error("Failed to retrieve tool configurations", { error });
+
     return NextResponse.json(
       { error: "Failed to retrieve tool configurations" },
       { status: 500 },
@@ -110,7 +113,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       message: `Configuration updated for tool '${toolName}'`,
     });
   } catch (error) {
-    
+    // Log the error with pino for debugging
+    logger.error("Failed to update tool configuration", { error });
+
     return NextResponse.json(
       { error: "Failed to update tool configuration" },
       { status: 500 },
@@ -173,7 +178,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       );
     }
   } catch (error) {
-    
+    // Log the error with pino for debugging
+    logger.error("Failed to update tool state", { error });
+
     return NextResponse.json(
       { error: "Failed to update tool state" },
       { status: 500 },
@@ -212,7 +219,9 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       deleted,
     });
   } catch (error) {
-    
+    // Log the error with pino for debugging
+    logger.error("Failed to delete tool configuration", { error });
+
     return NextResponse.json(
       { error: "Failed to delete tool configuration" },
       { status: 500 },

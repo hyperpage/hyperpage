@@ -2,11 +2,14 @@
 
 import { ToolRateLimitConfig } from "../tools/tool-types";
 import { defaultHttpClient } from "./connection-pool";
+import logger from "./logger";
 
 export interface RetryConfig {
   rateLimitConfig: ToolRateLimitConfig;
   /** Force use of fetch instead of pooled client (for testing) */
   forceFetch?: boolean;
+  /** Tool name for logging purposes */
+  toolName?: string;
 }
 
 /**
@@ -29,7 +32,11 @@ export async function makeRetryRequest(
   options: RequestInit,
   config: RetryConfig,
 ): Promise<Response> {
-  const { rateLimitConfig, forceFetch = false } = config;
+  const {
+    rateLimitConfig,
+    forceFetch = false,
+    toolName = "api-client",
+  } = config;
   const maxRetries = rateLimitConfig.maxRetries ?? 3; // Default to 3 retries
 
   let lastResponse: Response | null = null;
@@ -73,6 +80,12 @@ export async function makeRetryRequest(
 
       // Check if request succeeded
       if (lastResponse.ok) {
+        logger.debug(`API request successful`, {
+          toolName,
+          url,
+          attemptNumber: attemptNumber + 1,
+          statusCode: response.status,
+        });
         return lastResponse;
       }
 
@@ -80,10 +93,15 @@ export async function makeRetryRequest(
       const delayMs = rateLimitConfig.shouldRetry(lastResponse, attemptNumber);
 
       if (delayMs !== null) {
-        const toolName = "tool"; // This could be passed in config for better logging
-        console.warn(
-          `${toolName}: Rate limited, waiting ${delayMs}ms before retry (attempt ${attemptNumber + 1}/${maxRetries + 1})`,
-        );
+        logger.warn("API request rate limited, retrying", {
+          toolName,
+          url,
+          attemptNumber: attemptNumber + 1,
+          maxRetries: maxRetries + 1,
+          delayMs,
+          statusCode: response.status,
+          statusText: response.statusText,
+        });
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         attemptNumber++;
         continue;
@@ -92,9 +110,22 @@ export async function makeRetryRequest(
       // No retry needed according to tool logic, return immediately
       break;
     } catch (error) {
-      
+      logger.warn("API request failed, will retry if possible", {
+        toolName,
+        url,
+        attemptNumber: attemptNumber + 1,
+        maxRetries: maxRetries + 1,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
       attemptNumber++;
       if (attemptNumber > maxRetries) {
+        logger.error("API request failed after all retries", {
+          toolName,
+          url,
+          maxRetries: maxRetries + 1,
+          finalError: error instanceof Error ? error.message : String(error),
+        });
         throw error;
       }
       const delayMs = calculateBackoffDelay(attemptNumber - 1);
@@ -104,6 +135,12 @@ export async function makeRetryRequest(
 
   // Return last response if all retries exhausted
   if (lastResponse) {
+    logger.warn("API request exhausted retries, returning last response", {
+      toolName,
+      url,
+      statusCode: lastResponse.status,
+      statusText: lastResponse.statusText,
+    });
     return lastResponse;
   }
 
@@ -120,7 +157,7 @@ export async function makeRetryRequestLegacy(
   options: RequestInit,
   config: RetryConfig,
 ): Promise<Response> {
-  const { rateLimitConfig } = config;
+  const { rateLimitConfig, toolName = "api-client" } = config;
   const maxRetries = rateLimitConfig.maxRetries ?? 3; // Default to 3 retries
 
   let lastResponse: Response | null = null;
@@ -133,6 +170,12 @@ export async function makeRetryRequestLegacy(
 
       // Check if request succeeded
       if (response.ok) {
+        logger.debug(`Legacy API request successful`, {
+          toolName,
+          url,
+          attemptNumber: attemptNumber + 1,
+          statusCode: response.status,
+        });
         return response;
       }
 
@@ -140,10 +183,15 @@ export async function makeRetryRequestLegacy(
       const delayMs = rateLimitConfig.shouldRetry(response, attemptNumber);
 
       if (delayMs !== null) {
-        const toolName = "tool"; // This could be passed in config for better logging
-        console.warn(
-          `${toolName}: Rate limited, waiting ${delayMs}ms before retry (attempt ${attemptNumber + 1}/${maxRetries + 1})`,
-        );
+        logger.warn("Legacy API request rate limited, retrying", {
+          toolName,
+          url,
+          attemptNumber: attemptNumber + 1,
+          maxRetries: maxRetries + 1,
+          delayMs,
+          statusCode: response.status,
+          statusText: response.statusText,
+        });
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         attemptNumber++;
         continue;
@@ -152,9 +200,22 @@ export async function makeRetryRequestLegacy(
       // No retry needed according to tool logic, return immediately
       break;
     } catch (error) {
-      
+      logger.warn("Legacy API request failed, will retry if possible", {
+        toolName,
+        url,
+        attemptNumber: attemptNumber + 1,
+        maxRetries: maxRetries + 1,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
       attemptNumber++;
       if (attemptNumber > maxRetries) {
+        logger.error("Legacy API request failed after all retries", {
+          toolName,
+          url,
+          maxRetries: maxRetries + 1,
+          finalError: error instanceof Error ? error.message : String(error),
+        });
         throw error;
       }
       const delayMs = calculateBackoffDelay(attemptNumber - 1);
@@ -164,6 +225,15 @@ export async function makeRetryRequestLegacy(
 
   // Return last response if all retries exhausted
   if (lastResponse) {
+    logger.warn(
+      "Legacy API request exhausted retries, returning last response",
+      {
+        toolName,
+        url,
+        statusCode: lastResponse.status,
+        statusText: lastResponse.statusText,
+      },
+    );
     return lastResponse;
   }
 

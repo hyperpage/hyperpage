@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isOAuthConfigured } from "@/lib/oauth-config";
+import logger from "@/lib/logger";
 
 /**
  * Get OAuth configuration status for tools
@@ -20,7 +21,10 @@ export async function GET() {
       configured,
     });
   } catch (error) {
-    
+    logger.error("Failed to check OAuth configuration", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return NextResponse.json(
       { success: false, error: "Failed to check OAuth configuration" },
       { status: 500 },

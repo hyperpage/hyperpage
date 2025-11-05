@@ -3,6 +3,7 @@ import {
   defaultBatchingMiddleware,
   isBatchRequest,
 } from "../../../lib/api/batching/batching-middleware";
+import logger from "@/lib/logger";
 
 /**
  * POST /api/batch - Handle bulk API operations
@@ -53,7 +54,13 @@ export async function POST(request: NextRequest) {
     // Process the batch request
     return await defaultBatchingMiddleware.processBatch(body.requests, request);
   } catch (error) {
-    
+    logger.error("Failed to process batch request", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      endpoint: "/api/batch",
+      method: "POST",
+    });
+
     return NextResponse.json(
       {
         error: "Failed to process batch request",

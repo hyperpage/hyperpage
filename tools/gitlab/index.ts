@@ -244,10 +244,13 @@ export const gitlabTool: Tool = {
         });
 
         if (!userResponse.ok) {
-          logger.warn("Could not fetch GitLab user info, falling back to empty issues array", {
-            status: userResponse.status,
-            statusText: userResponse.statusText,
-          });
+          logger.warn(
+            "Could not fetch GitLab user info, falling back to empty issues array",
+            {
+              status: userResponse.status,
+              statusText: userResponse.statusText,
+            },
+          );
           return { issues: results };
         }
 
@@ -271,7 +274,7 @@ export const gitlabTool: Tool = {
             statusText: issuesResponse.statusText,
             errorText,
           });
-          
+
           return { issues: results }; // Return empty array instead of throwing
         }
 

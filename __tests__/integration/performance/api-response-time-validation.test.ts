@@ -258,11 +258,6 @@ describe("API Response Time Validation Suite", () => {
           const endTime = performance.now();
           const responseTime = endTime - startTime;
 
-          // Record response time for analysis
-          console.log(
-            `GitHub ${endpoint} response time: ${responseTime.toFixed(2)}ms`,
-          );
-
           // Verify the result structure is correct
           expect(result).toBeDefined();
 
@@ -326,13 +321,6 @@ describe("API Response Time Validation Suite", () => {
           0,
         ) / responseTimes.length;
       const standardDeviation = Math.sqrt(variance);
-
-      console.log(`GitHub ${endpoint} performance stats:`, {
-        avg: `${avgResponseTime.toFixed(2)}ms`,
-        max: `${maxResponseTime.toFixed(2)}ms`,
-        min: `${minResponseTime.toFixed(2)}ms`,
-        stdDev: `${standardDeviation.toFixed(2)}ms`,
-      });
 
       // Performance consistency validations
       expect(avgResponseTime).toBeLessThan(200); // Average should be fast
@@ -399,10 +387,6 @@ describe("API Response Time Validation Suite", () => {
 
           const endTime = performance.now();
           const responseTime = endTime - startTime;
-
-          console.log(
-            `GitLab ${endpoint} response time: ${responseTime.toFixed(2)}ms`,
-          );
 
           // Verify result structure
           expect(result).toBeDefined();
@@ -493,10 +477,6 @@ describe("API Response Time Validation Suite", () => {
           const endTime = performance.now();
           const responseTime = endTime - startTime;
 
-          console.log(
-            `Jira ${endpoint} response time: ${responseTime.toFixed(2)}ms`,
-          );
-
           // Verify result structure
           expect(result).toBeDefined();
 
@@ -581,8 +561,6 @@ describe("API Response Time Validation Suite", () => {
         responseTimes[platform.name] = endTime - startTime;
       }
 
-      
-
       // All platforms should have reasonable response times
       Object.values(responseTimes).forEach((time) => {
         expect(time).toBeLessThan(500);
@@ -657,14 +635,6 @@ describe("API Response Time Validation Suite", () => {
       const avg =
         responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
 
-      console.log("Response time distribution:", {
-        p50: `${p50.toFixed(2)}ms`,
-        p95: `${p95.toFixed(2)}ms`,
-        p99: `${p99.toFixed(2)}ms`,
-        avg: `${avg.toFixed(2)}ms`,
-        max: `${Math.max(...responseTimes).toFixed(2)}ms`,
-      });
-
       // Performance distribution validations
       expect(p50).toBeLessThan(100); // 50th percentile should be fast
       expect(p95).toBeLessThan(300); // 95th percentile should be reasonable
@@ -710,8 +680,6 @@ describe("API Response Time Validation Suite", () => {
           min: Math.min(...responseTimes),
         };
       }
-
-      
 
       // All windows should have reasonable averages
       Object.values(windowResults).forEach((result) => {

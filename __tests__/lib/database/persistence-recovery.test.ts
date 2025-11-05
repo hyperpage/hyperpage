@@ -16,14 +16,15 @@ import {
 import { promises as fs } from "fs";
 import * as path from "path";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import * as schema from "../../../lib/database/schema.js";
+import * as schema from "../../../lib/database/schema";
 import {
   createTestDatabase,
   createTestDrizzle,
   closeAllConnections,
-} from "../../../lib/database/connection.js";
-import { rateLimits, toolConfigs } from "../../../lib/database/schema.js";
+} from "../../../lib/database/connection";
+import { rateLimits, toolConfigs } from "../../../lib/database/schema";
 import { eq } from "drizzle-orm";
+import { pinoLogger as logger } from "../../../lib/logger";
 
 // Create fresh database instance for each test to avoid singleton issues
 let testDb: ReturnType<typeof drizzle<typeof schema>>;
@@ -43,7 +44,8 @@ describe("Persistence and Recovery System", () => {
         .catch(() => {});
       await fs.mkdir(TEST_BACKUP_DIR, { recursive: true }).catch(() => {});
     } catch (error) {
-      
+      // Log cleanup error at debug level - these are expected in cleanup scenarios
+      logger.debug("Test setup cleanup error (expected)", { error });
     }
 
     // Create fresh test database with manual schema creation
@@ -72,7 +74,6 @@ describe("Persistence and Recovery System", () => {
     `);
 
     testDb = createTestDrizzle(testSqliteDb);
-    
   });
 
   afterAll(async () => {
@@ -84,7 +85,8 @@ describe("Persistence and Recovery System", () => {
         .rm(TEST_BACKUP_DIR, { recursive: true, force: true })
         .catch(() => {});
     } catch (error) {
-      
+      // Log cleanup error at debug level - these are expected in cleanup scenarios
+      logger.debug("Test teardown cleanup error (expected)", { error });
     }
   });
 
@@ -101,7 +103,8 @@ describe("Persistence and Recovery System", () => {
       await testDb.delete(toolConfigs);
       await testDb.delete(rateLimits);
     } catch (error) {
-      
+      // Log cleanup error at debug level - these are expected in cleanup scenarios
+      logger.debug("Test beforeEach cleanup error (expected)", { error });
     }
   });
 
@@ -112,7 +115,8 @@ describe("Persistence and Recovery System", () => {
         .rm(TEST_BACKUP_DIR, { recursive: true, force: true })
         .catch(() => {});
     } catch (error) {
-      
+      // Log cleanup error at debug level - these are expected in cleanup scenarios
+      logger.debug("Test afterEach cleanup error (expected)", { error });
     }
   });
 

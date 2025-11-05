@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getToolIcon } from "../../tools";
 import { ToolIntegration } from "../../tools/tool-types";
+import logger from "../../lib/logger";
 
 import { Wifi, WifiOff, Zap, UserCheck, UserX } from "lucide-react";
 import {
@@ -12,6 +13,7 @@ import {
   formatTimeUntilReset,
 } from "./hooks/useRateLimit";
 import { RateLimitStatus } from "../../lib/types/rate-limit";
+import { useAuthStatus } from "./hooks/useAuthStatus";
 
 interface ToolHealthInfo extends ToolIntegration {
   slug: string;
@@ -24,33 +26,19 @@ export default function ToolStatusRow() {
   const [enabledPlatformSlugs, setEnabledPlatformSlugs] = useState<string[]>(
     [],
   );
-  const [authStatus, setAuthStatus] = useState<{
-    authenticated: boolean;
-    authenticatedTools: Record<
-      string,
-      { connected: boolean; connectedAt: Date; lastUsed: Date }
-    >;
-  }>({ authenticated: false, authenticatedTools: {} });
+
+  // Use the shared auth status hook to prevent duplicate requests
+  const { authStatus } = useAuthStatus();
 
   // Get rate limit status for all enabled tools that support rate limiting - only when we have slugs
   const { statuses: rateLimitStatuses } = useMultipleRateLimits(
     enabledPlatformSlugs.length > 0 ? enabledPlatformSlugs : ["dummy"], // Use dummy to avoid empty array issues
   );
 
-  // Load tool integrations, auth status, and health info on component mount
+  // Load tool integrations on component mount
   useEffect(() => {
     async function loadIntegrations() {
       try {
-        // Load authentication status first
-        const authResponse = await fetch("/api/auth/status");
-        if (authResponse.ok) {
-          const authData = await authResponse.json();
-          setAuthStatus({
-            authenticated: authData.authenticated,
-            authenticatedTools: authData.authenticatedTools || {},
-          });
-        }
-
         // Load enabled tools with basic status
         const response = await fetch("/api/tools/enabled");
         if (response.ok) {
@@ -79,11 +67,12 @@ export default function ToolStatusRow() {
 
           // Set basic integrations (no need for detailed health info)
           setToolIntegrations(basicIntegrations);
-        } else {
-          
         }
       } catch (error) {
-        
+        logger.error("Failed to load tool integrations", {
+          error,
+          stack: error instanceof Error ? error.stack : undefined,
+        });
       }
     }
 

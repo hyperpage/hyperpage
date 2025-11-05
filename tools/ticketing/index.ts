@@ -82,9 +82,7 @@ export const ticketingTool: Tool = {
               );
               results.push(...transformedIssues);
             }
-          } catch {
-            
-          }
+          } catch {}
         }
       }
 

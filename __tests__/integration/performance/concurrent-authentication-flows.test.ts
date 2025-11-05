@@ -10,7 +10,15 @@ import {
 import {
   IntegrationTestEnvironment,
   TestUserManager,
+  OAuthTestCredentials,
 } from "../../lib/test-credentials";
+import logger from "../../../lib/logger";
+// Define interface for test session data to replace 'any' types
+interface TestSession {
+  userId: string;
+  sessionId: string;
+  credentials: OAuthTestCredentials;
+}
 
 describe("Concurrent Authentication Flow Testing", () => {
   let testEnv: IntegrationTestEnvironment;
@@ -36,7 +44,7 @@ describe("Concurrent Authentication Flow Testing", () => {
 
       expect(sessions).toHaveLength(3);
 
-      sessions.forEach((session) => {
+      sessions.forEach((session: TestSession) => {
         expect(session.userId).toBeDefined();
         expect(session.sessionId).toBeDefined();
         expect(session.credentials).toBeDefined();
@@ -44,7 +52,7 @@ describe("Concurrent Authentication Flow Testing", () => {
       });
 
       // Ensure unique user IDs
-      const userIds = sessions.map((s) => s.userId);
+      const userIds = sessions.map((s: TestSession) => s.userId);
       expect(new Set(userIds).size).toBe(userIds.length);
     });
 
@@ -60,12 +68,12 @@ describe("Concurrent Authentication Flow Testing", () => {
       );
 
       // Each session should be completely isolated
-      sessions.forEach((session, index) => {
+      sessions.forEach((session: TestSession, index: number) => {
         const otherSessions = sessions.filter(
-          (_, otherIndex) => otherIndex !== index,
+          (_, otherIndex: number) => otherIndex !== index,
         );
         const hasCollision = otherSessions.some(
-          (other) =>
+          (other: TestSession) =>
             other.sessionId === session.sessionId ||
             other.userId === session.userId,
         );
@@ -198,7 +206,7 @@ describe("Concurrent Authentication Flow Testing", () => {
       ];
 
       const accessAttempts = [
-        ...legitimateSessions.map((session) => ({
+        ...legitimateSessions.map((session: TestSession) => ({
           sessionId: session.sessionId,
           isMalicious: false,
           expectedUser: session.userId,
@@ -389,8 +397,16 @@ describe("Concurrent Authentication Flow Testing", () => {
       expect(averageTimePerOperation).toBeLessThan(100);
       expect(totalStressTime).toBeLessThan(5000);
 
-      console.log(
+      logger.info(
         `Stress test: ${totalOperations} operations in ${totalStressTime.toFixed(2)}ms`,
+        {
+          type: "stress_test",
+          totalOperations,
+          totalStressTime: `${totalStressTime.toFixed(2)}ms`,
+          averageTimePerOperation: `${averageTimePerOperation.toFixed(2)}ms`,
+          iterations: stressTestIterations,
+          concurrentOperations: concurrentStressOperations,
+        },
       );
     });
   });

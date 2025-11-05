@@ -75,7 +75,6 @@ export const useSession = (): SessionHookReturn => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +119,6 @@ export const useSession = (): SessionHookReturn => {
         const errorMessage =
           err instanceof Error ? err.message : "Unknown error";
         setError(errorMessage);
-        
       }
     },
     [sessionId],
@@ -151,7 +149,6 @@ export const useSession = (): SessionHookReturn => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +175,6 @@ export const useSession = (): SessionHookReturn => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
-      
     }
   }, [sessionId]);
 

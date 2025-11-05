@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionManager } from "../../../lib/sessions/session-manager";
 import { headers } from "next/headers";
+import logger from "../../../lib/logger";
 
 /**
  * Session Management API
@@ -58,7 +59,10 @@ export async function GET(request: NextRequest) {
       session,
     });
   } catch (error) {
-    
+    logger.error("Failed to get session", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return NextResponse.json(
       { success: false, error: "Failed to get session" },
       { status: 500 },
@@ -108,7 +112,10 @@ export async function POST(request: NextRequest) {
       message: "Session saved successfully",
     });
   } catch (error) {
-    
+    logger.error("Failed to save session", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return NextResponse.json(
       { success: false, error: "Failed to save session" },
       { status: 500 },
@@ -148,7 +155,10 @@ export async function PATCH(request: NextRequest) {
       message: "Session updated successfully",
     });
   } catch (error) {
-    
+    logger.error("Failed to update session", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return NextResponse.json(
       { success: false, error: "Failed to update session" },
       { status: 500 },
@@ -185,7 +195,10 @@ export async function DELETE(request: NextRequest) {
       message: "Session deleted successfully",
     });
   } catch (error) {
-    
+    logger.error("Failed to delete session", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return NextResponse.json(
       { success: false, error: "Failed to delete session" },
       { status: 500 },

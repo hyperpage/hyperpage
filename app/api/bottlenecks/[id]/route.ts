@@ -6,6 +6,7 @@ import {
   Correlation,
 } from "../../../../lib/monitoring/bottleneck-detector";
 import { BOTTLENECK_PATTERNS } from "../../../../lib/monitoring/bottleneck-patterns";
+import logger from "../../../../lib/logger";
 
 /**
  * GET /api/bottlenecks/[id] - Get detailed information about a specific bottleneck
@@ -69,7 +70,11 @@ export async function GET(
       },
     });
   } catch (error) {
-    
+    logger.error("Failed to retrieve bottleneck details", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
       { error: "Failed to retrieve bottleneck details" },
       { status: 500 },
@@ -84,11 +89,13 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  try {
-    const { id } = await context.params;
-    const body = await request.json();
+  const { id } = await context.params;
 
-    const { resolution, actionTaken, followUpActions } = body;
+  try {
+    const body = await request.json();
+    const resolution: "automatic" | "manual" = body.resolution;
+    const actionTaken: string = body.actionTaken;
+    const followUpActions: unknown = body.followUpActions;
 
     if (!resolution || !["automatic", "manual"].includes(resolution)) {
       return NextResponse.json(
@@ -120,7 +127,7 @@ export async function PATCH(
     }
 
     // Log the resolution for auditing
-    console.info("Bottleneck resolved", {
+    logger.info("Bottleneck resolved", {
       bottleneckId: id,
       resolutionMethod: resolution,
       actionTaken,
@@ -133,10 +140,11 @@ export async function PATCH(
       message: `Bottleneck ${id} marked as resolved`,
     });
   } catch (error) {
-    console.error(
-      `Bottleneck ${await context.params} resolution error:`,
-      error,
-    );
+    logger.error("Bottleneck resolution error", {
+      bottleneckId: id,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: "Failed to resolve bottleneck" },
       { status: 500 },
@@ -151,9 +159,9 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  try {
-    const { id } = await context.params;
+  const { id } = await context.params;
 
+  try {
     // Check if bottleneck exists and is already resolved
     const bottleneck = bottleneckDetector.getBottleneck(id);
 
@@ -179,7 +187,12 @@ export async function DELETE(
       message: `Resolved bottleneck ${id} acknowledged and removed from active tracking`,
     });
   } catch (error) {
-    
+    logger.error("Failed to delete bottleneck", {
+      bottleneckId: id,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
       { error: "Failed to delete bottleneck" },
       { status: 500 },

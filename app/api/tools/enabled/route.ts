@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEnabledTools } from "../../../../tools";
 import { Tool, ToolWidget, ToolApi } from "../../../../tools/tool-types";
+import logger from "../../../../lib/logger";
 
 // Enabled tools API endpoint
 // Returns only enabled tools and their capabilities
@@ -47,7 +48,8 @@ export async function GET() {
       ),
     });
   } catch (error) {
-    
+    logger.error("Failed to get enabled tools", { error });
+
     return NextResponse.json(
       { error: "Failed to get enabled tools" },
       { status: 500 },

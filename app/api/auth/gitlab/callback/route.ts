@@ -10,6 +10,7 @@ import { getAppDatabase } from "@/lib/database/connection";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import { users } from "@/lib/database/schema";
 import { eq } from "drizzle-orm";
+import logger from "@/lib/logger";
 
 /**
  * GitLab OAuth Callback Handler
@@ -28,7 +29,6 @@ export async function GET(request: NextRequest) {
 
     // Check for OAuth errors
     if (error) {
-      
       const errorDescription =
         searchParams.get("error_description") || "Unknown error";
       return NextResponse.redirect(
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Validate required parameters
     if (!code) {
-      console.error(
+      logger.error(
         `${PROVIDER_NAME} OAuth callback: Missing authorization code`,
       );
       return NextResponse.redirect(
@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(PROVIDER_NAME);
     if (!oauthConfig) {
-      
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_not_configured`,
       );
@@ -59,7 +58,6 @@ export async function GET(request: NextRequest) {
     const isValidState = await validateOAuthState(PROVIDER_NAME, state);
 
     if (!isValidState) {
-      
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_invalid_state`,
       );
@@ -73,7 +71,6 @@ export async function GET(request: NextRequest) {
     const tokenResponse = await exchangeCodeForTokens(oauthConfig, code);
 
     if (!tokenResponse.access_token) {
-      
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_token_exchange_failed`,
       );
@@ -88,7 +85,6 @@ export async function GET(request: NextRequest) {
       });
 
       if (!userResponse.ok) {
-        
         return NextResponse.redirect(
           `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_user_fetch_failed`,
         );
@@ -179,10 +175,12 @@ export async function GET(request: NextRequest) {
           },
         },
       });
-
-      
     } catch (storageError) {
-      
+      logger.error("GitLab OAuth token storage failed", {
+        error: storageError,
+        provider: PROVIDER_NAME,
+      });
+
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_storage_error`,
       );
@@ -213,7 +211,11 @@ export async function GET(request: NextRequest) {
 
     return successResponse;
   } catch (error) {
-    
+    logger.error("GitLab OAuth callback failed", {
+      error,
+      provider: PROVIDER_NAME,
+    });
+
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${PROVIDER_NAME}_oauth_internal_error`,
     );

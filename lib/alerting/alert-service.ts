@@ -324,7 +324,7 @@ export class AlertService extends EventEmitter {
 
     switch (channel.type) {
       case "console":
-        console.warn(
+        logger.warn(
           `📢 ALERT [${alert.severity.toUpperCase()}] ${template.title}: ${message}`,
         );
         break;
@@ -354,7 +354,6 @@ export class AlertService extends EventEmitter {
       default:
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const _exhaustiveCheck: never = channel; // TypeScript exhaustive check
-        
     }
   }
 
@@ -475,12 +474,12 @@ export class AlertService extends EventEmitter {
   ): Promise<void> {
     // Placeholder - implement email sending logic here
     // Could use nodemailer, AWS SES, SendGrid, etc.
-    console.log(
+    logger.info(
       `📧 EMAIL ALERT [${alert.severity.toUpperCase()}] ${template.title}: ${message}`,
     );
 
     // Log that email would be sent
-    console.warn(
+    logger.warn(
       "Email alerting not yet implemented - would send to:",
       config.to,
     );

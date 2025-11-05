@@ -67,7 +67,9 @@ function getGitHubConfig(): OAuthConfig | null {
   const clientSecret = process.env[OAUTH_ENV_VARS.GITHUB_CLIENT_SECRET];
 
   if (!clientId || !clientSecret) {
-    logger.warn("GitHub OAuth not configured - missing CLIENT_ID or CLIENT_SECRET");
+    logger.warn(
+      "GitHub OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
+    );
     return null;
   }
 
@@ -95,7 +97,9 @@ function getGitLabConfig(): OAuthConfig | null {
   const clientSecret = process.env[OAUTH_ENV_VARS.GITLAB_CLIENT_SECRET];
 
   if (!clientId || !clientSecret) {
-    logger.warn("GitLab OAuth not configured - missing CLIENT_ID or CLIENT_SECRET");
+    logger.warn(
+      "GitLab OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
+    );
     return null;
   }
 
@@ -122,14 +126,18 @@ function getJiraConfig(instanceUrl?: string): OAuthConfig | null {
   const clientSecret = process.env[OAUTH_ENV_VARS.JIRA_CLIENT_SECRET];
 
   if (!clientId || !clientSecret) {
-    logger.warn("Jira OAuth not configured - missing CLIENT_ID or CLIENT_SECRET");
+    logger.warn(
+      "Jira OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
+    );
     return null;
   }
 
   // For Jira, we need an instance URL. If not provided, fall back to environment variable
   const baseUrl = instanceUrl || process.env["JIRA_WEB_URL"];
   if (!baseUrl) {
-    logger.warn("Jira OAuth not configured - missing instance URL (JIRA_WEB_URL)");
+    logger.warn(
+      "Jira OAuth not configured - missing instance URL (JIRA_WEB_URL)",
+    );
     return null;
   }
 
