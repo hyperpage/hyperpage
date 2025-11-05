@@ -65,7 +65,11 @@ try {
     },
   });
   // Log the error using the fallback logger since we can't use the original logger
-  pinoInstance.error({ message: "Failed to initialize logger with transport config, using emergency fallback", error });
+  pinoInstance.error({
+    message:
+      "Failed to initialize logger with transport config, using emergency fallback",
+    error,
+  });
 }
 
 // Helper function to safely merge metadata
@@ -88,21 +92,33 @@ const createSafeLogger = (logger: pino.Logger) => {
         logger.error({ msg, ...meta });
       } catch (err) {
         // Last resort fallback
-        pinoInstance.error({ message: `[CRITICAL] Logger error: ${msg}`, meta, error: err });
+        pinoInstance.error({
+          message: `[CRITICAL] Logger error: ${msg}`,
+          meta,
+          error: err,
+        });
       }
     },
     warn: (msg: string, meta?: SafeMetadata) => {
       try {
         logger.warn({ msg, ...meta });
       } catch (err) {
-        pinoInstance.warn({ message: `[WARNING] Logger error: ${msg}`, meta, error: err });
+        pinoInstance.warn({
+          message: `[WARNING] Logger error: ${msg}`,
+          meta,
+          error: err,
+        });
       }
     },
     info: (msg: string, meta?: SafeMetadata) => {
       try {
         logger.info({ msg, ...meta });
       } catch (err) {
-        pinoInstance.info({ message: `[INFO] Logger error: ${msg}`, meta, error: err });
+        pinoInstance.info({
+          message: `[INFO] Logger error: ${msg}`,
+          meta,
+          error: err,
+        });
       }
     },
     debug: (msg: string, meta?: SafeMetadata) => {
@@ -110,21 +126,31 @@ const createSafeLogger = (logger: pino.Logger) => {
         logger.debug({ msg, ...meta });
       } catch (err) {
         // Log debug errors but keep them minimal
-        pinoInstance.debug({ message: `[DEBUG] Logger error for "${msg}":`, error: err });
+        pinoInstance.debug({
+          message: `[DEBUG] Logger error for "${msg}":`,
+          error: err,
+        });
       }
     },
     fatal: (msg: string, meta?: SafeMetadata) => {
       try {
         logger.fatal({ msg, ...meta });
       } catch (err) {
-        pinoInstance.error({ message: `[FATAL] Logger error: ${msg}`, meta, error: err });
+        pinoInstance.error({
+          message: `[FATAL] Logger error: ${msg}`,
+          meta,
+          error: err,
+        });
       }
     },
     trace: (msg: string, meta?: SafeMetadata) => {
       try {
         logger.trace({ msg, ...meta });
       } catch (err) {
-        pinoInstance.debug({ message: `[TRACE] Logger error for "${msg}":`, error: err });
+        pinoInstance.debug({
+          message: `[TRACE] Logger error for "${msg}":`,
+          error: err,
+        });
       }
     },
   };
@@ -136,13 +162,16 @@ const safePinoInstance = createSafeLogger(pinoInstance);
 // Rate Limit Logger - maintains existing API for backward compatibility
 const rateLimitLogger: RateLimitLogger = {
   hit: (platform: string, data: LoggerMetadata) => {
-    safePinoInstance.warn("RATE_LIMIT_HIT", mergeMetadata(
-      {
-        platform,
-        type: "rate_limit_hit",
-      } as LogMetadata,
-      data,
-    ));
+    safePinoInstance.warn(
+      "RATE_LIMIT_HIT",
+      mergeMetadata(
+        {
+          platform,
+          type: "rate_limit_hit",
+        } as LogMetadata,
+        data,
+      ),
+    );
   },
 
   backoff: (
@@ -151,26 +180,32 @@ const rateLimitLogger: RateLimitLogger = {
     attemptNumber: number,
     data: LoggerMetadata,
   ) => {
-    safePinoInstance.warn("RATE_LIMIT_BACKOFF", mergeMetadata(
-      {
-        platform,
-        retryAfter,
-        attemptNumber,
-        type: "rate_limit_backoff",
-      } as LogMetadata,
-      data,
-    ));
+    safePinoInstance.warn(
+      "RATE_LIMIT_BACKOFF",
+      mergeMetadata(
+        {
+          platform,
+          retryAfter,
+          attemptNumber,
+          type: "rate_limit_backoff",
+        } as LogMetadata,
+        data,
+      ),
+    );
   },
 
   retry: (platform: string, attemptNumber: number, data: LoggerMetadata) => {
-    safePinoInstance.info("RATE_LIMIT_RETRY", mergeMetadata(
-      {
-        platform,
-        attemptNumber,
-        type: "rate_limit_retry",
-      } as LogMetadata,
-      data,
-    ));
+    safePinoInstance.info(
+      "RATE_LIMIT_RETRY",
+      mergeMetadata(
+        {
+          platform,
+          attemptNumber,
+          type: "rate_limit_retry",
+        } as LogMetadata,
+        data,
+      ),
+    );
   },
 
   event: (
@@ -196,7 +231,10 @@ const stream: LogStream = {
       safePinoInstance.info("HTTP", { message: message.trim() } as LogMetadata);
     } catch (err) {
       // Fallback to pino logger with error details
-      pinoInstance.error({ message: "Stream write error for message: " + message.trim(), error: err });
+      pinoInstance.error({
+        message: "Stream write error for message: " + message.trim(),
+        error: err,
+      });
     }
   },
 };
@@ -262,28 +300,44 @@ const unifiedLogger: LogLevel = {
       safePinoInstance.error(message, (meta as LogMetadata) || {});
     } catch (err) {
       // Last resort fallback
-      pinoInstance.error({ message: `Unified logger error: ${message}`, meta, error: err });
+      pinoInstance.error({
+        message: `Unified logger error: ${message}`,
+        meta,
+        error: err,
+      });
     }
   },
   warn: (message: string, meta?: LoggerMetadata) => {
     try {
       safePinoInstance.warn(message, (meta as LogMetadata) || {});
     } catch (err) {
-      pinoInstance.warn({ message: `Unified logger warn: ${message}`, meta, error: err });
+      pinoInstance.warn({
+        message: `Unified logger warn: ${message}`,
+        meta,
+        error: err,
+      });
     }
   },
   info: (message: string, meta?: LoggerMetadata) => {
     try {
       safePinoInstance.info(message, (meta as LogMetadata) || {});
     } catch (err) {
-      pinoInstance.info({ message: `Unified logger info: ${message}`, meta, error: err });
+      pinoInstance.info({
+        message: `Unified logger info: ${message}`,
+        meta,
+        error: err,
+      });
     }
   },
   debug: (message: string, meta?: LoggerMetadata) => {
     try {
       safePinoInstance.debug(message, (meta as LogMetadata) || {});
     } catch (err) {
-      pinoInstance.debug({ message: `Unified logger debug: ${message}`, meta, error: err });
+      pinoInstance.debug({
+        message: `Unified logger debug: ${message}`,
+        meta,
+        error: err,
+      });
     }
   },
 };
