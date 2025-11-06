@@ -92,3 +92,31 @@ export const sortDataByTime = (data: ToolData[]): ToolData[] => {
     return 0;
   });
 };
+
+/**
+ * Formats a timestamp into a human-readable "time until reset" string.
+ *
+ * @param timestamp - The timestamp when limits reset (in milliseconds since epoch)
+ * @returns A string representing time until reset (e.g., "5 minutes", "2 hours")
+ */
+export function formatTimeUntilReset(timestamp: number | null): string {
+  if (!timestamp) return "unknown time";
+
+  const now = Date.now();
+  const diffMs = timestamp - now;
+
+  // If the timestamp is in the past
+  if (diffMs <= 0) {
+    return "now";
+  }
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return `${diffSec}s`;
+  if (diffMin < 60) return `${diffMin}m`;
+  if (diffHour < 24) return `${diffHour}h`;
+  return `${diffDay}d`;
+}

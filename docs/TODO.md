@@ -1,16 +1,5 @@
-- [x] Analyze current OAuth configuration patterns
-- [x] Extend ToolOAuthConfig interface to support full registry-driven config
-- [x] Update GitHub tool with complete OAuth configuration
-- [x] Update GitLab tool with complete OAuth configuration
-- [x] Update Jira tool OAuth configuration
-- [x] Refactor oauth-config.ts to use registry-driven approach
-- [x] Remove hardcoded environment variable mappings
-- [x] Remove hardcoded OAuth URL construction
-- [x] Remove hardcoded scope definitions
-- [x] Update provider type handling for extensibility
-- [x] Test OAuth configuration with updated tools
-- [x] Verify registry-driven flow works end-to-end
-- [x] Update documentation for new OAuth pattern
-- [x] Complete implementation of registry-driven OAuth configuration
-- [x] Update OAuth architecture design documentation
-- [x] Update tool integration system documentation
+- [ ] Create a new branch for the changes
+- [ ] Add all current changes to git
+- [ ] Commit the changes with a descriptive message
+- [ ] Push the branch to the remote repository
+- [ ] Verify the branch was created successfully
