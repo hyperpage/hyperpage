@@ -17,7 +17,7 @@ import {
 import {
   IntegrationTestEnvironment,
   OAuthTestCredentials,
-} from "../../lib/test-credentials";
+} from "../../shared/test-credentials";
 
 describe("Cross-Tool Aggregation Integration", () => {
   let testEnv: IntegrationTestEnvironment;

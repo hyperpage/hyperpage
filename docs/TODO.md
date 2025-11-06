@@ -1,5 +1,0 @@
-- [ ] Create a new branch for the changes
-- [ ] Add all current changes to git
-- [ ] Commit the changes with a descriptive message
-- [ ] Push the branch to the remote repository
-- [ ] Verify the branch was created successfully

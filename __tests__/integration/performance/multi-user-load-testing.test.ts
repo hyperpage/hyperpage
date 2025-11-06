@@ -11,7 +11,7 @@ import {
   IntegrationTestEnvironment,
   TestUserManager,
   TestUserData,
-} from "../../lib/test-credentials";
+} from "../../shared/test-credentials";
 import logger from "../../../lib/logger";
 
 describe("Multi-User Load Testing", () => {

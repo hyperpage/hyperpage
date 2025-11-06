@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { IntegrationTestEnvironment } from "../../lib/test-credentials";
+import { IntegrationTestEnvironment } from "../../shared/test-credentials";
 import { TestBrowser } from "./utils/test-browser";
 import { UserJourneySimulator } from "./utils/user-journey-simulator";
 

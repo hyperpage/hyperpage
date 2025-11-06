@@ -18,12 +18,12 @@ import {
   IntegrationTestEnvironment,
   OAuthTestCredentials,
   isServerAvailable,
-} from "../../lib/test-credentials";
+} from "../../shared/test-credentials";
 import logger from "../../../lib/logger";
 
 // Check server availability before defining tests
 const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
-const serverAvailable = await isServerAvailable(baseUrl);
+const serverAvailable = await isServerAvailable("jira");
 
 describe("Jira Tool Integration", () => {
   let testEnv: IntegrationTestEnvironment;
