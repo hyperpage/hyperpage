@@ -11,7 +11,7 @@ import logger from "@/lib/logger";
 // GET /api/auth/status/{provider} - Get OAuth authentication status
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ provider: string }> }
+  { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
 

@@ -10,7 +10,9 @@ export function registerTool(name: string, tool: Tool) {
 
 // Get all registered tools
 export function getAllTools(): Tool[] {
-  return Object.values(toolRegistry).filter((tool): tool is Tool => tool !== undefined);
+  return Object.values(toolRegistry).filter(
+    (tool): tool is Tool => tool !== undefined,
+  );
 }
 
 // Get a specific tool by name

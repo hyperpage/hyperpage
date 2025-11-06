@@ -11,7 +11,7 @@ import logger from "@/lib/logger";
 // POST /api/auth/disconnect/{provider} - Disconnect OAuth authentication
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ provider: string }> }
+  { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
 
@@ -63,11 +63,17 @@ export async function POST(
         message: `${provider} authentication disconnected successfully`,
       });
     } catch (storageError) {
-      logger.error(`Failed to remove ${provider} authentication tokens during disconnect`, {
-        provider,
-        userId,
-        error: storageError instanceof Error ? storageError.message : String(storageError),
-      });
+      logger.error(
+        `Failed to remove ${provider} authentication tokens during disconnect`,
+        {
+          provider,
+          userId,
+          error:
+            storageError instanceof Error
+              ? storageError.message
+              : String(storageError),
+        },
+      );
 
       return NextResponse.json(
         { success: false, error: "Failed to remove authentication data" },

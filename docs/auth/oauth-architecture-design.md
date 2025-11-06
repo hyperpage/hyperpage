@@ -26,27 +26,27 @@ export const tool: Tool = {
       authorizationUrl: "https://provider.com/oauth/authorize",
       tokenUrl: "https://provider.com/oauth/token",
       userApiUrl: "/user", // or "https://api.provider.com/user"
-      
+
       // Scopes required by this tool
       scopes: ["read:user", "repo", "admin:org"],
-      
+
       // Environment variables for credentials
       clientIdEnvVar: "TOOL_OAUTH_CLIENT_ID",
       clientSecretEnvVar: "TOOL_OAUTH_CLIENT_SECRET",
-      
+
       // User mapping for profile data
       userMapping: {
         id: "id",
         email: "email",
-        username: "username", 
+        username: "username",
         name: "name",
-        avatar: "avatar_url"
+        avatar: "avatar_url",
       },
-      
+
       // Authorization header format
       authorizationHeader: "Bearer", // or "token" for GitHub
-    }
-  }
+    },
+  },
 };
 ```
 
@@ -56,16 +56,19 @@ The system uses a centralized function that dynamically retrieves OAuth configur
 
 ```typescript
 // Registry-driven OAuth configuration lookup
-export function getOAuthConfig(toolName: string, baseUrl?: string): OAuthConfig | null {
+export function getOAuthConfig(
+  toolName: string,
+  baseUrl?: string,
+): OAuthConfig | null {
   // Get tool from registry
   const tool = toolRegistry[toolName.toLowerCase()];
-  
+
   if (!tool || !tool.config?.oauthConfig) {
     return null;
   }
 
   const oauthConfig = tool.config.oauthConfig;
-  
+
   // Get environment variables for this tool
   const clientId = process.env[oauthConfig.clientIdEnvVar];
   const clientSecret = process.env[oauthConfig.clientSecretEnvVar];
@@ -75,8 +78,12 @@ export function getOAuthConfig(toolName: string, baseUrl?: string): OAuthConfig 
   }
 
   // Build OAuth URLs with dynamic formatting support
-  const { authorizationUrl, tokenUrl } = buildOAuthUrls(toolName, oauthConfig, baseUrl);
-  
+  const { authorizationUrl, tokenUrl } = buildOAuthUrls(
+    toolName,
+    oauthConfig,
+    baseUrl,
+  );
+
   return {
     clientId,
     clientSecret,
@@ -287,23 +294,23 @@ The system supports both absolute and relative OAuth URLs with dynamic base URL 
 
 ```typescript
 function buildOAuthUrls(
-  toolName: string, 
-  oauthConfig: ToolOAuthConfig, 
-  baseUrl?: string
+  toolName: string,
+  oauthConfig: ToolOAuthConfig,
+  baseUrl?: string,
 ): { authorizationUrl: string; tokenUrl: string } {
   // For tools with relative URLs (like Jira), format with base URL
-  if (oauthConfig.authorizationUrl.startsWith('/')) {
+  if (oauthConfig.authorizationUrl.startsWith("/")) {
     const webUrl = baseUrl || getToolWebUrl(toolName);
     if (!webUrl) {
       throw new Error(`Base URL required for ${toolName} OAuth configuration`);
     }
-    
+
     return {
       authorizationUrl: `${webUrl}${oauthConfig.authorizationUrl}`,
       tokenUrl: `${webUrl}${oauthConfig.tokenUrl}`,
     };
   }
-  
+
   // For absolute URLs, use as-is
   return {
     authorizationUrl: oauthConfig.authorizationUrl,
@@ -469,21 +476,25 @@ oauthConfig: {
 ## Benefits of Registry-Driven Approach
 
 ### Extensibility
+
 - Adding new OAuth providers requires only tool definition updates
 - Zero changes to core OAuth authentication logic
 - Consistent configuration patterns across all tools
 
 ### Maintainability
+
 - OAuth configurations co-located with tool logic
 - Single source of truth for each tool's OAuth requirements
 - Easy to modify OAuth settings without touching core system
 
 ### Type Safety
+
 - Full TypeScript support for all OAuth configurations
 - Compile-time validation of OAuth settings
 - Auto-completion and IDE support for OAuth properties
 
 ### Testing
+
 - Easy to test OAuth configurations in isolation
 - Mock OAuth providers can be created for testing
 - Registry-driven testing simplifies end-to-end scenarios

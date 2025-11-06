@@ -51,14 +51,14 @@ export const newtool: Tool = {
         limit: {
           type: "number",
           required: false,
-          description: "Maximum number of items to return"
-        }
+          description: "Maximum number of items to return",
+        },
       },
       response: {
         dataKey: "items",
-        description: "Array of data items"
-      }
-    }
+        description: "Array of data items",
+      },
+    },
   },
 
   // Widget definitions
@@ -96,11 +96,11 @@ export const newtool: Tool = {
         email: "email",
         username: "username",
         name: "name",
-        avatar: "avatar_url"
+        avatar: "avatar_url",
       },
-      authorizationHeader: "Bearer"
-    }
-  }
+      authorizationHeader: "Bearer",
+    },
+  },
 };
 ```
 
@@ -216,34 +216,34 @@ export const tool: Tool = {
   config: {
     // Optional: Custom API URL formatter
     formatApiUrl: (webUrl: string) => `${webUrl}/api/v3`,
-    
+
     // Complete OAuth configuration
     oauthConfig: {
       // OAuth URLs (absolute or relative for dynamic formatting)
       authorizationUrl: "https://provider.com/oauth/authorize",
       tokenUrl: "https://provider.com/oauth/token",
       userApiUrl: "/user", // or full URL for user profile
-      
+
       // Required OAuth scopes
       scopes: ["read:data", "write:data", "admin:settings"],
-      
+
       // Environment variable names for credentials
       clientIdEnvVar: "PROVIDER_OAUTH_CLIENT_ID",
       clientSecretEnvVar: "PROVIDER_OAUTH_CLIENT_SECRET",
-      
+
       // User profile field mapping
       userMapping: {
-        id: "id",                    // User's unique identifier
-        email: "email",             // User's email address
-        username: "username",       // User's username
-        name: "full_name",          // User's display name
-        avatar: "avatar_url"        // URL to user's avatar
+        id: "id", // User's unique identifier
+        email: "email", // User's email address
+        username: "username", // User's username
+        name: "full_name", // User's display name
+        avatar: "avatar_url", // URL to user's avatar
       },
-      
+
       // Authorization header format
-      authorizationHeader: "Bearer"  // or "token" for GitHub
-    }
-  }
+      authorizationHeader: "Bearer", // or "token" for GitHub
+    },
+  },
 };
 ```
 
@@ -285,12 +285,12 @@ The system provides centralized OAuth configuration lookup:
 
 ```typescript
 // Get OAuth configuration from registry
-const oauthConfig = getOAuthConfig('provider-name');
+const oauthConfig = getOAuthConfig("provider-name");
 if (oauthConfig) {
   // Use for OAuth flow
   const authorizationUrl = buildAuthorizationUrl(oauthConfig, {
     state: generateSecureState(),
-    scope: oauthConfig.scopes.join(' ')
+    scope: oauthConfig.scopes.join(" "),
   });
 }
 ```
@@ -309,7 +309,7 @@ userMapping: {
   avatar: "avatar_url"        // https://github.com/images/error/octocat_happy.gif
 }
 
-// Jira response mapping  
+// Jira response mapping
 userMapping: {
   id: "accountId",                          // 5b10ac8d82e05b22cc7d4ef5
   email: "emailAddress",                    // octocat@example.com

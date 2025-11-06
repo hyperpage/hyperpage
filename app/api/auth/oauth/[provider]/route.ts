@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getOAuthConfig, buildAuthorizationUrl } from "@/lib/oauth-config";
-import { 
-  validateOAuthState, 
+import {
+  validateOAuthState,
   createOAuthStateCookie,
-  getOAuthStateClearCookieOptions 
+  getOAuthStateClearCookieOptions,
 } from "@/lib/oauth-state-cookies";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { getAppDatabase } from "@/lib/database/connection";
@@ -23,12 +23,12 @@ import logger from "@/lib/logger";
 // GET /api/auth/oauth/{provider}/initiate - Initiate OAuth flow
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ provider: string }> }
+  { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
   const { searchParams } = new URL(request.url);
   const webUrl = searchParams.get("web_url"); // For Jira instances
-  
+
   try {
     // Get OAuth configuration
     const oauthConfig = getOAuthConfig(provider, webUrl || undefined);
@@ -50,26 +50,32 @@ export async function GET(
 
     // Set OAuth state cookie for CSRF protection
     // For Jira, include web_url in state JSON
-    const cookieStateValue = provider === "jira" 
-      ? JSON.stringify({
-          state,
-          webUrl: webUrl || undefined,
-          created: Date.now(),
-        })
-      : state;
+    const cookieStateValue =
+      provider === "jira"
+        ? JSON.stringify({
+            state,
+            webUrl: webUrl || undefined,
+            created: Date.now(),
+          })
+        : state;
 
-    const cookieOptions = provider === "jira" 
-      ? {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax" as const,
-          path: `/api/auth/${provider}/callback`,
-          maxAge: 600,
-        }
-      : createOAuthStateCookie(provider, state).options;
+    const cookieOptions =
+      provider === "jira"
+        ? {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax" as const,
+            path: `/api/auth/${provider}/callback`,
+            maxAge: 600,
+          }
+        : createOAuthStateCookie(provider, state).options;
 
     if (provider === "jira") {
-      response.cookies.set(`_oauth_state_${provider}`, cookieStateValue, cookieOptions);
+      response.cookies.set(
+        `_oauth_state_${provider}`,
+        cookieStateValue,
+        cookieOptions,
+      );
     } else {
       const { name, value, options } = createOAuthStateCookie(provider, state);
       response.cookies.set(name, value, options);
@@ -93,10 +99,10 @@ export async function GET(
 // POST /api/auth/oauth/{provider}/callback - Handle OAuth callback
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ provider: string }> }
+  { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
-  
+
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
@@ -105,7 +111,8 @@ export async function POST(
 
     // Check for OAuth errors
     if (error) {
-      const errorDescription = searchParams.get("error_description") || "Unknown error";
+      const errorDescription =
+        searchParams.get("error_description") || "Unknown error";
       logger.warn(`${provider} OAuth callback error from provider`, {
         provider,
         error,
@@ -179,10 +186,10 @@ export async function POST(
       }
 
       const { oauthConfig: toolOAuthConfig } = tool.config;
-      
+
       // Build the full user API URL (handle relative paths for GitLab)
-      const userApiUrl = toolOAuthConfig.userApiUrl.startsWith('/') 
-        ? `${getOAuthConfig(provider)?.authorizationUrl?.replace(/\/authorize.*/, '') || ''}${toolOAuthConfig.userApiUrl}`
+      const userApiUrl = toolOAuthConfig.userApiUrl.startsWith("/")
+        ? `${getOAuthConfig(provider)?.authorizationUrl?.replace(/\/authorize.*/, "") || ""}${toolOAuthConfig.userApiUrl}`
         : toolOAuthConfig.userApiUrl;
 
       const userResponse = await fetch(userApiUrl, {
@@ -229,8 +236,8 @@ export async function POST(
 
       // Type-safe helper function to extract nested values
       const getNestedValue = (obj: unknown, path: string): unknown => {
-        return path.split('.').reduce((current, key) => {
-          if (current && typeof current === 'object' && current !== null) {
+        return path.split(".").reduce((current, key) => {
+          if (current && typeof current === "object" && current !== null) {
             return (current as Record<string, unknown>)[key];
           }
           return undefined;
@@ -251,7 +258,8 @@ export async function POST(
         username: getStringValue(userProfile, userMapping.username),
         displayName: getStringValue(userProfile, userMapping.name),
         avatarUrl: getStringValue(userProfile, userMapping.avatar),
-        createdAt: existingUser.length > 0 ? existingUser[0].createdAt : Date.now(),
+        createdAt:
+          existingUser.length > 0 ? existingUser[0].createdAt : Date.now(),
         updatedAt: Date.now(),
       };
 
@@ -278,12 +286,12 @@ export async function POST(
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token || undefined,
         tokenType: tokenResponse.token_type || "Bearer",
-        expiresAt: tokenResponse.expires_in 
-          ? now + tokenResponse.expires_in * 1000 
+        expiresAt: tokenResponse.expires_in
+          ? now + tokenResponse.expires_in * 1000
           : undefined,
         refreshExpiresAt: undefined,
-        scopes: tokenResponse.scope 
-          ? tokenResponse.scope.split(" ") 
+        scopes: tokenResponse.scope
+          ? tokenResponse.scope.split(" ")
           : undefined,
         metadata: {
           tokenResponse: tokenResponse,
@@ -326,7 +334,10 @@ export async function POST(
       logger.error(`Failed to store ${provider} OAuth tokens and user data`, {
         provider,
         sessionId,
-        error: storageError instanceof Error ? storageError.message : String(storageError),
+        error:
+          storageError instanceof Error
+            ? storageError.message
+            : String(storageError),
         stack: storageError instanceof Error ? storageError.stack : undefined,
       });
       return NextResponse.redirect(

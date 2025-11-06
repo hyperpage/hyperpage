@@ -42,7 +42,7 @@ export function getOAuthConfig(
 ): OAuthConfig | null {
   // Get tool from registry
   const tool = toolRegistry[toolName.toLowerCase()];
-  
+
   if (!tool) {
     logger.warn(`Tool ${toolName} not found in registry`);
     return null;
@@ -68,8 +68,12 @@ export function getOAuthConfig(
   }
 
   // Build OAuth URLs - some tools need base URL formatting (like Jira)
-  const { authorizationUrl, tokenUrl } = buildOAuthUrls(toolName, oauthConfig, baseUrl);
-  
+  const { authorizationUrl, tokenUrl } = buildOAuthUrls(
+    toolName,
+    oauthConfig,
+    baseUrl,
+  );
+
   return {
     clientId,
     clientSecret,
@@ -85,24 +89,24 @@ export function getOAuthConfig(
  * Build OAuth authorization and token URLs for a tool using registry configuration
  */
 function buildOAuthUrls(
-  toolName: string, 
-  oauthConfig: ToolOAuthConfig, 
-  baseUrl?: string
+  toolName: string,
+  oauthConfig: ToolOAuthConfig,
+  baseUrl?: string,
 ): { authorizationUrl: string; tokenUrl: string } {
   // For tools with relative URLs (like Jira), we need to format with base URL
-  if (oauthConfig.authorizationUrl.startsWith('/')) {
+  if (oauthConfig.authorizationUrl.startsWith("/")) {
     // This is a relative URL that needs base URL formatting
     const webUrl = baseUrl || getToolWebUrl(toolName);
     if (!webUrl) {
       throw new Error(`Base URL required for ${toolName} OAuth configuration`);
     }
-    
+
     return {
       authorizationUrl: `${webUrl}${oauthConfig.authorizationUrl}`,
       tokenUrl: `${webUrl}${oauthConfig.tokenUrl}`,
     };
   }
-  
+
   // For tools with absolute URLs (like GitHub, GitLab), use as-is
   return {
     authorizationUrl: oauthConfig.authorizationUrl,
@@ -118,12 +122,14 @@ function getToolWebUrl(toolName: string): string | null {
   if (!tool || !tool.config) {
     return null;
   }
-  
+
   // Try to get web URL from tool configuration
-  return tool.config.getWebUrl?.() || 
-         tool.config.webUrl || 
-         process.env[`${toolName.toUpperCase()}_WEB_URL`] ||
-         null;
+  return (
+    tool.config.getWebUrl?.() ||
+    tool.config.webUrl ||
+    process.env[`${toolName.toUpperCase()}_WEB_URL`] ||
+    null
+  );
 }
 
 /**
@@ -207,7 +213,7 @@ export function isOAuthConfigured(toolName: string): boolean {
  */
 export function getConfiguredProviders(): string[] {
   const providers: string[] = [];
-  
+
   // Check each tool in registry for OAuth configuration
   for (const [toolName, tool] of Object.entries(toolRegistry)) {
     if (tool && tool.enabled && tool.config?.oauthConfig) {
@@ -217,7 +223,7 @@ export function getConfiguredProviders(): string[] {
       }
     }
   }
-  
+
   return providers;
 }
 
@@ -229,6 +235,6 @@ export function getRequiredScopes(toolName: string): string[] {
   if (!tool || !tool.config?.oauthConfig) {
     return [];
   }
-  
+
   return tool.config.oauthConfig.scopes;
 }

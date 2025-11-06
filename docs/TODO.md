@@ -1,7 +1,7 @@
 - [x] Analyze current OAuth configuration patterns
 - [x] Extend ToolOAuthConfig interface to support full registry-driven config
 - [x] Update GitHub tool with complete OAuth configuration
-- [x] Update GitLab tool with complete OAuth configuration  
+- [x] Update GitLab tool with complete OAuth configuration
 - [x] Update Jira tool OAuth configuration
 - [x] Refactor oauth-config.ts to use registry-driven approach
 - [x] Remove hardcoded environment variable mappings
