@@ -8,7 +8,12 @@ interface ToolStatusTooltipProps {
   rateLimitStatus: RateLimitStatus | undefined;
 }
 
-export function ToolStatusTooltip({ toolName, status, authStatus, rateLimitStatus }: ToolStatusTooltipProps) {
+export function ToolStatusTooltip({
+  toolName,
+  status,
+  authStatus,
+  rateLimitStatus,
+}: ToolStatusTooltipProps) {
   const generateTooltipText = (): string => {
     let tooltip = `${toolName} - ${status}`;
     tooltip += `\nAuthentication: ${authStatus?.connected ? "Connected" : "Not connected"}`;
@@ -32,7 +37,10 @@ export function ToolStatusTooltip({ toolName, status, authStatus, rateLimitStatu
 
     // Add platform-specific details
     const limits = rateLimitStatus.limits;
-    const addApiDetails = (apiName: string, usage: RateLimitUsage | undefined) => {
+    const addApiDetails = (
+      apiName: string,
+      usage: RateLimitUsage | undefined,
+    ) => {
       if (!usage || usage.usagePercent === null) return;
 
       let details = `\n${apiName}: ${usage.usagePercent}% used`;

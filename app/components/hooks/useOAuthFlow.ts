@@ -3,7 +3,10 @@
 import { useEffect } from "react";
 import logger from "@/lib/logger";
 
-export function useOAuthFlow(toolSlugs: string[], onAuthSuccess: (tool: string) => void) {
+export function useOAuthFlow(
+  toolSlugs: string[],
+  onAuthSuccess: (tool: string) => void,
+) {
   useEffect(() => {
     // Check for OAuth success indicators on page load
     const urlParams = new URLSearchParams(window.location.search);
@@ -15,9 +18,7 @@ export function useOAuthFlow(toolSlugs: string[], onAuthSuccess: (tool: string) 
       sessionStorage.removeItem("currentAuthTool");
 
       // Check if this matches our tool
-      const toolMatch = toolSlugs.find((tool) =>
-        successParam.includes(tool),
-      );
+      const toolMatch = toolSlugs.find((tool) => successParam.includes(tool));
       if (toolMatch) {
         logger.info(
           `OAuth success detected for ${toolMatch}, refreshing status...`,

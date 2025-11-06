@@ -1,7 +1,10 @@
 "use client";
 
 import { createContext, useContext, ReactNode } from "react";
-import { useAuthOperations, type AuthToolState } from "./hooks/useAuthOperations";
+import {
+  useAuthOperations,
+  type AuthToolState,
+} from "./hooks/useAuthOperations";
 
 interface AuthContextType {
   tools: AuthToolState[];
@@ -43,9 +46,7 @@ export function AuthProvider({
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 
