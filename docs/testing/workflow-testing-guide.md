@@ -260,4 +260,27 @@ const aggregatedData = await Promise.all([
 
 ### Realistic Scenarios
 
-- Use actual API rate limits (GitHub: 5000/hour, GitLab: 300
+- Use actual API rate limits (GitHub: 5000/hour, GitLab: 300/min, Jira: 1000/day)
+- Simulate real-world error patterns and recovery mechanisms
+- Test concurrent operations and cross-tool workflows
+- Validate user experience under various failure conditions
+
+### Performance Testing
+
+- Measure response times for each test operation
+- Track memory usage during long-running tests
+- Validate timeout handling and recovery
+- Test concurrent user scenarios
+
+## Integration with Main Testing Strategy
+
+This workflow testing guide complements the main testing strategy outlined in [testing.md](testing.md). While unit and integration tests focus on individual components, workflow tests validate complete user journeys and cross-platform interactions.
+
+### Cross-Reference
+
+- **Unit Tests**: Component-level validation
+- **Integration Tests**: API and OAuth flow testing
+- **E2E Tests**: User interface workflows
+- **Workflow Tests**: Cross-platform orchestration and data flows
+
+For comprehensive testing strategy, see [testing.md](testing.md). For development workflow, see [development-workflow.md](development-workflow.md).
