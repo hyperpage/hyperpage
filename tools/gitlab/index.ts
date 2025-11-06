@@ -412,11 +412,23 @@ export const gitlabTool: Tool = {
         }
 
         return null; // No retry needed
-      },
-      maxRetries: 3, // Reduced from 5 - GitLab Premium doesn't increase API limits significantly
-      backoffStrategy: "linear", // Use linear backoff for progressive delays
+    },
+    maxRetries: 3, // Reduced from 5 - GitLab Premium doesn't increase API limits significantly
+    backoffStrategy: "linear", // Use linear backoff for progressive delays
+  },
+  // OAuth configuration for registry-driven authentication
+  oauthConfig: {
+    userApiUrl: "/user", // Will be formatted with API base URL
+    authorizationHeader: "Bearer",
+    userMapping: {
+      id: "id",
+      email: "email",
+      username: "username",
+      name: "name",
+      avatar: "avatar_url",
     },
   },
+},
 };
 
 registerTool("gitlab", gitlabTool); // Self-register in registry on import

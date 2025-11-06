@@ -386,6 +386,18 @@ export const githubTool: Tool = {
       maxRetries: 3,
       backoffStrategy: "exponential",
     },
+    // OAuth configuration for registry-driven authentication
+    oauthConfig: {
+      userApiUrl: "https://api.github.com/user",
+      authorizationHeader: "token",
+      userMapping: {
+        id: "id",
+        email: "email",
+        username: "login",
+        name: "name",
+        avatar: "avatar_url",
+      },
+    },
   },
 };
 

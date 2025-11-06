@@ -12,28 +12,13 @@ import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import { users } from "@/lib/database/schema";
 import { exchangeCodeForTokens } from "@/lib/oauth-config";
 import { eq } from "drizzle-orm";
+import { getToolByName } from "@/tools";
 import logger from "@/lib/logger";
 
 /**
- * Unified OAuth Handler
- * Handles OAuth initiation and callback for all providers (GitHub, GitLab, Jira)
+ * Unified OAuth Handler - Registry-Driven
+ * Handles OAuth initiation and callback for all providers using tool registry
  */
-
-// Provider-specific configurations
-const PROVIDER_CONFIG = {
-  github: {
-    userApiUrl: "https://api.github.com/user",
-    authorizationHeader: "token",
-  },
-  gitlab: {
-    userApiUrl: "https://gitlab.com/api/v4/user",
-    authorizationHeader: "Bearer",
-  },
-  jira: {
-    userApiUrl: "https://api.atlassian.com/me",
-    authorizationHeader: "Bearer",
-  },
-} as const;
 
 // GET /api/auth/oauth/{provider}/initiate - Initiate OAuth flow
 export async function GET(
@@ -187,15 +172,22 @@ export async function POST(
     }
 
     try {
-      // Get user info from provider API
-      const config = PROVIDER_CONFIG[provider as keyof typeof PROVIDER_CONFIG];
-      if (!config) {
-        throw new Error(`Unsupported provider: ${provider}`);
+      // Get user info from provider API using registry-driven approach
+      const tool = getToolByName(provider);
+      if (!tool?.config?.oauthConfig) {
+        throw new Error(`OAuth not configured for ${provider}`);
       }
 
-      const userResponse = await fetch(config.userApiUrl, {
+      const { oauthConfig: toolOAuthConfig } = tool.config;
+      
+      // Build the full user API URL (handle relative paths for GitLab)
+      const userApiUrl = toolOAuthConfig.userApiUrl.startsWith('/') 
+        ? `${getOAuthConfig(provider)?.authorizationUrl?.replace(/\/authorize.*/, '') || ''}${toolOAuthConfig.userApiUrl}`
+        : toolOAuthConfig.userApiUrl;
+
+      const userResponse = await fetch(userApiUrl, {
         headers: {
-          Authorization: `${config.authorizationHeader} ${tokenResponse.access_token}`,
+          Authorization: `${toolOAuthConfig.authorizationHeader} ${tokenResponse.access_token}`,
           "User-Agent": "Hyperpage-OAuth-App",
         },
       });
@@ -226,15 +218,39 @@ export async function POST(
         .where(eq(users.id, userId))
         .limit(1);
 
-      // Map provider-specific user profile fields
+      // Map provider-specific user profile fields using registry configuration
+      const userMapping = toolOAuthConfig.userMapping || {
+        id: "id",
+        email: "email",
+        username: "username",
+        name: "name",
+        avatar: "avatar_url",
+      };
+
+      // Type-safe helper function to extract nested values
+      const getNestedValue = (obj: unknown, path: string): unknown => {
+        return path.split('.').reduce((current, key) => {
+          if (current && typeof current === 'object' && current !== null) {
+            return (current as Record<string, unknown>)[key];
+          }
+          return undefined;
+        }, obj);
+      };
+
+      // Helper function to safely extract string values
+      const getStringValue = (obj: unknown, path: string): string | null => {
+        const value = getNestedValue(obj, path);
+        return value == null ? null : String(value);
+      };
+
       const userData = {
         id: userId,
         provider: provider,
-        providerUserId: userProfile.id.toString(),
-        email: userProfile.email || null,
-        username: provider === "github" ? userProfile.login : userProfile.username || null,
-        displayName: userProfile.name || null,
-        avatarUrl: userProfile.avatar_url || null,
+        providerUserId: getStringValue(userProfile, userMapping.id) || "",
+        email: getStringValue(userProfile, userMapping.email),
+        username: getStringValue(userProfile, userMapping.username),
+        displayName: getStringValue(userProfile, userMapping.name),
+        avatarUrl: getStringValue(userProfile, userMapping.avatar),
         createdAt: existingUser.length > 0 ? existingUser[0].createdAt : Date.now(),
         updatedAt: Date.now(),
       };

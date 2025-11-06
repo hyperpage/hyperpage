@@ -669,6 +669,18 @@ export const jiraTool: Tool = {
         cloud: { warningThreshold: 60, criticalThreshold: 80 }, // Optimized for Atlassian Cloud
       },
     },
+    // OAuth configuration for registry-driven authentication
+    oauthConfig: {
+      userApiUrl: "/rest/api/3/myself", // Jira's current user endpoint
+      authorizationHeader: "Bearer",
+      userMapping: {
+        id: "accountId",
+        email: "emailAddress",
+        username: "name",
+        name: "displayName",
+        avatar: "avatarUrls.48x48",
+      },
+    },
   },
 };
 
