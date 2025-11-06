@@ -673,6 +673,15 @@ export const jiraTool: Tool = {
     oauthConfig: {
       userApiUrl: "/rest/api/3/myself", // Jira's current user endpoint
       authorizationHeader: "Bearer",
+      authorizationUrl: "/rest/oauth2/latest/authorize", // Will be formatted with base URL
+      tokenUrl: "/rest/oauth2/latest/token", // Will be formatted with base URL
+      scopes: [
+        "read:jira-work", // Read jira work items
+        "read:jira-user", // Read user information
+        "write:jira-work", // Create and edit jira work items
+      ],
+      clientIdEnvVar: "JIRA_OAUTH_CLIENT_ID",
+      clientSecretEnvVar: "JIRA_OAUTH_CLIENT_SECRET",
       userMapping: {
         id: "accountId",
         email: "emailAddress",

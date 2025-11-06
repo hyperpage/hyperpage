@@ -1,9 +1,11 @@
 /**
  * OAuth Configuration for supported tools
- * Centralizes OAuth client configurations, scopes, and provider URLs
+ * Uses tool registry for dynamic OAuth configurations
  */
 
 import logger from "./logger";
+import { toolRegistry } from "../tools/registry";
+import { ToolOAuthConfig } from "../tools/tool-types";
 
 export interface OAuthConfig {
   clientId: string;
@@ -12,7 +14,7 @@ export interface OAuthConfig {
   tokenUrl: string;
   scopes: string[];
   redirectUri?: string; // Optional, can be constructed dynamically
-  provider: "github" | "gitlab" | "jira";
+  provider: string; // Made extensible - any string instead of hardcoded union
 }
 
 /**
@@ -30,130 +32,98 @@ export interface OAuthTokenResponse {
   error_description?: string;
 }
 
-// Environment variable keys for OAuth
-const OAUTH_ENV_VARS = {
-  GITHUB_CLIENT_ID: "GITHUB_OAUTH_CLIENT_ID",
-  GITHUB_CLIENT_SECRET: "GITHUB_OAUTH_CLIENT_SECRET",
-  GITLAB_CLIENT_ID: "GITLAB_OAUTH_CLIENT_ID",
-  GITLAB_CLIENT_SECRET: "GITLAB_OAUTH_CLIENT_SECRET",
-  JIRA_CLIENT_ID: "JIRA_OAUTH_CLIENT_ID",
-  JIRA_CLIENT_SECRET: "JIRA_OAUTH_CLIENT_SECRET",
-} as const;
-
 /**
- * Get OAuth configuration for a specific tool
+ * Registry-driven OAuth configuration lookup
+ * Dynamically retrieves OAuth configs from tool registry
  */
 export function getOAuthConfig(
   toolName: string,
   baseUrl?: string,
 ): OAuthConfig | null {
-  switch (toolName.toLowerCase()) {
-    case "github":
-      return getGitHubConfig();
-    case "gitlab":
-      return getGitLabConfig();
-    case "jira":
-      return getJiraConfig(baseUrl);
-    default:
-      return null;
+  // Get tool from registry
+  const tool = toolRegistry[toolName.toLowerCase()];
+  
+  if (!tool) {
+    logger.warn(`Tool ${toolName} not found in registry`);
+    return null;
   }
-}
 
-/**
- * GitHub OAuth configuration
- */
-function getGitHubConfig(): OAuthConfig | null {
-  const clientId = process.env[OAUTH_ENV_VARS.GITHUB_CLIENT_ID];
-  const clientSecret = process.env[OAUTH_ENV_VARS.GITHUB_CLIENT_SECRET];
+  // Check if tool has OAuth configuration
+  if (!tool.config?.oauthConfig) {
+    logger.warn(`OAuth not configured for tool ${toolName}`);
+    return null;
+  }
+
+  const oauthConfig = tool.config.oauthConfig;
+
+  // Get environment variables for this tool using registry-configured names
+  const clientId = process.env[oauthConfig.clientIdEnvVar];
+  const clientSecret = process.env[oauthConfig.clientSecretEnvVar];
 
   if (!clientId || !clientSecret) {
     logger.warn(
-      "GitHub OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
+      `${toolName} OAuth not configured - missing ${oauthConfig.clientIdEnvVar} or ${oauthConfig.clientSecretEnvVar}`,
     );
     return null;
   }
 
+  // Build OAuth URLs - some tools need base URL formatting (like Jira)
+  const { authorizationUrl, tokenUrl } = buildOAuthUrls(toolName, oauthConfig, baseUrl);
+  
   return {
-    provider: "github",
     clientId,
     clientSecret,
-    authorizationUrl: "https://github.com/login/oauth/authorize",
-    tokenUrl: "https://github.com/login/oauth/access_token",
-    scopes: [
-      "read:user", // Read user profile data
-      "repo", // Full access to public and private repositories
-      "read:org", // Read organization membership and teams
-      "read:discussion", // Read discussion data
-    ],
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/github/callback`,
+    authorizationUrl,
+    tokenUrl,
+    scopes: oauthConfig.scopes,
+    provider: toolName.toLowerCase(),
+    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/${toolName}/callback`,
   };
 }
 
 /**
- * GitLab OAuth configuration
+ * Build OAuth authorization and token URLs for a tool using registry configuration
  */
-function getGitLabConfig(): OAuthConfig | null {
-  const clientId = process.env[OAUTH_ENV_VARS.GITLAB_CLIENT_ID];
-  const clientSecret = process.env[OAUTH_ENV_VARS.GITLAB_CLIENT_SECRET];
-
-  if (!clientId || !clientSecret) {
-    logger.warn(
-      "GitLab OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
-    );
-    return null;
+function buildOAuthUrls(
+  toolName: string, 
+  oauthConfig: ToolOAuthConfig, 
+  baseUrl?: string
+): { authorizationUrl: string; tokenUrl: string } {
+  // For tools with relative URLs (like Jira), we need to format with base URL
+  if (oauthConfig.authorizationUrl.startsWith('/')) {
+    // This is a relative URL that needs base URL formatting
+    const webUrl = baseUrl || getToolWebUrl(toolName);
+    if (!webUrl) {
+      throw new Error(`Base URL required for ${toolName} OAuth configuration`);
+    }
+    
+    return {
+      authorizationUrl: `${webUrl}${oauthConfig.authorizationUrl}`,
+      tokenUrl: `${webUrl}${oauthConfig.tokenUrl}`,
+    };
   }
-
+  
+  // For tools with absolute URLs (like GitHub, GitLab), use as-is
   return {
-    provider: "gitlab",
-    clientId,
-    clientSecret,
-    authorizationUrl: "https://gitlab.com/oauth/authorize", // Can be made configurable for self-hosted
-    tokenUrl: "https://gitlab.com/oauth/token", // Can be made configurable for self-hosted
-    scopes: [
-      "read_user", // Read user profile
-      "api", // Full API access
-    ],
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/gitlab/callback`,
+    authorizationUrl: oauthConfig.authorizationUrl,
+    tokenUrl: oauthConfig.tokenUrl,
   };
 }
 
 /**
- * Jira OAuth 2.0 configuration
- * Note: Jira uses instance-specific URLs
+ * Get tool's web URL from registry configuration
  */
-function getJiraConfig(instanceUrl?: string): OAuthConfig | null {
-  const clientId = process.env[OAUTH_ENV_VARS.JIRA_CLIENT_ID];
-  const clientSecret = process.env[OAUTH_ENV_VARS.JIRA_CLIENT_SECRET];
-
-  if (!clientId || !clientSecret) {
-    logger.warn(
-      "Jira OAuth not configured - missing CLIENT_ID or CLIENT_SECRET",
-    );
+function getToolWebUrl(toolName: string): string | null {
+  const tool = toolRegistry[toolName.toLowerCase()];
+  if (!tool || !tool.config) {
     return null;
   }
-
-  // For Jira, we need an instance URL. If not provided, fall back to environment variable
-  const baseUrl = instanceUrl || process.env["JIRA_WEB_URL"];
-  if (!baseUrl) {
-    logger.warn(
-      "Jira OAuth not configured - missing instance URL (JIRA_WEB_URL)",
-    );
-    return null;
-  }
-
-  return {
-    provider: "jira",
-    clientId,
-    clientSecret,
-    authorizationUrl: `${baseUrl}/rest/oauth2/latest/authorize`,
-    tokenUrl: `${baseUrl}/rest/oauth2/latest/token`,
-    scopes: [
-      "read:jira-work", // Read jira work items
-      "read:jira-user", // Read user information
-      "write:jira-work", // Create and edit jira work items
-    ],
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/jira/callback`,
-  };
+  
+  // Try to get web URL from tool configuration
+  return tool.config.getWebUrl?.() || 
+         tool.config.webUrl || 
+         process.env[`${toolName.toUpperCase()}_WEB_URL`] ||
+         null;
 }
 
 /**
@@ -233,25 +203,32 @@ export function isOAuthConfigured(toolName: string): boolean {
 }
 
 /**
- * Get configured OAuth providers
+ * Get configured OAuth providers from registry
  */
 export function getConfiguredProviders(): string[] {
-  const providers = ["github", "gitlab", "jira"];
-  return providers.filter((provider) => isOAuthConfigured(provider));
+  const providers: string[] = [];
+  
+  // Check each tool in registry for OAuth configuration
+  for (const [toolName, tool] of Object.entries(toolRegistry)) {
+    if (tool && tool.enabled && tool.config?.oauthConfig) {
+      const config = getOAuthConfig(toolName);
+      if (config) {
+        providers.push(toolName);
+      }
+    }
+  }
+  
+  return providers;
 }
 
 /**
  * Get required OAuth scopes for a tool
  */
 export function getRequiredScopes(toolName: string): string[] {
-  switch (toolName.toLowerCase()) {
-    case "github":
-      return ["read:user", "repo", "read:org"];
-    case "gitlab":
-      return ["read_user", "api"];
-    case "jira":
-      return ["read:jira-work", "read:jira-user"];
-    default:
-      return [];
+  const tool = toolRegistry[toolName.toLowerCase()];
+  if (!tool || !tool.config?.oauthConfig) {
+    return [];
   }
+  
+  return tool.config.oauthConfig.scopes;
 }

@@ -390,6 +390,16 @@ export const githubTool: Tool = {
     oauthConfig: {
       userApiUrl: "https://api.github.com/user",
       authorizationHeader: "token",
+      authorizationUrl: "https://github.com/login/oauth/authorize",
+      tokenUrl: "https://github.com/login/oauth/access_token",
+      scopes: [
+        "read:user", // Read user profile data
+        "repo", // Full access to public and private repositories
+        "read:org", // Read organization membership and teams
+        "read:discussion", // Read discussion data
+      ],
+      clientIdEnvVar: "GITHUB_OAUTH_CLIENT_ID",
+      clientSecretEnvVar: "GITHUB_OAUTH_CLIENT_SECRET",
       userMapping: {
         id: "id",
         email: "email",

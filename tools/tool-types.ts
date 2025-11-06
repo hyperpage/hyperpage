@@ -100,6 +100,11 @@ export interface ToolRateLimitConfig {
 export interface ToolOAuthConfig {
   userApiUrl: string;
   authorizationHeader: "Bearer" | "token";
+  authorizationUrl: string; // OAuth 2.0 authorization endpoint
+  tokenUrl: string; // OAuth 2.0 token endpoint
+  scopes: string[]; // Default OAuth scopes
+  clientIdEnvVar: string; // Environment variable for OAuth client ID
+  clientSecretEnvVar: string; // Environment variable for OAuth client secret
   userMapping?: {
     id: string;
     email: string;

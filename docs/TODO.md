@@ -1,11 +1,16 @@
-# TODO - Authentication API Route Consolidation
-
-## Phase 2: Registry-Driven OAuth Enhancement
-
-- [x] Extend Tool interface with OAuth configuration
-- [x] Add OAuth config to GitHub tool definition
-- [x] Add OAuth config to GitLab tool definition  
-- [x] Add OAuth config to Jira tool definition
-- [ ] Remove hardcoded PROVIDER_CONFIG from OAuth handler
-- [ ] Make OAuth handler use tool registry dynamically
-- [ ] Test registry-driven OAuth functionality
+- [x] Analyze current OAuth configuration patterns
+- [x] Extend ToolOAuthConfig interface to support full registry-driven config
+- [x] Update GitHub tool with complete OAuth configuration
+- [x] Update GitLab tool with complete OAuth configuration  
+- [x] Update Jira tool OAuth configuration
+- [x] Refactor oauth-config.ts to use registry-driven approach
+- [x] Remove hardcoded environment variable mappings
+- [x] Remove hardcoded OAuth URL construction
+- [x] Remove hardcoded scope definitions
+- [x] Update provider type handling for extensibility
+- [x] Test OAuth configuration with updated tools
+- [x] Verify registry-driven flow works end-to-end
+- [x] Update documentation for new OAuth pattern
+- [x] Complete implementation of registry-driven OAuth configuration
+- [x] Update OAuth architecture design documentation
+- [x] Update tool integration system documentation

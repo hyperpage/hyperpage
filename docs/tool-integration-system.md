@@ -35,21 +35,30 @@ Each tool owns its complete integration:
 Create `tools/newtool/index.ts` with complete tool definition:
 
 ```typescript
-import { ToolDefinition } from "../tool-types";
+import { Tool } from "../tool-types";
 
-export const newtool: ToolDefinition = {
-  name: "newtool",
-  displayName: "New Tool",
-  description: "Description of the new tool",
+export const newtool: Tool = {
+  name: "New Tool",
+  slug: "newtool",
   enabled: process.env.ENABLE_NEWTOOL === "true",
 
   // API endpoints
   apis: {
     data: {
       method: "GET",
-      endpoint: "/api/v1/data",
-      dataKey: "items",
-    },
+      description: "Get data from new tool",
+      parameters: {
+        limit: {
+          type: "number",
+          required: false,
+          description: "Maximum number of items to return"
+        }
+      },
+      response: {
+        dataKey: "items",
+        description: "Array of data items"
+      }
+    }
   },
 
   // Widget definitions
@@ -66,11 +75,32 @@ export const newtool: ToolDefinition = {
 
   // API handlers
   handlers: {
-    async data() {
+    data: async (request: Request, config: ToolConfig) => {
       // Business logic implementation
       return { items: [] };
     },
   },
+
+  // Optional: OAuth configuration for authentication
+  config: {
+    formatApiUrl: (webUrl: string) => `${webUrl}/api/v1`,
+    oauthConfig: {
+      authorizationUrl: "https://newtool.com/oauth/authorize",
+      tokenUrl: "https://newtool.com/oauth/token",
+      userApiUrl: "/user",
+      scopes: ["read:data", "write:data"],
+      clientIdEnvVar: "NEWTOOL_OAUTH_CLIENT_ID",
+      clientSecretEnvVar: "NEWTOOL_OAUTH_CLIENT_SECRET",
+      userMapping: {
+        id: "id",
+        email: "email",
+        username: "username",
+        name: "name",
+        avatar: "avatar_url"
+      },
+      authorizationHeader: "Bearer"
+    }
+  }
 };
 ```
 
@@ -169,6 +199,145 @@ All tools are loaded server-side on startup. Each tool checks its `ENABLE_*` env
 ### Single API Router
 
 All tool API calls route through `/api/tools/[tool]/[endpoint]` which uses `tool.handlers[endpoint]` for execution.
+
+## OAuth Configuration
+
+### Registry-Driven OAuth Architecture
+
+The Hyperpage platform uses a **registry-driven OAuth architecture** where each tool owns its complete OAuth configuration. This approach eliminates hardcoded provider mappings and enables seamless addition of new OAuth providers.
+
+### OAuth Configuration Structure
+
+Each tool can define its complete OAuth configuration within its definition:
+
+```typescript
+export const tool: Tool = {
+  // ... other properties
+  config: {
+    // Optional: Custom API URL formatter
+    formatApiUrl: (webUrl: string) => `${webUrl}/api/v3`,
+    
+    // Complete OAuth configuration
+    oauthConfig: {
+      // OAuth URLs (absolute or relative for dynamic formatting)
+      authorizationUrl: "https://provider.com/oauth/authorize",
+      tokenUrl: "https://provider.com/oauth/token",
+      userApiUrl: "/user", // or full URL for user profile
+      
+      // Required OAuth scopes
+      scopes: ["read:data", "write:data", "admin:settings"],
+      
+      // Environment variable names for credentials
+      clientIdEnvVar: "PROVIDER_OAUTH_CLIENT_ID",
+      clientSecretEnvVar: "PROVIDER_OAUTH_CLIENT_SECRET",
+      
+      // User profile field mapping
+      userMapping: {
+        id: "id",                    // User's unique identifier
+        email: "email",             // User's email address
+        username: "username",       // User's username
+        name: "full_name",          // User's display name
+        avatar: "avatar_url"        // URL to user's avatar
+      },
+      
+      // Authorization header format
+      authorizationHeader: "Bearer"  // or "token" for GitHub
+    }
+  }
+};
+```
+
+### Dynamic URL Support
+
+The OAuth system supports both absolute and relative URLs:
+
+- **Absolute URLs**: Used by GitHub, GitLab - specified directly in configuration
+- **Relative URLs**: Used by Jira - formatted dynamically with tool's base URL
+
+```typescript
+// GitLab - Absolute URLs
+oauthConfig: {
+  authorizationUrl: "https://gitlab.com/oauth/authorize",
+  tokenUrl: "https://gitlab.com/oauth/token"
+}
+
+// Jira - Relative URLs (formatted with base URL)
+oauthConfig: {
+  authorizationUrl: "/rest/oauth2/latest/authorize",
+  tokenUrl: "/rest/oauth2/latest/token"
+}
+```
+
+### OAuth Environment Configuration
+
+Add OAuth credentials to `.env.local.sample`:
+
+```env
+# Provider OAuth Configuration
+ENABLE_PROVIDER=false
+PROVIDER_OAUTH_CLIENT_ID=your_oauth_app_client_id
+PROVIDER_OAUTH_CLIENT_SECRET=your_oauth_app_client_secret
+```
+
+### Centralized OAuth Configuration Access
+
+The system provides centralized OAuth configuration lookup:
+
+```typescript
+// Get OAuth configuration from registry
+const oauthConfig = getOAuthConfig('provider-name');
+if (oauthConfig) {
+  // Use for OAuth flow
+  const authorizationUrl = buildAuthorizationUrl(oauthConfig, {
+    state: generateSecureState(),
+    scope: oauthConfig.scopes.join(' ')
+  });
+}
+```
+
+### User Profile Mapping
+
+OAuth configurations include user profile field mapping to handle different API response structures:
+
+```typescript
+// GitHub response mapping
+userMapping: {
+  id: "id",                    // github_user_id
+  email: "email",             // user@example.com
+  username: "login",          // octocat
+  name: "name",               // The Octocat
+  avatar: "avatar_url"        // https://github.com/images/error/octocat_happy.gif
+}
+
+// Jira response mapping  
+userMapping: {
+  id: "accountId",                          // 5b10ac8d82e05b22cc7d4ef5
+  email: "emailAddress",                    // octocat@example.com
+  username: "name",                         // The Octocat
+  name: "displayName",                      // The Octocat
+  avatar: "avatarUrls.48x48"               // https://avatar-url
+}
+```
+
+### OAuth Flow Integration
+
+OAuth configurations are automatically used by the authentication system:
+
+1. **OAuth Initiation**: Uses `authorizationUrl` and `scopes`
+2. **Token Exchange**: Uses `tokenUrl` for access/refresh tokens
+3. **User Profile**: Uses `userApiUrl` and `userMapping`
+4. **API Requests**: Uses `authorizationHeader` format
+
+### Adding OAuth to New Tools
+
+To add OAuth support to a new tool:
+
+1. **Define OAuth Configuration** in tool definition
+2. **Set Environment Variables** in `.env.local.sample`
+3. **Register Tool** in tools registry (automatic integration)
+4. **Test OAuth Flow** using provided authentication endpoints
+
+**No additional code changes required** - OAuth is automatically available through the registry system.
 
 ## Best Practices
 
