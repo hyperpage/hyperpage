@@ -4,14 +4,17 @@ import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import logger from "@/lib/logger";
 
 /**
- * GitHub OAuth Status Handler
- * Returns authentication status for GitHub
+ * Unified OAuth Status Handler
+ * Returns authentication status for any provider (GitHub, GitLab, Jira)
  */
 
-const PROVIDER_NAME = "github";
+// GET /api/auth/status/{provider} - Get OAuth authentication status
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ provider: string }> },
+) {
+  const { provider } = await params;
 
-// GET /api/auth/github/status - Get OAuth authentication status
-export async function GET(request: NextRequest) {
   try {
     // Get session ID from cookies
     const cookies = request.cookies;
@@ -41,7 +44,7 @@ export async function GET(request: NextRequest) {
     try {
       // Check if tokens exist for this user and tool
       const tokenStorage = new SecureTokenStorage();
-      const tokens = await tokenStorage.getTokens(userId, PROVIDER_NAME);
+      const tokens = await tokenStorage.getTokens(userId, provider);
 
       if (!tokens) {
         return NextResponse.json({
@@ -78,10 +81,10 @@ export async function GET(request: NextRequest) {
         hasRefreshToken: !!tokens.refreshToken && !isRefreshExpired,
       });
     } catch (storageError) {
-      logger.error("GitHub OAuth token storage check failed", {
+      logger.error(`${provider} OAuth token storage check failed`, {
         error: storageError,
         userId,
-        provider: PROVIDER_NAME,
+        provider,
       });
 
       // If storage check fails, assume not authenticated
@@ -93,9 +96,9 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    logger.error("GitHub OAuth status check failed", {
+    logger.error(`${provider} OAuth status check failed`, {
       error,
-      provider: PROVIDER_NAME,
+      provider,
     });
 
     // Always return valid JSON in case of error

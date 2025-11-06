@@ -408,7 +408,7 @@ export class RedisCache<T = unknown> implements ICache<T> {
       const totalKeys = await client.dbsize();
 
       const hitRate = this.stats.hits / (this.stats.hits + this.stats.misses);
-      
+
       return {
         size: totalKeys,
         hits: this.stats.hits,
@@ -530,19 +530,17 @@ export class RedisCache<T = unknown> implements ICache<T> {
     }, this.config.healthCheckInterval || 30000);
   }
 
-  private updatePerformanceMetrics(
-    outcome: "success" | "failure",
-  ): void {
+  private updatePerformanceMetrics(outcome: "success" | "failure"): void {
     if (!this.config.enableMetrics) return;
 
     this.performanceMetrics.totalOperations++;
 
     // Track success/failure metrics separately
     if (outcome === "success") {
-      this.performanceMetrics.successfulOperations = 
+      this.performanceMetrics.successfulOperations =
         (this.performanceMetrics.successfulOperations || 0) + 1;
     } else {
-      this.performanceMetrics.failedOperations = 
+      this.performanceMetrics.failedOperations =
         (this.performanceMetrics.failedOperations || 0) + 1;
     }
 
@@ -553,7 +551,8 @@ export class RedisCache<T = unknown> implements ICache<T> {
         const responseTime = Date.now() - firstStartTime;
         this.performanceMetrics.totalResponseTime += responseTime;
         this.performanceMetrics.averageResponseTime =
-          this.performanceMetrics.totalResponseTime / this.performanceMetrics.totalOperations;
+          this.performanceMetrics.totalResponseTime /
+          this.performanceMetrics.totalOperations;
       }
     }
   }
@@ -562,27 +561,41 @@ export class RedisCache<T = unknown> implements ICache<T> {
 // Factory functions for different Redis configurations (migrated from advanced cache)
 
 export function createBasicRedisCache<T>(redisUrl?: string): RedisCache<T> {
-  return new RedisCache<T>(redisUrl, { maxSize: 10000, enableLru: false }, {
-    enablePipeline: false,
-    enableMetrics: false,
-    enableBatch: false,
-  });
+  return new RedisCache<T>(
+    redisUrl,
+    { maxSize: 10000, enableLru: false },
+    {
+      enablePipeline: false,
+      enableMetrics: false,
+      enableBatch: false,
+    },
+  );
 }
 
 export function createAdvancedRedisCache<T>(redisUrl?: string): RedisCache<T> {
-  return new RedisCache<T>(redisUrl, { maxSize: 10000, enableLru: false }, {
-    enablePipeline: true,
-    enableMetrics: true,
-    enableBatch: true,
-    healthCheckInterval: 30000,
-  });
+  return new RedisCache<T>(
+    redisUrl,
+    { maxSize: 10000, enableLru: false },
+    {
+      enablePipeline: true,
+      enableMetrics: true,
+      enableBatch: true,
+      healthCheckInterval: 30000,
+    },
+  );
 }
 
-export function createPerformanceRedisCache<T>(redisUrl?: string): RedisCache<T> {
-  return new RedisCache<T>(redisUrl, { maxSize: 10000, enableLru: false }, {
-    enablePipeline: true,
-    enableMetrics: true,
-    enableBatch: true,
-    healthCheckInterval: 20000,
-  });
+export function createPerformanceRedisCache<T>(
+  redisUrl?: string,
+): RedisCache<T> {
+  return new RedisCache<T>(
+    redisUrl,
+    { maxSize: 10000, enableLru: false },
+    {
+      enablePipeline: true,
+      enableMetrics: true,
+      enableBatch: true,
+      healthCheckInterval: 20000,
+    },
+  );
 }

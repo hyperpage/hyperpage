@@ -183,7 +183,7 @@ export default function SetupWizard() {
       <CardContent className="space-y-6">
         {/* Step 1 */}
         <div className="flex items-start gap-4 p-4 border rounded-lg">
-          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+          <div className="shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
             1
           </div>
           <div className="flex-1">
@@ -198,7 +198,7 @@ export default function SetupWizard() {
 
         {/* Step 2 */}
         <div className="flex items-start gap-4 p-4 border rounded-lg">
-          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+          <div className="shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
             2
           </div>
           <div className="flex-1">
@@ -215,7 +215,7 @@ export default function SetupWizard() {
 
         {/* Step 3 */}
         <div className="flex items-start gap-4 p-4 border rounded-lg">
-          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+          <div className="shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
             3
           </div>
           <div className="flex-1">
@@ -228,7 +228,7 @@ export default function SetupWizard() {
 
         {/* Step 4 */}
         <div className="flex items-start gap-4 p-4 border rounded-lg">
-          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+          <div className="shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
             4
           </div>
           <div className="flex-1">

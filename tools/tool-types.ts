@@ -97,6 +97,23 @@ export interface ToolRateLimitConfig {
   };
 }
 
+export interface ToolOAuthConfig {
+  userApiUrl: string;
+  authorizationHeader: "Bearer" | "token";
+  authorizationUrl: string; // OAuth 2.0 authorization endpoint
+  tokenUrl: string; // OAuth 2.0 token endpoint
+  scopes: string[]; // Default OAuth scopes
+  clientIdEnvVar: string; // Environment variable for OAuth client ID
+  clientSecretEnvVar: string; // Environment variable for OAuth client secret
+  userMapping?: {
+    id: string;
+    email: string;
+    username: string;
+    name: string;
+    avatar: string;
+  };
+}
+
 export interface ToolConfig {
   apiUrl?: string;
   webUrl?: string;
@@ -104,6 +121,7 @@ export interface ToolConfig {
   formatApiUrl?: (webUrl: string) => string; // Tool-owned URL formatter
   getWebUrl?: () => string; // Optional default web URL provider
   rateLimit?: ToolRateLimitConfig;
+  oauthConfig?: ToolOAuthConfig; // OAuth configuration for this tool
   [key: string]: unknown;
 }
 

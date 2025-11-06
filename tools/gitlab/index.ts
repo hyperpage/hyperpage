@@ -416,6 +416,26 @@ export const gitlabTool: Tool = {
       maxRetries: 3, // Reduced from 5 - GitLab Premium doesn't increase API limits significantly
       backoffStrategy: "linear", // Use linear backoff for progressive delays
     },
+    // OAuth configuration for registry-driven authentication
+    oauthConfig: {
+      userApiUrl: "/user", // Will be formatted with API base URL
+      authorizationHeader: "Bearer",
+      authorizationUrl: "https://gitlab.com/oauth/authorize",
+      tokenUrl: "https://gitlab.com/oauth/token",
+      scopes: [
+        "read_user", // Read user profile
+        "api", // Full API access
+      ],
+      clientIdEnvVar: "GITLAB_OAUTH_CLIENT_ID",
+      clientSecretEnvVar: "GITLAB_OAUTH_CLIENT_SECRET",
+      userMapping: {
+        id: "id",
+        email: "email",
+        username: "username",
+        name: "name",
+        avatar: "avatar_url",
+      },
+    },
   },
 };
 

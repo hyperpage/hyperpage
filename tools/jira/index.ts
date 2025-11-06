@@ -669,6 +669,27 @@ export const jiraTool: Tool = {
         cloud: { warningThreshold: 60, criticalThreshold: 80 }, // Optimized for Atlassian Cloud
       },
     },
+    // OAuth configuration for registry-driven authentication
+    oauthConfig: {
+      userApiUrl: "/rest/api/3/myself", // Jira's current user endpoint
+      authorizationHeader: "Bearer",
+      authorizationUrl: "/rest/oauth2/latest/authorize", // Will be formatted with base URL
+      tokenUrl: "/rest/oauth2/latest/token", // Will be formatted with base URL
+      scopes: [
+        "read:jira-work", // Read jira work items
+        "read:jira-user", // Read user information
+        "write:jira-work", // Create and edit jira work items
+      ],
+      clientIdEnvVar: "JIRA_OAUTH_CLIENT_ID",
+      clientSecretEnvVar: "JIRA_OAUTH_CLIENT_SECRET",
+      userMapping: {
+        id: "accountId",
+        email: "emailAddress",
+        username: "name",
+        name: "displayName",
+        avatar: "avatarUrls.48x48",
+      },
+    },
   },
 };
 

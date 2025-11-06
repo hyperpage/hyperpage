@@ -2,7 +2,99 @@
 
 ## Overview
 
-This document outlines the authentication system architecture for implementing OAuth integration in Hyperpage, extending the existing session management to include user authentication with secure token storage.
+This document outlines the authentication system architecture for implementing OAuth integration in Hyperpage, extending the existing session management to include user authentication with secure token storage. The system is built around a **registry-driven architecture** where OAuth configurations are completely managed through the tool registry.
+
+## Registry-Driven OAuth Configuration
+
+### Core Architecture
+
+The OAuth system is built on a registry-driven architecture where each tool owns its complete OAuth configuration. Unlike traditional approaches with hardcoded configurations, this system allows for:
+
+- **Dynamic OAuth Configuration**: Each tool defines its OAuth configuration in its own definition
+- **Extensible Provider Support**: Adding new OAuth providers requires zero changes to core OAuth logic
+- **Centralized Configuration Management**: All OAuth settings are discovered through the tool registry
+
+### Registry-Driven Configuration Structure
+
+```typescript
+// Each tool owns its complete OAuth configuration
+export const tool: Tool = {
+  name: "Tool Name",
+  config: {
+    oauthConfig: {
+      // OAuth URLs (absolute or relative for dynamic formatting)
+      authorizationUrl: "https://provider.com/oauth/authorize",
+      tokenUrl: "https://provider.com/oauth/token",
+      userApiUrl: "/user", // or "https://api.provider.com/user"
+
+      // Scopes required by this tool
+      scopes: ["read:user", "repo", "admin:org"],
+
+      // Environment variables for credentials
+      clientIdEnvVar: "TOOL_OAUTH_CLIENT_ID",
+      clientSecretEnvVar: "TOOL_OAUTH_CLIENT_SECRET",
+
+      // User mapping for profile data
+      userMapping: {
+        id: "id",
+        email: "email",
+        username: "username",
+        name: "name",
+        avatar: "avatar_url",
+      },
+
+      // Authorization header format
+      authorizationHeader: "Bearer", // or "token" for GitHub
+    },
+  },
+};
+```
+
+### Centralized OAuth Configuration Lookup
+
+The system uses a centralized function that dynamically retrieves OAuth configurations from the registry:
+
+```typescript
+// Registry-driven OAuth configuration lookup
+export function getOAuthConfig(
+  toolName: string,
+  baseUrl?: string,
+): OAuthConfig | null {
+  // Get tool from registry
+  const tool = toolRegistry[toolName.toLowerCase()];
+
+  if (!tool || !tool.config?.oauthConfig) {
+    return null;
+  }
+
+  const oauthConfig = tool.config.oauthConfig;
+
+  // Get environment variables for this tool
+  const clientId = process.env[oauthConfig.clientIdEnvVar];
+  const clientSecret = process.env[oauthConfig.clientSecretEnvVar];
+
+  if (!clientId || !clientSecret) {
+    return null;
+  }
+
+  // Build OAuth URLs with dynamic formatting support
+  const { authorizationUrl, tokenUrl } = buildOAuthUrls(
+    toolName,
+    oauthConfig,
+    baseUrl,
+  );
+
+  return {
+    clientId,
+    clientSecret,
+    authorizationUrl,
+    tokenUrl,
+    scopes: oauthConfig.scopes,
+    provider: toolName.toLowerCase(),
+    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/${toolName}/callback`,
+  };
+}
+```
 
 ## Architecture Components
 
@@ -187,13 +279,44 @@ export class SecureTokenStorage {
 
 ### 5. OAuth Flow Architecture
 
-#### Authentication Routes
+#### Registry-Driven Authentication Routes
 
 ```
 /api/auth/[tool]/initiate  - Start OAuth flow (redirect to provider)
 /api/auth/[tool]/callback  - Handle provider callback (exchange code for tokens)
 /api/auth/[tool]/status    - Check authentication status
 /api/auth/logout          - Clear authentication
+```
+
+#### Dynamic OAuth URL Building
+
+The system supports both absolute and relative OAuth URLs with dynamic base URL formatting:
+
+```typescript
+function buildOAuthUrls(
+  toolName: string,
+  oauthConfig: ToolOAuthConfig,
+  baseUrl?: string,
+): { authorizationUrl: string; tokenUrl: string } {
+  // For tools with relative URLs (like Jira), format with base URL
+  if (oauthConfig.authorizationUrl.startsWith("/")) {
+    const webUrl = baseUrl || getToolWebUrl(toolName);
+    if (!webUrl) {
+      throw new Error(`Base URL required for ${toolName} OAuth configuration`);
+    }
+
+    return {
+      authorizationUrl: `${webUrl}${oauthConfig.authorizationUrl}`,
+      tokenUrl: `${webUrl}${oauthConfig.tokenUrl}`,
+    };
+  }
+
+  // For absolute URLs, use as-is
+  return {
+    authorizationUrl: oauthConfig.authorizationUrl,
+    tokenUrl: oauthConfig.tokenUrl,
+  };
+}
 ```
 
 #### Flow State Management
@@ -205,10 +328,10 @@ export class SecureTokenStorage {
 
 ### 6. API Integration
 
-#### Tool API Authentication
+#### Registry-Driven Tool API Authentication
 
 ```typescript
-// Extend existing tool APIs with authentication
+// Extend existing tool APIs with authentication using registry configurations
 export async function authenticatedToolRequest(
   userId: string,
   toolName: string,
@@ -239,12 +362,12 @@ export async function authenticatedToolRequest(
 
 ### 7. UI/UX Architecture
 
-#### Authentication UI Components
+#### Registry-Driven Authentication UI Components
 
-- **Connect Button**: Prominent tool connection buttons with status indicators
+- **Dynamic Connect Buttons**: Generated from registry OAuth configurations
 - **Connection Status**: Sidebar indicators showing authenticated tools
 - **Error States**: User-friendly error messages for failed connections
-- **Permission Requests**: Clear explanation of requested OAuth permissions
+- **Permission Requests**: Tool-specific scope explanations from registry
 
 #### Responsive Design
 
@@ -285,12 +408,56 @@ export interface AuthAuditEvent {
 - OAuth flow rate limiting (5 attempts per minute per user IP)
 - Token refresh rate limiting to prevent abuse
 
-### 9. Migration Strategy
+## Tool Integration Examples
+
+### GitHub OAuth Configuration
+
+```typescript
+oauthConfig: {
+  authorizationUrl: "https://github.com/login/oauth/authorize",
+  tokenUrl: "https://github.com/login/oauth/access_token",
+  userApiUrl: "https://api.github.com/user",
+  scopes: ["read:user", "repo", "read:org", "read:discussion"],
+  clientIdEnvVar: "GITHUB_OAUTH_CLIENT_ID",
+  clientSecretEnvVar: "GITHUB_OAUTH_CLIENT_SECRET",
+  userMapping: {
+    id: "id",
+    email: "email",
+    username: "login",
+    name: "name",
+    avatar: "avatar_url"
+  },
+  authorizationHeader: "token"
+}
+```
+
+### Jira OAuth Configuration
+
+```typescript
+oauthConfig: {
+  authorizationUrl: "/rest/oauth2/latest/authorize", // Relative URL
+  tokenUrl: "/rest/oauth2/latest/token",             // Relative URL
+  userApiUrl: "/rest/api/3/myself",
+  scopes: ["read:jira-work", "read:jira-user", "write:jira-work"],
+  clientIdEnvVar: "JIRA_OAUTH_CLIENT_ID",
+  clientSecretEnvVar: "JIRA_OAUTH_CLIENT_SECRET",
+  userMapping: {
+    id: "accountId",
+    email: "emailAddress",
+    username: "name",
+    name: "displayName",
+    avatar: "avatarUrls.48x48"
+  },
+  authorizationHeader: "Bearer"
+}
+```
+
+## Migration Strategy
 
 #### Phased Implementation
 
 1. **Phase 1**: Anonymous usage remains unchanged
-2. **Phase 2**: Optional authentication UI with feature opt-in
+2. **Phase 2**: Optional authentication UI with registry-driven tool configuration
 3. **Phase 3**: Required authentication for sensitive operations
 4. **Phase 4**: Full authentication enforcement
 
@@ -300,4 +467,36 @@ export interface AuthAuditEvent {
 - Backward-compatible with existing anonymous sessions
 - Gradual migration of session data to database tables
 
-This architecture provides secure, scalable OAuth authentication while maintaining backward compatibility with existing anonymous usage patterns.
+#### Registry Migration
+
+- Existing tools can be upgraded incrementally to include OAuth configurations
+- New tools automatically benefit from registry-driven OAuth support
+- No breaking changes to existing tool APIs
+
+## Benefits of Registry-Driven Approach
+
+### Extensibility
+
+- Adding new OAuth providers requires only tool definition updates
+- Zero changes to core OAuth authentication logic
+- Consistent configuration patterns across all tools
+
+### Maintainability
+
+- OAuth configurations co-located with tool logic
+- Single source of truth for each tool's OAuth requirements
+- Easy to modify OAuth settings without touching core system
+
+### Type Safety
+
+- Full TypeScript support for all OAuth configurations
+- Compile-time validation of OAuth settings
+- Auto-completion and IDE support for OAuth properties
+
+### Testing
+
+- Easy to test OAuth configurations in isolation
+- Mock OAuth providers can be created for testing
+- Registry-driven testing simplifies end-to-end scenarios
+
+This architecture provides secure, scalable OAuth authentication while maintaining backward compatibility with existing anonymous usage patterns and providing a foundation for easy extension to new OAuth providers.
