@@ -11,7 +11,7 @@ import {
   IntegrationTestEnvironment,
   TestUserManager,
   OAuthTestCredentials,
-} from "../../lib/test-credentials";
+} from "../../shared/test-credentials";
 import logger from "../../../lib/logger";
 // Define interface for test session data to replace 'any' types
 interface TestSession {

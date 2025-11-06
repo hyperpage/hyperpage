@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
 import {
   IntegrationTestEnvironment,
   OAuthTestCredentials,
-} from "../../lib/test-credentials";
+} from "../../shared/test-credentials";
 
 describe("Jira OAuth Integration", () => {
   let testEnv: IntegrationTestEnvironment;

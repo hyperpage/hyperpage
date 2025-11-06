@@ -9,7 +9,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
   IntegrationTestEnvironment,
   OAuthTestCredentials,
-} from "../../lib/test-credentials";
+} from "../../shared/test-credentials";
 import { TestBrowser } from "./utils/test-browser";
 import { UserJourneySimulator } from "./utils/user-journey-simulator";
 

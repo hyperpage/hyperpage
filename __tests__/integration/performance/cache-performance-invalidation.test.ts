@@ -10,7 +10,7 @@ import {
 import {
   IntegrationTestEnvironment,
   TestUserManager,
-} from "../../lib/test-credentials";
+} from "../../shared/test-credentials";
 import logger from "../../../lib/logger";
 
 // Test-specific type definitions to avoid 'any' usage

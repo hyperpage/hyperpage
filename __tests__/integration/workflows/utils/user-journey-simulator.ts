@@ -5,7 +5,10 @@
  * and authentication providers.
  */
 
-import { OAuthTestCredentials } from "../../../lib/test-credentials";
+import {
+  TEST_CREDENTIALS,
+  OAuthTestCredentials,
+} from "../../../shared/test-credentials";
 import { TestBrowser } from "./test-browser";
 
 export interface OAuthResult {
@@ -82,14 +85,11 @@ export class UserJourneySimulator {
    */
   async completeOAuthFlow(
     provider: string,
-    credentials: OAuthTestCredentials,
+    credentials: OAuthTestCredentials = TEST_CREDENTIALS.oauth as OAuthTestCredentials,
   ): Promise<OAuthResult> {
     try {
       // Check for invalid credentials
-      if (
-        credentials.clientId === "invalid-client-id" ||
-        !credentials.clientId
-      ) {
+      if (!credentials.clientId || credentials.clientId.length === 0) {
         return {
           success: false,
           redirectUrl: "",
@@ -123,7 +123,7 @@ export class UserJourneySimulator {
    */
   async addProvider(
     provider: string,
-    credentials: OAuthTestCredentials,
+    credentials: OAuthTestCredentials = TEST_CREDENTIALS.oauth as OAuthTestCredentials,
   ): Promise<OAuthResult> {
     if (!this.browser.getSessionData("authenticated")) {
       return {
@@ -295,7 +295,7 @@ export class UserJourneySimulator {
    */
   async completeSetupWizard(
     provider: string,
-    credentials: OAuthTestCredentials,
+    credentials: OAuthTestCredentials = TEST_CREDENTIALS.oauth as OAuthTestCredentials,
   ): Promise<boolean> {
     try {
       // Step 1: Provider selection
