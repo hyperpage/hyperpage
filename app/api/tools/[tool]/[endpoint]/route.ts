@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateInput, validateTool, executeHandler } from "./shared";
-import { performanceMiddleware } from "../../../../../lib/monitoring/performance-middleware";
-import logger from "../../../../../lib/logger";
+import {
+  validateInput,
+  validateTool,
+  executeHandler,
+} from "@/app/api/tools/[tool]/[endpoint]/shared";
+import { performanceMiddleware } from "@/lib/monitoring/performance-middleware";
+import logger from "@/lib/logger";
 
 // Centralized API handler that routes through the tool registry
 export async function GET(

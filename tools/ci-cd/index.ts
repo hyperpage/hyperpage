@@ -1,8 +1,8 @@
 import React from "react";
 import { RotateCcw } from "lucide-react";
-import { Tool, ToolConfig } from "../tool-types";
-import { registerTool } from "../registry";
-import { getEnabledTools } from "../index";
+import { Tool, ToolConfig } from "@/tools/tool-types";
+import { registerTool } from "@/tools/registry";
+import { getEnabledTools } from "@/tools/index";
 
 export const ciCdTool: Tool = {
   name: "CI/CD",

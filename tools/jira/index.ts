@@ -1,12 +1,12 @@
 import React from "react";
 import { Kanban } from "lucide-react";
-import { Tool, ToolConfig } from "../tool-types";
-import { JiraApiIssue } from "./types";
-import { registerTool } from "../registry";
-import { detectJiraInstanceSize } from "../../lib/rate-limit-utils";
-import { MemoryCache } from "../../lib/cache/memory-cache";
-import { createIPv4Fetch } from "../../lib/ipv4-fetch";
-import logger from "../../lib/logger";
+import { Tool, ToolConfig } from "@/tools/tool-types";
+import { JiraApiIssue } from "@/tools/jira/types";
+import { registerTool } from "@/tools/registry";
+import { detectJiraInstanceSize } from "@/lib/rate-limit-utils";
+import { MemoryCache } from "@/lib/cache/memory-cache";
+import { createIPv4Fetch } from "@/lib/ipv4-fetch";
+import logger from "@/lib/logger";
 
 // Advisory locking for concurrent requests to prevent API storms
 class RequestDeduper<T = unknown> {

@@ -8,12 +8,12 @@
  */
 
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { MemoryJobQueue } from "../../../../lib/jobs/memory-job-queue";
-import { JobStatus, JobPriority, JobType } from "../../../../lib/types/jobs";
-import { generateJobId } from "../../../../lib/jobs/memory-job-queue";
+import { MemoryJobQueue } from "@/lib/jobs/memory-job-queue";
+import { JobStatus, JobPriority, JobType } from "@/lib/types/jobs";
+import { generateJobId } from "@/lib/jobs/memory-job-queue";
 
 // Mock the database module
-vi.mock("../../../../lib/database", () => ({
+vi.mock("@/lib/database", () => ({
   db: {
     insert: vi.fn(() => ({ values: vi.fn() })),
     select: vi.fn(() => ({

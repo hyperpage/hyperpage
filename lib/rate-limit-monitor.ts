@@ -8,7 +8,7 @@ import type {
   GitHubRateLimitResponse,
   RateLimitStatus,
 } from "./types/rate-limit";
-import { toolRegistry } from "../tools/registry";
+import { toolRegistry } from "@/tools/registry";
 
 // In-memory cache with TTL support
 let rateLimitCache: RateLimitCache = {};

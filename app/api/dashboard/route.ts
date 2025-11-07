@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   performanceDashboard,
   PerformanceThresholds,
-} from "../../../lib/monitoring/performance-dashboard";
-import logger from "../../../lib/logger";
+} from "@/lib/monitoring/performance-dashboard";
+import logger from "@/lib/logger";
 
 /**
  * GET /api/dashboard - Get real-time performance dashboard metrics

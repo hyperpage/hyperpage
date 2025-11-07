@@ -2,11 +2,11 @@ import type {
   ICache,
   CacheFactoryConfig,
   CacheMetrics,
-} from "./cache-interface";
-import { MemoryCache } from "./memory-cache";
-import { RedisCache } from "./redis-cache";
-import { CacheBackend, CacheError } from "./cache-interface";
-import logger from "../logger";
+} from "@/lib/cache/cache-interface";
+import { MemoryCache } from "@/lib/cache/memory-cache";
+import { RedisCache } from "@/lib/cache/redis-cache";
+import { CacheBackend, CacheError } from "@/lib/cache/cache-interface";
+import logger from "@/lib/logger";
 
 /**
  * Factory for creating and managing cache instances across different backends.

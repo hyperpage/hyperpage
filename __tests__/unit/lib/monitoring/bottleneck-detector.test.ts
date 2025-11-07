@@ -1,21 +1,21 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import type { MockedFunction } from "vitest";
-import { BottleneckDetector } from "../../../../lib/monitoring/bottleneck-detector";
-import { BOTTLENECK_PATTERNS } from "../../../../lib/monitoring/bottleneck-patterns";
+import { BottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
+import { BOTTLENECK_PATTERNS } from "@/lib/monitoring/bottleneck-patterns";
 import {
   performanceDashboard,
   DashboardMetrics,
-} from "../../../../lib/monitoring/performance-dashboard";
+} from "@/lib/monitoring/performance-dashboard";
 
 // Mock the alert service to avoid actual alerting in tests
-vi.mock("../../../../lib/alerting/alert-service", () => ({
+vi.mock("@/lib/alerting/alert-service", () => ({
   alertService: {
     processAlert: vi.fn(),
   },
 }));
 
 // Mock performance dashboard
-vi.mock("../../../../lib/monitoring/performance-dashboard", () => ({
+vi.mock("@/lib/monitoring/performance-dashboard", () => ({
   performanceDashboard: {
     getDashboardMetrics: vi.fn(),
   },
@@ -403,7 +403,7 @@ describe("BottleneckDetector", () => {
     });
 
     it("should check condition breaches accurately", () => {
-      const condition: import("../../../../lib/monitoring/bottleneck-detector").BottleneckCondition =
+      const condition: import("@/lib/monitoring/bottleneck-detector").BottleneckCondition =
         {
           operator: "gt",
           metric: "test",
@@ -743,7 +743,7 @@ describe("BottleneckDetector", () => {
   describe("Bottleneck Detection and Management", () => {
     it("should create detected bottlenecks correctly", () => {
       const pattern = BOTTLENECK_PATTERNS[0];
-      const analysis: import("../../../../lib/monitoring/bottleneck-detector").BottleneckAnalysis =
+      const analysis: import("@/lib/monitoring/bottleneck-detector").BottleneckAnalysis =
         {
           confidence: 85,
           impact: "moderate" as const,
@@ -779,7 +779,7 @@ describe("BottleneckDetector", () => {
 
     it("should manage active bottlenecks", () => {
       const pattern = BOTTLENECK_PATTERNS[0];
-      const analysis: import("../../../../lib/monitoring/bottleneck-detector").BottleneckAnalysis =
+      const analysis: import("@/lib/monitoring/bottleneck-detector").BottleneckAnalysis =
         {
           confidence: 85,
           impact: "moderate" as const,

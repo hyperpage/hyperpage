@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { IntegrationTestEnvironment } from "../../shared/test-credentials";
-import { TestBrowser } from "./utils/test-browser";
-import { UserJourneySimulator } from "./utils/user-journey-simulator";
+import { IntegrationTestEnvironment } from "@/__tests__/shared/test-credentials";
+import { TestBrowser } from "@/__tests__/integration/workflows/utils/test-browser";
+import { UserJourneySimulator } from "@/__tests__/integration/workflows/utils/user-journey-simulator";
 
 export interface SessionState {
   id: string;

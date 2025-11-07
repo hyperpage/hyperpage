@@ -11,8 +11,8 @@ import {
   IntegrationTestEnvironment,
   TestUserManager,
   TestUserData,
-} from "../../shared/test-credentials";
-import logger from "../../../lib/logger";
+} from "@/lib/../__tests__/shared/test-credentials";
+import logger from "@/lib/logger";
 
 describe("Multi-User Load Testing", () => {
   let testEnv: IntegrationTestEnvironment;

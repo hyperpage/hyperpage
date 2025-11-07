@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { defaultCache } from "../../cache/cache-factory";
-import { generateCacheKey } from "../../cache/memory-cache";
-import logger from "../../logger";
+import { defaultCache } from "@/lib/cache/cache-factory";
+import { generateCacheKey } from "@/lib/cache/memory-cache";
+import logger from "@/lib/logger";
 
 export interface InvalidationRule {
   /** Pattern to match cache keys for invalidation */

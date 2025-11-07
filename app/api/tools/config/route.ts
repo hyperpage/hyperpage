@@ -12,9 +12,9 @@ import {
   deleteToolConfiguration,
   getAllToolConfigurations,
   toggleToolState,
-} from "../../../../lib/tool-config-manager";
-import { toolRegistry } from "../../../../tools/registry";
-import logger from "../../../../lib/logger";
+} from "@/lib/tool-config-manager";
+import { toolRegistry } from "@/tools/registry";
+import logger from "@/lib/logger";
 
 /**
  * GET /api/tools/config - Get all tool configurations or specific tool config

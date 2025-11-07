@@ -1,10 +1,10 @@
 // Rate limit monitoring endpoint for all platforms
 
 import { NextRequest, NextResponse } from "next/server";
-import logger from "../../../../lib/logger";
-import { toolRegistry } from "../../../../tools/registry";
-import { getServerRateLimitStatus } from "../../../../lib/rate-limit-service";
-import { Tool } from "../../../../tools/tool-types";
+import logger from "@/lib/logger";
+import { toolRegistry } from "@/tools/registry";
+import { getServerRateLimitStatus } from "@/lib/rate-limit-service";
+import { Tool } from "@/tools/tool-types";
 
 /**
  * GET /api/rate-limit/[platform] - Get rate limit status for a specific platform

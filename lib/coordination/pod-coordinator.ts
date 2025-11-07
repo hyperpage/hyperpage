@@ -1,6 +1,6 @@
-import logger from "../logger";
-import { CacheFactory } from "../cache/cache-factory";
-import { CacheBackend } from "../cache/cache-interface";
+import logger from "@/lib/logger";
+import { CacheFactory } from "@/lib/cache/cache-factory";
+import { CacheBackend } from "@/lib/cache/cache-interface";
 
 export interface CoordinationMessage {
   id: string;

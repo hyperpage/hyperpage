@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
-import {
-  alertService,
-  AlertType,
-} from "../../../../lib/alerting/alert-service";
+import { alertService } from "@/lib/alerting/alert-service";
+import { AlertType } from "@/lib/monitoring/performance-dashboard";
 
 // Simple test to verify alert processing works correctly
 describe("AlertService", () => {

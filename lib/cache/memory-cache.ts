@@ -3,7 +3,7 @@ import type {
   CacheEntry,
   CacheOptions,
   CacheStats,
-} from "./cache-interface";
+} from "@/lib/cache/cache-interface";
 
 /**
  * In-memory cache with TTL support for API response caching.

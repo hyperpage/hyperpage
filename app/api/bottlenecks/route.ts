@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { bottleneckDetector } from "../../../lib/monitoring/bottleneck-detector";
+import { bottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
 import {
   DetectedBottleneck,
   BottleneckHistory,
-} from "../../../lib/monitoring/bottleneck-detector";
-import logger from "../../../lib/logger";
+} from "@/lib/monitoring/bottleneck-detector";
+import logger from "@/lib/logger";
 
 /**
  * GET /api/bottlenecks - Get all active and recent bottleneck detections

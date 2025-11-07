@@ -2,18 +2,8 @@
  * Alert Service for handling system alerts and notifications
  */
 
-import logger from "../logger";
-
-export enum AlertType {
-  HIGH_RESPONSE_TIME = "HIGH_RESPONSE_TIME",
-  HIGH_ERROR_RATE = "HIGH_ERROR_RATE",
-  CACHE_LOW_HIT_RATE = "CACHE_LOW_HIT_RATE",
-  MEMORY_HIGH_USAGE = "MEMORY_HIGH_USAGE",
-  COMPRESSION_LOW_RATIO = "COMPRESSION_LOW_RATIO",
-  BATCH_HIGH_LATENCY = "BATCH_HIGH_LATENCY",
-  RESOURCE_EXHAUSTION = "RESOURCE_EXHAUSTION",
-  CIRCUIT_BREAKER_OPEN = "CIRCUIT_BREAKER_OPEN",
-}
+import logger from "@/lib/logger";
+import { AlertType } from "@/lib/monitoring/performance-dashboard";
 
 export interface Alert {
   id: string;

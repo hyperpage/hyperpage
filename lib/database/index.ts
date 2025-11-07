@@ -5,15 +5,15 @@
  * Provides persistence for jobs, rate limits, configurations, and application state.
  */
 
-import { runMigrations } from "./migrate";
+import { runMigrations } from "@/lib/database/migrate";
 import {
   getAppDatabase,
   closeAllConnections,
   getDatabaseStats,
   checkDatabaseConnectivity,
-} from "./connection";
-import { loadPersistedRateLimits } from "../rate-limit-service";
-import { loadToolConfigurations } from "../tool-config-manager";
+} from "@/lib/database/connection";
+import { loadPersistedRateLimits } from "@/lib/rate-limit-service";
+import { loadToolConfigurations } from "@/lib/tool-config-manager";
 
 // Get application database instance (singleton)
 const { drizzle: db } = getAppDatabase();

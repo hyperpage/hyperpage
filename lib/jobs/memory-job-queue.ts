@@ -14,11 +14,11 @@ import {
   JobPriority,
   JobType,
   JobError,
-} from "../types/jobs";
-import { db } from "../database";
-import { jobs, Job, NewJob } from "../database/schema";
+} from "@/lib/types/jobs";
+import { db } from "@/lib/database";
+import { jobs, Job, NewJob } from "@/lib/database/schema";
 import { eq, and, inArray, lt } from "drizzle-orm";
-import logger from "../logger";
+import logger from "@/lib/logger";
 
 /**
  * Priority queue implementation for job scheduling

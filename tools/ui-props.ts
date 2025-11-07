@@ -1,5 +1,5 @@
 import React from "react";
-import { toolRegistry } from "./registry";
+import { toolRegistry } from "@/tools/registry";
 
 // Helper function to normalize tool name for registry lookup
 const normalizeToolName = (name: string): string => {

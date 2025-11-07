@@ -3,9 +3,9 @@
  * Uses tool registry for dynamic OAuth configurations
  */
 
-import logger from "./logger";
-import { toolRegistry } from "../tools/registry";
-import { ToolOAuthConfig } from "../tools/tool-types";
+import logger from "@/lib/logger";
+import { toolRegistry } from "@/tools/registry";
+import { ToolOAuthConfig } from "@/tools/tool-types";
 
 export interface OAuthConfig {
   clientId: string;

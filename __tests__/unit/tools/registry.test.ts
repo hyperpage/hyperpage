@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { registerTool, toolRegistry } from "../../../tools/registry";
-import { Tool } from "../../../tools/tool-types";
+import { registerTool, toolRegistry } from "@/tools/registry";
+import { Tool } from "@/tools/tool-types";
 
 // Clear registry before each test
 beforeEach(() => {

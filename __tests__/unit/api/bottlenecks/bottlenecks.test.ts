@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 // Mock the bottleneck detector
-vi.mock("../../lib/monitoring/bottleneck-detector", () => ({
+vi.mock("@/lib/monitoring/bottleneck-detector", () => ({
   bottleneckDetector: {
     getActiveBottlenecks: vi.fn(),
     getBottleneckAnalysis: vi.fn(),
@@ -11,8 +11,8 @@ vi.mock("../../lib/monitoring/bottleneck-detector", () => ({
   },
 }));
 
-import { GET, POST } from "../../../../app/api/bottlenecks/route";
-import { bottleneckDetector } from "../../../../lib/monitoring/bottleneck-detector";
+import { GET, POST } from "@/app/api/bottlenecks/route";
+import { bottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
 
 // Type definitions for test data
 interface BottleneckMetrics {

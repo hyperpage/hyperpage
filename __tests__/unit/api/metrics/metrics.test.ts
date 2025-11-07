@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GET } from "../../../../app/api/metrics/route";
-import { defaultCache } from "../../../../lib/cache/memory-cache";
-import { getRateLimitStatus } from "../../../../lib/rate-limit-monitor";
-import { getActivePlatforms } from "../../../../lib/rate-limit-utils";
+import { GET } from "@/app/api/metrics/route";
+import { defaultCache } from "@/lib/cache/memory-cache";
+import { getRateLimitStatus } from "@/lib/rate-limit-monitor";
+import { getActivePlatforms } from "@/lib/rate-limit-utils";
 
 // Mock the rate limit monitor to fix vi.mocked() issues
-vi.mock("../../../../lib/rate-limit-monitor", () => ({
+vi.mock("@/lib/rate-limit-monitor", () => ({
   getRateLimitStatus: vi.fn(),
 }));
 
@@ -46,19 +46,19 @@ vi.mock("prom-client", () => {
 });
 
 // Mock cache stats
-vi.mock("../../../../lib/cache/memory-cache", () => ({
+vi.mock("@/lib/cache/memory-cache", () => ({
   defaultCache: {
     getStats: vi.fn(),
   },
 }));
 
 // Mock rate limit utilities
-vi.mock("../../../../lib/rate-limit-utils", () => ({
+vi.mock("@/lib/rate-limit-utils", () => ({
   getActivePlatforms: vi.fn(),
 }));
 
 // Mock tool registry
-vi.mock("../../../../tools/registry", () => ({
+vi.mock("@/tools/registry", () => ({
   toolRegistry: {},
 }));
 

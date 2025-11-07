@@ -1,12 +1,12 @@
-import { RedisClient } from "./redis-client";
+import { RedisClient } from "@/lib/cache/redis-client";
 import type {
   ICache,
   CacheEntry,
   CacheOptions,
   CacheStats,
-} from "./cache-interface";
-import { CacheBackend, CacheError } from "./cache-interface";
-import logger from "../logger";
+} from "@/lib/cache/cache-interface";
+import { CacheBackend, CacheError } from "@/lib/cache/cache-interface";
+import logger from "@/lib/logger";
 
 /**
  * Configuration for advanced Redis features.

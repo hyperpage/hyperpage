@@ -4,7 +4,7 @@ import type {
   RateLimitStatus,
   PlatformRateLimits,
   RateLimitUsage,
-} from "./types/rate-limit";
+} from "@/lib/types/rate-limit";
 
 /**
  * Calculate dynamic poll interval based on rate limit usage and time-of-day

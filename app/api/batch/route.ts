@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   defaultBatchingMiddleware,
   isBatchRequest,
-} from "../../../lib/api/batching/batching-middleware";
+} from "@/lib/api/batching/batching-middleware";
 import logger from "@/lib/logger";
 
 /**

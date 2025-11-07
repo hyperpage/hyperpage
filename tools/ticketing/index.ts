@@ -1,9 +1,9 @@
 import React from "react";
 import { Ticket } from "lucide-react";
-import { Tool, ToolConfig, TransformedIssue } from "../tool-types";
-import { registerTool } from "../registry";
+import { Tool, ToolConfig, TransformedIssue } from "@/tools/tool-types";
+import { registerTool } from "@/tools/registry";
 
-import { getEnabledTools } from "../index";
+import { getEnabledTools } from "@/tools/index";
 
 export const ticketingTool: Tool = {
   name: "Ticketing",

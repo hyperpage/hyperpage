@@ -1,4 +1,4 @@
-import { BottleneckPattern } from "./bottleneck-detector";
+import { BottleneckPattern } from "@/lib/monitoring/bottleneck-detector";
 
 /**
  * Predefined bottleneck detection patterns for enterprise performance monitoring

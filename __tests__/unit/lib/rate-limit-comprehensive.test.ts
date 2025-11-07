@@ -8,7 +8,7 @@ import {
   getRateLimitStatus,
   clearRateLimitCache,
   getCacheStats,
-} from "../../../lib/rate-limit-monitor";
+} from "@/lib/rate-limit-monitor";
 
 import {
   getDynamicInterval,
@@ -19,13 +19,13 @@ import {
   getActivityAccelerationFactor,
   clampInterval,
   formatInterval,
-} from "../../../lib/rate-limit-utils";
+} from "@/lib/rate-limit-utils";
 
-import { PlatformRateLimits } from "../../../lib/types/rate-limit";
-import type { RateLimitStatus } from "../../../lib/types/rate-limit";
+import { PlatformRateLimits } from "@/lib/types/rate-limit";
+import type { RateLimitStatus } from "@/lib/types/rate-limit";
 
-import { toolRegistry } from "../../../tools/registry";
-import { Tool } from "../../../tools/tool-types";
+import { toolRegistry } from "@/tools/registry";
+import { Tool } from "@/tools/tool-types";
 
 // TypeScript-safe global fetch access
 const safeGlobal = globalThis as unknown as { fetch?: unknown };

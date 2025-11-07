@@ -2,8 +2,8 @@
 
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useCallback, useState, useEffect } from "react";
-import { Tool, ToolData } from "../../../tools/tool-types";
-import { getToolDataKey } from "../../../tools";
+import { Tool, ToolData } from "@/tools/tool-types";
+import { getToolDataKey } from "@/tools";
 import {
   getDynamicInterval,
   getActivePlatforms,
@@ -12,8 +12,11 @@ import {
   getGitHubWeightedUsage,
   getActivityAccelerationFactor,
   clampInterval,
-} from "../../../lib/rate-limit-utils";
-import { useMultipleRateLimits, RateLimitStatus } from "./useRateLimit";
+} from "@/lib/rate-limit-utils";
+import {
+  useMultipleRateLimits,
+  RateLimitStatus,
+} from "@/app/components/hooks/useRateLimit";
 
 interface UseToolQueriesProps {
   enabledTools: Omit<Tool, "handlers">[];

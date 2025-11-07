@@ -5,9 +5,9 @@
  * data refresh, and rate limit updates with sensible defaults.
  */
 
-import { IJobFactory, IJob, JobType, JobPriority } from "../types/jobs";
-import { generateJobId } from "./memory-job-queue";
-import { Tool } from "../../tools/tool-types";
+import { IJobFactory, IJob, JobType, JobPriority } from "@/lib/types/jobs";
+import { generateJobId } from "@/lib/jobs/memory-job-queue";
+import { Tool } from "@/tools/tool-types";
 
 /**
  * Job factory implementation

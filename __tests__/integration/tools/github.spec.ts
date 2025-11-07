@@ -18,8 +18,8 @@ import {
   IntegrationTestEnvironment,
   OAuthTestCredentials,
   isServerAvailable,
-} from "../../shared/test-credentials";
-import logger from "../../../lib/logger";
+} from "@/lib/../__tests__/shared/test-credentials";
+import logger from "@/lib/logger";
 
 // Check server availability before defining tests
 const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";

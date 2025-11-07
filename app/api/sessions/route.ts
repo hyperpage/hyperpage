@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionManager } from "../../../lib/sessions/session-manager";
+import { sessionManager } from "@/lib/sessions/session-manager";
 import { headers } from "next/headers";
-import logger from "../../../lib/logger";
+import logger from "@/lib/logger";
 
 /**
  * Session Management API

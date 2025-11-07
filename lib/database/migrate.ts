@@ -5,9 +5,12 @@
  * Supports up/down migrations with transaction safety and rollback capabilities.
  */
 
-import { internalDb } from "./connection";
-import { MIGRATIONS_REGISTRY, getMigrationNames } from "./migrations";
-import logger from "../logger";
+import { internalDb } from "@/lib/database/connection";
+import {
+  MIGRATIONS_REGISTRY,
+  getMigrationNames,
+} from "@/lib/database/migrations";
+import logger from "@/lib/logger";
 
 // Create migration tracking table if it doesn't exist
 function ensureMigrationTable() {

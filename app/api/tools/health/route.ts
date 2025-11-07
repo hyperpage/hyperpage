@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getAllTools } from "../../../../tools";
+import { getAllTools } from "@/tools";
 import {
   testToolConnectivity,
   getAllToolsHealth,
   getCircuitBreakerStatus,
-} from "../../../../tools/validation";
-import logger from "../../../../lib/logger";
+} from "@/tools/validation";
+import logger from "@/lib/logger";
 
 /**
  * Tool Health API Endpoint

@@ -11,10 +11,10 @@ import {
 import {
   getRateLimitStatus,
   clearRateLimitCache,
-} from "../../../lib/rate-limit-monitor";
-import { getDynamicInterval } from "../../../lib/rate-limit-utils";
-import { toolRegistry } from "../../../tools/registry";
-import type { RateLimitStatus } from "../../../lib/types/rate-limit";
+} from "@/lib/rate-limit-monitor";
+import { getDynamicInterval } from "@/lib/rate-limit-utils";
+import { toolRegistry } from "@/tools/registry";
+import type { RateLimitStatus } from "@/lib/types/rate-limit";
 
 // Type definitions to replace 'any' types
 interface MockToolHandlers {

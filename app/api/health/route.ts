@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
-import { defaultCache } from "../../../lib/cache/memory-cache";
-import { getActivePlatforms } from "../../../lib/rate-limit-utils";
-import { getServerRateLimitStatus } from "../../../lib/rate-limit-service";
-import { toolRegistry } from "../../../tools/registry";
+import { defaultCache } from "@/lib/cache/memory-cache";
+import { getActivePlatforms } from "@/lib/rate-limit-utils";
+import { getServerRateLimitStatus } from "@/lib/rate-limit-service";
+import { toolRegistry } from "@/tools/registry";
 
 export async function GET() {
   const cacheStats = await defaultCache.getStats();

@@ -1,9 +1,13 @@
 import React from "react";
 import { Github } from "lucide-react";
-import { Tool, ToolConfig, TransformedIssue } from "../tool-types";
-import { GitHubSearchItem, GitHubRepository, GitHubWorkflowRun } from "./types";
-import { registerTool } from "../registry";
-import { createIPv4Fetch } from "../../lib/ipv4-fetch";
+import { Tool, ToolConfig, TransformedIssue } from "@/tools/tool-types";
+import {
+  GitHubSearchItem,
+  GitHubRepository,
+  GitHubWorkflowRun,
+} from "@/tools/github/types";
+import { registerTool } from "@/tools/registry";
+import { createIPv4Fetch } from "@/lib/ipv4-fetch";
 
 export const githubTool: Tool = {
   name: "GitHub",

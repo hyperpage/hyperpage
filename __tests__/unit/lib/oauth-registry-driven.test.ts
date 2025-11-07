@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { getAllTools, getTool } from "../../../tools/registry";
-import { getOAuthConfig } from "../../../lib/oauth-config";
-import type { Tool } from "../../../tools/tool-types";
+import { getAllTools, getTool } from "@/tools/registry";
+import { getOAuthConfig } from "@/lib/oauth-config";
+import type { Tool } from "@/tools/tool-types";
 
 describe("Registry-Driven OAuth Configuration", () => {
   let tools: Tool[] = [];
@@ -9,9 +9,9 @@ describe("Registry-Driven OAuth Configuration", () => {
   beforeAll(async () => {
     // Import tools to trigger registry registration
     await Promise.all([
-      import("../../../tools/github/index"),
-      import("../../../tools/gitlab/index"),
-      import("../../../tools/jira/index"),
+      import("@/tools/github/index"),
+      import("@/tools/gitlab/index"),
+      import("@/tools/jira/index"),
     ]);
 
     tools = await getAllTools();

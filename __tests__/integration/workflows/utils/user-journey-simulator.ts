@@ -8,8 +8,8 @@
 import {
   TEST_CREDENTIALS,
   OAuthTestCredentials,
-} from "../../../shared/test-credentials";
-import { TestBrowser } from "./test-browser";
+} from "@/__tests__/shared/test-credentials";
+import { TestBrowser } from "@/__tests__/integration/workflows/utils/test-browser";
 
 export interface OAuthResult {
   success: boolean;

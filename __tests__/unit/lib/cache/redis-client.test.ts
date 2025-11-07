@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RedisClient, redisClient } from "../../../../lib/cache/redis-client";
-import logger from "../../../../lib/logger";
+import { RedisClient, redisClient } from "@/lib/cache/redis-client";
+import logger from "@/lib/logger";
 
 // Mock the logger
-vi.mock("../../../../lib/logger", () => ({
+vi.mock("@/lib/logger", () => ({
   default: {
     error: vi.fn(),
     warn: vi.fn(),

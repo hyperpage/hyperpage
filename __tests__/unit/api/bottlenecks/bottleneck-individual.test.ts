@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 // Mock the bottleneck detector
-vi.mock("../../lib/monitoring/bottleneck-detector", () => ({
+vi.mock("@/lib/monitoring/bottleneck-detector", () => ({
   bottleneckDetector: {
     getBottleneck: vi.fn(),
     getCorrelationData: vi.fn(),
@@ -11,11 +11,11 @@ vi.mock("../../lib/monitoring/bottleneck-detector", () => ({
   },
 }));
 
-import { GET, PATCH, DELETE } from "../../../../app/api/bottlenecks/[id]/route";
-import { bottleneckDetector } from "../../../../lib/monitoring/bottleneck-detector";
+import { GET, PATCH, DELETE } from "@/app/api/bottlenecks/[id]/route";
+import { bottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
 
 // Mock the bottleneck patterns
-vi.mock("../../lib/monitoring/bottleneck-patterns", () => ({
+vi.mock("@/lib/monitoring/bottleneck-patterns", () => ({
   BOTTLENECK_PATTERNS: [
     {
       id: "memory-leak",

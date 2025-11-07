@@ -3,7 +3,7 @@
  * Comprehensive error management for OAuth flows with user-friendly messaging
  */
 
-import logger from "./logger";
+import logger from "@/lib/logger";
 
 export enum OAuthErrorType {
   CONFIGURATION_ERROR = "CONFIGURATION_ERROR",

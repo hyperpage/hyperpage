@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { CacheFactory } from "../../../../lib/cache/cache-factory";
-import { CacheBackend, ICache } from "../../../../lib/cache/cache-interface";
-import logger from "../../../../lib/logger";
+import { CacheFactory } from "@/lib/cache/cache-factory";
+import { CacheBackend, ICache } from "@/lib/cache/cache-interface";
+import logger from "@/lib/logger";
 
 describe("Cache Integration", () => {
   let memoryCache: ICache<unknown>;

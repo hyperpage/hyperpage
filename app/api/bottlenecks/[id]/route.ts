@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { bottleneckDetector } from "../../../../lib/monitoring/bottleneck-detector";
+import { bottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
 import {
   DetectedBottleneck,
   BottleneckRecommendation,
   Correlation,
-} from "../../../../lib/monitoring/bottleneck-detector";
-import { BOTTLENECK_PATTERNS } from "../../../../lib/monitoring/bottleneck-patterns";
-import logger from "../../../../lib/logger";
+} from "@/lib/monitoring/bottleneck-detector";
+import { BOTTLENECK_PATTERNS } from "@/lib/monitoring/bottleneck-patterns";
+import logger from "@/lib/logger";
 
 /**
  * GET /api/bottlenecks/[id] - Get detailed information about a specific bottleneck

@@ -1,0 +1,173 @@
+#!/bin/bash
+# Comprehensive script to convert all relative imports to path aliases
+
+set -e
+
+echo "🔧 Starting comprehensive relative import conversion..."
+
+# Create a backup of the current state
+BACKUP_DIR="backup-$(date +%Y%m%d-%H%M%S)"
+echo "Creating backup in $BACKUP_DIR..."
+mkdir -p "$BACKUP_DIR"
+rsync -av --exclude=node_modules/ --exclude=.git/ --exclude="backup-*/" --exclude=scripts/ . "$BACKUP_DIR/"
+
+# Counter for changes
+CHANGES_MADE=0
+
+# Function to convert relative imports in a single file
+convert_file_imports() {
+    local file="$1"
+    local changes_in_file=0
+
+    # Skip certain files and directories
+    if [[ "$file" =~ \.(test|spec)\.ts$ ]] || [[ "$file" =~ \.(test|spec)\.tsx$ ]]; then
+        return 0
+    fi
+
+    # Skip script files to prevent recursive modification
+    if [[ "$file" =~ ^scripts/ ]]; then
+        return 0
+    fi
+
+    # Process each type of relative import
+    # 1. Fix imports from parent directories (../)
+    if grep -q "import.*from ['\"]\.\./" "$file"; then
+        # Count the number of ../ in the import
+        local imports=$(grep -o "import.*from ['\"]\.\./[^'\"]*['\"]" "$file" || true)
+        if [ ! -z "$imports" ]; then
+            echo "$imports" | while IFS= read -r import_line; do
+                # Extract the relative path
+                local rel_path=$(echo "$import_line" | sed -n "s/.*from ['\"]\(\.\./[^'\"]*\)['\"].*/\1/p")
+                if [ ! -z "$rel_path" ]; then
+                    # Convert relative path to absolute path
+                    local absolute_path
+                    case "$rel_path" in
+                        "../../../"*|../../../../*|../../../../../"*|../../../../../../*)
+                            # Go to root level
+                            local depth=$(echo "$rel_path" | grep -o "\.\./" | wc -l)
+                            if [[ "$file" =~ ^app/ ]]; then
+                                case $depth in
+                                    3|4) absolute_path="@/lib/${rel_path#../../../}" ;;
+                                    5|6) absolute_path="@/components/${rel_path#../../../../}" ;;
+                                    7|8) absolute_path="@/tools/${rel_path#../../../../../}" ;;
+                                    *) absolute_path="@/lib/${rel_path#../../../}" ;;
+                                esac
+                            elif [[ "$file" =~ ^lib/ ]]; then
+                                case $depth in
+                                    2|3) absolute_path="@/lib/${rel_path#../../}" ;;
+                                    4|5) absolute_path="@/components/${rel_path#../../../../}" ;;
+                                    *) absolute_path="@/lib/${rel_path#../../}" ;;
+                                esac
+                            elif [[ "$file" =~ ^components/ ]]; then
+                                case $depth in
+                                    2|3) absolute_path="@/components/${rel_path#../../}" ;;
+                                    4|5) absolute_path="@/lib/${rel_path#../../../../}" ;;
+                                    *) absolute_path="@/components/${rel_path#../../}" ;;
+                                esac
+                            elif [[ "$file" =~ ^tools/ ]]; then
+                                case $depth in
+                                    2|3) absolute_path="@/tools/${rel_path#../../}" ;;
+                                    4|5) absolute_path="@/lib/${rel_path#../../../../}" ;;
+                                    *) absolute_path="@/tools/${rel_path#../../}" ;;
+                                esac
+                            else
+                                # Default conversion
+                                absolute_path="@/lib/${rel_path#../../}"
+                            fi
+                            ;;
+                        "../../"*)
+                            # Go to lib/
+                            if [[ "$file" =~ ^app/ ]]; then
+                                absolute_path="@/lib/${rel_path#../../}"
+                            else
+                                absolute_path="@/lib/${rel_path#../../}"
+                            fi
+                            ;;
+                        "../"*)
+                            # Go to parent directory
+                            if [[ "$file" =~ ^lib/ ]]; then
+                                absolute_path="@/lib/${rel_path#../}"
+                            elif [[ "$file" =~ ^app/ ]]; then
+                                absolute_path="@/lib/${rel_path#../}"
+                            elif [[ "$file" =~ ^components/ ]]; then
+                                absolute_path="@/components/${rel_path#../}"
+                            elif [[ "$file" =~ ^tools/ ]]; then
+                                absolute_path="@/tools/${rel_path#../}"
+                            else
+                                absolute_path="@/lib/${rel_path#../}"
+                            fi
+                            ;;
+                    esac
+
+                    # Replace the import line
+                    local new_import="import $(echo "$import_line" | sed -n "s/import \(.*\) from.*/\1/" | head -1) from '$absolute_path'"
+                    sed -i.tmp "s|$import_line|$new_import|g" "$file"
+                    changes_in_file=$((changes_in_file + 1))
+                    CHANGES_MADE=$((CHANGES_MADE + 1))
+                fi
+            done
+        fi
+    fi
+
+    # 2. Fix imports from same directory (./)
+    if grep -q "import.*from ['\"]\.\/[^'\"]*['\"]" "$file"; then
+        local same_dir_imports=$(grep -o "import.*from ['\"]\.\/[^'\"]*['\"]" "$file" || true)
+        if [ ! -z "$same_dir_imports" ]; then
+            echo "$same_dir_imports" | while IFS= read -r import_line; do
+                local rel_path=$(echo "$import_line" | sed -n "s/.*from ['\"]\(\.\/[^'\"]*\)['\"].*/\1/p")
+                if [ ! -z "$rel_path" ]; then
+                    # Convert ./import to @/path/import
+                    local absolute_path
+                    if [[ "$file" =~ ^lib/ ]]; then
+                        absolute_path="@/lib/$rel_path"
+                    elif [[ "$file" =~ ^app/ ]]; then
+                        absolute_path="@/app/$rel_path"
+                    elif [[ "$file" =~ ^components/ ]]; then
+                        absolute_path="@/components/$rel_path"
+                    elif [[ "$file" =~ ^tools/ ]]; then
+                        absolute_path="@/tools/$rel_path"
+                    else
+                        absolute_path="@/lib/$rel_path"
+                    fi
+
+                    # Replace the import line
+                    local new_import="import $(echo "$import_line" | sed -n "s/import \(.*\) from.*/\1/" | head -1) from '$absolute_path'"
+                    sed -i.tmp "s|$import_line|$new_import|g" "$file"
+                    changes_in_file=$((changes_in_file + 1))
+                    CHANGES_MADE=$((CHANGES_MADE + 1))
+                fi
+            done
+        fi
+    fi
+
+    # Clean up temporary file if it exists
+    if [ -f "${file}.tmp" ]; then
+        rm "${file}.tmp"
+    fi
+
+    if [ $changes_in_file -gt 0 ]; then
+        echo "✅ Converted $changes_in_file imports in $file"
+    fi
+}
+
+# Find and process all TypeScript/JavaScript files, excluding scripts directory
+echo "Processing all TypeScript and JavaScript files..."
+find . -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" | grep -v node_modules | grep -v "\.next" | grep -v "backup-" | grep -v "^./scripts/" | while read -r file; do
+    convert_file_imports "$file"
+done
+
+echo "📊 Conversion complete!"
+echo "Total changes made: $CHANGES_MADE"
+
+# Test the changes
+echo "Testing TypeScript compilation..."
+if npx tsc --noEmit; then
+    echo "✅ TypeScript compilation successful after import conversion"
+else
+    echo "❌ TypeScript compilation failed. Check changes."
+    echo "You can restore from backup: $BACKUP_DIR"
+    exit 1
+fi
+
+echo "🎉 All relative imports have been successfully converted to path aliases!"
+echo "Backup created in: $BACKUP_DIR"

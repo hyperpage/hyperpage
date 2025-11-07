@@ -1,5 +1,5 @@
-import DataTable from "./DataTable";
-import { Tool, ToolWidget } from "../../tools/tool-types";
+import DataTable from "@/app/components/DataTable";
+import { Tool, ToolWidget } from "@/tools/tool-types";
 
 type ExtendedToolWidget = ToolWidget & { toolName: string };
 

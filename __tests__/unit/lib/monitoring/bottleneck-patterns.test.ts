@@ -5,7 +5,7 @@ import {
   getPatternsByCategory,
   getPatternsBySeverity,
   getBottleneckPattern,
-} from "../../../../lib/monitoring/bottleneck-patterns";
+} from "@/lib/monitoring/bottleneck-patterns";
 
 describe("Bottleneck Patterns", () => {
   describe("Pattern Structure Validation", () => {

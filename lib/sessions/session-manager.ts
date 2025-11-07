@@ -1,7 +1,7 @@
-import { CacheFactory } from "../cache/cache-factory";
-import { CacheBackend } from "../cache/cache-interface";
-import { MemorySessionStore } from "./memory-session-store";
-import logger from "../logger";
+import { CacheFactory } from "@/lib/cache/cache-factory";
+import { CacheBackend } from "@/lib/cache/cache-interface";
+import { MemorySessionStore } from "@/lib/sessions/memory-session-store";
+import logger from "@/lib/logger";
 
 /**
  * Redis client interface for type safety

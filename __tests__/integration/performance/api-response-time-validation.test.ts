@@ -8,8 +8,8 @@ import {
   beforeEach,
   afterEach,
 } from "vitest";
-import { clearRateLimitCache } from "../../../lib/rate-limit-monitor";
-import { toolRegistry } from "../../../tools/registry";
+import { clearRateLimitCache } from "@/lib/rate-limit-monitor";
+import { toolRegistry } from "@/tools/registry";
 
 describe("API Response Time Validation Suite", () => {
   // Create spy for global.fetch

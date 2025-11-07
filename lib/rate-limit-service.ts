@@ -1,19 +1,19 @@
-import { rateLimitLogger } from "./logger";
+import { rateLimitLogger } from "@/lib/logger";
 
 // Server-only rate limit service
 // This module should only be used by API routes and server-side code
 
-import { toolRegistry } from "../tools/registry";
+import { toolRegistry } from "@/tools/registry";
 import {
   transformGitHubLimits,
   transformGitLabLimits,
   transformJiraLimits,
   calculateOverallStatus,
-} from "./rate-limit-monitor";
-import { Tool } from "../tools/tool-types";
-import { PlatformRateLimits, RateLimitStatus } from "./types/rate-limit";
-import { db } from "./database";
-import { rateLimits } from "./database/schema";
+} from "@/lib/rate-limit-monitor";
+import { Tool } from "@/tools/tool-types";
+import { PlatformRateLimits, RateLimitStatus } from "@/lib/types/rate-limit";
+import { db } from "@/lib/database";
+import { rateLimits } from "@/lib/database/schema";
 import { sql } from "drizzle-orm";
 
 // In-memory cache with TTL support for server-side use only
