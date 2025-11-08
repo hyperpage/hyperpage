@@ -18,7 +18,7 @@ async function validateSession(
   tool: Tool,
 ): Promise<NextResponse | null> {
   // Skip session validation in test environment
-  if (process.env.NODE_ENV === "test") {
+  if (false) {
     return null;
   }
 

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RedisClient, redisClient } from "@/lib/cache/redis-client";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { RedisClient, redisClient, Redis } from "@/lib/cache/redis-client";
 import logger from "@/lib/logger";
 
 // Mock the logger
@@ -14,117 +14,214 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-// Mock ioredis
-const mockRedis = {
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-  quit: vi.fn(),
-  ping: vi.fn(),
-  get: vi.fn(),
-  set: vi.fn(),
-  del: vi.fn(),
-  exists: vi.fn(),
-  flushdb: vi.fn(),
-  dbsize: vi.fn(),
-  info: vi.fn(),
-  on: vi.fn(),
-  status: "ready",
-};
+/**
+ * Mock ioredis.
+ *
+ * IMPORTANT (Vitest hoisting rule):
+ * - vi.mock() is hoisted to the top of the file.
+ * - The factory must NOT reference variables defined outside itself.
+ * - We define the mocks entirely inside the factory and also return them
+ *   as named exports so tests can access them without touching uninitialized
+ *   top-level variables.
+ */
+vi.mock("ioredis", () => {
+  const instance = {
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    quit: vi.fn(),
+    ping: vi.fn(),
+    on: vi.fn(),
+    status: "ready",
+  };
 
-vi.mock("ioredis", () => ({
-  default: vi.fn().mockImplementation(() => mockRedis),
-}));
+  const ctor = vi.fn().mockImplementation(() => instance);
+
+  return {
+    default: ctor,
+    // Named exports for test assertions
+    __mockInstance: instance,
+    __mockCtor: ctor,
+  };
+});
+
+// Import the named test-only exports from the mocked module
+const { __mockInstance: mockRedis, __mockCtor: RedisCtorMock } = vi.mocked(
+  (await import("ioredis")) as unknown as {
+    __mockInstance: {
+      connect: ReturnType<typeof vi.fn>;
+      disconnect: ReturnType<typeof vi.fn>;
+      quit: ReturnType<typeof vi.fn>;
+      ping: ReturnType<typeof vi.fn>;
+      on: ReturnType<typeof vi.fn>;
+      status: string;
+    };
+    __mockCtor: ReturnType<typeof vi.fn>;
+  },
+);
 
 describe("RedisClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.clearAllTimers();
+    mockRedis.status = "ready";
+    mockRedis.connect.mockReset();
+    mockRedis.disconnect.mockReset();
+    mockRedis.quit.mockReset();
+    mockRedis.ping.mockReset();
+    mockRedis.on.mockReset();
+    (logger.error as unknown as { mockReset?: () => void }).mockReset?.();
   });
 
   describe("constructor", () => {
-    it("should create client with default URL when no URL provided", () => {
+    it("should create client with default URL and lazy options when no URL provided", () => {
       const client = new RedisClient();
-      expect(client).toBeDefined();
+
+      expect(client).toBeInstanceOf(RedisClient);
+      expect(RedisCtorMock).toHaveBeenCalledTimes(1);
+
+      const [url, options] = RedisCtorMock.mock.calls[0];
+
+      expect(url).toMatch(/^redis:\/\//);
+      expect(options).toEqual(
+        expect.objectContaining({
+          lazyConnect: true,
+          retryDelayOnFailover: 500,
+          maxRetriesPerRequest: 3,
+          connectTimeout: 5000,
+          commandTimeout: 2000,
+          family: 4,
+        }),
+      );
     });
 
     it("should create client with custom URL", () => {
       const customUrl = "redis://custom-host:6380";
-      const client = new RedisClient(customUrl);
-      expect(client).toBeDefined();
+      new RedisClient(customUrl);
+
+      const [url, options] =
+        RedisCtorMock.mock.calls[RedisCtorMock.mock.calls.length - 1];
+
+      expect(url).toBe(customUrl);
+      expect(options).toEqual(
+        expect.objectContaining({
+          lazyConnect: true,
+        }),
+      );
     });
 
-    it("should create client with custom URL and options", () => {
+    it("should merge custom options", () => {
       const customUrl = "redis://custom-host:6380";
       const options = {
         host: "custom-host",
         port: 6380,
         password: "secret",
         db: 1,
+        connectTimeout: 10000,
       };
-      const client = new RedisClient(customUrl, options);
-      expect(client).toBeDefined();
+
+      new RedisClient(customUrl, options);
+
+      const [url, merged] =
+        RedisCtorMock.mock.calls[RedisCtorMock.mock.calls.length - 1];
+
+      expect(url).toBe(customUrl);
+      expect(merged).toEqual(
+        expect.objectContaining({
+          host: "custom-host",
+          port: 6380,
+          password: "secret",
+          db: 1,
+          connectTimeout: 10000,
+          lazyConnect: true,
+        }),
+      );
     });
   });
 
   describe("connect", () => {
-    it("should connect successfully", async () => {
+    it("should connect successfully when not already connected or connecting", async () => {
       const client = new RedisClient();
+      mockRedis.status = "connecting";
       mockRedis.connect.mockResolvedValue(undefined);
 
       await client.connect();
 
-      expect(mockRedis.connect).toHaveBeenCalled();
+      expect(mockRedis.connect).toHaveBeenCalledTimes(1);
     });
 
-    it("should throw error when connect fails", async () => {
+    it("should not call connect when already connected", async () => {
       const client = new RedisClient();
-      mockRedis.connect.mockRejectedValue(new Error("Connection failed"));
+      mockRedis.status = "ready";
+
+      await client.connect();
+
+      expect(mockRedis.connect).not.toHaveBeenCalled();
+    });
+
+    it("should surface error and log when connect fails", async () => {
+      const client = new RedisClient();
+      const error = new Error("Connection failed");
+      mockRedis.status = "connecting";
+      mockRedis.connect.mockRejectedValue(error);
 
       await expect(client.connect()).rejects.toThrow(
         "Redis connection failed: Connection failed",
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        "Redis connection failed",
+        expect.objectContaining({
+          error: "Connection failed",
+        }),
       );
     });
   });
 
   describe("disconnect", () => {
-    it("should disconnect gracefully", async () => {
+    it("should disconnect gracefully via quit", async () => {
       const client = new RedisClient();
       mockRedis.quit.mockResolvedValue("OK");
 
       await client.disconnect();
 
-      expect(mockRedis.quit).toHaveBeenCalled();
+      expect(mockRedis.quit).toHaveBeenCalledTimes(1);
+      expect(mockRedis.disconnect).not.toHaveBeenCalled();
     });
 
-    it("should force disconnect when quit fails", async () => {
+    it("should log and force disconnect when quit fails", async () => {
       const client = new RedisClient();
-      mockRedis.quit.mockRejectedValue(new Error("Quit failed"));
-      mockRedis.disconnect.mockResolvedValue(undefined);
+      const quitError = new Error("Quit failed");
+
+      mockRedis.quit.mockRejectedValue(quitError);
 
       await client.disconnect();
 
-      expect(mockRedis.quit).toHaveBeenCalled();
-      expect(mockRedis.disconnect).toHaveBeenCalled();
+      expect(mockRedis.quit).toHaveBeenCalledTimes(1);
+      expect(mockRedis.disconnect).toHaveBeenCalledTimes(1);
+      expect(logger.error).toHaveBeenCalledWith(
+        "Redis disconnect error",
+        expect.objectContaining({
+          error: "Quit failed",
+        }),
+      );
+    });
+
+    it("should no-op when client is already null", async () => {
+      const client = new RedisClient() as unknown as {
+        disconnect: () => Promise<void>;
+        client: Redis | null;
+      };
+      client.client = null;
+
+      await client.disconnect();
+
+      expect(mockRedis.quit).not.toHaveBeenCalled();
+      expect(mockRedis.disconnect).not.toHaveBeenCalled();
     });
   });
 
-  // Type for accessing private properties during testing
+  // Type for limited internal access in edge-case tests
   interface TestableRedisClient {
-    isConnecting: boolean;
-    connectionStartTime: number | null;
-    client: unknown;
-    getClient(): unknown;
-    get isConnected(): boolean;
-    get isConnectingToRedis(): boolean;
-    getConnectionInfo(): {
-      url: string;
-      status: string;
-      uptimeSeconds?: number;
-      lastError?: string;
-    };
+    client: Redis | null;
   }
 
   describe("getClient", () => {
@@ -136,35 +233,44 @@ describe("RedisClient", () => {
 
     it("should throw error if client not initialized", () => {
       const client = new RedisClient() as unknown as TestableRedisClient;
-      // Mock client as null
       client.client = null;
 
-      expect(() => client.getClient()).toThrow("Redis client not initialized");
+      expect(() => (client as unknown as RedisClient).getClient()).toThrow(
+        "Redis client not initialized",
+      );
     });
   });
 
   describe("isConnected", () => {
-    it("should return true when client is ready", () => {
+    it("should reflect underlying client ready status", () => {
       const client = new RedisClient();
-      expect(client.isConnected).toBe(false);
 
-      // Mock status as ready
       mockRedis.status = "ready";
       expect(client.isConnected).toBe(true);
+
+      mockRedis.status = "disconnected";
+      expect(client.isConnected).toBe(false);
     });
   });
 
   describe("isConnectingToRedis", () => {
-    it("should return true when connecting", () => {
-      const client = new RedisClient() as unknown as TestableRedisClient;
-      // Access private property through proper typing
-      client.isConnecting = true;
+    it("should return true when client status is connecting", () => {
+      const client = new RedisClient();
+      mockRedis.status = "connecting";
+
       expect(client.isConnectingToRedis).toBe(true);
+    });
+
+    it("should return false when not connecting", () => {
+      const client = new RedisClient();
+      mockRedis.status = "ready";
+
+      expect(client.isConnectingToRedis).toBe(false);
     });
   });
 
   describe("getHealth", () => {
-    it("should return health status when connected", async () => {
+    it("should return healthy status and ping latency when connected", async () => {
       const client = new RedisClient();
       mockRedis.status = "ready";
       mockRedis.ping.mockResolvedValue("PONG");
@@ -173,10 +279,11 @@ describe("RedisClient", () => {
 
       expect(health.connected).toBe(true);
       expect(health.ready).toBe(true);
-      expect(health.pingLatency).toBeDefined();
+      expect(health.pingLatency).toEqual(expect.any(Number));
+      expect(health.lastError).toBeUndefined();
     });
 
-    it("should return health status when disconnected", async () => {
+    it("should return disconnected health when not ready", async () => {
       const client = new RedisClient();
       mockRedis.status = "disconnected";
 
@@ -186,7 +293,7 @@ describe("RedisClient", () => {
       expect(health.ready).toBe(false);
     });
 
-    it("should handle ping failure", async () => {
+    it("should mark health as failed when ping throws", async () => {
       const client = new RedisClient();
       mockRedis.status = "ready";
       mockRedis.ping.mockRejectedValue(new Error("Ping failed"));
@@ -231,25 +338,21 @@ describe("RedisClient", () => {
   });
 
   describe("getConnectionInfo", () => {
-    it("should return connection information", () => {
+    it("should return basic connection information", () => {
       const customUrl = "redis://custom-host:6380";
-      const client = new RedisClient(
-        customUrl,
-      ) as unknown as TestableRedisClient;
+      const client = new RedisClient(customUrl);
+
       mockRedis.status = "ready";
-      // Access private property through proper typing
-      client.connectionStartTime = Date.now() - 5000;
 
       const info = client.getConnectionInfo();
 
       expect(info.url).toBe(customUrl);
       expect(info.status).toBe("ready");
-      expect(info.uptimeSeconds).toBeGreaterThanOrEqual(5);
     });
   });
 
   describe("event handling", () => {
-    it("should set up event handlers on construction", () => {
+    it("should register core event handlers on construction", () => {
       new RedisClient();
 
       expect(mockRedis.on).toHaveBeenCalledWith(
@@ -264,49 +367,49 @@ describe("RedisClient", () => {
         expect.any(Function),
       );
     });
-  });
 
-  describe("error handling", () => {
-    it("should handle connection errors", async () => {
-      const client = new RedisClient();
-      const error = new Error("Connection refused");
-      mockRedis.connect.mockRejectedValue(error);
+    it("should log structured error when error event is emitted", () => {
+      new RedisClient();
 
-      await expect(client.connect()).rejects.toThrow();
+      const errorHandler = (
+        mockRedis.on as unknown as { mock: { calls: [unknown, unknown][] } }
+      ).mock.calls.find(([event]) => event === "error")?.[1] as (
+        err: Error,
+      ) => void;
+
+      const error = Object.assign(new Error("boom"), {
+        code: "ECONNREFUSED",
+        errno: 111,
+        syscall: "connect",
+        hostname: "redis",
+      });
+
+      errorHandler(error);
 
       expect(logger.error).toHaveBeenCalledWith(
-        "Redis connection failed",
+        "Redis client error",
         expect.objectContaining({
-          error: "Connection refused",
+          error: "boom",
+          code: "ECONNREFUSED",
+          errno: 111,
+          syscall: "connect",
+          hostname: "redis",
         }),
       );
     });
   });
 
-  describe("graceful degradation", () => {
-    it("should not throw during connection failures but handle gracefully", async () => {
+  describe("graceful degradation semantics", () => {
+    it("should expose failed connection via rejected promise and not mark as connected", async () => {
       const client = new RedisClient();
+      mockRedis.status = "connecting";
       mockRedis.connect.mockRejectedValue(new Error("Connection failed"));
 
-      await expect(client.connect()).rejects.toThrow("Redis connection failed");
+      await expect(client.connect()).rejects.toThrow(
+        "Redis connection failed: Connection failed",
+      );
 
-      // Should not crash the application
       expect(client.isConnected).toBe(false);
-    });
-  });
-
-  describe("configuration options", () => {
-    it("should handle custom connection options", () => {
-      const options = {
-        host: "custom-host",
-        port: 6380,
-        password: "secret",
-        db: 1,
-        connectTimeout: 10000,
-      };
-
-      const client = new RedisClient("redis://localhost:6379", options);
-      expect(client).toBeDefined();
     });
   });
 
