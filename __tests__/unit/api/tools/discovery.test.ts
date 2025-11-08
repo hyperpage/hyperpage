@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET as getToolDiscovery } from "../../../../app/api/tools/discovery/route";
-import * as toolsModule from "../../../../tools";
+import { GET as getToolDiscovery } from "@/app/api/tools/discovery/route";
+import * as toolsModule from "@/tools";
 
 // Mock the tools module
-vi.mock("../../../../tools", () => ({
+vi.mock("@/tools", () => ({
   getAllTools: vi.fn(),
   getAvailableApis: vi.fn(),
 }));

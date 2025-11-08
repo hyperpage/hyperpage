@@ -1,8 +1,8 @@
 // Rate limiting and retry logic for external API requests with connection pooling support
 
-import { ToolRateLimitConfig } from "../tools/tool-types";
-import { defaultHttpClient } from "./connection-pool";
-import logger from "./logger";
+import { ToolRateLimitConfig } from "@/tools/tool-types";
+import { defaultHttpClient } from "@/lib/connection-pool";
+import logger from "@/lib/logger";
 
 export interface RetryConfig {
   rateLimitConfig: ToolRateLimitConfig;

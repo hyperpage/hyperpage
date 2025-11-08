@@ -8,11 +8,16 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { db, closeDatabase } from "./index.js";
-import { jobs, jobHistory, rateLimits, toolConfigs } from "./schema.js";
-import { loadPersistedRateLimits } from "../rate-limit-service.js";
-import { loadToolConfigurations } from "../tool-config-manager.js";
-import logger from "../logger";
+import { db, closeDatabase } from "@/lib/database/index";
+import {
+  jobs,
+  jobHistory,
+  rateLimits,
+  toolConfigs,
+} from "@/lib/database/schema";
+import { loadPersistedRateLimits } from "@/lib/rate-limit-service";
+import { loadToolConfigurations } from "@/lib/tool-config-manager";
+import logger from "@/lib/logger";
 
 // Get project root directory
 const __filename = fileURLToPath(import.meta.url);

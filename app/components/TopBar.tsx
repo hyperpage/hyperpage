@@ -8,9 +8,9 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import HyperpageLogo from "./HyperpageLogo";
-import ThemeSwitcher from "./ThemeSwitcher";
-import { AuthPanelStandalone } from "./AuthPanel";
+import HyperpageLogo from "@/app/components/HyperpageLogo";
+import ThemeSwitcher from "@/app/components/ThemeSwitcher";
+import { AuthPanelStandalone } from "@/app/components/AuthPanel";
 
 interface TopBarProps {
   searchQuery: string;

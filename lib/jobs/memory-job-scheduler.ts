@@ -11,8 +11,8 @@ import {
   JobPriority,
   JobStatus,
   JobType,
-} from "../types/jobs";
-import logger from "../logger";
+} from "@/lib/types/jobs";
+import logger from "@/lib/logger";
 
 interface ScheduledJob {
   job: IJob;

@@ -103,6 +103,9 @@ jobs:
             --rule 'no-debugger: error' \
             --rule 'no-alert: error'
 
+      - run: ./scripts/validate-imports.sh
+      - run: ./scripts/validate-component-sizes.sh
+
   # ==============================================
   # PHASE 3: COMPREHENSIVE TESTING SUITE
   # ==============================================

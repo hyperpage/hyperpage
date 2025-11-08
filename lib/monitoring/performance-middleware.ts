@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import logger from "../logger";
+import logger from "@/lib/logger";
 import {
   performanceDashboard,
   PerformanceSnapshot,
-} from "./performance-dashboard";
+} from "@/lib/monitoring/performance-dashboard";
 
 export interface PerformanceMiddlewareOptions {
   /** Whether to log detailed debugging information */

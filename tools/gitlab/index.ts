@@ -1,15 +1,15 @@
 import React from "react";
 import { Gitlab } from "lucide-react";
-import { Tool, ToolConfig, TransformedIssue } from "../tool-types";
+import { Tool, ToolConfig, TransformedIssue } from "@/tools/tool-types";
 import {
   GitLabMergeRequest,
   GitLabProject,
   GitLabPipeline,
   GitLabIssue,
-} from "./types";
-import { registerTool } from "../registry";
-import { createIPv4Fetch } from "../../lib/ipv4-fetch";
-import logger from "../../lib/logger";
+} from "@/tools/gitlab/types";
+import { registerTool } from "@/tools/registry";
+import { createIPv4Fetch } from "@/lib/ipv4-fetch";
+import logger from "@/lib/logger";
 
 export const gitlabTool: Tool = {
   name: "GitLab",

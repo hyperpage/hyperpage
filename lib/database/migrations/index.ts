@@ -10,8 +10,8 @@
  * 3. Add the migration to the MIGRATIONS_EXPORT registry below
  */
 
-import * as initialSchema from "./001_initial_schema";
-import * as oauthAuthTables from "./002_oauth_auth_tables";
+import * as initialSchema from "@/lib/database/migrations/001_initial_schema";
+import * as oauthAuthTables from "@/lib/database/migrations/002_oauth_auth_tables";
 
 /**
  * Database type for migration operations

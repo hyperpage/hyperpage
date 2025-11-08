@@ -1,16 +1,16 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getToolByName, Tool } from "../../../../../tools";
-import { ToolApi } from "../../../../../tools/tool-types";
+import { getToolByName, Tool } from "@/tools";
+import { ToolApi } from "@/tools/tool-types";
 import {
   canExecuteRequest,
   recordRequestSuccess,
   recordRequestFailure,
-} from "../../../../../tools/validation";
-import { defaultCache } from "../../../../../lib/cache/cache-factory";
-import { generateCacheKey } from "../../../../../lib/cache/memory-cache";
-import { defaultCompressionMiddleware } from "../../../../../lib/api/compression/compression-middleware";
-import { sessionManager } from "../../../../../lib/sessions/session-manager";
-import logger from "../../../../../lib/logger";
+} from "@/tools/validation";
+import { defaultCache } from "@/lib/cache/cache-factory";
+import { generateCacheKey } from "@/lib/cache/memory-cache";
+import { defaultCompressionMiddleware } from "@/lib/api/compression/compression-middleware";
+import { sessionManager } from "@/lib/sessions/session-manager";
+import logger from "@/lib/logger";
 
 // Session validation helper with consistent cookie handling
 async function validateSession(

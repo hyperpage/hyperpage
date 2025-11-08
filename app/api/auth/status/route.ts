@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionManager } from "../../../../lib/sessions/session-manager";
-import logger from "../../../../lib/logger";
-import { checkAuthRateLimit } from "../../../../lib/rate-limit-auth";
+import { sessionManager } from "@/lib/sessions/session-manager";
+import logger from "@/lib/logger";
+import { checkAuthRateLimit } from "@/lib/rate-limit-auth";
 
 /**
  * Parse session cookies to extract session ID

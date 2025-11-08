@@ -10,7 +10,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as fs from "fs";
 import * as path from "path";
 import * as schema from "./schema";
-import logger from "../logger";
+import logger from "@/lib/logger";
 
 type DrizzleInstance = ReturnType<typeof drizzle<typeof schema>>;
 

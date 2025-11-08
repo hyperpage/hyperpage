@@ -10,8 +10,8 @@ import {
 import {
   IntegrationTestEnvironment,
   TestUserManager,
-} from "../../shared/test-credentials";
-import logger from "../../../lib/logger";
+} from "@/lib/../__tests__/shared/test-credentials";
+import logger from "@/lib/logger";
 import {
   TestUser,
   SessionData,
@@ -29,7 +29,7 @@ import {
   TimePersistenceTest,
   PeakLoadTest,
   MigrationSource,
-} from "./database-persistence-recovery.types";
+} from "@/lib/../__tests__/integration/performance/database-persistence-recovery.types";
 
 // Helper function for referential integrity validation
 function validateReferentialIntegrity(

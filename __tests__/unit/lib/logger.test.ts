@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import logger, { pinoLogger } from "../../../lib/logger";
+import logger, { pinoLogger } from "@/lib/logger";
 
 /**
  * Pino Logger Integration Tests

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import dashboardJson from "../../grafana/hyperpage-rate-limiting-dashboard.json";
+import dashboardJson from "@/grafana/hyperpage-rate-limiting-dashboard.json";
 
 // Type definitions for test
 interface GrafanaVariable {

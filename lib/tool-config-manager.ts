@@ -5,11 +5,11 @@
  * Provides type-safe configuration loading, saving, and management.
  */
 
-import { db } from "./database";
-import { toolConfigs } from "./database/schema";
+import { db } from "@/lib/database";
+import { toolConfigs } from "@/lib/database/schema";
 import { eq } from "drizzle-orm";
-import { toolRegistry } from "../tools/registry";
-import logger from "./logger";
+import { toolRegistry } from "@/tools/registry";
+import logger from "@/lib/logger";
 
 /**
  * User-configurable tool settings interface

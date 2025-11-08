@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { SessionData } from "../../../lib/sessions/session-manager";
+import { SessionData } from "@/lib/sessions/session-manager";
 
 interface SessionHookReturn {
   session: SessionData | null;

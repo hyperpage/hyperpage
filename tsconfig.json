@@ -20,7 +20,13 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/app/*": ["./app/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/components/*": ["./components/*"],
+      "@/tools/*": ["./tools/*"],
+      "@/tests/*": ["./__tests__/*"],
+      "@/types/*": ["./lib/types/*"]
     }
   },
   "include": [
@@ -28,7 +34,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "vitest.globals.d.ts"
+    "vitest.globals.d.ts",
+    "scripts/validation/hooks-pattern-validation.ts"
   ],
   "exclude": ["node_modules"]
 }

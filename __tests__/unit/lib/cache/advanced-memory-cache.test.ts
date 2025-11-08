@@ -5,7 +5,7 @@ import {
   createAdaptiveCache,
   createTTLOnlyCache,
   EvictionPolicy,
-} from "../../../../lib/cache/advanced-memory-cache";
+} from "@/lib/cache/advanced-memory-cache";
 
 describe("AdvancedMemoryCache", () => {
   let cache: AdvancedMemoryCache<string>;

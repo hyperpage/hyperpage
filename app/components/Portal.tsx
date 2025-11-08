@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import TopBar from "./TopBar";
-import TabNavigation from "./TabNavigation";
-import PortalOverview from "./PortalOverview";
+import TopBar from "@/app/components/TopBar";
+import TabNavigation from "@/app/components/TabNavigation";
+import PortalOverview from "@/app/components/PortalOverview";
 
-import { Tool } from "../../tools/tool-types";
-import { useToolQueries } from "./hooks/useToolQueries";
+import { Tool } from "@/tools/tool-types";
+import { useToolQueries } from "@/app/components/hooks/useToolQueries";
 
 interface PortalProps {
   enabledTools: Omit<Tool, "handlers">[];

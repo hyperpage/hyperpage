@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getEnabledTools } from "../../../../tools";
-import { Tool, ToolWidget, ToolApi } from "../../../../tools/tool-types";
-import logger from "../../../../lib/logger";
+import { getEnabledTools } from "@/tools";
+import { Tool, ToolWidget, ToolApi } from "@/tools/tool-types";
+import logger from "@/lib/logger";
 
 // Enabled tools API endpoint
 // Returns only enabled tools and their capabilities

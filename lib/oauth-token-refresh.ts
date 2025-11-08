@@ -1,6 +1,6 @@
-import { SecureTokenStorage, OAuthTokens } from "./oauth-token-store";
-import { getOAuthConfig } from "./oauth-config";
-import logger from "./logger";
+import { SecureTokenStorage, OAuthTokens } from "@/lib/oauth-token-store";
+import { getOAuthConfig } from "@/lib/oauth-config";
+import logger from "@/lib/logger";
 
 /**
  * OAuth Token Refresh Management

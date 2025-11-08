@@ -1,9 +1,9 @@
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import crypto from "crypto";
-import { oauthTokens } from "./database/schema";
+import { oauthTokens } from "@/lib/database/schema";
 import { eq, and, sql } from "drizzle-orm";
-import logger from "./logger";
+import logger from "@/lib/logger";
 
 export interface OAuthTokens {
   accessToken: string;

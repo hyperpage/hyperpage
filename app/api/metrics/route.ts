@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import promClient from "prom-client";
-import { defaultCache } from "../../../lib/cache/memory-cache";
-import { getActivePlatforms } from "../../../lib/rate-limit-utils";
-import { getServerRateLimitStatus } from "../../../lib/rate-limit-service";
-import { toolRegistry } from "../../../tools/registry";
-import { performanceDashboard } from "../../../lib/monitoring/performance-dashboard";
-import { defaultHttpClient } from "../../../lib/connection-pool";
-import { DashboardMetrics } from "../../../lib/monitoring/performance-dashboard";
-import { Tool } from "../../../tools/tool-types";
-import logger from "../../../lib/logger";
+import { defaultCache } from "@/lib/cache/memory-cache";
+import { getActivePlatforms } from "@/lib/rate-limit-utils";
+import { getServerRateLimitStatus } from "@/lib/rate-limit-service";
+import { toolRegistry } from "@/tools/registry";
+import { performanceDashboard } from "@/lib/monitoring/performance-dashboard";
+import { defaultHttpClient } from "@/lib/connection-pool";
+import { DashboardMetrics } from "@/lib/monitoring/performance-dashboard";
+import { Tool } from "@/tools/tool-types";
+import logger from "@/lib/logger";
 const register = new promClient.Registry();
 
 // Add default metrics (process, heap, etc.)

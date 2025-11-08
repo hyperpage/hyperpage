@@ -1,10 +1,10 @@
 import React from "react";
 import { GitBranch } from "lucide-react";
-import { Tool, ToolConfig } from "../tool-types";
-import { registerTool } from "../registry";
-import logger from "../../lib/logger";
+import { Tool, ToolConfig } from "@/tools/tool-types";
+import { registerTool } from "@/tools/registry";
+import logger from "@/lib/logger";
 
-import { getEnabledTools } from "../index";
+import { getEnabledTools } from "@/tools/index";
 
 export const codeReviewsTool: Tool = {
   name: "Code Reviews",

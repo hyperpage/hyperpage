@@ -1,7 +1,7 @@
 import React from "react";
-import { Tool, ToolData } from "../../tools/tool-types";
-import DataTable from "./DataTable";
-import { PortalEmptyState } from "./PortalEmptyState";
+import { Tool, ToolData } from "@/tools/tool-types";
+import DataTable from "@/app/components/DataTable";
+import { PortalEmptyState } from "@/app/components/PortalEmptyState";
 
 interface WidgetWithToolName {
   toolName: string;

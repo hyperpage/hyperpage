@@ -1,5 +1,5 @@
 // Mock the rate limit monitor before importing
-vi.mock("../../../../lib/rate-limit-monitor", () => ({
+vi.mock("@/lib/rate-limit-monitor", () => ({
   getRateLimitStatus: vi.fn(),
   clearRateLimitCache: vi.fn(),
 }));
@@ -13,13 +13,13 @@ import {
   getRateLimitStatusBgColor,
   formatUsagePercent,
   formatTimeUntilReset,
-} from "../../../../app/components/hooks/useRateLimit";
-import { TEST_BASE_URL } from "../../../test-constants";
+} from "@/app/components/hooks/useRateLimit";
+import { TEST_BASE_URL } from "@/__tests__/test-constants";
 
 import {
   getRateLimitStatus,
   clearRateLimitCache,
-} from "../../../../lib/rate-limit-monitor";
+} from "@/lib/rate-limit-monitor";
 
 const mockGetRateLimitStatus = vi.mocked(getRateLimitStatus);
 

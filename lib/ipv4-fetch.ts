@@ -1,4 +1,4 @@
-import logger from "./logger";
+import logger from "@/lib/logger";
 
 /**
  * IPv4-forced fetch utility for IPv6-only network environments

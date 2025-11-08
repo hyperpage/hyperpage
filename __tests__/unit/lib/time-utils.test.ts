@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  getTimeAgo,
-  findTimestamp,
-  sortDataByTime,
-} from "../../../lib/time-utils";
+import { getTimeAgo, findTimestamp, sortDataByTime } from "@/lib/time-utils";
 
 // Mock Date.now to ensure consistent test results
 const mockNow = new Date("2025-01-15T10:00:00Z").getTime();

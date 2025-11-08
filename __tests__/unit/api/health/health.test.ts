@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GET } from "../../../../app/api/health/route";
-import { defaultCache } from "../../../../lib/cache/memory-cache";
-import { toolRegistry } from "../../../../tools/registry";
+import { GET } from "@/app/api/health/route";
+import { defaultCache } from "@/lib/cache/memory-cache";
+import { toolRegistry } from "@/tools/registry";
 
 // Type definitions for test
 interface MockTool {
@@ -19,7 +19,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // Mock the cache stats
-vi.mock("../../lib/cache/memory-cache", () => ({
+vi.mock("@/lib/cache/memory-cache", () => ({
   defaultCache: {
     getStats: vi.fn(),
   },

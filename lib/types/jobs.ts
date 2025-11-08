@@ -6,7 +6,7 @@
  * with priority-based queuing and execution tracking.
  */
 
-import { Tool } from "../../tools/tool-types";
+import { Tool } from "@/tools/tool-types";
 
 /**
  * Job priority levels for scheduling and execution

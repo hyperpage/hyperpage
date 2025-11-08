@@ -1,11 +1,8 @@
 // Custom hook for accessing rate limit status in components
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  RateLimitStatus,
-  UseRateLimitResult,
-} from "../../../lib/types/rate-limit";
-import { getRateLimitStatus } from "../../../lib/rate-limit-monitor";
+import { RateLimitStatus, UseRateLimitResult } from "@/lib/types/rate-limit";
+import { getRateLimitStatus } from "@/lib/rate-limit-monitor";
 
 /**
  * Hook for accessing rate limit status for a specific platform
@@ -259,4 +256,4 @@ export function formatTimeUntilReset(resetTime: number | null): string {
 export type {
   RateLimitStatus,
   PlatformRateLimits,
-} from "../../../lib/types/rate-limit";
+} from "@/lib/types/rate-limit";

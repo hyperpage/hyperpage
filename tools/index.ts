@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
-import { Tool, ToolRegistry, ToolIntegration } from "./tool-types";
-import { getToolIcon } from "./ui-props";
-import { toolRegistry } from "./registry";
-import { validateToolConfig } from "./validation";
+import { Tool, ToolRegistry, ToolIntegration } from "@/tools/tool-types";
+import { getToolIcon } from "@/tools/ui-props";
+import { toolRegistry } from "@/tools/registry";
+import { validateToolConfig } from "@/tools/validation";
 
 // Import tools server-side - each tool registers itself and checks enabled status
 // This eliminates client-side race conditions

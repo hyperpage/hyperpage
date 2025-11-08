@@ -16,15 +16,15 @@ import {
 import { promises as fs } from "fs";
 import * as path from "path";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import * as schema from "../../../../lib/database/schema";
+import * as schema from "@/lib/database/schema";
 import {
   createTestDatabase,
   createTestDrizzle,
   closeAllConnections,
-} from "../../../../lib/database/connection";
-import { rateLimits, toolConfigs } from "../../../../lib/database/schema";
+} from "@/lib/database/connection";
+import { rateLimits, toolConfigs } from "@/lib/database/schema";
 import { eq } from "drizzle-orm";
-import { pinoLogger as logger } from "../../../../lib/logger";
+import { pinoLogger as logger } from "@/lib/logger";
 
 // Create fresh database instance for each test to avoid singleton issues
 let testDb: ReturnType<typeof drizzle<typeof schema>>;

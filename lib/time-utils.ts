@@ -1,4 +1,4 @@
-import type { ToolData } from "../tools/tool-types";
+import type { ToolData } from "@/tools/tool-types";
 
 /**
  * Converts a date to a human-readable "time ago" string.

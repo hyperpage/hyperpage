@@ -3,8 +3,8 @@ import type {
   CacheEntry,
   CacheOptions,
   CacheStats,
-} from "./cache-interface";
-import logger from "../logger";
+} from "@/lib/cache/cache-interface";
+import logger from "@/lib/logger";
 
 /**
  * Eviction policies for advanced cache management.

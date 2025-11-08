@@ -3,7 +3,7 @@ import {
   MemoryCache,
   generateCacheKey,
   defaultCache,
-} from "../../../../lib/cache/memory-cache";
+} from "@/lib/cache/memory-cache";
 
 describe("Memory Cache", () => {
   let cache: MemoryCache;

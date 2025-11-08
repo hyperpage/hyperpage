@@ -1,4 +1,4 @@
-import { Tool, ToolRegistry } from "./tool-types";
+import { Tool, ToolRegistry } from "@/tools/tool-types";
 
 // Global registry - populated automatically by tools on import
 const toolRegistry: ToolRegistry = {};

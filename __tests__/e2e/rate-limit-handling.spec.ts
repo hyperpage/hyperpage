@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { MockRateLimitServer } from "../mocks/rate-limit-server";
+import { MockRateLimitServer } from "@/__tests__/mocks/rate-limit-server";
 
 test.describe("Rate Limit UI Handling E2E Tests", () => {
   let mockServer: MockRateLimitServer;

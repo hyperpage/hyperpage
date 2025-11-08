@@ -2,10 +2,10 @@ import {
   performanceDashboard,
   DashboardMetrics,
   AlertType,
-} from "./performance-dashboard";
-import { alertService } from "../alerting/alert-service";
+} from "@/lib/monitoring/performance-dashboard";
+import { alertService } from "@/lib/alerting/alert-service";
 import { EventEmitter } from "events";
-import logger from "../logger";
+import logger from "@/lib/logger";
 
 export interface BottleneckCondition {
   metric: string; // e.g., 'overall.averageResponseTime'
@@ -1305,7 +1305,7 @@ interface CorrelationData {
 }
 
 // Initialize bottleneck detector with patterns
-import { BOTTLENECK_PATTERNS } from "./bottleneck-patterns";
+import { BOTTLENECK_PATTERNS } from "@/lib/monitoring/bottleneck-patterns";
 
 // Global bottleneck detector instance
 export const bottleneckDetector = new BottleneckDetector(BOTTLENECK_PATTERNS);

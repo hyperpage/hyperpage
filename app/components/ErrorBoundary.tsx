@@ -1,16 +1,28 @@
 "use client";
 
 import { Component, ReactNode, ErrorInfo } from "react";
-import logger from "@/lib/logger";
+import { DefaultErrorFallback } from "@/app/components/DefaultErrorFallback";
+import { logErrorToService, canRetry } from "@/lib/error-boundary-utils";
+
+interface ErrorBoundaryFallbackProps {
+  error: Error;
+  retry: () => void;
+  retryCount: number;
+  maxRetries: number;
+}
 
 interface ErrorBoundaryProps {
   children: ReactNode;
-  fallback?: ReactNode;
+  fallback?: React.ComponentType<ErrorBoundaryFallbackProps>;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  maxRetries?: number;
 }
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  errorInfo: ErrorInfo | null;
+  retryCount: number;
 }
 
 export class ErrorBoundary extends Component<
@@ -19,69 +31,49 @@ export class ErrorBoundary extends Component<
 > {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      retryCount: 0,
+    };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    logger.error("Error Boundary caught an error:", {
-      error: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-    });
+    this.setState({ errorInfo });
+    this.props.onError?.(error, errorInfo);
+    logErrorToService(error, errorInfo);
   }
+
+  handleRetry = () => {
+    const { maxRetries = 3 } = this.props;
+    const { retryCount } = this.state;
+
+    if (canRetry(retryCount, maxRetries)) {
+      this.setState((prev) => ({
+        hasError: false,
+        error: null,
+        errorInfo: null,
+        retryCount: prev.retryCount + 1,
+      }));
+    }
+  };
 
   render() {
     if (this.state.hasError) {
-      const error = this.state.error;
-      const errorMessage = error?.message || "An unexpected error occurred";
-      const isAuthError = errorMessage.toLowerCase().includes("authentication");
-
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
+      const FallbackComponent = this.props.fallback || DefaultErrorFallback;
 
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-8">
-          <div className="max-w-md w-full text-center">
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-              <div className="text-red-600 dark:text-red-400 mb-4">
-                <svg
-                  className="w-12 h-12 mx-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
-                {isAuthError
-                  ? "Authentication Required"
-                  : "Something went wrong"}
-              </h2>
-              <p className="text-red-600 dark:text-red-300 text-sm mb-4">
-                {isAuthError
-                  ? "Please authenticate to access the portal data."
-                  : errorMessage}
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Refresh Page
-              </button>
-            </div>
-          </div>
-        </div>
+        <FallbackComponent
+          error={this.state.error!}
+          retry={this.handleRetry}
+          retryCount={this.state.retryCount}
+          maxRetries={this.props.maxRetries || 3}
+        />
       );
     }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToolByName, getAllTools } from "../../../../tools";
-import { ToolWidget, ToolApi } from "../../../../tools/tool-types";
-import logger from "../../../../lib/logger";
+import { getToolByName, getAllTools } from "@/tools";
+import { Tool, ToolWidget, ToolApi } from "@/tools/tool-types";
+import logger from "@/lib/logger";
 
 // Get details about a specific tool
 export async function GET(
@@ -17,14 +17,16 @@ export async function GET(
       // Check if it's a valid tool name (case-sensitive) or suggest alternatives
       const allTools = getAllTools();
       const suggestions = allTools
-        .filter((t) => t.name.toLowerCase().includes(toolName.toLowerCase()))
-        .map((t) => t.name);
+        .filter((t: Tool) =>
+          t.name.toLowerCase().includes(toolName.toLowerCase()),
+        )
+        .map((t: Tool) => t.name);
 
       return NextResponse.json(
         {
           error: `Tool '${toolName}' not found`,
           suggestions,
-          availableTools: allTools.map((t) => t.name),
+          availableTools: allTools.map((t: Tool) => t.name),
         },
         { status: 404 },
       );

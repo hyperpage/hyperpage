@@ -1,5 +1,5 @@
-import { Tool } from "./tool-types";
-import { getToolUrls, getAllTools } from "./index";
+import { Tool } from "@/tools/tool-types";
+import { getToolUrls, getAllTools } from "@/tools/index";
 
 /**
  * Tool configuration validation and error recovery system

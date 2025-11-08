@@ -4,7 +4,7 @@ import { createContext, useContext, ReactNode } from "react";
 import {
   useAuthOperations,
   type AuthToolState,
-} from "./hooks/useAuthOperations";
+} from "@/app/components/hooks/useAuthOperations";
 
 interface AuthContextType {
   tools: AuthToolState[];

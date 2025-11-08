@@ -41,10 +41,7 @@ vi.mock("better-sqlite3", () => ({
 }));
 
 import { describe, it, expect, beforeAll } from "vitest";
-import {
-  SecureTokenStorage,
-  OAuthTokens,
-} from "../../../lib/oauth-token-store";
+import { SecureTokenStorage, OAuthTokens } from "@/lib/oauth-token-store";
 
 describe("SecureTokenStorage", () => {
   let storage: SecureTokenStorage;

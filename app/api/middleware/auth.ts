@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import logger from "../../../lib/logger";
-import {
-  sessionManager,
-  SessionData,
-} from "../../../lib/sessions/session-manager";
+import logger from "@/lib/logger";
+import { sessionManager, SessionData } from "@/lib/sessions/session-manager";
 
 export interface AuthenticatedTool {
   connected: boolean;
