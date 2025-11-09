@@ -312,21 +312,47 @@ export class TestUserManager {
   }
 }
 
-// Server availability checker
+// Server availability checker (deterministic, real HTTP-based)
 export async function isServerAvailable(
   service: "github" | "gitlab" | "jira" | "redis" | "database",
 ): Promise<boolean> {
+  const baseUrl =
+    process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
+
   try {
     switch (service) {
-      case "github":
-      case "gitlab":
-      case "jira":
-        // Mock API availability check
-        return Math.random() > 0.1; // 90% success rate for testing
+      case "jira": {
+        // Check that the app server is up and the Jira tool is wired.
+        // We intentionally use a lightweight GET that should exist when Jira is enabled.
+        const res = await fetch(`${baseUrl}/api/tools/jira/issues`, {
+          method: "GET",
+        });
+        // Consider server available when endpoint responds at all (no network error)
+        // and is not a 5xx. auth/401/403 are acceptable: they prove routing/handler work.
+        return res.status < 500;
+      }
+
+      case "github": {
+        const res = await fetch(`${baseUrl}/api/tools/github/pull-requests`, {
+          method: "GET",
+        });
+        return res.status < 500;
+      }
+
+      case "gitlab": {
+        const res = await fetch(`${baseUrl}/api/tools/gitlab/issues`, {
+          method: "GET",
+        });
+        return res.status < 500;
+      }
+
       case "redis":
-        return Math.random() > 0.05; // 95% success rate for testing
-      case "database":
-        return Math.random() > 0.02; // 98% success rate for testing
+      case "database": {
+        // For now, treat these as available once the main app server responds to /api/health.
+        const res = await fetch(`${baseUrl}/api/health`, { method: "GET" });
+        return res.status < 500;
+      }
+
       default:
         return false;
     }

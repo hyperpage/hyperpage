@@ -6,6 +6,7 @@ import {
   createTTLOnlyCache,
   EvictionPolicy,
 } from "@/lib/cache/advanced-memory-cache";
+import logger from "@/lib/logger";
 
 describe("AdvancedMemoryCache", () => {
   let cache: AdvancedMemoryCache<string>;
@@ -251,7 +252,7 @@ describe("AdvancedMemoryCache", () => {
 
   describe("Cache Warming", () => {
     it("should initialize cache warming when enabled", () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const loggerSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
 
       new AdvancedMemoryCache({
         maxSize: 10,
@@ -261,11 +262,12 @@ describe("AdvancedMemoryCache", () => {
         warmKeys: ["key1", "key2", "key3"],
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Cache warming enabled for 3 keys",
-      );
+      expect(loggerSpy).toHaveBeenCalledWith("Cache warming initialized", {
+        warmKeysCount: 3,
+        warmKeys: ["key1", "key2", "key3"],
+      });
 
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 

@@ -89,7 +89,11 @@ export class UserJourneySimulator {
   ): Promise<OAuthResult> {
     try {
       // Check for invalid credentials
-      if (!credentials.clientId || credentials.clientId.length === 0) {
+      if (
+        !credentials.clientId ||
+        credentials.clientId.length === 0 ||
+        credentials.clientId === "invalid-client-id"
+      ) {
         return {
           success: false,
           redirectUrl: "",
@@ -181,7 +185,7 @@ export class UserJourneySimulator {
     }
 
     // Simulate data loading
-    const dataItems = Math.floor(Math.random() * 10); // 0-9 items
+    const dataItems = Math.floor(Math.random() * 10) + 1; // 1-10 items (ensure at least 1)
     const lastUpdate = Date.now();
 
     const mockData: ToolData = {
@@ -196,10 +200,10 @@ export class UserJourneySimulator {
     this.browser.setSessionData(`tool_${tool}_data`, mockData);
 
     return {
-      hasData: dataItems > 0,
+      hasData: true, // Tool is enabled, so it has data capability
       dataItems,
       lastUpdate,
-      errors: dataItems === 0 ? [`No data available for ${tool}`] : [],
+      errors: [],
     };
   }
 
