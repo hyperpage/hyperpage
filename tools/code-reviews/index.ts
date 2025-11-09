@@ -1,6 +1,6 @@
 import React from "react";
 import { GitBranch } from "lucide-react";
-import { Tool, ToolConfig } from "@/tools/tool-types";
+import { Tool } from "@/tools/tool-types";
 import { registerTool } from "@/tools/registry";
 import logger from "@/lib/logger";
 
@@ -39,8 +39,9 @@ export const codeReviewsTool: Tool = {
     },
   },
   handlers: {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    "pull-requests": async (request: Request, _config: ToolConfig) => {
+    "pull-requests": async (
+      request: Request,
+    ): Promise<{ pullRequests: unknown[] }> => {
       const results: unknown[] = [];
 
       // Get all enabled tools that provide pull-requests capability (GitHub)

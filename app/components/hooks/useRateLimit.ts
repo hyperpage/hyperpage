@@ -143,10 +143,9 @@ export function useMultipleRateLimits(
   const platformsKey = platforms.join(",");
   useEffect(() => {
     if (enabled && platforms.length > 0) {
-      refreshAll();
+      void refreshAll();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [platformsKey, enabled, refreshAll]); // refreshAll is included
+  }, [platformsKey, enabled, platforms.length, refreshAll]);
 
   // Clear data when disabled
   useEffect(() => {

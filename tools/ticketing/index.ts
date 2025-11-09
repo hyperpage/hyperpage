@@ -1,6 +1,6 @@
 import React from "react";
 import { Ticket } from "lucide-react";
-import { Tool, ToolConfig, TransformedIssue } from "@/tools/tool-types";
+import { Tool, TransformedIssue } from "@/tools/tool-types";
 import { registerTool } from "@/tools/registry";
 
 import { getEnabledTools } from "@/tools/index";
@@ -37,8 +37,9 @@ export const ticketingTool: Tool = {
     },
   },
   handlers: {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    issues: async (request: Request, _config: ToolConfig) => {
+    issues: async (
+      request: Request,
+    ): Promise<{ issues: TransformedIssue[] }> => {
       const results: TransformedIssue[] = [];
 
       // Get all enabled tools that provide issues capability (Jira-style)

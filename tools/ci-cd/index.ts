@@ -1,6 +1,6 @@
 import React from "react";
 import { RotateCcw } from "lucide-react";
-import { Tool, ToolConfig } from "@/tools/tool-types";
+import { Tool } from "@/tools/tool-types";
 import { registerTool } from "@/tools/registry";
 import { getEnabledTools } from "@/tools/index";
 
@@ -47,8 +47,7 @@ export const ciCdTool: Tool = {
     },
   },
   handlers: {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    pipelines: async (request: Request, _config: ToolConfig) => {
+    pipelines: async (request: Request): Promise<{ pipelines: unknown[] }> => {
       const results: unknown[] = [];
       const url = new URL(request.url);
       const statusFilter = url.searchParams.get("status");
