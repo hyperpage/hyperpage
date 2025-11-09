@@ -71,7 +71,23 @@ export const gitlabTool: Tool = {
           "Array of pipeline objects with project, branch, status, duration, and finished date",
       },
     },
-
+    issues: {
+      method: "GET",
+      description: "Get recent issues created by the authenticated GitLab user",
+      parameters: {
+        state: {
+          type: "string",
+          required: false,
+          description:
+            "Issue state filter (opened, closed, all). Defaults to opened.",
+        },
+      },
+      response: {
+        dataKey: "issues",
+        description:
+          "Array of unified issue objects with ticket id, url, title, status, assignee, and created timestamps",
+      },
+    },
     "rate-limit": {
       method: "GET",
       description: "Get current GitLab API rate limit status",
