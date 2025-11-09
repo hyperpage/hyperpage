@@ -1,88 +1,66 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { registerTool, toolRegistry } from "@/tools/registry";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  getAllTools,
+  getTool,
+  getToolNames,
+  registerTool,
+  toolRegistry,
+} from "@/tools/registry";
 import { Tool } from "@/tools/tool-types";
 
-// Clear registry before each test
+const createTool = (overrides: Partial<Tool> = {}): Tool => ({
+  name: "TestTool",
+  slug: "test-tool",
+  enabled: true,
+  ui: {
+    color: "bg-blue-500",
+    icon: null,
+  },
+  widgets: [],
+  apis: {},
+  handlers: {},
+  capabilities: [],
+  ...overrides,
+});
+
 beforeEach(() => {
-  // Reset the registry to empty state
-  Object.keys(toolRegistry).forEach((key) => {
-    delete toolRegistry[key];
-  });
+  for (const key of Object.keys(toolRegistry)) {
+    delete toolRegistry[key as keyof typeof toolRegistry];
+  }
 });
 
 describe("registerTool", () => {
-  it("registers a tool in the registry", () => {
-    const mockTool: Tool = {
-      name: "TestTool",
-      slug: "test-tool",
-      enabled: true,
-      ui: {
-        color: "bg-blue-500",
-        icon: null,
-      },
-      widgets: [],
-      apis: {},
-      handlers: {},
-      capabilities: ["test"],
-    };
+  it("registers a tool in the registry under the given name", () => {
+    const tool = createTool({ name: "ToolA", slug: "tool-a" });
 
-    registerTool("testtool", mockTool);
+    registerTool("toolA", tool);
 
-    expect(toolRegistry.testtool).toBe(mockTool);
+    expect(toolRegistry.toolA).toBe(tool);
   });
 
-  it("overwrites existing tool registration", () => {
-    const originalTool: Tool = {
-      name: "Original",
-      slug: "original",
-      enabled: true,
-      ui: { color: "bg-blue-500", icon: null },
-      widgets: [],
-      apis: {},
-      handlers: {},
-      capabilities: [],
-    };
-
-    const updatedTool: Tool = {
+  it("overwrites an existing registration with the same name", () => {
+    const original = createTool({ name: "Original", slug: "original" });
+    const updated = createTool({
       name: "Updated",
       slug: "updated",
       enabled: false,
-      ui: { color: "bg-green-500", icon: null },
-      widgets: [],
-      apis: {},
-      handlers: {},
-      capabilities: [],
-    };
+    });
 
-    registerTool("test", originalTool);
-    registerTool("test", updatedTool);
+    registerTool("toolX", original);
+    registerTool("toolX", updated);
 
-    expect(toolRegistry.test).toBe(updatedTool);
-    expect(toolRegistry.test?.enabled).toBe(false);
+    expect(toolRegistry.toolX).toBe(updated);
+    expect(toolRegistry.toolX?.name).toBe("Updated");
+    expect(toolRegistry.toolX?.enabled).toBe(false);
   });
 
-  it("handles multiple tool registrations", () => {
-    const tool1: Tool = {
-      name: "Tool1",
-      slug: "tool-1",
-      enabled: true,
-      ui: { color: "bg-blue-500", icon: null },
-      widgets: [],
-      apis: {},
-      handlers: {},
-      capabilities: ["cap1"],
-    };
-
-    const tool2: Tool = {
+  it("supports registering multiple distinct tools", () => {
+    const tool1 = createTool({ name: "Tool1", slug: "tool-1" });
+    const tool2 = createTool({
       name: "Tool2",
       slug: "tool-2",
-      enabled: false,
       ui: { color: "bg-green-500", icon: null },
-      widgets: [],
-      apis: {},
-      handlers: {},
-      capabilities: ["cap2"],
-    };
+    });
 
     registerTool("tool1", tool1);
     registerTool("tool2", tool2);
@@ -93,48 +71,63 @@ describe("registerTool", () => {
   });
 });
 
-describe("toolRegistry", () => {
-  it("starts empty", () => {
-    // Registry should be empty after cleanup
+describe("toolRegistry initial state", () => {
+  it("is empty before any registrations", () => {
     expect(Object.keys(toolRegistry)).toHaveLength(0);
   });
+});
 
-  it("persists tools between registrations", () => {
-    const tool1: Tool = {
-      name: "Tool1",
-      slug: "tool-1",
-      enabled: true,
-      ui: { color: "bg-blue-500", icon: null },
-      widgets: [],
-      apis: {},
-      handlers: {},
-      capabilities: [],
-    };
+describe("getTool", () => {
+  it("returns a registered tool by name", () => {
+    const tool = createTool({ name: "Lookup", slug: "lookup" });
 
-    const tool2: Tool = {
-      name: "Tool2",
-      slug: "tool-2",
-      enabled: true,
-      ui: { color: "bg-green-500", icon: null },
-      widgets: [],
-      apis: {},
-      handlers: {},
-      capabilities: [],
-    };
+    registerTool("lookup", tool);
 
-    registerTool("tool1", tool1);
-    registerTool("tool2", tool2);
-
-    expect(Object.keys(toolRegistry)).toHaveLength(2);
-    expect(toolRegistry.tool1?.name).toBe("Tool1");
-    expect(toolRegistry.tool2?.name).toBe("Tool2");
+    expect(getTool("lookup")).toBe(tool);
   });
 
-  it("allows undefined tools to be registered", () => {
-    // This tests edge case where undefined might be registered
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (registerTool as any)("undefinedTool", undefined);
+  it("returns undefined for unknown tools", () => {
+    expect(getTool("missing")).toBeUndefined();
+  });
+});
 
-    expect(toolRegistry.undefinedTool).toBeUndefined();
+describe("getAllTools", () => {
+  it("returns all registered tools", () => {
+    const tool1 = createTool({ name: "T1", slug: "t1" });
+    const tool2 = createTool({ name: "T2", slug: "t2" });
+
+    registerTool("t1", tool1);
+    registerTool("t2", tool2);
+
+    const all = getAllTools();
+    expect(all).toHaveLength(2);
+    expect(all).toContain(tool1);
+    expect(all).toContain(tool2);
+  });
+
+  it("does not include missing or undefined entries", () => {
+    const tool = createTool({ name: "Only", slug: "only" });
+
+    registerTool("only", tool);
+
+    const all = getAllTools();
+    expect(all).toEqual([tool]);
+  });
+});
+
+describe("getToolNames", () => {
+  it("returns all registered tool names", () => {
+    const tool1 = createTool({ name: "Tool1", slug: "tool-1" });
+    const tool2 = createTool({ name: "Tool2", slug: "tool-2" });
+
+    registerTool("alpha", tool1);
+    registerTool("beta", tool2);
+
+    const names = getToolNames().sort();
+    expect(names).toEqual(["alpha", "beta"]);
+  });
+
+  it("returns an empty array when no tools are registered", () => {
+    expect(getToolNames()).toEqual([]);
   });
 });
