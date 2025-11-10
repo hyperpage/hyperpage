@@ -8,19 +8,23 @@
 
 This phase updates the Kubernetes deployment configuration to include PostgreSQL as a sidecar container, along with proper environment variables, health checks, and security configurations.
 
-## Kubernetes Sidecar Pattern
+## Deployment Topology
 
-### Why Sidecar Pattern
+PostgreSQL should be treated as a first-class infrastructure component. For production, prefer one of:
 
-- **Co-location**: Database and application in same pod
-- **Shared lifecycle**: Scale together
-- **Local communication**: Faster than network calls
-- **Simplified networking**: No external dependencies
-- **Data locality**: Reduced latency
+1. Managed PostgreSQL (RDS, Cloud SQL, AlloyDB, etc.)
+2. A dedicated PostgreSQL StatefulSet with its own Service and PVCs
+
+The sidecar pattern shown below can be useful for:
+- local development
+- ephemeral test environments
+- simple demos
+
+It is not recommended as the default pattern for production deployments.
 
 ## Implementation Steps
 
-### Step 1: Update Deployment Configuration
+### Step 1: Application Deployment Configuration
 
 #### Current: k8s/deployment.yaml (SQLite)
 
@@ -58,7 +62,7 @@ spec:
             claimName: hyperpage-pvc
 ```
 
-#### Target: k8s/deployment.yaml (PostgreSQL)
+#### Target: k8s/deployment.yaml (App connecting to external/Postgres Service)
 
 ```yaml
 apiVersion: apps/v1
@@ -67,7 +71,6 @@ metadata:
   name: hyperpage
   labels:
     app: hyperpage
-    version: v0.1.0
 spec:
   replicas: 1
   selector:
@@ -77,148 +80,11 @@ spec:
     metadata:
       labels:
         app: hyperpage
-        version: v0.1.0
     spec:
-      # Initialize container to wait for PostgreSQL
-      initContainers:
-        - name: wait-for-postgres
-          image: postgres:15-alpine
-          command:
-            - sh
-            - -c
-            - |
-              echo "Waiting for PostgreSQL to be ready..."
-              until pg_isready -h localhost -p 5432 -U hyperpage; do
-                echo "PostgreSQL is unavailable - sleeping"
-                sleep 2
-              done
-              echo "PostgreSQL is up - starting application"
-          env:
-            - name: PGHOST
-              value: "localhost"
-            - name: PGPORT
-              value: "5432"
-            - name: PGUSER
-              value: "hyperpage"
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: hyperpage-secrets
-                  key: POSTGRES_PASSWORD
-            - name: PGDATABASE
-              value: "hyperpage"
-
-      # PostgreSQL sidecar container
-      - name: postgresql
-        image: postgres:15-alpine
-        imagePullPolicy: IfNotPresent
-
-        # Security context
-        securityContext:
-          runAsUser: 70
-          runAsGroup: 70
-          fsGroup: 70
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false
-          capabilities:
-            drop:
-              - ALL
-            add:
-              - CHOWN
-              - FOWNER
-              - DAC_OVERRIDE
-              - FSETID
-              - SETGID
-              - SETUID
-              - SETPCAP
-              - NET_BIND_SERVICE
-
-        # Environment variables
-        env:
-          - name: POSTGRES_DB
-            value: "hyperpage"
-          - name: POSTGRES_USER
-            value: "hyperpage"
-          - name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: hyperpage-secrets
-                key: POSTGRES_PASSWORD
-          - name: PGDATA
-            value: "/var/lib/postgresql/data/pgdata"
-          - name: POSTGRES_INITDB_ARGS
-            value: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
-          - name: POSTGRES_HOST_AUTH_METHOD
-            value: "scram-sha-256"
-          - name: POSTGRES_INITDB_WALDIR
-            value: "/var/lib/postgresql/data/pg_wal"
-
-        # Ports
-        ports:
-          - containerPort: 5432
-            name: postgresql
-            protocol: TCP
-
-        # Resource limits and requests
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "100m"
-            ephemeral-storage: "1Gi"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-            ephemeral-storage: "2Gi"
-
-        # Liveness probe
-        livenessProbe:
-          exec:
-            command:
-              - pg_isready
-              - -h
-              - localhost
-              - -U
-              - hyperpage
-              - -d
-              - hyperpage
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-          successThreshold: 1
-
-        # Readiness probe
-        readinessProbe:
-          exec:
-            command:
-              - pg_isready
-              - -h
-              - localhost
-              - -U
-              - hyperpage
-              - -d
-              - hyperpage
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
-          successThreshold: 1
-
-        # Volume mounts
-        volumeMounts:
-          - name: postgres-data
-            mountPath: /var/lib/postgresql/data
-          - name: postgres-wal
-            mountPath: /var/lib/postgresql/data/pg_wal
-            subPath: wal
-          - name: postgres-config
-            mountPath: /etc/postgresql
-            readOnly: true
-
-      # Main application container
-      - name: hyperpage
-        image: hyperpage:v0.1.0
-        imagePullPolicy: IfNotPresent
+      containers:
+        - name: hyperpage
+          image: hyperpage:v0.1.0
+          imagePullPolicy: IfNotPresent
 
         # Security context
         securityContext:
@@ -237,20 +103,35 @@ spec:
           - name: NODE_ENV
             value: "production"
           - name: POSTGRES_HOST
-            value: "localhost"
+            valueFrom:
+              configMapKeyRef:
+                name: hyperpage-config
+                key: POSTGRES_HOST
           - name: POSTGRES_PORT
-            value: "5432"
+            valueFrom:
+              configMapKeyRef:
+                name: hyperpage-config
+                key: POSTGRES_PORT
           - name: POSTGRES_DB
-            value: "hyperpage"
+            valueFrom:
+              configMapKeyRef:
+                name: hyperpage-config
+                key: POSTGRES_DB
           - name: POSTGRES_USER
-            value: "hyperpage"
+            valueFrom:
+              secretKeyRef:
+                name: hyperpage-secrets
+                key: POSTGRES_USER
           - name: POSTGRES_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: hyperpage-secrets
                 key: POSTGRES_PASSWORD
           - name: DATABASE_URL
-            value: "postgresql://hyperpage:$(POSTGRES_PASSWORD)@localhost:5432/hyperpage"
+            valueFrom:
+              secretKeyRef:
+                name: hyperpage-secrets
+                key: DATABASE_URL
 
           # Connection pool settings
           - name: DB_POOL_MAX
@@ -503,10 +384,8 @@ spec:
       port: 80
       targetPort: 3000
       protocol: TCP
-    - name: postgresql
-      port: 5432
-      targetPort: 5432
-      protocol: TCP
+    # PostgreSQL is typically exposed via its own Service (e.g. hyperpage-postgres)
+    # The application connects using DATABASE_URL/POSTGRES_* pointing at that Service.
 ```
 
 ### Step 6: Horizontal Pod Autoscaler

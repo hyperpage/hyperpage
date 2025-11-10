@@ -10,6 +10,8 @@ This phase implements PostgreSQL connection pooling, health checks, error handli
 
 ## PostgreSQL Connection Architecture
 
+This phase defines a simple, production-safe connection pattern using a shared Pool and Drizzle for node-postgres. It must work correctly in a Next.js/server environment (including serverless-style deployments) without relying on long-lived global timers or process-level hooks.
+
 ### Connection Pooling Benefits
 
 - **Performance**: Reuse connections instead of creating new ones
@@ -19,46 +21,37 @@ This phase implements PostgreSQL connection pooling, health checks, error handli
 
 ## Implementation Steps
 
-### Step 1: Enhanced Connection Pool Configuration
-
-#### Advanced Pool Configuration
+### Step 1: Minimal, Reusable Pool + Drizzle
 
 ```typescript
-// lib/database/connection.ts - Enhanced configuration
-const poolConfig = {
-  // Core connection settings
+// lib/database/connection.ts
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import * as schema from "./schema";
+
+const DATABASE_URL =
+  process.env.DATABASE_URL ??
+  "postgresql://hyperpage:password@localhost:5432/hyperpage";
+
+const pool = new Pool({
   connectionString: DATABASE_URL,
-
-  // Pool size management
-  max: parseInt(process.env.DB_POOL_MAX || "20"),
-  min: parseInt(process.env.DB_POOL_MIN || "5"),
-
-  // Timeout settings
-  idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || "30000"),
-  connectionTimeoutMillis: parseInt(
-    process.env.DB_CONNECTION_TIMEOUT || "5000",
+  max: Number(process.env.DB_POOL_MAX ?? 20),
+  idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT ?? 30_000),
+  connectionTimeoutMillis: Number(
+    process.env.DB_CONNECTION_TIMEOUT ?? 5_000,
   ),
-
-  // Health check settings
-  statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || "30000"),
-  query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || "30000"),
-
-  // SSL configuration
   ssl:
     process.env.NODE_ENV === "production"
-      ? {
-          rejectUnauthorized: false,
-          minVersion: "TLSv1.2",
-        }
+      ? { rejectUnauthorized: false }
       : false,
+});
 
-  // Connection validation
-  application_name: "hyperpage",
+const db = drizzle(pool, { schema });
 
-  // Connection lifecycle
-  keepAlive: true,
-  keepAliveInitialDelayMillis: 10000,
-};
+export function getAppDatabase() {
+  return { pool, drizzle: db };
+}
+```
 
 // Environment variables
 export const DATABASE_URL =
@@ -80,242 +73,53 @@ export const DB_CONNECTION_TIMEOUT = parseInt(
 );
 ```
 
-### Step 2: Connection Health Monitoring
-
-#### Health Check Implementation
+### Step 2: Simple Health Check Utility
 
 ```typescript
 // lib/database/health.ts
-import { Pool } from "pg";
+import { getAppDatabase } from "./connection";
+
+export type DatabaseHealthStatus = "healthy" | "unhealthy";
 
 export interface DatabaseHealth {
-  status: "healthy" | "degraded" | "unhealthy";
-  responseTime: number;
-  connectionCount: number;
+  status: DatabaseHealthStatus;
+  responseTimeMs: number;
   error?: string;
-  lastCheck: Date;
 }
 
-export class DatabaseHealthMonitor {
-  private pool: Pool;
-  private healthHistory: DatabaseHealth[] = [];
-  private maxHistorySize = 10;
-
-  constructor(pool: Pool) {
-    this.pool = pool;
-  }
-
-  async checkHealth(): Promise<DatabaseHealth> {
-    const startTime = Date.now();
-
-    try {
-      // Test basic connectivity
-      const result = await this.pool.query(
-        "SELECT 1 as health_check, NOW() as timestamp",
-      );
-      const responseTime = Date.now() - startTime;
-
-      // Get connection pool statistics
-      const totalCount = this.pool.totalCount;
-      const idleCount = this.pool.idleCount;
-      const waitingCount = this.pool.waitingCount;
-
-      const health: DatabaseHealth = {
-        status: responseTime < 1000 ? "healthy" : "degraded",
-        responseTime,
-        connectionCount: totalCount,
-        lastCheck: new Date(),
-      };
-
-      this.addToHistory(health);
-      return health;
-    } catch (error) {
-      const health: DatabaseHealth = {
-        status: "unhealthy",
-        responseTime: Date.now() - startTime,
-        connectionCount: this.pool.totalCount,
-        error: error instanceof Error ? error.message : "Unknown error",
-        lastCheck: new Date(),
-      };
-
-      this.addToHistory(health);
-      return health;
-    }
-  }
-
-  private addToHistory(health: DatabaseHealth): void {
-    this.healthHistory.push(health);
-    if (this.healthHistory.length > this.maxHistorySize) {
-      this.healthHistory.shift();
-    }
-  }
-
-  getHealthHistory(): DatabaseHealth[] {
-    return [...this.healthHistory];
-  }
-
-  isHealthy(): boolean {
-    const recent = this.healthHistory.slice(-3);
-    return recent.length > 0 && recent.every((h) => h.status === "healthy");
+export async function checkDatabaseHealth(): Promise<DatabaseHealth> {
+  const start = Date.now();
+  try {
+    const { pool } = getAppDatabase();
+    await pool.query("SELECT 1");
+    return {
+      status: "healthy",
+      responseTimeMs: Date.now() - start,
+    };
+  } catch (error) {
+    return {
+      status: "unhealthy",
+      responseTimeMs: Date.now() - start,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 ```
 
-### Step 3: Enhanced Connection Manager
+### Step 3: Usage Pattern
 
-#### Connection Lifecycle Management
+- All code should import from the shared connection:
 
 ```typescript
-// lib/database/connection.ts - Enhanced manager
-import { Pool, PoolClient, PoolConfig } from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
-import * as schema from "./schema";
-import { DatabaseHealthMonitor } from "./health";
+import { getAppDatabase } from "@/lib/database/connection";
 
-type DrizzleInstance = ReturnType<typeof drizzle<typeof schema>>;
+const { drizzle } = getAppDatabase();
 
-interface ConnectionState {
-  pool: Pool;
-  drizzle: DrizzleInstance;
-  healthMonitor: DatabaseHealthMonitor;
-  isInitialized: boolean;
-  lastHealthCheck: Date;
-}
-
-class DatabaseConnectionManager {
-  private state: ConnectionState | null = null;
-  private initializing = false;
-  private healthCheckInterval: NodeJS.Timeout | null = null;
-
-  async initialize(): Promise<ConnectionState> {
-    if (this.state?.isInitialized) {
-      return this.state;
-    }
-
-    if (this.initializing) {
-      // Wait for initialization to complete
-      return new Promise((resolve, reject) => {
-        const checkInterval = setInterval(() => {
-          if (this.state?.isInitialized) {
-            clearInterval(checkInterval);
-            resolve(this.state);
-          }
-        }, 100);
-
-        setTimeout(() => {
-          clearInterval(checkInterval);
-          reject(new Error("Database initialization timeout"));
-        }, 30000);
-      });
-    }
-
-    this.initializing = true;
-
-    try {
-      const pool = new Pool(poolConfig);
-      const drizzle = drizzle(pool, { schema });
-      const healthMonitor = new DatabaseHealthMonitor(pool);
-
-      // Test initial connection
-      await healthMonitor.checkHealth();
-
-      this.state = {
-        pool,
-        drizzle,
-        healthMonitor,
-        isInitialized: true,
-        lastHealthCheck: new Date(),
-      };
-
-      // Start periodic health checks
-      this.startHealthChecks();
-
-      // Handle process shutdown
-      this.setupShutdownHandlers();
-
-      this.initializing = false;
-      return this.state;
-    } catch (error) {
-      this.initializing = false;
-      throw new Error(`Failed to initialize database: ${error}`);
-    }
-  }
-
-  private startHealthChecks(): void {
-    // Check health every 30 seconds
-    this.healthCheckInterval = setInterval(async () => {
-      if (this.state?.healthMonitor) {
-        try {
-          const health = await this.state.healthMonitor.checkHealth();
-          this.state.lastHealthCheck = health.lastCheck;
-
-          if (health.status === "unhealthy") {
-            console.error("Database health check failed:", health.error);
-            // Could trigger alerts here
-          }
-        } catch (error) {
-          console.error("Health check error:", error);
-        }
-      }
-    }, 30000);
-  }
-
-  private setupShutdownHandlers(): void {
-    const gracefulShutdown = async (signal: string) => {
-      console.log(`Received ${signal}, shutting down gracefully...`);
-
-      if (this.healthCheckInterval) {
-        clearInterval(this.healthCheckInterval);
-      }
-
-      if (this.state?.pool) {
-        await this.state.pool.end();
-        console.log("Database connections closed");
-      }
-
-      process.exit(0);
-    };
-
-    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-  }
-
-  getConnection(): ConnectionState {
-    if (!this.state?.isInitialized) {
-      throw new Error("Database not initialized. Call initialize() first.");
-    }
-    return this.state;
-  }
-
-  async getHealth(): Promise<ReturnType<DatabaseHealthMonitor["checkHealth"]>> {
-    const state = this.getConnection();
-    return await state.healthMonitor.checkHealth();
-  }
-
-  async getClient(): Promise<PoolClient> {
-    const state = this.getConnection();
-    return await state.pool.connect();
-  }
-
-  async close(): Promise<void> {
-    if (this.healthCheckInterval) {
-      clearInterval(this.healthCheckInterval);
-    }
-
-    if (this.state?.pool) {
-      await this.state.pool.end();
-      this.state = null;
-    }
-  }
-}
-
-// Export singleton instance
-export const dbManager = new DatabaseConnectionManager();
-export const getAppDatabase = () => dbManager.getConnection();
-export const getHealth = () => dbManager.getHealth();
-export const getClient = () => dbManager.getClient();
-export const closeAllConnections = () => dbManager.close();
+const jobs = await drizzle.select().from(schema.jobs);
 ```
+
+- Health endpoint(s) should call `checkDatabaseHealth()` instead of building their own pools.
+- Avoid process-level signal handling and long-running intervals inside library code; let the hosting platform manage process lifecycle.
 
 ### Step 4: Database Metrics and Monitoring
 

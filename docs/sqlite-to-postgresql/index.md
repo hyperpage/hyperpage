@@ -3,7 +3,7 @@
 **Document Version:** 1.0  
 **Date:** 2025-01-11  
 **Author:** Hyperpage Development Team  
-**Status:** Planning Complete - Ready for Implementation
+**Status:** Draft Plan - Requires Alignment and Updates Before Implementation
 
 ## Migration Overview
 
@@ -88,58 +88,59 @@ This migration transforms Hyperpage from SQLite to PostgreSQL, providing product
 **Duration:** 1-2 hours  
 **File:** [`phase-4-migration-system.md`](phase-4-migration-system.md)
 
-- Update migration registry
-- Create PostgreSQL migration scripts
-- Update test database setup
+- Introduce a PostgreSQL migration system using Drizzle ORM for node-postgres
+- Use the official Drizzle migrator for node-postgres (not postgres-js)
+- Keep migration table/schema consistent with Drizzle defaults
+- Add scripts for local/test/production migration runs
 
-### Phase 5: Kubernetes Configuration
+### Phase 5: Kubernetes / Deployment Configuration
 
 **Duration:** 2-3 hours  
 **File:** [`phase-5-kubernetes.md`](phase-5-kubernetes.md)
 
-- Add PostgreSQL sidecar container
-- Update deployment configuration
-- Add environment variables
-- Configure health checks
+- Define how Hyperpage connects to PostgreSQL in each environment
+- Prefer managed PostgreSQL or a dedicated StatefulSet + Service
+- Treat sidecar PostgreSQL only as a non-production/example option
+- Ensure env vars and connection strings match the chosen topology
 
-### Phase 6: Data Migration
-
-**Duration:** 1-2 hours  
-**File:** [`phase-6-data-migration.md`](phase-6-data-migration.md)
-
-- Export SQLite data
-- Transform data for PostgreSQL
-- Import into PostgreSQL
-- Validate data integrity
-
-### Phase 7: Testing & Validation
+### Phase 6: Testing & Validation
 
 **Duration:** 3-4 hours  
 **File:** [`phase-7-testing.md`](phase-7-testing.md)
 
-- Update test suite
-- Run integration tests
-- Validate all functionality
-- Performance testing
-
-### Phase 8: Production Deployment
+- Update test suite to target PostgreSQL
+- Run integration tests on the new schema
+- Validate all functionality against a clean PostgreSQL database
+- Performance testing and baseline
+### Phase 7: Production Deployment
 
 **Duration:** 2-3 hours  
-**File:** [`phase-8-deployment.md`](phase-8-deployment.md)
+**File:** [`phase-8-production-deployment.md`](phase-8-production-deployment.md)
 
-- Deploy to production
-- Monitor performance
-- Validate functionality
-- Gradual rollout
+- Deploy the PostgreSQL-backed version
+- Monitor performance and stability
+- Validate functionality against clean Postgres schema
+- Gradual rollout with the ability to rollback to the previous release
 
-### Phase 9: Rollback Strategy
+### Phase 8: Rollback Strategy
 
 **Duration:** Planning Phase  
-**File:** [`phase-9-rollback.md`](phase-9-rollback.md)
+**File:** [`phase-9-rollback-strategy.md`](phase-9-rollback-strategy.md)
 
-- Rollback procedures
-- Data recovery process
-- Emergency protocols
+- Rollback procedures (to previous app + SQLite stack)
+- Clear separation: no partial data merges between PostgreSQL and legacy SQLite
+- Emergency protocols and monitoring
+
+### Phase 9: SQLite Cleanup
+
+**Duration:** 0.5-1 hour  
+**File:** (inline in this document)
+
+- Remove better-sqlite3 and related types from dependencies
+- Delete SQLite-specific schema and connection code no longer in use
+- Remove `data/hyperpage.db` and other SQLite files from repo and deployment manifests
+- Verify no remaining imports of drizzle-orm/sqlite-core or SQLite migrations
+- Ensure CI/CD, k8s manifests, and docs reference PostgreSQL only
 
 ## Current Database Schema
 
@@ -196,11 +197,11 @@ The existing SQLite database contains 8 main tables:
 ### Success Criteria
 
 - ✅ All functionality works with PostgreSQL
-- ✅ 100% data integrity maintained
-- ✅ Performance equal or better than SQLite
-- ✅ Zero downtime deployment
-- ✅ Rollback capability maintained
-- ✅ All tests pass
+- ✅ Data integrity validated via automated checks
+- ✅ Performance equal or better than SQLite for expected workloads
+- ✅ Deployment with minimal disruption and documented rollback
+- ✅ Drizzle migrations and schema fully aligned with the running database
+- ✅ All tests (unit, integration, migration) pass against PostgreSQL
 
 ## Risk Assessment
 

@@ -35,7 +35,7 @@ This phase updates the existing migration system to work with PostgreSQL instead
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { getAppDatabase } from "./connection";
 
 export class MigrationManager {
@@ -94,21 +94,18 @@ export class MigrationManager {
     }>;
   }> {
     try {
-      // Query migration table
-      const result = await this.drizzle.execute(`
-        SELECT 
-          id,
-          name,
-          created_at,
-          executed_at
-        FROM public.__drizzle_migrations
-        ORDER BY created_at DESC
-      `);
+      // Query Drizzle migration table (schema/columns depend on Drizzle version)
+      const result = await this.drizzle.execute(
+        `SELECT name, created_at, executed_at FROM "__drizzle_migrations" ORDER BY created_at DESC`,
+      );
 
-      const migrations = result.rows.map((row) => ({
+      const rows = Array.isArray(result) ? result : (result.rows ?? []);
+      const migrations = rows.map((row: any) => ({
         name: row.name,
         status: row.executed_at ? ("applied" as const) : ("pending" as const),
-        applied_at: row.executed_at?.toISOString(),
+        applied_at: row.executed_at
+          ? new Date(row.executed_at).toISOString()
+          : undefined,
       }));
 
       return {
@@ -128,38 +125,24 @@ export class MigrationManager {
     }
   }
 
-  async rollbackMigration(migrationName: string): Promise<void> {
-    try {
-      console.log(`🔄 Rolling back migration: ${migrationName}`);
-
-      // Mark migration as not executed
-      await this.drizzle.execute(
-        `
-        UPDATE public.__drizzle_migrations 
-        SET executed_at = NULL 
-        WHERE name = ?
-      `,
-        [migrationName],
-      );
-
-      console.log(`✅ Migration ${migrationName} rolled back`);
-    } catch (error) {
-      console.error(`❌ Failed to rollback migration ${migrationName}:`, error);
-      throw error;
-    }
+  async rollbackMigration(_migrationName: string): Promise<void> {
+    // NOTE:
+    // Automated down-migrations are intentionally not implemented here.
+    // Design explicit, tested down-migrations if you require rollback via SQL.
+    console.warn(
+      "rollbackMigration is not implemented. Use forward-only migrations plus backups/restore.",
+    );
   }
 
   async createMigrationTable(): Promise<void> {
     const sql = `
-      CREATE TABLE IF NOT EXISTS public.__drizzle_migrations (
+      -- Migration metadata table (example; align with Drizzle's actual schema)
+      CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL UNIQUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         executed_at TIMESTAMPTZ
       );
-      
-      CREATE INDEX IF NOT EXISTS idx_drizzle_migrations_executed 
-        ON public.__drizzle_migrations (executed_at);
     `;
 
     await this.drizzle.execute(sql);
