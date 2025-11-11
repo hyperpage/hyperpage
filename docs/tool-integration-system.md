@@ -4,35 +4,83 @@ This document describes how tools integrate with the Hyperpage platform and prov
 
 ## Overview
 
-The Hyperpage tool integration system is designed around a **registry-driven architecture** where all tool interactions are completely driven by registry configurations with zero hardcoded logic.
+The Hyperpage tool integration system is built on two core pillars:
+
+- A **registry-driven architecture** for tools, widgets, and APIs.
+- A **repository-first, dual-engine persistence layer** that all tools and platform features rely on.
+
+All tool interactions are driven by registry configurations with zero hardcoded per-tool logic in application flows, and all persistence is routed through well-defined repository interfaces.
+
+---
 
 ## Architecture
 
 ### Registry-Driven Design
 
-All tool interactions are completely registry-driven with zero hardcoded logic anywhere in the codebase. Each tool is defined as a registry entry that contains:
+All tool interactions are completely registry-driven. Each tool is defined as a registry entry that contains:
 
-- **API Specifications**: Endpoints, request/response formats
-- **Widget Definitions**: UI components and data display
+- **API Specifications**: Endpoint definitions, parameters, and response metadata
+- **Widget Definitions**: UI components and data display configuration
 - **Handler Functions**: Business logic for API operations
 - **TypeScript Types**: Type-safe interfaces for all operations
-- **Configuration**: Environment variables and authentication
+- **Configuration**: Environment variables and authentication/OAuth metadata
+
+There is no ad-hoc branching on tool names scattered across the codebase. The registry is the single source of truth for tool capabilities.
 
 ### Tool Ownership Model
 
 Each tool owns its complete integration:
 
 - **Widgets**: UI components that display tool data
-- **API Specifications**: Endpoint definitions and data structures
-- **Handler Functions**: Business logic for API operations
-- **TypeScript Interfaces**: Type definitions for all data
-- **Configuration**: Environment setup and credentials
+- **APIs and Handlers**: Endpoint specifications and implementations
+- **Types**: Data contracts for its responses
+- **Configuration**: Environment setup, credentials, OAuth configuration
+
+The platform core reads these definitions from the registry to:
+
+- Expose `/api/tools/[tool]/[endpoint]` routes
+- Render widgets in the portal
+- Drive discovery and status indicators
+
+---
+
+## Persistence Integration (Repository-First)
+
+Tools and platform features MUST use the repository-first persistence layer described in `docs/persistence.md` and MUST NOT access drizzle schemas directly.
+
+### Valid Persistence Boundaries for Tools
+
+When a tool or its handlers need persistence, they MUST depend on:
+
+- `getAppStateRepository()` for durable key/value state
+- `getJobRepository()` (typically via `MemoryJobQueue`) for background jobs
+- `getOAuthTokenRepository()` / `SecureTokenStorage` for OAuth tokens
+- `getSessionRepository()` where applicable for session-related flows
+
+Key rules:
+
+- No direct imports of `lib/database/schema` or `lib/database/pg-schema` in tool handlers or widgets.
+- No engine-specific branching (`if DB_ENGINE === ...`) in tool code.
+- All dual-engine behavior is encapsulated inside repository factories via `getReadWriteDb()` + `$schema` identity checks.
+
+This ensures:
+
+- Tools remain engine-agnostic.
+- Dual-engine migrations (SQLite → PostgreSQL) do not require changes in tool integrations.
+- Tests for tools can rely on repository-shaped fakes.
+
+For details, see:
+
+- `docs/persistence.md`
+- `docs/sqlite-to-postgresql/dual-engine-repositories.md`
+
+---
 
 ## Adding a New Tool
 
 ### Step 1: Create Tool Definition
 
-Create `tools/newtool/index.ts` with complete tool definition:
+Create `tools/newtool/index.ts` with the complete tool definition:
 
 ```typescript
 import { Tool } from "../tool-types";
@@ -76,12 +124,15 @@ export const newtool: Tool = {
   // API handlers
   handlers: {
     data: async (request: Request, config: ToolConfig) => {
-      // Business logic implementation
+      // Business logic implementation:
+      // - Use tool config from registry/environment
+      // - Call external APIs as needed
+      // - Optionally use repository-first persistence (see below)
       return { items: [] };
     },
   },
 
-  // Optional: OAuth configuration for authentication
+  // Optional: OAuth + configuration
   config: {
     formatApiUrl: (webUrl: string) => `${webUrl}/api/v1`,
     oauthConfig: {
@@ -122,15 +173,11 @@ export interface NewToolResponse {
 
 ### Step 3: Register Tool
 
-Add to `tools/index.ts`:
+In `tools/index.ts`:
 
 ```typescript
 export { newtool } from "./newtool";
-```
 
-And register in the tools registry:
-
-```typescript
 export const tools = [
   // ... existing tools
   newtool,
@@ -148,20 +195,22 @@ NEWTOOL_API_URL=https://api.newtool.com
 NEWTOOL_API_TOKEN=your_api_token_here
 ```
 
+---
+
 ## Widget System
 
 ### Widget Requirements
 
 All widgets must include:
 
-- **Title**: Display name for the widget
-- **Data Source**: Configurable data source with refresh capabilities
-- **Loading States**: Appropriate loading and error states
-- **Dynamic Loading**: Support for server-side API data fetching
+- **Title**: Display name
+- **Data Source**: Configurable data source (API endpoint)
+- **Loading/Error States**: Clear feedback for users
+- **Dynamic Loading**: Server-side API data fetching when `dynamic: true`
 
-### Dynamic Widgets
+### Dynamic Widgets and API Endpoints
 
-Widgets can be marked as `dynamic: true` to enable server-side API data fetching:
+Widgets can be marked as `dynamic: true` to enable server-side loading:
 
 ```typescript
 widgets: [
@@ -174,265 +223,200 @@ widgets: [
 ];
 ```
 
-**Important**: All dynamic widgets must specify `apiEndpoint` property that matches a defined API handler in the tool's `apis` object.
+Constraints:
+
+- `apiEndpoint` MUST match an entry in the tool's `apis` and `handlers`.
+- No fallback guessing of endpoints; configuration must be explicit.
 
 ### Auto-Refresh Configuration
 
-Widgets support configurable `refreshInterval` (in milliseconds) for automatic background polling. Example intervals:
+Widgets support `refreshInterval` in milliseconds. Examples:
 
-- GitHub/Jira: 300000ms (5 minutes)
-- Performance monitoring: 60000ms (1 minute)
-- System metrics: 30000ms (30 seconds)
+- GitHub/Jira: 300000 (5 minutes)
+- Performance monitoring: 60000 (1 minute)
+- System metrics: 30000 (30 seconds)
+
+---
 
 ## API Integration
 
 ### Server-Side Loading
 
-All tools are loaded server-side on startup. Each tool checks its `ENABLE_*` environment variable to determine enabled state.
+- Tools are registered server-side.
+- Each tool reads its `ENABLE_*` flag from environment variables.
+- Only enabled tools participate in routing and UI.
 
 ### Client/Server Separation
 
-- **Server**: Handles all API calls, authentication, and sensitive operations
-- **Client**: Receives only UI-safe data via API endpoints
-- **Security**: Tool configurations are automatically excluded from client components
+- All calls to external services and sensitive operations are server-side.
+- Client components consume data via internal API routes:
+  - Typically `/api/tools/[tool]/[endpoint]`.
+- Tool configuration secrets never reach the client.
 
 ### Single API Router
 
-All tool API calls route through `/api/tools/[tool]/[endpoint]` which uses `tool.handlers[endpoint]` for execution.
+All tool API calls are routed through:
+
+- `/api/tools/[tool]/[endpoint]`
+
+The router:
+
+- Resolves the tool definition from the registry.
+- Validates that `[endpoint]` exists in `tool.apis` and `tool.handlers`.
+- Invokes `tool.handlers[endpoint]` with properly typed parameters.
+
+---
 
 ## OAuth Configuration
 
-### Registry-Driven OAuth Architecture
+### Registry-Driven OAuth
 
-The Hyperpage platform uses a **registry-driven OAuth architecture** where each tool owns its complete OAuth configuration. This approach eliminates hardcoded provider mappings and enables seamless addition of new OAuth providers.
+Each tool can define its OAuth configuration inside its definition. This:
 
-### OAuth Configuration Structure
+- Avoids hardcoded provider logic.
+- Enables adding/removing OAuth-capable tools via configuration.
 
-Each tool can define its complete OAuth configuration within its definition:
+Example structure:
 
 ```typescript
-export const tool: Tool = {
-  // ... other properties
-  config: {
-    // Optional: Custom API URL formatter
-    formatApiUrl: (webUrl: string) => `${webUrl}/api/v3`,
-
-    // Complete OAuth configuration
-    oauthConfig: {
-      // OAuth URLs (absolute or relative for dynamic formatting)
-      authorizationUrl: "https://provider.com/oauth/authorize",
-      tokenUrl: "https://provider.com/oauth/token",
-      userApiUrl: "/user", // or full URL for user profile
-
-      // Required OAuth scopes
-      scopes: ["read:data", "write:data", "admin:settings"],
-
-      // Environment variable names for credentials
-      clientIdEnvVar: "PROVIDER_OAUTH_CLIENT_ID",
-      clientSecretEnvVar: "PROVIDER_OAUTH_CLIENT_SECRET",
-
-      // User profile field mapping
-      userMapping: {
-        id: "id", // User's unique identifier
-        email: "email", // User's email address
-        username: "username", // User's username
-        name: "full_name", // User's display name
-        avatar: "avatar_url", // URL to user's avatar
-      },
-
-      // Authorization header format
-      authorizationHeader: "Bearer", // or "token" for GitHub
+config: {
+  formatApiUrl: (webUrl: string) => `${webUrl}/api/v3`,
+  oauthConfig: {
+    authorizationUrl: "https://provider.com/oauth/authorize",
+    tokenUrl: "https://provider.com/oauth/token",
+    userApiUrl: "/user",
+    scopes: ["read:data"],
+    clientIdEnvVar: "PROVIDER_OAUTH_CLIENT_ID",
+    clientSecretEnvVar: "PROVIDER_OAUTH_CLIENT_SECRET",
+    userMapping: {
+      id: "id",
+      email: "email",
+      username: "username",
+      name: "full_name",
+      avatar: "avatar_url",
     },
+    authorizationHeader: "Bearer",
   },
-};
+}
 ```
 
 ### Dynamic URL Support
 
-The OAuth system supports both absolute and relative URLs:
-
-- **Absolute URLs**: Used by GitHub, GitLab - specified directly in configuration
-- **Relative URLs**: Used by Jira - formatted dynamically with tool's base URL
-
-```typescript
-// GitLab - Absolute URLs
-oauthConfig: {
-  authorizationUrl: "https://gitlab.com/oauth/authorize",
-  tokenUrl: "https://gitlab.com/oauth/token"
-}
-
-// Jira - Relative URLs (formatted with base URL)
-oauthConfig: {
-  authorizationUrl: "/rest/oauth2/latest/authorize",
-  tokenUrl: "/rest/oauth2/latest/token"
-}
-```
+- Absolute URLs (e.g. GitHub, GitLab) are specified directly.
+- Relative URLs (e.g. Jira) are combined with the tool's base URL using `formatApiUrl`.
 
 ### OAuth Environment Configuration
 
-Add OAuth credentials to `.env.local.sample`:
+`.env.local.sample`:
 
 ```env
-# Provider OAuth Configuration
 ENABLE_PROVIDER=false
 PROVIDER_OAUTH_CLIENT_ID=your_oauth_app_client_id
 PROVIDER_OAUTH_CLIENT_SECRET=your_oauth_app_client_secret
 ```
 
-### Centralized OAuth Configuration Access
+### Centralized OAuth Lookup
 
-The system provides centralized OAuth configuration lookup:
+OAuth configuration is resolved from the registry and consumed by the shared OAuth helpers. Tokens themselves are persisted via `SecureTokenStorage` / `OAuthTokenRepository` (repository-first, dual-engine).
 
-```typescript
-// Get OAuth configuration from registry
-const oauthConfig = getOAuthConfig("provider-name");
-if (oauthConfig) {
-  // Use for OAuth flow
-  const authorizationUrl = buildAuthorizationUrl(oauthConfig, {
-    state: generateSecureState(),
-    scope: oauthConfig.scopes.join(" "),
-  });
-}
-```
-
-### User Profile Mapping
-
-OAuth configurations include user profile field mapping to handle different API response structures:
-
-```typescript
-// GitHub response mapping
-userMapping: {
-  id: "id",                    // github_user_id
-  email: "email",             // user@example.com
-  username: "login",          // octocat
-  name: "name",               // The Octocat
-  avatar: "avatar_url"        // https://github.com/images/error/octocat_happy.gif
-}
-
-// Jira response mapping
-userMapping: {
-  id: "accountId",                          // 5b10ac8d82e05b22cc7d4ef5
-  email: "emailAddress",                    // octocat@example.com
-  username: "name",                         // The Octocat
-  name: "displayName",                      // The Octocat
-  avatar: "avatarUrls.48x48"               // https://avatar-url
-}
-```
-
-### OAuth Flow Integration
-
-OAuth configurations are automatically used by the authentication system:
-
-1. **OAuth Initiation**: Uses `authorizationUrl` and `scopes`
-2. **Token Exchange**: Uses `tokenUrl` for access/refresh tokens
-3. **User Profile**: Uses `userApiUrl` and `userMapping`
-4. **API Requests**: Uses `authorizationHeader` format
-
-### Adding OAuth to New Tools
-
-To add OAuth support to a new tool:
-
-1. **Define OAuth Configuration** in tool definition
-2. **Set Environment Variables** in `.env.local.sample`
-3. **Register Tool** in tools registry (automatic integration)
-4. **Test OAuth Flow** using provided authentication endpoints
-
-**No additional code changes required** - OAuth is automatically available through the registry system.
+---
 
 ## Best Practices
 
 ### Environment Variables
 
-- Use `ENABLE_TOOL_NAME=true/false` for tool enablement
-- Follow the existing pattern for API credentials
-- Include both `.env.local.sample` (committed) and `.env.local` (ignored)
+- Use `ENABLE_TOOL_NAME=true/false` for tool enablement.
+- Declare all required variables in `.env.local.sample`.
+- Do not commit real credentials.
 
 ### Type Safety
 
-- Define TypeScript interfaces for all API responses
-- Use strict typing for widget props and API handlers
-- Maintain type safety across the entire tool stack
+- Define TypeScript interfaces for all API responses.
+- Type widget props and handlers strictly.
+- Keep tool definitions strongly typed against `Tool` / registry types.
 
-### Performance
+### Persistence (Critical)
 
-- Implement appropriate refresh intervals based on data update frequency
-- Use caching strategies for expensive operations
-- Monitor API rate limits and implement backoff strategies
+- If a tool needs:
+  - Durable configuration state → use `getAppStateRepository()`.
+  - Background jobs → use `MemoryJobQueue` (which uses `getJobRepository()`).
+  - OAuth tokens → use `SecureTokenStorage`.
+- Do not import or write to drizzle schemas directly from tools.
 
-### Error Handling
+### Performance and Error Handling
 
-- Provide graceful error handling in all widget components
-- Use loading states during API operations
-- Implement retry logic for transient failures
+- Choose appropriate `refreshInterval` values.
+- Handle rate limits and backoff in handlers.
+- Provide clear loading and error states in widgets.
+- Use repository boundaries as natural instrumentation points.
+
+---
 
 ## Tool Status and Discovery
 
 ### Automatic Integration
 
-Adding/generating a tool automatically provides:
+Once registered, a tool automatically:
 
-- UI widgets in the portal
-- API endpoints for data access
-- Sidebar status indicators
-- Discovery capabilities
+- Exposes API endpoints through the unified router.
+- Provides widgets in the portal for enabled tools.
+- Participates in sidebar/status/discovery components.
 
 ### UI Filtering
 
 Only enabled tools appear in:
 
-- Portal UI widgets
+- Portal widgets
 - Sidebar navigation
-- API endpoint discovery
-- User interface elements
+- Discovery endpoints
+
+---
 
 ## Testing and Validation
 
 ### API Endpoint Testing
 
-Test API endpoints at `/api/tools/[tool]/[endpoint]`:
+For `/api/tools/[tool]/[endpoint]`:
 
-- Verify data structure matches TypeScript types
-- Test error handling and edge cases
-- Validate authentication and authorization
+- Validate request/response shapes.
+- Assert errors are handled correctly.
+- Use mocks/fakes for external services.
 
 ### Widget Testing
 
-Verify widgets in the portal:
+- Ensure widgets appear only when the tool is enabled.
+- Test dynamic data loading, refresh behavior, and failure modes.
+- Verify responsive layout and dark mode behavior.
 
-- Confirm widgets appear only for enabled tools
-- Test dynamic data loading and refresh functionality
-- Validate responsive design and error states
+### Persistence and Dual-Engine Testing
+
+- When tool behavior depends on persistence (e.g. jobs, tokens, state):
+  - Test against repository interfaces using fakes (hermetic).
+  - Repository-level tests cover engine-specific behavior separately.
+
+---
 
 ## Security Considerations
 
-### Token Management
+### Token and Credential Management
 
-- All API tokens stored in environment variables
-- Never exposed to client-side code
-- Server-side authentication for all external API calls
+- All external API tokens are environment-based.
+- OAuth tokens are stored exclusively via `SecureTokenStorage` / `OAuthTokenRepository`.
+- No secrets in client bundles or tool widgets.
 
 ### Input Validation
 
-- All dynamic route parameters validated with strict regex
-- Early validation in API routes
-- Generic error messages without implementation details
+- Dynamic route parameters validated with strict patterns.
+- API handlers return generic errors; internal details stay server-side.
 
 ---
 
 ## Cross-References
 
-### Related Documentation
+- **Persistence**: `docs/persistence.md`
+- **Dual-Engine Repositories**: `docs/sqlite-to-postgresql/dual-engine-repositories.md`
+- **Configuration Guidelines**: `configuration-guidelines.md`
+- **Security Practices**: `security-practices.md`
+- **Coding Principles**: `coding-principles.md`
 
-- **[Configuration Guidelines](configuration-guidelines.md)** - Environment setup and tool configuration
-- **[Security Practices](security-practices.md)** - Security standards and validation
-- **[Coding Principles](coding-principles.md)** - Architectural patterns and component systems
-
-### Code Examples
-
-- **[GitHub Tool](tools/github/)** - Example of OAuth integration
-- **[Jira Tool](tools/jira/)** - Example of enterprise tool integration
-- **[GitLab Tool](tools/gitlab/)** - Example of self-hosted deployment
-
----
-
-**Last updated**: January 11, 2025
+**Last updated**: Reflects repository-first, dual-engine persistence integration.

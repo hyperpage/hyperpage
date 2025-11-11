@@ -16,6 +16,7 @@ PostgreSQL should be treated as a first-class infrastructure component. For prod
 2. A dedicated PostgreSQL StatefulSet with its own Service and PVCs
 
 The sidecar pattern shown below can be useful for:
+
 - local development
 - ephemeral test environments
 - simple demos

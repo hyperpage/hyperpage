@@ -1,6 +1,34 @@
 import { NextResponse } from "next/server";
 import { isOAuthConfigured } from "@/lib/oauth-config";
 import logger from "@/lib/logger";
+import fs from "fs";
+import path from "path";
+
+/**
+ * Load environment variables from .env.local file
+ * This ensures OAuth credentials are available for API routes
+ */
+function loadEnvFile() {
+  try {
+    const envPath = path.join(process.cwd(), '.env.local');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      envContent.split('\n').forEach(line => {
+        line = line.trim();
+        if (line && !line.startsWith('#') && line.includes('=')) {
+          const [key, ...valueParts] = line.split('=');
+          const value = valueParts.join('=');
+          // Only set if not already set to avoid overriding runtime values
+          if (!process.env[key.trim()]) {
+            process.env[key.trim()] = value.trim();
+          }
+        }
+      });
+    }
+  } catch (error) {
+    logger.warn("Could not load .env.local file", { error });
+  }
+}
 
 /**
  * Get OAuth configuration status for tools
@@ -8,6 +36,9 @@ import logger from "@/lib/logger";
  */
 export async function GET() {
   try {
+    // Load environment variables from .env.local
+    loadEnvFile();
+    
     const tools = ["github", "gitlab", "jira"];
     const configured = {} as Record<string, boolean>;
 

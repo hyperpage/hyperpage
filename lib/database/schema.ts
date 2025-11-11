@@ -1,200 +1,142 @@
 /**
- * Database schema definitions for Hyperpage
+ * Legacy SQLite schema for Hyperpage
  *
- * Defines all tables using Drizzle ORM syntax with proper typing.
- * Includes jobs, rate limits, configurations, and audit trails.
+ * This file restores the original better-sqlite3 / drizzle-orm sqlite-core schema
+ * so existing code and tests continue to compile while we introduce Postgres
+ * via lib/database/pg-schema.ts incrementally.
  */
 
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-import { sql } from "drizzle-orm";
-
-// ============================================================================
-// JOBS TABLES
-// ============================================================================
+import { integer, text, sqliteTable } from "drizzle-orm/sqlite-core";
 
 /**
- * Core jobs table - persists background job state and recovery information
+ * Jobs
  */
 export const jobs = sqliteTable("jobs", {
-  id: text("id").primaryKey(),
-  type: text("type").notNull(), // JobType enum as string
+  id: text("id").primaryKey(), // string IDs
+  type: text("type").notNull(),
   name: text("name").notNull(),
-  priority: integer("priority").notNull(), // JobPriority enum as number
-  status: text("status").notNull(), // JobStatus enum as string
-  tool: text("tool"), // JSON serialized tool info (optional)
-  endpoint: text("endpoint"), // API endpoint for data refresh jobs (optional)
-  payload: text("payload").notNull(), // JSON-serialized payload stored as text
-  result: text("result"), // JSON-serialized result stored as text (optional)
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull(),
-  startedAt: integer("started_at"),
-  completedAt: integer("completed_at"),
-  retryCount: integer("retry_count").default(0).notNull(),
-
-  // Recovery and persistence fields
-  persistedAt: integer("persisted_at")
-    .default(sql`(unixepoch() * 1000)`)
-    .notNull(),
-  recoveryAttempts: integer("recovery_attempts").default(0).notNull(),
+  status: text("status").notNull(),
+  // Core payload/result fields (stored as JSON strings)
+  payload: text("payload").notNull(),
+  result: text("result"),
+  // Optional tool metadata
+  tool: text("tool"),
+  endpoint: text("endpoint"),
+  // Scheduling and timing fields
+  priority: integer("priority").notNull().default(0),
+  scheduledAt: integer("scheduledAt"), // ms timestamp (optional)
+  startedAt: integer("startedAt"),
+  completedAt: integer("completedAt"),
+  // Retry and tracking fields
+  retryCount: integer("retryCount").notNull().default(0),
+  persistedAt: integer("persistedAt").notNull(),
+  recoveryAttempts: integer("recoveryAttempts").notNull().default(0),
+  // Legacy fields (kept for backward compatibility)
+  attempts: integer("attempts").notNull().default(0),
+  lastError: text("last_error"),
+  // Audit timestamps
+  createdAt: integer("createdAt").notNull(),
+  updatedAt: integer("updatedAt").notNull(),
 });
 
 /**
- * Job execution history table - audit trail for all job attempts
+ * Job insert type (used by memory job queue/tests)
+ */
+export type NewJob = typeof jobs.$inferInsert;
+export type Job = typeof jobs.$inferSelect;
+
+/**
+ * Job History
  */
 export const jobHistory = sqliteTable("job_history", {
-  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-  jobId: text("job_id")
-    .notNull()
-    .references(() => jobs.id),
-  attempt: integer("attempt").notNull(),
-  status: text("status").notNull(), // JobStatus enum as string
-  startedAt: integer("started_at").notNull(),
-  completedAt: integer("completed_at"),
-  durationMs: integer("duration_ms"), // Calculated in milliseconds
-  errorMessage: text("error_message"), // Truncated error message for audit
+  id: integer("id").primaryKey(),
+  jobId: text("jobId").notNull(),
+  status: text("status").notNull(),
+  details: text("details"), // JSON string
+  createdAt: integer("createdAt").notNull(),
 });
 
-// ============================================================================
-// RATE LIMITS TABLES
-// ============================================================================
+/**
+ * Tool Configs
+ *
+ * Snapshot-style configuration table referenced by persistence recovery tests
+ * and tool-config-manager. Kept as-is for backward compatibility.
+ */
+export const toolConfigs = sqliteTable("tool_configs", {
+  toolName: text("tool_name").primaryKey(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  config: text("config", { mode: "json" }).$type<Record<
+    string,
+    unknown
+  > | null>(),
+  refreshInterval: integer("refresh_interval"),
+  notifications: integer("notifications", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  updatedAt: integer("updated_at").notNull().default(Math.floor(Date.now())),
+});
 
 /**
- * Rate limits persistence table - maintains rate limit state across restarts
+ * Rate Limits
+ *
+ * Legacy schema used by rate-limit-service and related tests.
  */
 export const rateLimits = sqliteTable("rate_limits", {
-  id: text("id").primaryKey(), // Format: "platform:identifier" (e.g., "github:user123")
-  platform: text("platform").notNull(), // Platform name (github, gitlab, etc.)
+  id: text("id").primaryKey(),
+  platform: text("platform").notNull(),
   limitRemaining: integer("limit_remaining"),
   limitTotal: integer("limit_total"),
   resetTime: integer("reset_time"),
   lastUpdated: integer("last_updated").notNull(),
-  createdAt: integer("created_at")
-    .default(sql`(unixepoch() * 1000)`)
-    .notNull(),
+  createdAt: integer("created_at").notNull().default(Math.floor(Date.now())),
 });
 
-// ============================================================================
-// CONFIGURATION TABLES
-// ============================================================================
-
 /**
- * Tool configurations table - user-configurable tool settings
- */
-export const toolConfigs = sqliteTable("tool_configs", {
-  toolName: text("tool_name").primaryKey(),
-  enabled: integer("enabled", { mode: "boolean" }).default(true).notNull(),
-  config: text("config", { mode: "json" }).$type<Record<string, unknown>>(), // User configuration overrides
-  refreshInterval: integer("refresh_interval"), // Override default refresh interval
-  notifications: integer("notifications", { mode: "boolean" })
-    .default(true)
-    .notNull(),
-  updatedAt: integer("updated_at")
-    .default(sql`(unixepoch() * 1000)`)
-    .notNull(),
-});
-
-// ============================================================================
-// APPLICATION STATE TABLES
-// ============================================================================
-
-/**
- * Application state table - global configuration and state persistence
+ * App State
  */
 export const appState = sqliteTable("app_state", {
   key: text("key").primaryKey(),
-  value: text("value"), // Can store JSON or simple values
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-    .default(sql`(unixepoch() * 1000)`)
-    .notNull(),
-});
-
-// ============================================================================
-// AUTHENTICATION TABLES
-// ============================================================================
-
-/**
- * User authentication table - stores OAuth-authenticated users
- */
-export const users = sqliteTable("users", {
-  id: text("id").primaryKey(), // OAuth provider user ID (e.g., github:12345)
-  provider: text("provider").notNull(), // 'github', 'jira', 'gitlab'
-  providerUserId: text("provider_user_id").notNull(), // Raw provider user ID
-  email: text("email"), // Optional user email
-  username: text("username"), // Optional username
-  displayName: text("display_name"), // Optional display name
-  avatarUrl: text("avatar_url"), // Optional avatar URL
-  createdAt: integer("created_at")
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer("updated_at")
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+  value: text("value").notNull(), // JSON string
 });
 
 /**
- * OAuth tokens table - stores encrypted access and refresh tokens
+ * OAuth tokens (legacy, SQLite-backed)
+ *
+ * NOTE:
+ * - Kept for compatibility with existing tests and any code that still uses this schema.
+ * - The new Postgres-backed schema lives in lib/database/pg-schema.ts.
  */
 export const oauthTokens = sqliteTable("oauth_tokens", {
-  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-  userId: text("user_id").notNull(),
-  toolName: text("tool_name").notNull(), // 'github', 'jira', 'gitlab'
-  accessToken: text("access_token").notNull(), // Encrypted using AES-256-GCM
-  refreshToken: text("refresh_token"), // Encrypted using AES-256-GCM (when available)
-  tokenType: text("token_type").default("Bearer").notNull(),
-  expiresAt: integer("expires_at"), // Token expiry timestamp (milliseconds)
-  refreshExpiresAt: integer("refresh_expires_at"), // Refresh token expiry (milliseconds)
-  scopes: text("scopes"), // Required scopes granted (space-separated)
-  metadata: text("metadata"), // JSON: additional OAuth response data
-  ivAccess: text("iv_access").notNull(), // Initialization vector for access token
-  ivRefresh: text("iv_refresh"), // Initialization vector for refresh token
-  createdAt: integer("created_at")
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  updatedAt: integer("updated_at")
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+  id: integer("id").primaryKey(),
+  userId: text("userId").notNull(),
+  toolName: text("toolName").notNull(),
+  accessToken: text("accessToken").notNull(),
+  refreshToken: text("refreshToken"),
+  tokenType: text("tokenType").notNull(),
+  expiresAt: integer("expiresAt"),
+  refreshExpiresAt: integer("refreshExpiresAt"),
+  scopes: text("scopes"),
+  metadata: text("metadata"),
+  ivAccess: text("ivAccess").notNull(),
+  ivRefresh: text("ivRefresh"),
+  createdAt: integer("createdAt").notNull(),
+  updatedAt: integer("updatedAt").notNull(),
 });
 
 /**
- * User sessions complement table - links sessions to authenticated users
+ * Users (legacy, SQLite-backed)
+ *
+ * Minimal user profile table required by the OAuth route when using SQLite.
+ * This mirrors the shape expected in app/api/auth/oauth/[provider]/route.ts.
  */
-export const userSessions = sqliteTable("user_sessions", {
-  sessionId: text("session_id").primaryKey(),
-  userId: text("user_id").notNull(),
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey(),
   provider: text("provider").notNull(),
-  createdAt: integer("created_at")
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
-  lastActivity: integer("last_activity")
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`),
+  providerUserId: text("providerUserId").notNull(),
+  email: text("email"),
+  username: text("username"),
+  displayName: text("displayName"),
+  avatarUrl: text("avatarUrl"),
+  createdAt: integer("createdAt").notNull(),
+  updatedAt: integer("updatedAt").notNull(),
 });
-
-// ============================================================================
-// TYPE EXPORTS
-// ============================================================================
-
-// Type helpers for better TypeScript integration
-export type Job = typeof jobs.$inferSelect;
-export type NewJob = typeof jobs.$inferInsert;
-
-export type JobHistoryEntry = typeof jobHistory.$inferSelect;
-export type NewJobHistoryEntry = typeof jobHistory.$inferInsert;
-
-export type RateLimit = typeof rateLimits.$inferSelect;
-export type NewRateLimit = typeof rateLimits.$inferInsert;
-
-export type ToolConfig = typeof toolConfigs.$inferSelect;
-export type NewToolConfig = typeof toolConfigs.$inferInsert;
-
-export type AppStateEntry = typeof appState.$inferSelect;
-export type NewAppStateEntry = typeof appState.$inferInsert;
-
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-
-export type OAuthToken = typeof oauthTokens.$inferSelect;
-export type NewOAuthToken = typeof oauthTokens.$inferInsert;
-
-export type UserSession = typeof userSessions.$inferSelect;
-export type NewUserSession = typeof userSessions.$inferInsert;

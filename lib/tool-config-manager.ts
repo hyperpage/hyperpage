@@ -5,11 +5,12 @@
  * Provides type-safe configuration loading, saving, and management.
  */
 
-import { db } from "@/lib/database";
-import { toolConfigs } from "@/lib/database/schema";
-import { eq } from "drizzle-orm";
 import { toolRegistry } from "@/tools/registry";
 import logger from "@/lib/logger";
+import {
+  toolConfigRepository,
+  type NormalizedToolConfig,
+} from "@/lib/database/tool-config-repository";
 
 /**
  * User-configurable tool settings interface
@@ -36,25 +37,15 @@ class ToolConfigManager {
    */
   async loadToolConfigurations(): Promise<number> {
     try {
-      const persistedConfigs = await db.select().from(toolConfigs);
+      const persistedConfigs = await toolConfigRepository.getAll();
       let loadedCount = 0;
 
       for (const config of persistedConfigs) {
         try {
-          // Convert database format to UserToolConfig
-          const userConfig: UserToolConfig = {
-            enabled: Boolean(config.enabled),
-            config: config.config || undefined,
-            refreshInterval: config.refreshInterval
-              ? Number(config.refreshInterval)
-              : undefined,
-            notifications: Boolean(config.notifications),
-          };
+          const userConfig = this.fromNormalizedConfig(config);
 
-          // Update the tool registry with persisted configuration
           await this.applyToolConfiguration(config.toolName, userConfig);
 
-          // Cache for quick access
           this.configCache.set(config.toolName, userConfig);
           loadedCount++;
         } catch (error) {
@@ -88,27 +79,13 @@ class ToolConfigManager {
         this.configCache.get(toolName) || this.getDefaultConfig();
       const mergedConfig = { ...currentConfig, ...config };
 
-      // Persist to database
-      await db
-        .insert(toolConfigs)
-        .values({
-          toolName,
-          enabled: mergedConfig.enabled,
-          config: mergedConfig.config,
-          refreshInterval: mergedConfig.refreshInterval,
-          notifications: mergedConfig.notifications,
-          updatedAt: Date.now(),
-        })
-        .onConflictDoUpdate({
-          target: toolConfigs.toolName,
-          set: {
-            enabled: mergedConfig.enabled,
-            config: mergedConfig.config,
-            refreshInterval: mergedConfig.refreshInterval,
-            notifications: mergedConfig.notifications,
-            updatedAt: Date.now(),
-          },
-        });
+      await toolConfigRepository.upsert({
+        toolName,
+        enabled: mergedConfig.enabled,
+        config: mergedConfig.config,
+        refreshInterval: mergedConfig.refreshInterval,
+        notifications: mergedConfig.notifications,
+      });
 
       // Update cache
       this.configCache.set(toolName, mergedConfig);
@@ -133,29 +110,16 @@ class ToolConfigManager {
       return this.configCache.get(toolName)!;
     }
 
-    // Load from database
-    const result = await db
-      .select()
-      .from(toolConfigs)
-      .where(eq(toolConfigs.toolName, toolName));
+    const normalized = await toolConfigRepository.get(toolName);
 
-    if (result.length > 0) {
-      const config = result[0];
-      const userConfig: UserToolConfig = {
-        enabled: Boolean(config.enabled),
-        config: config.config || undefined,
-        refreshInterval: config.refreshInterval
-          ? Number(config.refreshInterval)
-          : undefined,
-        notifications: Boolean(config.notifications),
-      };
-
-      // Cache it
-      this.configCache.set(toolName, userConfig);
-      return userConfig;
+    if (!normalized) {
+      return null;
     }
 
-    return null; // No configuration found
+    const userConfig = this.fromNormalizedConfig(normalized);
+
+    this.configCache.set(toolName, userConfig);
+    return userConfig;
   }
 
   /**
@@ -163,8 +127,7 @@ class ToolConfigManager {
    */
   async deleteToolConfiguration(toolName: string): Promise<boolean> {
     try {
-      // Perform the delete operation
-      await db.delete(toolConfigs).where(eq(toolConfigs.toolName, toolName));
+      await toolConfigRepository.delete(toolName);
 
       // Remove from cache regardless of whether db had the record
       this.configCache.delete(toolName);
@@ -212,21 +175,25 @@ class ToolConfigManager {
   async getAllToolConfigurations(): Promise<Record<string, UserToolConfig>> {
     const result: Record<string, UserToolConfig> = {};
 
-    // Load all from database
-    const allConfigs = await db.select().from(toolConfigs);
+    const allConfigs = await toolConfigRepository.getAll();
 
     for (const config of allConfigs) {
-      result[config.toolName] = {
-        enabled: Boolean(config.enabled),
-        config: config.config || undefined,
-        refreshInterval: config.refreshInterval
-          ? Number(config.refreshInterval)
-          : undefined,
-        notifications: Boolean(config.notifications),
-      };
+      result[config.toolName] = this.fromNormalizedConfig(config);
     }
 
     return result;
+  }
+
+  private fromNormalizedConfig(config: NormalizedToolConfig): UserToolConfig {
+    return {
+      enabled: config.enabled,
+      config: config.config,
+      refreshInterval:
+        typeof config.refreshInterval === "number"
+          ? config.refreshInterval
+          : undefined,
+      notifications: config.notifications,
+    };
   }
 
   /**

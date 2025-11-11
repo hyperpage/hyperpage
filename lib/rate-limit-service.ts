@@ -12,9 +12,10 @@ import {
 } from "@/lib/rate-limit-monitor";
 import { Tool } from "@/tools/tool-types";
 import { PlatformRateLimits, RateLimitStatus } from "@/lib/types/rate-limit";
-import { db } from "@/lib/database";
-import { rateLimits } from "@/lib/database/schema";
-import { sql } from "drizzle-orm";
+import {
+  rateLimitRepository,
+  type NormalizedRateLimitRecord,
+} from "@/lib/database/rate-limit-repository";
 
 // In-memory cache with TTL support for server-side use only
 const rateLimitCache: {
@@ -118,7 +119,7 @@ export async function loadPersistedRateLimits(): Promise<number> {
       "system",
       "Loading persisted rate limits from database",
     );
-    const persistedLimits = await db.select().from(rateLimits);
+    const persistedLimits = await rateLimitRepository.loadAll();
 
     let loadedCount = 0;
     const now = Date.now();
@@ -141,11 +142,12 @@ export async function loadPersistedRateLimits(): Promise<number> {
         }
 
         // Reconstruct rate limit status from persisted data
-        const limitTotal = limit.limitTotal ? Number(limit.limitTotal) : null;
-        const limitRemaining = limit.limitRemaining
-          ? Number(limit.limitRemaining)
-          : null;
-        const resetTime = limit.resetTime ? Number(limit.resetTime) : null;
+        const limitTotal =
+          limit.limitTotal !== null ? Number(limit.limitTotal) : null;
+        const limitRemaining =
+          limit.limitRemaining !== null ? Number(limit.limitRemaining) : null;
+        const resetTime =
+          limit.resetTime !== null ? Number(limit.resetTime) : null;
 
         let status: "normal" | "warning" | "critical" | "unknown" = "unknown";
         if (limitRemaining !== null && limitTotal !== null) {
@@ -335,35 +337,27 @@ export async function saveRateLimitStatus(
       return;
     }
 
-    const limitRecord = {
+    const limitRecord: NormalizedRateLimitRecord = {
       id: `${platform}:global`, // Use consistent format: platform:resource_type
       platform,
-      limitRemaining: platformLimits.remaining ?? null,
-      limitTotal: platformLimits.limit ?? null,
-      resetTime: platformLimits.resetTime ?? null,
+      limitRemaining:
+        typeof platformLimits.remaining === "number"
+          ? platformLimits.remaining
+          : null,
+      limitTotal:
+        typeof platformLimits.limit === "number" ? platformLimits.limit : null,
+      resetTime:
+        typeof platformLimits.resetTime === "number"
+          ? platformLimits.resetTime
+          : null,
       lastUpdated: rateLimitStatus.lastUpdated,
     };
 
-    // Upsert the rate limit record
-    await db
-      .insert(rateLimits)
-      .values(limitRecord)
-      .onConflictDoUpdate({
-        target: rateLimits.id,
-        set: {
-          limitRemaining: limitRecord.limitRemaining,
-          limitTotal: limitRecord.limitTotal,
-          resetTime: limitRecord.resetTime,
-          lastUpdated: limitRecord.lastUpdated,
-        },
-      });
+    await rateLimitRepository.upsert(limitRecord);
 
-    // Also clean up old rate limit records (older than 7 days)
+    // Also clean up old rate limit records (older than 7 days) for SQLite backend.
     const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    await db.delete(rateLimits).where(
-      // Use a proper comparison for cleanup - records older than cutoff time
-      sql`${rateLimits.lastUpdated} < ${cutoffTime}`,
-    );
+    await rateLimitRepository.cleanupOlderThan(cutoffTime);
   } catch (_error) {
     rateLimitLogger.event(
       "error",

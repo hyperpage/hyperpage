@@ -1,0 +1,203 @@
+# PostgreSQL Production Configuration for Hyperpage
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hyperpage-postgres-config
+  labels:
+    app: hyperpage
+    component: postgres
+data:
+  # PostgreSQL Configuration
+  postgresql.conf: |
+    # Connection and Authentication
+    max_connections = 100
+    shared_buffers = 256MB
+    effective_cache_size = 1GB
+    maintenance_work_mem = 64MB
+    
+    # WAL Configuration (Write-Ahead Logging)
+    wal_level = replica
+    max_wal_size = 1GB
+    min_wal_size = 80MB
+    wal_buffers = 16MB
+    checkpoint_completion_target = 0.9
+    
+    # Performance Settings
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+    work_mem = 4MB
+    min_wal_size = 80MB
+    max_wal_size = 1GB
+    
+    # Logging
+    log_destination = 'stderr'
+    logging_collector = on
+    log_directory = 'log'
+    log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+    log_statement = 'all'
+    log_min_duration_statement = 1000
+    
+    # Security
+    ssl = off
+    password_encryption = scram-sha-256
+    
+    # Timeouts
+    statement_timeout = 30000
+    idle_in_transaction_session_timeout = 300000
+    
+    # Background Writer
+    bgwriter_delay = 200ms
+    bgwriter_lru_maxpages = 100
+    bgwriter_lru_multiplier = 2.0
+
+---
+# PostgreSQL Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hyperpage-postgres-secrets
+  labels:
+    app: hyperpage
+    component: postgres
+type: Opaque
+stringData:
+  POSTGRES_USER: "hyperpage"
+  POSTGRES_PASSWORD: "REPLACE_WITH_SECURE_PRODUCTION_PASSWORD"
+  POSTGRES_DB: "hyperpage"
+  PGPASSWORD: "REPLACE_WITH_SECURE_PRODUCTION_PASSWORD"
+
+---
+# PostgreSQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hyperpage-postgres
+  labels:
+    app: hyperpage
+    component: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hyperpage
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: hyperpage
+        component: postgres
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: hyperpage-postgres-secrets
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: hyperpage-postgres-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hyperpage-postgres-secrets
+              key: POSTGRES_PASSWORD
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        - name: POSTGRES_HOST_AUTH_METHOD
+          value: "scram-sha-256"
+        - name: POSTGRES_INITDB_ARGS
+          value: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+        ports:
+        - containerPort: 5432
+          name: postgresql
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "exec pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "exec pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 999
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: hyperpage-postgres-pvc
+      - name: postgres-config
+        configMap:
+          name: hyperpage-postgres-config
+
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: hyperpage-postgres
+  labels:
+    app: hyperpage
+    component: postgres
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgresql
+  selector:
+    app: hyperpage
+    component: postgres
+
+---
+# PostgreSQL PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hyperpage-postgres-pvc
+  labels:
+    app: hyperpage
+    component: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: default  # Adjust based on your cluster
+  volumeMode: Filesystem
