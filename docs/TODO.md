@@ -1,0 +1,10 @@
+- [ ] Fix database migration system (meta/_journal.json missing)
+- [ ] Resolve Playwright test configuration conflicts
+- [ ] Fix MemoryCache mock configuration issues
+- [ ] Repair empty/malformed test file structures
+- [ ] Validate database-dependent tests functionality
+- [ ] Test OAuth integration tests after Playwright fix
+- [ ] Verify cache-related unit tests after mock fix
+- [ ] Run targeted test categories for validation
+- [ ] Run full test suite to confirm resolution
+- [ ] Document any remaining known limitations

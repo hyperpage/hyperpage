@@ -1,24 +1,41 @@
 /**
  * Database connection management for Hyperpage
  *
- * Provides singleton database connections for both application use and internal operations.
- * Handles connection pooling, error handling, and graceful shutdown.
+ * Legacy SQLite + new PostgreSQL wiring (incremental migration).
+ *
+ * Responsibilities:
+ * - Provide existing SQLite-based APIs used across the codebase:
+ *   - getAppDatabase, getInternalDatabase, appDb, internalDb
+ *   - getDatabaseStats, checkDatabaseConnectivity
+ *   - createTestDatabase, createTestDrizzle
+ *   - closeAllConnections
+ * - Expose a Postgres Drizzle client for new code paths (without breaking legacy callers):
+ *   - getPostgresDrizzleDb
  */
 
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
+import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as fs from "fs";
 import * as path from "path";
-import * as schema from "./schema";
+import * as sqliteSchema from "./schema";
+import * as pgSchema from "./pg-schema";
+import { getPgPool, assertPostgresConnection } from "./client";
 import logger from "@/lib/logger";
 
-type DrizzleInstance = ReturnType<typeof drizzle<typeof schema>>;
+type SQLiteDrizzleInstance = ReturnType<
+  typeof drizzleSqlite<typeof sqliteSchema>
+>;
+type PostgresDrizzleInstance = NodePgDatabase<typeof pgSchema>;
 
-// Database configuration
+// ---------------------------------------------------------------------------
+// Legacy SQLite configuration (unchanged behavior)
+// ---------------------------------------------------------------------------
+
 export const DATABASE_PATH = process.env.DATABASE_PATH || "./data/hyperpage.db";
 export const DATABASE_DIR = path.dirname(DATABASE_PATH);
 
-// Ensure database directory exists
 try {
   if (!fs.existsSync(DATABASE_DIR)) {
     fs.mkdirSync(DATABASE_DIR, { recursive: true });
@@ -31,45 +48,38 @@ try {
       error: error instanceof Error ? error.message : String(error),
     },
   );
-  // Continue - the database will be created in the current directory if needed
 }
 
-// Test-safe database path (use in-memory database for tests)
 const IS_TEST_ENV =
   process.env.NODE_ENV === "test" || process.env.VITEST === "1";
 const TEST_DB_PATH = IS_TEST_ENV ? ":memory:" : DATABASE_PATH;
 
-// Application database connection (for business logic)
 let _appDb: Database.Database | null = null;
-let _appDrizzleDb: DrizzleInstance | null = null;
-
-// Internal database connection (for migrations and system operations)
+let _appDrizzleDb: SQLiteDrizzleInstance | null = null;
 let _internalDb: Database.Database | null = null;
 
 /**
- * Get the application database instance (singleton)
- * Used for all business logic operations
+ * Get the application database instance (SQLite)
+ * Used for business logic callers that still depend on the legacy path.
  */
 export function getAppDatabase(): {
   sqlite: Database.Database;
-  drizzle: DrizzleInstance;
+  drizzle: SQLiteDrizzleInstance;
 } {
   if (!_appDb || !_appDrizzleDb) {
     const dbPath = IS_TEST_ENV ? TEST_DB_PATH : DATABASE_PATH;
     _appDb = new Database(dbPath);
 
-    // Enable WAL mode for better concurrency (skip for in-memory test databases)
     if (!IS_TEST_ENV) {
       _appDb.pragma("journal_mode = WAL");
       _appDb.pragma("synchronous = NORMAL");
-      _appDb.pragma("cache_size = 1000000"); // 1GB cache
-      _appDb.pragma("temp_store = memory"); // Temporary tables in memory
+      _appDb.pragma("cache_size = 1000000");
+      _appDb.pragma("temp_store = memory");
     }
 
-    // Set up Drizzle with schema
-    _appDrizzleDb = drizzle(_appDb, { schema });
+    _appDrizzleDb = drizzleSqlite(_appDb, { schema: sqliteSchema });
 
-    logger.info("Application database connection established", {
+    logger.info("Application SQLite database connection established", {
       dbPath,
       isTestEnvironment: IS_TEST_ENV,
       isWALMode: !IS_TEST_ENV,
@@ -80,21 +90,20 @@ export function getAppDatabase(): {
 }
 
 /**
- * Get the internal database instance (singleton)
- * Used for system operations like migrations
+ * Get the internal database instance (SQLite)
+ * Used for system operations (migrations, maintenance) in legacy flow.
  */
 export function getInternalDatabase(): Database.Database {
   if (!_internalDb) {
     const dbPath = IS_TEST_ENV ? TEST_DB_PATH : DATABASE_PATH;
     _internalDb = new Database(dbPath);
 
-    // Enable WAL mode for internal operations too (skip for in-memory test databases)
     if (!IS_TEST_ENV) {
       _internalDb.pragma("journal_mode = WAL");
       _internalDb.pragma("synchronous = NORMAL");
     }
 
-    logger.debug("Internal database connection established", {
+    logger.debug("Internal SQLite database connection established", {
       dbPath,
       isTestEnvironment: IS_TEST_ENV,
     });
@@ -103,23 +112,21 @@ export function getInternalDatabase(): Database.Database {
   return _internalDb;
 }
 
-// Convenience exports
 export const internalDb = getInternalDatabase();
 export const appDb = getAppDatabase;
 
 /**
- * Close all database connections gracefully
- * Should be called during application shutdown
+ * Close all database connections gracefully (SQLite)
  */
 export function closeAllConnections(): void {
-  logger.info("Closing database connections");
+  logger.info("Closing SQLite database connections");
 
   if (_appDb) {
     try {
       _appDb.close();
-      logger.debug("Application database connection closed");
+      logger.debug("Application SQLite database connection closed");
     } catch (error) {
-      logger.error("Failed to close application database connection", {
+      logger.error("Failed to close application SQLite database connection", {
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -130,9 +137,9 @@ export function closeAllConnections(): void {
   if (_internalDb) {
     try {
       _internalDb.close();
-      logger.debug("Internal database connection closed");
+      logger.debug("Internal SQLite database connection closed");
     } catch (error) {
-      logger.error("Failed to close internal database connection", {
+      logger.error("Failed to close internal SQLite database connection", {
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -141,7 +148,7 @@ export function closeAllConnections(): void {
 }
 
 /**
- * Get database connection statistics
+ * Get SQLite database connection statistics
  */
 export function getDatabaseStats(): {
   appDbConnected: boolean;
@@ -155,7 +162,7 @@ export function getDatabaseStats(): {
     const stats = fs.statSync(DATABASE_PATH);
     databaseSize = stats.size;
   } catch {
-    // File might not exist yet, that's fine
+    // File might not exist yet
   }
 
   return {
@@ -167,7 +174,7 @@ export function getDatabaseStats(): {
 }
 
 /**
- * Health check for database connectivity
+ * Health check for SQLite connectivity
  */
 export function checkDatabaseConnectivity(): {
   status: "healthy" | "degraded" | "unhealthy";
@@ -176,7 +183,6 @@ export function checkDatabaseConnectivity(): {
   try {
     const internal = getInternalDatabase();
 
-    // Simple connectivity test
     const result = internal.prepare("SELECT 1 as test").get() as {
       test: number;
     };
@@ -185,25 +191,25 @@ export function checkDatabaseConnectivity(): {
       return {
         status: "healthy",
         details: {
-          message: "Database connection successful",
-          ...getDatabaseStats(),
-        },
-      };
-    } else {
-      return {
-        status: "degraded",
-        details: {
-          message: "Database query returned unexpected result",
+          message: "SQLite database connection successful",
           ...getDatabaseStats(),
         },
       };
     }
+
+    return {
+      status: "degraded",
+      details: {
+        message: "SQLite database query returned unexpected result",
+        ...getDatabaseStats(),
+      },
+    };
   } catch (error) {
     return {
       status: "unhealthy",
       details: {
-        message: "Database connectivity check failed",
-        error: (error as Error).message,
+        message: "SQLite database connectivity check failed",
+        error: error instanceof Error ? error.message : String(error),
         ...getDatabaseStats(),
       },
     };
@@ -211,22 +217,108 @@ export function checkDatabaseConnectivity(): {
 }
 
 /**
- * Create a fresh in-memory database connection for testing
- * Each test suite gets its own isolated database instance
+ * Create a fresh in-memory SQLite database connection for testing
  */
 export function createTestDatabase(): Database.Database {
   const db = new Database(":memory:");
-
-  // Set up basic WAL mode for consistency with regular databases
-  db.pragma("journal_mode = MEMORY"); // Use MEMORY mode for in-memory databases
+  db.pragma("journal_mode = MEMORY");
   db.pragma("synchronous = NORMAL");
-
   return db;
 }
 
 /**
- * Create a test Drizzle instance with schema for testing
+ * Create a test Drizzle instance with SQLite schema for testing
  */
 export function createTestDrizzle(db: Database.Database) {
-  return drizzle(db, { schema });
+  return drizzleSqlite(db, { schema: sqliteSchema });
+}
+
+/**
+ * Resolve configured primary database engine.
+ * Defaults to SQLite to preserve existing behavior.
+ */
+function getConfiguredDbEngine(): "sqlite" | "postgres" {
+  const engine = (process.env.DB_ENGINE || "").toLowerCase();
+  return engine === "postgres" ? "postgres" : "sqlite";
+}
+
+// ---------------------------------------------------------------------------
+// New: PostgreSQL Drizzle client for incremental migration
+// ---------------------------------------------------------------------------
+
+let _pgDrizzleDb: PostgresDrizzleInstance | null = null;
+
+/**
+ * Get the PostgreSQL Drizzle database instance.
+ *
+ * This uses:
+ * - pg Pool from lib/database/client.ts
+ * - Postgres schema from lib/database/pg-schema.ts
+ *
+ * Existing callers remain on SQLite; new code paths can opt into this.
+ */
+export function getPostgresDrizzleDb(): PostgresDrizzleInstance {
+  if (_pgDrizzleDb) {
+    return _pgDrizzleDb;
+  }
+
+  const pool = getPgPool();
+  _pgDrizzleDb = drizzlePostgres(pool, { schema: pgSchema });
+
+  logger.info("PostgreSQL Drizzle client initialized");
+
+  return _pgDrizzleDb;
+}
+
+/**
+ * Get the primary Drizzle database based on configured engine.
+ *
+ * - Default (no DB_ENGINE or unknown): SQLite drizzle from getAppDatabase()
+ * - DB_ENGINE=postgres: Postgres Drizzle via getPostgresDrizzleDb()
+ *
+ * This is the preferred entrypoint for new code to allow seamless migration.
+ */
+export function getPrimaryDrizzleDb():
+  | SQLiteDrizzleInstance
+  | PostgresDrizzleInstance {
+  const engine = getConfiguredDbEngine();
+
+  if (engine === "postgres") {
+    return getPostgresDrizzleDb();
+  }
+
+  const { drizzle } = getAppDatabase();
+  return drizzle;
+}
+
+/**
+ * Alias for read/write operations to emphasize intent.
+ * Currently identical to getPrimaryDrizzleDb().
+ */
+export const getReadWriteDb = getPrimaryDrizzleDb;
+
+/**
+ * Health check for PostgreSQL connectivity
+ */
+export async function checkPostgresConnectivity(): Promise<{
+  status: "healthy" | "unhealthy";
+  details: Record<string, unknown>;
+}> {
+  try {
+    await assertPostgresConnection();
+    return {
+      status: "healthy",
+      details: {
+        message: "PostgreSQL connection successful",
+      },
+    };
+  } catch (error) {
+    return {
+      status: "unhealthy",
+      details: {
+        message: "PostgreSQL connectivity check failed",
+        error: error instanceof Error ? error.message : String(error),
+      },
+    };
+  }
 }

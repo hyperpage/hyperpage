@@ -37,9 +37,7 @@ const pool = new Pool({
   connectionString: DATABASE_URL,
   max: Number(process.env.DB_POOL_MAX ?? 20),
   idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT ?? 30_000),
-  connectionTimeoutMillis: Number(
-    process.env.DB_CONNECTION_TIMEOUT ?? 5_000,
-  ),
+  connectionTimeoutMillis: Number(process.env.DB_CONNECTION_TIMEOUT ?? 5_000),
   ssl:
     process.env.NODE_ENV === "production"
       ? { rejectUnauthorized: false }
@@ -55,8 +53,8 @@ export function getAppDatabase() {
 
 // Environment variables
 export const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  `postgresql://${process.env.POSTGRES_USER || "hyperpage"}:${process.env.POSTGRES_PASSWORD || "password"}@${process.env.POSTGRES_HOST || "localhost"}:${process.env.POSTGRES_PORT || "5432"}/${process.env.POSTGRES_DB || "hyperpage"}?sslmode=${process.env.NODE_ENV === "production" ? "require" : "disable"}`;
+process.env.DATABASE_URL ||
+`postgresql://${process.env.POSTGRES_USER || "hyperpage"}:${process.env.POSTGRES_PASSWORD || "password"}@${process.env.POSTGRES_HOST || "localhost"}:${process.env.POSTGRES_PORT || "5432"}/${process.env.POSTGRES_DB || "hyperpage"}?sslmode=${process.env.NODE_ENV === "production" ? "require" : "disable"}`;
 
 export const POSTGRES_HOST = process.env.POSTGRES_HOST || "localhost";
 export const POSTGRES_PORT = parseInt(process.env.POSTGRES_PORT || "5432");
@@ -69,9 +67,10 @@ export const DB_POOL_MAX = parseInt(process.env.DB_POOL_MAX || "20");
 export const DB_POOL_MIN = parseInt(process.env.DB_POOL_MIN || "5");
 export const DB_IDLE_TIMEOUT = parseInt(process.env.DB_IDLE_TIMEOUT || "30000");
 export const DB_CONNECTION_TIMEOUT = parseInt(
-  process.env.DB_CONNECTION_TIMEOUT || "5000",
+process.env.DB_CONNECTION_TIMEOUT || "5000",
 );
-```
+
+````
 
 ### Step 2: Simple Health Check Utility
 
@@ -104,7 +103,7 @@ export async function checkDatabaseHealth(): Promise<DatabaseHealth> {
     };
   }
 }
-```
+````
 
 ### Step 3: Usage Pattern
 

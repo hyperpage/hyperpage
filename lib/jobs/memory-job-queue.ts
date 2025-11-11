@@ -15,10 +15,11 @@ import {
   JobType,
   JobError,
 } from "@/lib/types/jobs";
-import { db } from "@/lib/database";
-import { jobs, Job, NewJob } from "@/lib/database/schema";
-import { eq, and, inArray, lt } from "drizzle-orm";
 import logger from "@/lib/logger";
+import {
+  getJobRepository,
+  type NormalizedJob,
+} from "@/lib/database/job-repository";
 
 /**
  * Priority queue implementation for job scheduling
@@ -189,6 +190,8 @@ export class MemoryJobQueue implements IJobQueue {
   async enqueue(
     jobSpec: Omit<IJob, "status" | "createdAt" | "updatedAt" | "retryCount">,
   ): Promise<IJob> {
+    const repository = getJobRepository();
+
     const now = Date.now();
     const job: IJob = {
       ...jobSpec,
@@ -202,7 +205,7 @@ export class MemoryJobQueue implements IJobQueue {
     // Validate job has required fields
     this.validateJob(job);
 
-    // Check for duplicate job ID (both in memory and database)
+    // Check for duplicate job ID (both in memory and persistent store)
     if (this.jobs.has(job.id)) {
       throw new JobError(
         `Job with ID ${job.id} already exists`,
@@ -212,13 +215,8 @@ export class MemoryJobQueue implements IJobQueue {
       );
     }
 
-    // Check for duplicate job ID in database
-    const existingJob = await db
-      .select()
-      .from(jobs)
-      .where(eq(jobs.id, job.id))
-      .limit(1);
-    if (existingJob.length > 0) {
+    const existsInStore = await repository.exists(job.id);
+    if (existsInStore) {
       throw new JobError(
         `Job with ID ${job.id} already exists in database`,
         "DUPLICATE_JOB_ID",
@@ -227,27 +225,8 @@ export class MemoryJobQueue implements IJobQueue {
       );
     }
 
-    // Persist job to database
-    const dbJob: NewJob = {
-      id: job.id,
-      type: job.type,
-      name: job.name,
-      priority: job.priority,
-      status: job.status,
-      tool: job.tool ? JSON.stringify(job.tool) : undefined,
-      endpoint: job.endpoint,
-      payload: JSON.stringify(job.payload),
-      result: job.result ? JSON.stringify(job.result) : undefined,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
-      startedAt: undefined,
-      completedAt: undefined,
-      retryCount: job.retryCount,
-      persistedAt: Date.now(),
-      recoveryAttempts: 0,
-    };
-
-    await db.insert(jobs).values(dbJob);
+    // Persist job via repository (engine-agnostic)
+    await repository.insert(job as NormalizedJob);
 
     // Add to in-memory structures
     this.jobs.set(job.id, job);
@@ -336,16 +315,11 @@ export class MemoryJobQueue implements IJobQueue {
       job.result = result;
     }
 
-    // Persist status update to database
-    const updateData: Partial<Job> = {
-      status,
-      updatedAt: now,
-    };
+    const repository = getJobRepository();
 
     // Track completion timestamp and execution time for completed jobs
     if (status === JobStatus.COMPLETED) {
       job.completedAt = now;
-      updateData.completedAt = now;
 
       // Track execution time if job was actually started
       if (job.startedAt) {
@@ -358,15 +332,14 @@ export class MemoryJobQueue implements IJobQueue {
     }
 
     // Persist result for completed/failed jobs
-    if (
-      result &&
-      (status === JobStatus.COMPLETED || status === JobStatus.FAILED)
-    ) {
-      updateData.result = JSON.stringify(result);
-    }
-
-    // Update database with new status and result
-    await db.update(jobs).set(updateData).where(eq(jobs.id, jobId));
+    // Persist status update to repository (including result when relevant)
+    await repository.updateStatus(jobId, {
+      status,
+      updatedAt: now,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt,
+      result,
+    });
 
     // Record job execution history (simplified for now - will be enhanced later)
     // TODO: Implement full job history tracking
@@ -394,54 +367,20 @@ export class MemoryJobQueue implements IJobQueue {
    */
   async loadPersistedJobs(): Promise<number> {
     try {
-      // Load all non-completed jobs from database
-      const persistedJobs = await db
-        .select()
-        .from(jobs)
-        .where(
-          inArray(jobs.status, [
-            JobStatus.PENDING,
-            JobStatus.RUNNING,
-            JobStatus.FAILED,
-          ]),
-        );
+      const repository = getJobRepository();
+
+      // Load all non-completed jobs from repository
+      const persistedJobs = await repository.loadActiveJobs();
 
       let recoveredCount = 0;
 
       for (const dbJob of persistedJobs) {
         try {
-          // Skip jobs with invalid data
-          if (!dbJob.id || !dbJob.name) {
-            logger.warn("Skipping job with missing required fields", {
-              jobId: dbJob.id,
-              jobName: dbJob.name,
-              requiredFields: ["id", "name"],
-            });
-            continue;
-          }
-
-          // Convert database format to IJob interface with type assertions
           const job: IJob = {
-            id: dbJob.id,
-            type: dbJob.type as JobType,
-            name: dbJob.name,
-            priority: dbJob.priority as JobPriority,
-            status: dbJob.status as JobStatus,
-            createdAt: Number(dbJob.createdAt),
-            updatedAt: Number(dbJob.updatedAt),
-            tool: dbJob.tool ? JSON.parse(dbJob.tool) : undefined,
-            endpoint: dbJob.endpoint || undefined,
-            payload: JSON.parse(dbJob.payload) as Record<string, unknown>,
-            result: dbJob.result
-              ? (JSON.parse(dbJob.result) as JobResult)
-              : undefined,
-            startedAt: dbJob.startedAt ? Number(dbJob.startedAt) : undefined,
-            completedAt: dbJob.completedAt
-              ? Number(dbJob.completedAt)
-              : undefined,
-            retryCount: dbJob.retryCount,
-            executionHistory: [],
-          };
+            ...dbJob,
+            // Ensure executionHistory is always present for in-memory tracking
+            executionHistory: dbJob.executionHistory ?? [],
+          } as IJob;
 
           // Add to in-memory structures
           this.jobs.set(job.id, job);
@@ -498,32 +437,16 @@ export class MemoryJobQueue implements IJobQueue {
   async cleanupOldJobs(retentionDays: number = 30): Promise<number> {
     try {
       const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+      const repository = getJobRepository();
 
-      // Count jobs to be deleted first
-      const countToDelete = await db.$count(
-        jobs,
-        and(
-          eq(jobs.status, JobStatus.COMPLETED),
-          lt(jobs.completedAt, cutoffTime),
-        ),
-      );
+      const countDeleted = await repository.cleanupCompletedBefore(cutoffTime);
 
-      // Delete completed jobs older than retention period
-      await db
-        .delete(jobs)
-        .where(
-          and(
-            eq(jobs.status, JobStatus.COMPLETED),
-            lt(jobs.completedAt, cutoffTime),
-          ),
-        );
-
-      logger.info("Successfully cleaned up old jobs from database", {
-        countDeleted: countToDelete,
+      logger.info("Successfully cleaned up old jobs via repository", {
+        countDeleted,
         retentionDays,
         cutoffTime,
       });
-      return countToDelete;
+      return countDeleted;
     } catch (error) {
       logger.error("Failed to cleanup old jobs from database", {
         retentionDays,
