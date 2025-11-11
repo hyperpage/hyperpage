@@ -3,23 +3,8 @@ import { CacheBackend } from "@/lib/cache/cache-interface";
 import { MemorySessionStore } from "@/lib/sessions/memory-session-store";
 import logger from "@/lib/logger";
 
-/**
- * Redis client interface for type safety
- */
-interface RedisClient {
-  get: (key: string) => Promise<string | null>;
-  set: (
-    key: string,
-    value: string,
-    mode: string,
-    ttlSeconds: number,
-  ) => Promise<"OK">;
-  del: (key: string) => Promise<number>;
-  exists: (key: string) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<number>;
-  scan: (cursor: number, ...args: string[]) => Promise<[number, string[]]>;
-  getClient: () => RedisClient;
-}
+// Import Redis type from ioredis
+import type Redis from "ioredis";
 
 export interface SessionData {
   userId?: string;
@@ -67,7 +52,7 @@ export interface SessionData {
 }
 
 export class SessionManager {
-  private redisClient: RedisClient | null = null;
+  private redisClient: Redis | null = null;
   private connected = false;
   private initializing = true;
   private memoryStore: MemorySessionStore;
@@ -87,17 +72,22 @@ export class SessionManager {
 
   private async initializeRedis(redisUrl?: string) {
     try {
-      const cache = await CacheFactory.create({
-        backend: CacheBackend.HYBRID,
-        redisUrl: redisUrl || process.env.REDIS_URL,
-        enableFallback: true,
-      });
+      // Create a dedicated Redis client for sessions
+      // We can't get the client from the cache, so create our own
+      const sessionRedisUrl = redisUrl || process.env.REDIS_URL;
+      if (!sessionRedisUrl) {
+        throw new Error("No Redis URL available for sessions");
+      }
 
-      // Get the underlying Redis client - this is a bit hacky but necessary
-      // for direct Redis operations like SCAN, DEL, etc.
-      this.redisClient = (
-        cache as unknown as { getClient: () => RedisClient }
-      ).getClient();
+      // Import RedisClient directly and create a dedicated instance
+      const { RedisClient } = await import("@/lib/cache/redis-client");
+      const sessionRedisClient = new RedisClient(sessionRedisUrl);
+      
+      // Connect to Redis
+      await sessionRedisClient.connect();
+      
+      // Store the client for session operations
+      this.redisClient = sessionRedisClient.getClient();
       this.connected = true;
 
       // Start cleanup interval
