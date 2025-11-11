@@ -80,7 +80,7 @@ stringData:
   POSTGRES_HOST: "hyperpage-postgres"
   POSTGRES_PORT: "5432"
   POSTGRES_DB: "hyperpage"
-  POSTGRES_USER: "hyperpage"
+  POSTGRES_USER: "postgres"
   POSTGRES_PASSWORD: "REPLACE_WITH_SECURE_PASSWORD"
 EOF
 
@@ -105,10 +105,10 @@ kubectl run migration-job-$TIMESTAMP \
   --env="POSTGRES_HOST=hyperpage-postgres.$NAMESPACE.svc.cluster.local" \
   --env="POSTGRES_PASSWORD=\$(POSTGRES_PASSWORD)" \
   --env="POSTGRES_DB=hyperpage" \
-  --env="POSTGRES_USER=hyperpage" \
+  --env="POSTGRES_USER=postgres" \
   --env="NODE_ENV=production" \
   --env="DB_ENGINE=postgres" \
-  --env="DATABASE_URL=postgresql://hyperpage:\$(POSTGRES_PASSWORD)@hyperpage-postgres.$NAMESPACE.svc.cluster.local:5432/hyperpage" \
+  --env="DATABASE_URL=postgresql://postgres:\$(POSTGRES_PASSWORD)@hyperpage-postgres.$NAMESPACE.svc.cluster.local:5432/hyperpage" \
   --command -- \
   /bin/sh -c "npm run migrate && echo 'Migration completed successfully'" \
   -n $NAMESPACE || log_error "Migration failed"

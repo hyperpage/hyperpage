@@ -229,7 +229,7 @@ spec:
         spec:
           containers:
           - name: backup
-            image: postgres:15-alpine
+            image: postgres:18-alpine
             command:
             - /bin/sh
             - -c
@@ -241,7 +241,7 @@ spec:
               mkdir -p $BACKUP_DIR
               
               # Database backup
-              pg_dump -h hyperpage-postgres -U hyperpage -d hyperpage > $BACKUP_DIR/hyperpage_$DATE.sql
+              pg_dump -h hyperpage-postgres -U postgres -d hyperpage > $BACKUP_DIR/hyperpage_$DATE.sql
               
               # Compress backup
               gzip $BACKUP_DIR/hyperpage_$DATE.sql
@@ -259,7 +259,7 @@ spec:
             - name: POSTGRES_DB
               value: "hyperpage"
             - name: POSTGRES_USER
-              value: "hyperpage"
+              value: "postgres"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -391,7 +391,7 @@ data:
       NODE_ENV: "production"
       DEBUG: "false"
       LOG_LEVEL: "warn"
-      DATABASE_URL: "postgresql://hyperpage:password@hyperpage-postgres:5432/hyperpage"
+      DATABASE_URL: "postgresql://postgres:password@hyperpage-postgres:5432/hyperpage"
       RATE_LIMIT_REQUESTS_PER_HOUR: "1000"
 
 ---
@@ -444,7 +444,7 @@ data:
     type: Opaque
     stringData:
       NEXTAUTH_SECRET: "production-secret-key-2025-secure-64-char"
-      DATABASE_URL: "postgresql://hyperpage:REPLACE_PASSWORD@hyperpage-postgres:5432/hyperpage"
+      DATABASE_URL: "postgresql://postgres:REPLACE_PASSWORD@hyperpage-postgres:5432/hyperpage"
       GITHUB_TOKEN: "REPLACE_WITH_PRODUCTION_TOKEN"
       JIRA_API_TOKEN: "REPLACE_WITH_PRODUCTION_TOKEN"
       GITLAB_TOKEN: "REPLACE_WITH_PRODUCTION_TOKEN"
@@ -460,7 +460,7 @@ metadata:
     component: registry
 type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6WyJldU9UVTNOemM1TmpVPSJdfX19fQ==
+  .dockerconfigjson: BASE64_TOKEN
 
 ---
 # Service Mesh Configuration (Istio)
