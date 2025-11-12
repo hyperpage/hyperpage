@@ -1,0 +1,12 @@
+services:
+  postgres:
+    env_file:
+      - .env.staging
+
+  redis:
+    env_file:
+      - .env.staging
+
+  hyperpage:
+    env_file:
+      - .env.staging

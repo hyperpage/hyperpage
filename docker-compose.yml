@@ -4,10 +4,8 @@ services:
     container_name: hyperpage-postgres
     ports:
       - "5432:5432"
-    env_file:
-      - .env.local
     environment:
-      # Only non-sensitive configuration that doesn't need to be in .env.docker
+      # Only non-sensitive configuration that doesn't need to be in env files
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     volumes:
@@ -19,15 +17,13 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - hyperpage-dev
+      - hyperpage
 
   redis:
     image: redis:8-alpine
     container_name: hyperpage-redis
     ports:
       - "6379:6379"
-    env_file:
-      - .env.local
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -38,7 +34,7 @@ services:
       retries: 5
       start_period: 5s
     networks:
-      - hyperpage-dev
+      - hyperpage
 
   hyperpage:
     build:
@@ -53,23 +49,20 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file:
-      - .env.local
     environment:
-      # Non-sensitive tool configuration
-      - ENABLE_GITHUB=true
-      - ENABLE_GITLAB=true
-      - ENABLE_JIRA=true
-      - ENABLE_CODE_REVIEWS=true
-      - ENABLE_CICD=true
-      - ENABLE_TICKETING=true
-      # Tool-specific credentials should be configured in .env.local
+      # Non-sensitive tool feature flags. Secrets/tokens stay in env files.
+      ENABLE_GITHUB: "true"
+      ENABLE_GITLAB: "true"
+      ENABLE_JIRA: "true"
+      ENABLE_CODE_REVIEWS: "true"
+      ENABLE_CICD: "true"
+      ENABLE_TICKETING: "true"
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
     networks:
-      - hyperpage-dev
+      - hyperpage
     command: npm run dev
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
@@ -85,6 +78,6 @@ volumes:
     driver: local
 
 networks:
-  hyperpage-dev:
+  hyperpage:
     driver: bridge
-    name: hyperpage-dev
+    name: hyperpage

@@ -1,0 +1,12 @@
+services:
+  postgres:
+    env_file:
+      - .env.prod
+
+  redis:
+    env_file:
+      - .env.prod
+
+  hyperpage:
+    env_file:
+      - .env.prod
