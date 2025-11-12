@@ -74,7 +74,6 @@ metadata:
 type: Opaque
 stringData:
   NODE_ENV: "production"
-  DB_ENGINE: "postgres"
   # Add other environment variables from .env.production
   # These would normally be loaded from your secrets manager
   POSTGRES_HOST: "hyperpage-postgres"
@@ -107,7 +106,6 @@ kubectl run migration-job-$TIMESTAMP \
   --env="POSTGRES_DB=hyperpage" \
   --env="POSTGRES_USER=postgres" \
   --env="NODE_ENV=production" \
-  --env="DB_ENGINE=postgres" \
   --env="DATABASE_URL=postgresql://postgres:\$(POSTGRES_PASSWORD)@hyperpage-postgres.$NAMESPACE.svc.cluster.local:5432/hyperpage" \
   --command -- \
   /bin/sh -c "npm run migrate && echo 'Migration completed successfully'" \
@@ -209,7 +207,6 @@ kubectl run perf-validation-$TIMESTAMP \
   --env="POSTGRES_DB=hyperpage" \
   --env="POSTGRES_USER=hyperpage" \
   --env="NODE_ENV=production" \
-  --env="DB_ENGINE=postgres" \
   --command -- \
   /bin/sh -c "npm run test:performance:quick || echo 'Performance tests skipped in production'" \
   -n $NAMESPACE

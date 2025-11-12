@@ -22,20 +22,6 @@ Hyperpage solves the challenge of scattered development data across multiple pla
 - **Rate Limit Monitoring**: Real-time tracking of API usage across all platforms
 - **Modern UI**: Clean design system using shadcn/ui components with Tailwind CSS
 - **Theme System**: Light and dark mode support
-- **🆕 Enterprise Deployment**: Kubernetes-native with horizontal pod autoscaling
-
-## 🆕 Production Deployment
-
-**Kubernetes Deployment Status**: Includes Kubernetes manifests
-
-### Enterprise Capabilities
-
-- **🔄 Auto-Scaling**: HPA with 3-50 pod scaling based on CPU/memory metrics
-- **🔒 Security Hardening**: Non-root containers, RBAC, network policies, security contexts
-- **📊 Observability**: Prometheus metrics, Grafana dashboards, structured logging
-- **♻️ Zero-Downtime Updates**: Rolling deployments with health probes and database migrations
-- **💾 Persistent Storage**: PVC-backed data and log persistence with backup/recovery
-- **🏗️ Containerized**: Docker images with multi-stage builds
 
 ## Quick Start
 
@@ -156,24 +142,7 @@ JIRA_OAUTH_CLIENT_SECRET=jira_client_secret_here
 
 ## Production Deployment
 
-For enterprise deployments, the project includes Kubernetes manifests:
-
-```bash
-# Quick deploy to Kubernetes (assumes cluster access)
-cd k8s
-kubectl apply -f service.yaml -f deployment.yaml -f hpa.yaml
-
-# Follow the detailed guide for complete setup
-cat docs/kubernetes.md
-```
-
-**Production Features:**
-
-- Horizontal Pod Auto-Scaling (HPA) with 3-50 replica scaling
-- Security hardened with RBAC and non-root containers
-- Enterprise observability with Prometheus and Grafana integration
-- Zero-downtime rolling deployments
-- Persistent storage with backup/recovery
+For production deployments, use the provided Dockerfile and Docker Compose configuration to run Hyperpage with PostgreSQL and Redis.
 
 ## Testing
 
@@ -193,10 +162,10 @@ npm test -- --run integration/oauth        # OAuth integration tests
 npm test -- --run integration/tools        # Tool integration tests
 
 # Individual Tool Tests
-npm test -- --run integration/tools/github           # GitHub integration (21 tests)
-npm test -- --run integration/tools/gitlab           # GitLab integration (25 tests)
-npm test -- --run integration/tools/jira             # Jira integration (15 tests)
-npm test -- --run integration/tools/cross-tool       # Cross-tool aggregation (6 tests)
+npm test -- --run integration/tools/github           # GitHub integration
+npm test -- --run integration/tools/gitlab           # GitLab integration
+npm test -- --run integration/tools/jira             # Jira integration
+npm test -- --run integration/tools/cross-tool       # Cross-tool aggregation
 
 # E2E Tests
 npm run test:e2e           # Playwright E2E tests
@@ -212,14 +181,6 @@ npm run test:e2e:ui        # Interactive E2E mode
 - **Cross-Tool Aggregation Tests**: Multi-tool coordination and unified data format validation
 - **E2E Tests**: Playwright framework for complete user journey validation
 - **CI/CD Ready**: All tests run in automated pipelines with parallel execution
-
-**Test Coverage:**
-
-- **67 Integration Tests** across 4 specialized test suites
-- **OAuth Security**: Token handling, session isolation, credential protection
-- **API Integration**: Rate limiting, error handling, data consistency
-- **Cross-Tool Validation**: Unified formats, multi-tool aggregation, security boundaries
-- **Performance**: Concurrent request handling, caching strategies, response optimization
 
 ## Usage Examples
 
@@ -254,4 +215,4 @@ hyperpage/
 
 ## Session Management API
 
-Hyperpage includes powerful session management for distributed deployments, enabling persistent user state
+Hyperpage includes session management for distributed deployments, enabling persistent user state across requests and nodes.
