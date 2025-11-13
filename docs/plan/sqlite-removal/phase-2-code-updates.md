@@ -21,6 +21,7 @@ Phase 2 focuses on updating all application code to use PostgreSQL exclusively. 
 **Action**: Update `lib/database/job-repository.ts` for PostgreSQL
 
 **Implementation**:
+
 ```typescript
 // lib/database/job-repository.ts - PostgreSQL Version
 import { getPostgresDrizzleDb } from "./connection";
@@ -35,7 +36,10 @@ export class JobRepository {
   constructor(private db = getPostgresDrizzleDb()) {}
 
   async create(job: NewJob): Promise<Job> {
-    const [created] = await this.db.insert(pgSchema.jobs).values(job).returning();
+    const [created] = await this.db
+      .insert(pgSchema.jobs)
+      .values(job)
+      .returning();
     return created;
   }
 
@@ -52,7 +56,7 @@ export class JobRepository {
     return await this.db
       .select()
       .from(pgSchema.jobs)
-      .where(eq(pgSchema.jobs.status, 'pending'))
+      .where(eq(pgSchema.jobs.status, "pending"))
       .orderBy(pgSchema.jobs.scheduledAt)
       .limit(limit_count);
   }
@@ -60,19 +64,22 @@ export class JobRepository {
   async updateStatus(id: string, status: string): Promise<void> {
     await this.db
       .update(pgSchema.jobs)
-      .set({ 
+      .set({
         status,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.jobs.id, id));
   }
 
-  async updateResult(id: string, result: Record<string, unknown>): Promise<void> {
+  async updateResult(
+    id: string,
+    result: Record<string, unknown>,
+  ): Promise<void> {
     await this.db
       .update(pgSchema.jobs)
-      .set({ 
+      .set({
         result: JSON.stringify(result),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.jobs.id, id));
   }
@@ -105,9 +112,9 @@ export class JobRepository {
       .from(pgSchema.jobs)
       .where(
         and(
-          eq(pgSchema.jobs.status, 'pending'),
-          lt(pgSchema.jobs.scheduledAt, now.toISOString())
-        )
+          eq(pgSchema.jobs.status, "pending"),
+          lt(pgSchema.jobs.scheduledAt, now.toISOString()),
+        ),
       )
       .orderBy(pgSchema.jobs.scheduledAt);
   }
@@ -116,7 +123,7 @@ export class JobRepository {
     return await this.db
       .select()
       .from(pgSchema.jobs)
-      .where(eq(pgSchema.jobs.status, 'failed'))
+      .where(eq(pgSchema.jobs.status, "failed"))
       .orderBy(desc(pgSchema.jobs.updatedAt))
       .limit(limit_count);
   }
@@ -131,7 +138,7 @@ export class JobRepository {
     const stats = await this.db
       .select({
         status: pgSchema.jobs.status,
-        count: () => sql`COUNT(*)`
+        count: () => sql`COUNT(*)`,
       })
       .from(pgSchema.jobs)
       .groupBy(pgSchema.jobs.status);
@@ -141,17 +148,25 @@ export class JobRepository {
       pending: 0,
       processing: 0,
       completed: 0,
-      failed: 0
+      failed: 0,
     };
 
-    stats.forEach(stat => {
+    stats.forEach((stat) => {
       const count = Number(stat.count);
       result.total += count;
       switch (stat.status) {
-        case 'pending': result.pending = count; break;
-        case 'processing': result.processing = count; break;
-        case 'completed': result.completed = count; break;
-        case 'failed': result.failed = count; break;
+        case "pending":
+          result.pending = count;
+          break;
+        case "processing":
+          result.processing = count;
+          break;
+        case "completed":
+          result.completed = count;
+          break;
+        case "failed":
+          result.failed = count;
+          break;
       }
     });
 
@@ -161,25 +176,25 @@ export class JobRepository {
   async deleteOldJobs(olderThanDays: number = 30): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-    
+
     const result = await this.db
       .delete(pgSchema.jobs)
       .where(
         and(
-          eq(pgSchema.jobs.status, 'completed'),
-          lt(pgSchema.jobs.updatedAt, cutoffDate.toISOString())
-        )
+          eq(pgSchema.jobs.status, "completed"),
+          lt(pgSchema.jobs.updatedAt, cutoffDate.toISOString()),
+        ),
       );
-    
+
     return result.rowCount || 0;
   }
 
   async incrementRetryCount(id: string): Promise<void> {
     await this.db
       .update(pgSchema.jobs)
-      .set({ 
+      .set({
         retryCount: sql`${pgSchema.jobs.retryCount} + 1`,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.jobs.id, id));
   }
@@ -193,6 +208,7 @@ export const jobRepository = new JobRepository();
 **Action**: Update `lib/database/tool-config-repository.ts` for PostgreSQL
 
 **Implementation**:
+
 ```typescript
 // lib/database/tool-config-repository.ts - PostgreSQL Version
 import { getPostgresDrizzleDb } from "./connection";
@@ -207,7 +223,10 @@ export class ToolConfigRepository {
   constructor(private db = getPostgresDrizzleDb()) {}
 
   async create(config: NewToolConfig): Promise<ToolConfig> {
-    const [created] = await this.db.insert(pgSchema.toolConfigs).values(config).returning();
+    const [created] = await this.db
+      .insert(pgSchema.toolConfigs)
+      .values(config)
+      .returning();
     return created;
   }
 
@@ -220,12 +239,15 @@ export class ToolConfigRepository {
     return config || null;
   }
 
-  async update(toolName: string, updates: Partial<NewToolConfig>): Promise<ToolConfig | null> {
+  async update(
+    toolName: string,
+    updates: Partial<NewToolConfig>,
+  ): Promise<ToolConfig | null> {
     const [updated] = await this.db
       .update(pgSchema.toolConfigs)
       .set({
         ...updates,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.toolConfigs.toolName, toolName))
       .returning();
@@ -260,23 +282,29 @@ export class ToolConfigRepository {
       .orderBy(pgSchema.toolConfigs.toolName);
   }
 
-  async updateRefreshInterval(toolName: string, interval: number): Promise<boolean> {
+  async updateRefreshInterval(
+    toolName: string,
+    interval: number,
+  ): Promise<boolean> {
     const result = await this.db
       .update(pgSchema.toolConfigs)
       .set({
         refreshInterval: interval,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.toolConfigs.toolName, toolName));
     return (result.rowCount || 0) > 0;
   }
 
-  async updateNotifications(toolName: string, enabled: boolean): Promise<boolean> {
+  async updateNotifications(
+    toolName: string,
+    enabled: boolean,
+  ): Promise<boolean> {
     const result = await this.db
       .update(pgSchema.toolConfigs)
       .set({
         notifications: enabled,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.toolConfigs.toolName, toolName));
     return (result.rowCount || 0) > 0;
@@ -299,6 +327,7 @@ export const toolConfigRepository = new ToolConfigRepository();
 **Action**: Update `lib/database/rate-limit-repository.ts` for PostgreSQL
 
 **Implementation**:
+
 ```typescript
 // lib/database/rate-limit-repository.ts - PostgreSQL Version
 import { getPostgresDrizzleDb } from "./connection";
@@ -313,7 +342,10 @@ export class RateLimitRepository {
   constructor(private db = getPostgresDrizzleDb()) {}
 
   async create(limit: NewRateLimit): Promise<RateLimit> {
-    const [created] = await this.db.insert(pgSchema.rateLimits).values(limit).returning();
+    const [created] = await this.db
+      .insert(pgSchema.rateLimits)
+      .values(limit)
+      .returning();
     return created;
   }
 
@@ -335,12 +367,15 @@ export class RateLimitRepository {
     return limit || null;
   }
 
-  async update(id: string, updates: Partial<NewRateLimit>): Promise<RateLimit | null> {
+  async update(
+    id: string,
+    updates: Partial<NewRateLimit>,
+  ): Promise<RateLimit | null> {
     const [updated] = await this.db
       .update(pgSchema.rateLimits)
       .set({
         ...updates,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.rateLimits.id, id))
       .returning();
@@ -373,7 +408,7 @@ export class RateLimitRepository {
       .update(pgSchema.rateLimits)
       .set({
         limitRemaining: pgSchema.rateLimits.limitRemaining - 1,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.rateLimits.id, id))
       .returning();
@@ -389,6 +424,7 @@ export const rateLimitRepository = new RateLimitRepository();
 **Action**: Update `lib/database/oauth-token-repository.ts` for PostgreSQL
 
 **Implementation**:
+
 ```typescript
 // lib/database/oauth-token-repository.ts - PostgreSQL Version
 import { getPostgresDrizzleDb } from "./connection";
@@ -403,18 +439,26 @@ export class OAuthTokenRepository {
   constructor(private db = getPostgresDrizzleDb()) {}
 
   async create(token: NewOAuthToken): Promise<OAuthToken> {
-    const [created] = await this.db.insert(pgSchema.oauthTokens).values(token).returning();
+    const [created] = await this.db
+      .insert(pgSchema.oauthTokens)
+      .values(token)
+      .returning();
     return created;
   }
 
-  async findByUserIdAndProvider(userId: string, provider: string): Promise<OAuthToken | null> {
+  async findByUserIdAndProvider(
+    userId: string,
+    provider: string,
+  ): Promise<OAuthToken | null> {
     const [token] = await this.db
       .select()
       .from(pgSchema.oauthTokens)
-      .where(and(
-        eq(pgSchema.oauthTokens.userId, userId),
-        eq(pgSchema.oauthTokens.provider, provider)
-      ))
+      .where(
+        and(
+          eq(pgSchema.oauthTokens.userId, userId),
+          eq(pgSchema.oauthTokens.provider, provider),
+        ),
+      )
       .limit(1);
     return token || null;
   }
@@ -433,12 +477,15 @@ export class OAuthTokenRepository {
       .where(eq(pgSchema.oauthTokens.provider, provider));
   }
 
-  async update(id: string, updates: Partial<NewOAuthToken>): Promise<OAuthToken | null> {
+  async update(
+    id: string,
+    updates: Partial<NewOAuthToken>,
+  ): Promise<OAuthToken | null> {
     const [updated] = await this.db
       .update(pgSchema.oauthTokens)
       .set({
         ...updates,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(pgSchema.oauthTokens.id, id))
       .returning();
@@ -452,13 +499,18 @@ export class OAuthTokenRepository {
     return (result.rowCount || 0) > 0;
   }
 
-  async deleteByUserIdAndProvider(userId: string, provider: string): Promise<boolean> {
+  async deleteByUserIdAndProvider(
+    userId: string,
+    provider: string,
+  ): Promise<boolean> {
     const result = await this.db
       .delete(pgSchema.oauthTokens)
-      .where(and(
-        eq(pgSchema.oauthTokens.userId, userId),
-        eq(pgSchema.oauthTokens.provider, provider)
-      ));
+      .where(
+        and(
+          eq(pgSchema.oauthTokens.userId, userId),
+          eq(pgSchema.oauthTokens.provider, provider),
+        ),
+      );
     return (result.rowCount || 0) > 0;
   }
 
@@ -489,6 +541,7 @@ export const oauthTokenRepository = new OAuthTokenRepository();
 **Action**: Update `app/api/tools/enabled/route.ts`
 
 **Implementation**:
+
 ```typescript
 // app/api/tools/enabled/route.ts - PostgreSQL Version
 import { NextRequest, NextResponse } from "next/server";
@@ -499,7 +552,7 @@ import { eq } from "drizzle-orm";
 export async function GET(request: NextRequest) {
   try {
     const db = getPostgresDrizzleDb();
-    
+
     const enabledTools = await db
       .select({
         toolName: toolConfigs.toolName,
@@ -507,7 +560,7 @@ export async function GET(request: NextRequest) {
         config: toolConfigs.config,
         refreshInterval: toolConfigs.refreshInterval,
         notifications: toolConfigs.notifications,
-        updatedAt: toolConfigs.updatedAt
+        updatedAt: toolConfigs.updatedAt,
       })
       .from(toolConfigs)
       .where(eq(toolConfigs.enabled, true));
@@ -521,12 +574,12 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching enabled tools:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: "Failed to fetch enabled tools",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -535,13 +588,13 @@ export async function POST(request: NextRequest) {
   try {
     const db = getPostgresDrizzleDb();
     const body = await request.json();
-    
+
     const { toolName, enabled, config, refreshInterval, notifications } = body;
-    
+
     if (!toolName) {
       return NextResponse.json(
         { success: false, error: "toolName is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -553,7 +606,7 @@ export async function POST(request: NextRequest) {
         config: config || {},
         refreshInterval: refreshInterval || 300000,
         notifications: notifications !== false,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .onConflictDoUpdate({
         target: toolConfigs.toolName,
@@ -562,8 +615,8 @@ export async function POST(request: NextRequest) {
           config: config || {},
           refreshInterval: refreshInterval || 300000,
           notifications: notifications !== false,
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       });
 
     return NextResponse.json({
@@ -574,12 +627,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error updating tool configuration:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: "Failed to update tool configuration",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -590,6 +643,7 @@ export async function POST(request: NextRequest) {
 **Action**: Update `app/api/health/route.ts`
 
 **Implementation**:
+
 ```typescript
 // app/api/health/route.ts - PostgreSQL Version
 import { NextRequest, NextResponse } from "next/server";
@@ -599,10 +653,10 @@ export async function GET(request: NextRequest) {
   try {
     // Check database connectivity
     const dbHealth = await checkDatabaseConnectivity();
-    
+
     // Overall health status
     const isHealthy = dbHealth.status === "healthy";
-    
+
     const healthData = {
       status: isHealthy ? "healthy" : "unhealthy",
       timestamp: new Date().toISOString(),
@@ -610,7 +664,7 @@ export async function GET(request: NextRequest) {
       environment: process.env.NODE_ENV || "development",
       database: {
         status: dbHealth.status,
-        details: dbHealth.details
+        details: dbHealth.details,
       },
       uptime: process.uptime(),
       memory: process.memoryUsage(),
@@ -618,7 +672,6 @@ export async function GET(request: NextRequest) {
 
     const statusCode = isHealthy ? 200 : 503;
     return NextResponse.json(healthData, { status: statusCode });
-    
   } catch (error) {
     console.error("Health check failed:", error);
     return NextResponse.json(
@@ -626,9 +679,9 @@ export async function GET(request: NextRequest) {
         status: "unhealthy",
         timestamp: new Date().toISOString(),
         error: "Health check failed",
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 }
@@ -639,6 +692,7 @@ export async function GET(request: NextRequest) {
 **Action**: Update `app/api/batch/route.ts`
 
 **Implementation**:
+
 ```typescript
 // app/api/batch/route.ts - PostgreSQL Version
 import { NextRequest, NextResponse } from "next/server";
@@ -658,26 +712,29 @@ export async function POST(request: NextRequest) {
   try {
     const db = getPostgresDrizzleDb();
     const body = await request.json();
-    
+
     // Validate input
     const validatedJob = jobSchema.parse(body);
-    
+
     // Generate job ID
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Create job
-    const [createdJob] = await db.insert(jobs).values({
-      id: jobId,
-      type: validatedJob.type,
-      name: validatedJob.name,
-      payload: JSON.stringify(validatedJob.payload),
-      status: 'pending',
-      priority: validatedJob.priority,
-      scheduledAt: validatedJob.scheduledAt || new Date().toISOString(),
-      retryCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }).returning();
+    const [createdJob] = await db
+      .insert(jobs)
+      .values({
+        id: jobId,
+        type: validatedJob.type,
+        name: validatedJob.name,
+        payload: JSON.stringify(validatedJob.payload),
+        status: "pending",
+        priority: validatedJob.priority,
+        scheduledAt: validatedJob.scheduledAt || new Date().toISOString(),
+        retryCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .returning();
 
     return NextResponse.json({
       success: true,
@@ -687,16 +744,16 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error creating batch job:", error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
           success: false,
           error: "Invalid job data",
           details: error.errors,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -704,9 +761,9 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: "Failed to create job",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -715,18 +772,18 @@ export async function GET(request: NextRequest) {
   try {
     const db = getPostgresDrizzleDb();
     const { searchParams } = new URL(request.url);
-    
-    const status = searchParams.get('status');
-    const type = searchParams.get('type');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+
+    const status = searchParams.get("status");
+    const type = searchParams.get("type");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = parseInt(searchParams.get("offset") || "0");
 
     let query = db.select().from(jobs);
-    
+
     if (status) {
       query = query.where(eq(jobs.status, status));
     }
-    
+
     if (type) {
       query = query.where(eq(jobs.type, type));
     }
@@ -748,9 +805,9 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: "Failed to fetch jobs",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -765,6 +822,7 @@ export async function GET(request: NextRequest) {
 **Action**: Update `lib/tool-config-manager.ts`
 
 **Implementation**:
+
 ```typescript
 // lib/tool-config-manager.ts - PostgreSQL Version
 import { getPostgresDrizzleDb } from "@/lib/database/connection";
@@ -791,7 +849,7 @@ export class ToolConfigManager {
         config: toolConfigs.config,
         refreshInterval: toolConfigs.refreshInterval,
         notifications: toolConfigs.notifications,
-        updatedAt: toolConfigs.updatedAt
+        updatedAt: toolConfigs.updatedAt,
       })
       .from(toolConfigs)
       .where(eq(toolConfigs.toolName, toolName))
@@ -800,7 +858,10 @@ export class ToolConfigManager {
     return config || null;
   }
 
-  async setConfig(toolName: string, config: Omit<ToolConfig, 'toolName'>): Promise<void> {
+  async setConfig(
+    toolName: string,
+    config: Omit<ToolConfig, "toolName">,
+  ): Promise<void> {
     await this.db
       .insert(toolConfigs)
       .values({
@@ -809,7 +870,7 @@ export class ToolConfigManager {
         config: config.config || {},
         refreshInterval: config.refreshInterval || 300000,
         notifications: config.notifications !== false,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .onConflictDoUpdate({
         target: toolConfigs.toolName,
@@ -818,8 +879,8 @@ export class ToolConfigManager {
           config: config.config || {},
           refreshInterval: config.refreshInterval || 300000,
           notifications: config.notifications !== false,
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       });
   }
 
@@ -831,7 +892,7 @@ export class ToolConfigManager {
         config: toolConfigs.config,
         refreshInterval: toolConfigs.refreshInterval,
         notifications: toolConfigs.notifications,
-        updatedAt: toolConfigs.updatedAt
+        updatedAt: toolConfigs.updatedAt,
       })
       .from(toolConfigs)
       .orderBy(toolConfigs.toolName);
@@ -847,7 +908,7 @@ export class ToolConfigManager {
         config: toolConfigs.config,
         refreshInterval: toolConfigs.refreshInterval,
         notifications: toolConfigs.notifications,
-        updatedAt: toolConfigs.updatedAt
+        updatedAt: toolConfigs.updatedAt,
       })
       .from(toolConfigs)
       .where(eq(toolConfigs.enabled, true))
@@ -868,18 +929,21 @@ export class ToolConfigManager {
       .update(toolConfigs)
       .set({
         enabled,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(toolConfigs.toolName, toolName));
     return (result.rowCount || 0) > 0;
   }
 
-  async updateRefreshInterval(toolName: string, interval: number): Promise<boolean> {
+  async updateRefreshInterval(
+    toolName: string,
+    interval: number,
+  ): Promise<boolean> {
     const result = await this.db
       .update(toolConfigs)
       .set({
         refreshInterval: interval,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(toolConfigs.toolName, toolName));
     return (result.rowCount || 0) > 0;
@@ -892,14 +956,14 @@ export class ToolConfigManager {
   }> {
     const allConfigs = await this.db
       .select({
-        enabled: toolConfigs.enabled
+        enabled: toolConfigs.enabled,
       })
       .from(toolConfigs);
 
     const summary = {
       total: allConfigs.length,
-      enabled: allConfigs.filter(c => c.enabled).length,
-      disabled: allConfigs.filter(c => !c.enabled).length
+      enabled: allConfigs.filter((c) => c.enabled).length,
+      disabled: allConfigs.filter((c) => !c.enabled).length,
     };
 
     return summary;
@@ -918,6 +982,7 @@ export const toolConfigManager = new ToolConfigManager();
 **Action**: Update `lib/oauth-token-store.ts`
 
 **Implementation**:
+
 ```typescript
 // lib/oauth-token-store.ts - PostgreSQL Version
 import { getPostgresDrizzleDb } from "@/lib/database/connection";
@@ -942,8 +1007,8 @@ export class PostgreSQLOAuthTokenStore {
 
   async storeToken(tokenData: OAuthTokenData): Promise<void> {
     const encryptedAccessToken = await this.encrypt(tokenData.accessToken);
-    const encryptedRefreshToken = tokenData.refreshToken 
-      ? await this.encrypt(tokenData.refreshToken) 
+    const encryptedRefreshToken = tokenData.refreshToken
+      ? await this.encrypt(tokenData.refreshToken)
       : null;
 
     await this.db.insert(oauthTokens).values({
@@ -951,7 +1016,7 @@ export class PostgreSQLOAuthTokenStore {
       provider: tokenData.provider,
       accessToken: encryptedAccessToken,
       refreshToken: encryptedRefreshToken,
-      tokenType: tokenData.tokenType || 'Bearer',
+      tokenType: tokenData.tokenType || "Bearer",
       expiresAt: tokenData.expiresAt?.toISOString(),
       refreshExpiresAt: tokenData.refreshExpiresAt?.toISOString(),
       scopes: tokenData.scopes ? JSON.stringify(tokenData.scopes) : null,
@@ -963,7 +1028,10 @@ export class PostgreSQLOAuthTokenStore {
     });
   }
 
-  async getToken(userId: string, provider: string): Promise<OAuthTokenData | null> {
+  async getToken(
+    userId: string,
+    provider: string,
+  ): Promise<OAuthTokenData | null> {
     const [token] = await this.db
       .select()
       .from(oauthTokens)
@@ -976,12 +1044,14 @@ export class PostgreSQLOAuthTokenStore {
       userId: token.userId,
       provider: token.provider,
       accessToken: await this.decrypt(token.accessToken, token.ivAccess),
-      refreshToken: token.refreshToken 
-        ? await this.decrypt(token.refreshToken, token.ivRefresh!) 
+      refreshToken: token.refreshToken
+        ? await this.decrypt(token.refreshToken, token.ivRefresh!)
         : undefined,
       tokenType: token.tokenType,
       expiresAt: token.expiresAt ? new Date(token.expiresAt) : undefined,
-      refreshExpiresAt: token.refreshExpiresAt ? new Date(token.refreshExpiresAt) : undefined,
+      refreshExpiresAt: token.refreshExpiresAt
+        ? new Date(token.refreshExpiresAt)
+        : undefined,
       scopes: token.scopes ? JSON.parse(token.scopes) : undefined,
       metadata: token.metadata ? JSON.parse(token.metadata) : undefined,
     };
@@ -993,22 +1063,28 @@ export class PostgreSQLOAuthTokenStore {
       .from(oauthTokens)
       .where(eq(oauthTokens.userId, userId));
 
-    return tokens.map(token => ({
+    return tokens.map((token) => ({
       userId: token.userId,
       provider: token.provider,
       accessToken: "encrypted", // Don't decrypt for listing
       refreshToken: token.refreshToken ? "encrypted" : undefined,
       tokenType: token.tokenType,
       expiresAt: token.expiresAt ? new Date(token.expiresAt) : undefined,
-      refreshExpiresAt: token.refreshExpiresAt ? new Date(token.refreshExpiresAt) : undefined,
+      refreshExpiresAt: token.refreshExpiresAt
+        ? new Date(token.refreshExpiresAt)
+        : undefined,
       scopes: token.scopes ? JSON.parse(token.scopes) : undefined,
       metadata: token.metadata ? JSON.parse(token.metadata) : undefined,
     }));
   }
 
-  async updateToken(userId: string, provider: string, updates: Partial<OAuthTokenData>): Promise<void> {
+  async updateToken(
+    userId: string,
+    provider: string,
+    updates: Partial<OAuthTokenData>,
+  ): Promise<void> {
     const updateData: any = {
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     if (updates.accessToken) {
@@ -1074,37 +1150,45 @@ export class PostgreSQLOAuthTokenStore {
   // Helper methods for encryption/decryption
   private async encrypt(token: string): Promise<string> {
     // Simple encryption for demo - use proper encryption in production
-    const algorithm = 'aes-256-cbc';
-    const key = crypto.scryptSync(process.env.OAUTH_ENCRYPTION_KEY || 'default-key', 'salt', 32);
+    const algorithm = "aes-256-cbc";
+    const key = crypto.scryptSync(
+      process.env.OAUTH_ENCRYPTION_KEY || "default-key",
+      "salt",
+      32,
+    );
     const iv = crypto.randomBytes(16);
-    
+
     const cipher = crypto.createCipher(algorithm, key);
     cipher.setAutoPadding(true);
-    
-    let encrypted = cipher.update(token, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    
-    return iv.toString('hex') + ':' + encrypted;
+
+    let encrypted = cipher.update(token, "utf8", "hex");
+    encrypted += cipher.final("hex");
+
+    return iv.toString("hex") + ":" + encrypted;
   }
 
   private async decrypt(encryptedToken: string, iv: string): Promise<string> {
-    const algorithm = 'aes-256-cbc';
-    const key = crypto.scryptSync(process.env.OAUTH_ENCRYPTION_KEY || 'default-key', 'salt', 32);
-    
-    const [ivHex, encrypted] = encryptedToken.split(':');
-    const ivBuffer = Buffer.from(ivHex, 'hex');
-    
+    const algorithm = "aes-256-cbc";
+    const key = crypto.scryptSync(
+      process.env.OAUTH_ENCRYPTION_KEY || "default-key",
+      "salt",
+      32,
+    );
+
+    const [ivHex, encrypted] = encryptedToken.split(":");
+    const ivBuffer = Buffer.from(ivHex, "hex");
+
     const decipher = crypto.createDecipher(algorithm, key);
     decipher.setAutoPadding(true);
-    
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    
+
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+
     return decrypted;
   }
 
   private async generateIV(): Promise<string> {
-    return crypto.randomBytes(16).toString('hex');
+    return crypto.randomBytes(16).toString("hex");
   }
 }
 
@@ -1120,6 +1204,7 @@ export const oauthTokenStore = new PostgreSQLOAuthTokenStore();
 **Action**: Update `lib/jobs/job-queue.ts`
 
 **Implementation**:
+
 ```typescript
 // lib/jobs/job-queue.ts - PostgreSQL Version
 import { getPostgresDrizzleDb } from "@/lib/database/connection";
@@ -1131,7 +1216,7 @@ export interface JobQueueItem {
   type: string;
   name: string;
   payload: Record<string, unknown>;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   priority: number;
   scheduledAt?: string;
   startedAt?: string;
@@ -1145,9 +1230,11 @@ export interface JobQueueItem {
 export class PostgreSQLJobQueue {
   private db = getPostgresDrizzleDb();
 
-  async addJob(job: Omit<JobQueueItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async addJob(
+    job: Omit<JobQueueItem, "id" | "createdAt" | "updatedAt">,
+  ): Promise<string> {
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     await this.db.insert(jobs).values({
       id: jobId,
       type: job.type,
@@ -1174,10 +1261,10 @@ export class PostgreSQLJobQueue {
       .from(jobs)
       .where(
         and(
-          eq(jobs.status, 'pending'),
+          eq(jobs.status, "pending"),
           lt(jobs.scheduledAt, now),
-          lte(jobs.priority, maxPriority)
-        )
+          lte(jobs.priority, maxPriority),
+        ),
       )
       .orderBy(desc(jobs.priority), jobs.createdAt)
       .limit(1);
@@ -1187,18 +1274,21 @@ export class PostgreSQLJobQueue {
     return this.mapJobFromDatabase(job);
   }
 
-  async getNextJobForType(type: string, maxPriority: number = 10): Promise<JobQueueItem | null> {
+  async getNextJobForType(
+    type: string,
+    maxPriority: number = 10,
+  ): Promise<JobQueueItem | null> {
     const now = new Date().toISOString();
     const [job] = await this.db
       .select()
       .from(jobs)
       .where(
         and(
-          eq(jobs.status, 'pending'),
+          eq(jobs.status, "pending"),
           eq(jobs.type, type),
           lt(jobs.scheduledAt, now),
-          lte(jobs.priority, maxPriority)
-        )
+          lte(jobs.priority, maxPriority),
+        ),
       )
       .orderBy(desc(jobs.priority), jobs.createdAt)
       .limit(1);
@@ -1222,7 +1312,7 @@ export class PostgreSQLJobQueue {
     const result = await this.db
       .update(jobs)
       .set({
-        status: 'processing',
+        status: "processing",
         startedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
@@ -1231,12 +1321,15 @@ export class PostgreSQLJobQueue {
     return (result.rowCount || 0) > 0;
   }
 
-  async markJobCompleted(jobId: string, result?: Record<string, unknown>): Promise<boolean> {
+  async markJobCompleted(
+    jobId: string,
+    result?: Record<string, unknown>,
+  ): Promise<boolean> {
     const result_data = result ? JSON.stringify(result) : null;
     const dbResult = await this.db
       .update(jobs)
       .set({
-        status: 'completed',
+        status: "completed",
         completedAt: new Date().toISOString(),
         result: result_data,
         updatedAt: new Date().toISOString(),
@@ -1250,7 +1343,7 @@ export class PostgreSQLJobQueue {
     const dbResult = await this.db
       .update(jobs)
       .set({
-        status: 'failed',
+        status: "failed",
         lastError: error,
         retryCount: jobs.retryCount + 1,
         updatedAt: new Date().toISOString(),
@@ -1264,7 +1357,7 @@ export class PostgreSQLJobQueue {
     const dbResult = await this.db
       .update(jobs)
       .set({
-        status: 'pending',
+        status: "pending",
         startedAt: null,
         completedAt: null,
         lastError: null,
@@ -1278,13 +1371,14 @@ export class PostgreSQLJobQueue {
   }
 
   async deleteJob(jobId: string): Promise<boolean> {
-    const result = await this.db
-      .delete(jobs)
-      .where(eq(jobs.id, jobId));
+    const result = await this.db.delete(jobs).where(eq(jobs.id, jobId));
     return (result.rowCount || 0) > 0;
   }
 
-  async getJobsByStatus(status: string, limit_count: number = 50): Promise<JobQueueItem[]> {
+  async getJobsByStatus(
+    status: string,
+    limit_count: number = 50,
+  ): Promise<JobQueueItem[]> {
     const jobList = await this.db
       .select()
       .from(jobs)
@@ -1292,10 +1386,13 @@ export class PostgreSQLJobQueue {
       .orderBy(desc(jobs.createdAt))
       .limit(limit_count);
 
-    return jobList.map(job => this.mapJobFromDatabase(job));
+    return jobList.map((job) => this.mapJobFromDatabase(job));
   }
 
-  async getJobsByType(type: string, limit_count: number = 50): Promise<JobQueueItem[]> {
+  async getJobsByType(
+    type: string,
+    limit_count: number = 50,
+  ): Promise<JobQueueItem[]> {
     const jobList = await this.db
       .select()
       .from(jobs)
@@ -1303,18 +1400,18 @@ export class PostgreSQLJobQueue {
       .orderBy(desc(jobs.createdAt))
       .limit(limit_count);
 
-    return jobList.map(job => this.mapJobFromDatabase(job));
+    return jobList.map((job) => this.mapJobFromDatabase(job));
   }
 
   async getFailedJobs(limit_count: number = 20): Promise<JobQueueItem[]> {
     const jobList = await this.db
       .select()
       .from(jobs)
-      .where(eq(jobs.status, 'failed'))
+      .where(eq(jobs.status, "failed"))
       .orderBy(desc(jobs.updatedAt))
       .limit(limit_count);
 
-    return jobList.map(job => this.mapJobFromDatabase(job));
+    return jobList.map((job) => this.mapJobFromDatabase(job));
   }
 
   async getJobStats(): Promise<{
@@ -1327,7 +1424,7 @@ export class PostgreSQLJobQueue {
     const stats = await this.db
       .select({
         status: jobs.status,
-        count: () => sql`COUNT(*)`
+        count: () => sql`COUNT(*)`,
       })
       .from(jobs)
       .groupBy(jobs.status);
@@ -1337,17 +1434,25 @@ export class PostgreSQLJobQueue {
       pending: 0,
       processing: 0,
       completed: 0,
-      failed: 0
+      failed: 0,
     };
 
-    stats.forEach(stat => {
+    stats.forEach((stat) => {
       const count = Number(stat.count);
       result.total += count;
       switch (stat.status) {
-        case 'pending': result.pending = count; break;
-        case 'processing': result.processing = count; break;
-        case 'completed': result.completed = count; break;
-        case 'failed': result.failed = count; break;
+        case "pending":
+          result.pending = count;
+          break;
+        case "processing":
+          result.processing = count;
+          break;
+        case "completed":
+          result.completed = count;
+          break;
+        case "failed":
+          result.failed = count;
+          break;
       }
     });
 
@@ -1357,16 +1462,16 @@ export class PostgreSQLJobQueue {
   async cleanupCompletedJobs(olderThanHours: number = 24): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setHours(cutoffDate.getHours() - olderThanHours);
-    
+
     const result = await this.db
       .delete(jobs)
       .where(
         and(
-          eq(jobs.status, 'completed'),
-          lt(jobs.updatedAt, cutoffDate.toISOString())
-        )
+          eq(jobs.status, "completed"),
+          lt(jobs.updatedAt, cutoffDate.toISOString()),
+        ),
       );
-    
+
     return result.rowCount || 0;
   }
 
@@ -1395,6 +1500,7 @@ export const jobQueue = new PostgreSQLJobQueue();
 ## Phase 2 Completion Checklist
 
 ### Repository Layer Updated
+
 - [ ] Job repository updated for PostgreSQL schema
 - [ ] Tool configuration repository updated
 - [ ] Rate limit repository updated
@@ -1402,18 +1508,21 @@ export const jobQueue = new PostgreSQLJobQueue();
 - [ ] All repositories use PostgreSQL features (JSON, timestamps)
 
 ### API Endpoints Updated
+
 - [ ] Tools enabled endpoint uses PostgreSQL
 - [ ] Health check endpoint validates PostgreSQL
 - [ ] Batch API endpoint creates jobs in PostgreSQL
 - [ ] All SQLite health check fallbacks removed
 
 ### Application Logic Updated
+
 - [ ] Tool config manager optimized for PostgreSQL
 - [ ] OAuth token storage uses PostgreSQL encryption
 - [ ] Job queue optimized for PostgreSQL patterns
 - [ ] All modules use PostgreSQL-specific features
 
 ### Performance Optimizations
+
 - [ ] Queries optimized for PostgreSQL
 - [ ] JSON fields used appropriately
 - [ ] Timestamp handling optimized
@@ -1429,9 +1538,11 @@ export const jobQueue = new PostgreSQLJobQueue();
 ## Validation and Testing
 
 ### 2.6.1 Unit Tests
+
 **Action**: Update unit tests for all updated repository classes
 
 **Test Example**:
+
 ```typescript
 // __tests__/unit/database/job-repository.test.ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -1480,9 +1591,11 @@ describe("JobRepository - PostgreSQL", () => {
 ```
 
 ### 2.6.2 Integration Tests
+
 **Action**: Test end-to-end functionality with PostgreSQL
 
 **Test Example**:
+
 ```typescript
 // __tests__/integration/repository-integration.test.ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -1524,9 +1637,9 @@ describe("Repository Integration - PostgreSQL", () => {
     expect(marked).toBe(true);
 
     // Mark as completed
-    const completed = await jobQueue.markJobCompleted(jobId, { 
-      result: "success", 
-      processedAt: new Date().toISOString() 
+    const completed = await jobQueue.markJobCompleted(jobId, {
+      result: "success",
+      processedAt: new Date().toISOString(),
     });
     expect(completed).toBe(true);
 
@@ -1539,9 +1652,11 @@ describe("Repository Integration - PostgreSQL", () => {
 ```
 
 ### 2.6.3 Performance Tests
+
 **Action**: Validate PostgreSQL performance improvements
 
 **Test Example**:
+
 ```typescript
 // __tests__/performance/repository-performance.test.ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -1566,7 +1681,7 @@ describe("Repository Performance - PostgreSQL", () => {
     const startTime = Date.now();
 
     // Create batch of jobs
-    const jobPromises = Array.from({ length: batchSize }, (_, i) => 
+    const jobPromises = Array.from({ length: batchSize }, (_, i) =>
       jobRepository.create({
         id: `perf_job_${i}`,
         type: "performance_test",
@@ -1577,7 +1692,7 @@ describe("Repository Performance - PostgreSQL", () => {
         retryCount: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      })
+      }),
     );
 
     const createdJobs = await Promise.all(jobPromises);
@@ -1600,6 +1715,7 @@ describe("Repository Performance - PostgreSQL", () => {
 ## Success Criteria
 
 Phase 2 is successfully completed when:
+
 1. All repository classes use PostgreSQL schema
 2. All API endpoints work with PostgreSQL
 3. Application logic optimized for PostgreSQL features
@@ -1609,6 +1725,7 @@ Phase 2 is successfully completed when:
 ## Next Steps Preview
 
 Phase 3 will focus on **Testing & Validation**:
+
 - Update test infrastructure for PostgreSQL-only
 - Run comprehensive integration tests
 - Validate performance and functionality

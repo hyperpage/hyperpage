@@ -21,17 +21,20 @@ import { describe, it, expect } from "vitest";
 const shouldRunLegacySqlite = process.env.LEGACY_SQLITE_TESTS === "1";
 const describeLegacy = shouldRunLegacySqlite ? describe : describe.skip;
 
-describeLegacy("Persistence and Recovery System (LEGACY SQLITE - skipped in Phase 1)", () => {
-  it("is documented as legacy-only and intentionally skipped in PostgreSQL-only Phase 1", () => {
-    // This assertion ensures the suite has at least one test for Vitest.
-    // The actual SQLite-based logic previously in this file depended on:
-    // - better-sqlite3
-    // - lib/database/schema.ts (SQLite schema)
-    // - createTestDatabase/createTestDrizzle/closeAllConnections from lib/database/connection.ts
-    //
-    // Those helpers are removed from the active connection facade.
-    // Keeping this file skipped prevents accidental coupling while preserving
-    // historical intent for future migration/forensics work.
-    expect(true).toBe(true);
-  });
-});
+describeLegacy(
+  "Persistence and Recovery System (LEGACY SQLITE - skipped in Phase 1)",
+  () => {
+    it("is documented as legacy-only and intentionally skipped in PostgreSQL-only Phase 1", () => {
+      // This assertion ensures the suite has at least one test for Vitest.
+      // The actual SQLite-based logic previously in this file depended on:
+      // - better-sqlite3
+      // - lib/database/schema.ts (SQLite schema)
+      // - createTestDatabase/createTestDrizzle/closeAllConnections from lib/database/connection.ts
+      //
+      // Those helpers are removed from the active connection facade.
+      // Keeping this file skipped prevents accidental coupling while preserving
+      // historical intent for future migration/forensics work.
+      expect(true).toBe(true);
+    });
+  },
+);

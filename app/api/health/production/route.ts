@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { checkPostgresConnectivity } from "@/lib/database/connection";
+import logger from "@/lib/logger";
 
 export async function GET(): Promise<NextResponse> {
   try {
     const startTime = Date.now();
-    
+
     // Check overall system health
     const systemHealth: {
       status: "healthy" | "unhealthy" | "degraded";
@@ -67,7 +68,9 @@ export async function GET(): Promise<NextResponse> {
         name: "Tool Registry",
         status: "unhealthy",
         responseTime: Date.now() - startTime,
-        details: { error: error instanceof Error ? error.message : String(error) },
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+        },
       });
     }
 
@@ -86,7 +89,9 @@ export async function GET(): Promise<NextResponse> {
         name: "Rate Limiting",
         status: "unhealthy",
         responseTime: Date.now() - startTime,
-        details: { error: error instanceof Error ? error.message : String(error) },
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+        },
       });
     }
 
@@ -95,14 +100,15 @@ export async function GET(): Promise<NextResponse> {
       const oauthStart = Date.now();
       // This would check OAuth configuration
       const oauthProviders = ["github", "gitlab", "jira"];
-      const enabledProviders = oauthProviders.filter(provider => 
-        process.env[`ENABLE_${provider.toUpperCase()}`] === "true"
+      const enabledProviders = oauthProviders.filter(
+        (provider) =>
+          process.env[`ENABLE_${provider.toUpperCase()}`] === "true",
       );
       appChecks.push({
         name: "OAuth Services",
         status: enabledProviders.length > 0 ? "healthy" : "degraded",
         responseTime: Date.now() - oauthStart,
-        details: { 
+        details: {
           totalProviders: oauthProviders.length,
           enabledProviders: enabledProviders.length,
           providers: enabledProviders,
@@ -113,7 +119,9 @@ export async function GET(): Promise<NextResponse> {
         name: "OAuth Services",
         status: "unhealthy",
         responseTime: Date.now() - startTime,
-        details: { error: error instanceof Error ? error.message : String(error) },
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+        },
       });
     }
 
@@ -133,15 +141,21 @@ export async function GET(): Promise<NextResponse> {
           name: "Redis Cache",
           status: "unhealthy",
           responseTime: Date.now() - startTime,
-          details: { error: error instanceof Error ? error.message : String(error) },
+          details: {
+            error: error instanceof Error ? error.message : String(error),
+          },
         });
       }
     }
 
     // Calculate overall health
     const allChecks = [...dbChecks, ...appChecks];
-    const unhealthyChecks = allChecks.filter(check => check.status === "unhealthy");
-    const degradedChecks = allChecks.filter(check => check.status === "degraded");
+    const unhealthyChecks = allChecks.filter(
+      (check) => check.status === "unhealthy",
+    );
+    const degradedChecks = allChecks.filter(
+      (check) => check.status === "degraded",
+    );
 
     if (unhealthyChecks.length > 0) {
       systemHealth.status = "unhealthy";
@@ -153,13 +167,17 @@ export async function GET(): Promise<NextResponse> {
     const totalResponseTime = Date.now() - startTime;
     const performanceMetrics = {
       totalResponseTime,
-      databaseResponseTime: Math.max(...dbChecks.map(db => db.responseTime)),
-      applicationResponseTime: Math.max(...appChecks.map(app => app.responseTime)),
+      databaseResponseTime: Math.max(...dbChecks.map((db) => db.responseTime)),
+      applicationResponseTime: Math.max(
+        ...appChecks.map((app) => app.responseTime),
+      ),
       memoryUsage: {
         ...systemHealth.memory,
         used: systemHealth.memory.heapUsed,
         total: systemHealth.memory.heapTotal,
-        percentage: Math.round((systemHealth.memory.heapUsed / systemHealth.memory.heapTotal) * 100),
+        percentage: Math.round(
+          (systemHealth.memory.heapUsed / systemHealth.memory.heapTotal) * 100,
+        ),
       },
       cpuUsage: systemHealth.cpu,
     };
@@ -183,22 +201,30 @@ export async function GET(): Promise<NextResponse> {
     };
 
     // Determine HTTP status code
-    const statusCode = 
-      systemHealth.status === "healthy" ? 200 :
-      systemHealth.status === "degraded" ? 200 : 503;
+    const statusCode =
+      systemHealth.status === "healthy"
+        ? 200
+        : systemHealth.status === "degraded"
+          ? 200
+          : 503;
 
     return NextResponse.json(response, {
       status: statusCode,
       headers: {
         "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Pragma": "no-cache",
-        "Expires": "0",
+        Pragma: "no-cache",
+        Expires: "0",
         "X-Health-Check": "production",
       },
     });
   } catch (error) {
-    console.error("Production health check failed:", error);
-    
+    logger.error(
+      "Production health check failed",
+      error instanceof Error
+        ? { err: { message: error.message, stack: error.stack } }
+        : { err: { value: error } },
+    );
+
     return NextResponse.json(
       {
         status: "unhealthy",
@@ -215,8 +241,8 @@ export async function GET(): Promise<NextResponse> {
         status: 503,
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0",
+          Pragma: "no-cache",
+          Expires: "0",
           "X-Health-Check": "production",
         },
       },

@@ -25,12 +25,15 @@ import * as connectionModule from "../../../../lib/database/connection";
  */
 
 vi.mock("../../../../lib/database/connection", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../lib/database/connection")>();
+  const actual =
+    await importOriginal<
+      typeof import("../../../../lib/database/connection")
+    >();
   let fakeDb: unknown = null;
 
   return {
     ...actual,
-    getReadWriteDb: () => (fakeDb ?? actual.getReadWriteDb()),
+    getReadWriteDb: () => fakeDb ?? actual.getReadWriteDb(),
     // Helper only visible in tests to swap the fake db
     __setFakeReadWriteDb(db: unknown) {
       fakeDb = db;
@@ -38,9 +41,11 @@ vi.mock("../../../../lib/database/connection", async (importOriginal) => {
   };
 });
 
-const mockedConnection = vi.mocked(connectionModule as unknown as {
-  __setFakeReadWriteDb: (db: unknown) => void;
-});
+const mockedConnection = vi.mocked(
+  connectionModule as unknown as {
+    __setFakeReadWriteDb: (db: unknown) => void;
+  },
+);
 
 class FakePgDbForDetection {
   readonly $schema = pgSchema;

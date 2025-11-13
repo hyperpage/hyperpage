@@ -3,12 +3,14 @@
 ## Overview
 
 This guide documents how to run Hyperpage tests in the Phase 1+ PostgreSQL-only model, including:
+
 - The canonical Postgres-backed testing stack
 - Test suite taxonomy and environment flags
 - How the Postgres test harness provisions and validates schema
 - How to opt into optional/legacy suites safely
 
 All instructions assume:
+
 - PostgreSQL is the only supported runtime and test database backend
 - SQLite is legacy/migration-only and exercised only via explicitly gated suites
 
@@ -96,7 +98,6 @@ Given `DATABASE_URL=postgresql://USER:PASS@HOST:PORT/DB_NAME`:
 2. **Global lifecycle**
 
    On first use (guarded by an internal `setupPromise`):
-
    - Drop the test database:
      - Connect via `adminUrl`
      - Terminate active connections to `dbName`
@@ -110,14 +111,12 @@ Given `DATABASE_URL=postgresql://USER:PASS@HOST:PORT/DB_NAME`:
    - Seed deterministic test data
 
    On global teardown:
-
    - Close the pool
    - Drop the test database via `adminUrl` (best-effort; failures are logged)
 
 3. **Migrations: primary + fallback**
 
    `TestDatabaseManager.runMigrations()`:
-
    1. Ensures `lib/database/migrations/meta/_journal.json` exists for drizzle.
    2. Requires `this.db` to be initialized.
    3. Calls drizzle migrator:
@@ -129,7 +128,6 @@ Given `DATABASE_URL=postgresql://USER:PASS@HOST:PORT/DB_NAME`:
       ```
 
    4. Verifies migration effect using `app_state` as a canary:
-
       - Executes:
 
         ```sql
@@ -144,10 +142,9 @@ Given `DATABASE_URL=postgresql://USER:PASS@HOST:PORT/DB_NAME`:
         - Dynamically imports:
 
           ```ts
-          const {
-            MIGRATIONS_REGISTRY,
-            getMigrationNames,
-          } = await import("./lib/database/migrations");
+          const { MIGRATIONS_REGISTRY, getMigrationNames } = await import(
+            "./lib/database/migrations"
+          );
           ```
 
         - For each name from `getMigrationNames()`:
@@ -156,7 +153,6 @@ Given `DATABASE_URL=postgresql://USER:PASS@HOST:PORT/DB_NAME`:
           - Throws a clear error pointing at migration definitions.
 
    **Authority and compatibility:**
-
    - `000_init_pg_schema.ts` (drizzle-style, Postgres-only) is the canonical schema migration.
    - `lib/database/migrations/index.ts` exposes:
 
@@ -167,6 +163,7 @@ Given `DATABASE_URL=postgresql://USER:PASS@HOST:PORT/DB_NAME`:
      ```
 
      and `getMigrationNames()`; this is used by the fallback.
+
    - Legacy SQLite migrations (`001_initial_schema.ts`, `002_oauth_auth_tables.ts`) and `lib/database/migrate.ts`:
      - Are **explicitly legacy**.
      - Are **not** used by the Postgres harness.
@@ -177,7 +174,6 @@ Given `DATABASE_URL=postgresql://USER:PASS@HOST:PORT/DB_NAME`:
 Before inserting any data, `seedTestData()`:
 
 - Checks the presence of required tables via `pg_tables`:
-
   - `app_state`, `jobs`, `users`, `oauth_tokens`, `tool_configs`,
     `rate_limits`, `job_history`, `user_sessions`.
 

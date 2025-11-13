@@ -68,6 +68,7 @@ For each file:
    - **Legacy**: no longer referenced; candidate for removal.
 
 Deliverable: matrix in this plan mapping:
+
 - Compose file → Services → Purpose → Active/Legacy.
 
 ### 1.2 Normalization Rules
@@ -109,7 +110,7 @@ For each variable:
 2. Classify vars:
    - Core app (PORT, NODE_ENV, BASE_URL).
    - Database (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, etc.).
-   - Tool integrations (JIRA_*, GITHUB_*, GITLAB_*, etc.).
+   - Tool integrations (JIRA*\*, GITHUB*\_, GITLAB\_\_, etc.).
    - Feature flags / `ENABLE_*`.
 
 ### 2.2 Hygiene Rules

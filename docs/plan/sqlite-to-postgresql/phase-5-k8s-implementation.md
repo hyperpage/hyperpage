@@ -5,13 +5,14 @@
 **Phase 5 Status**: ✅ **COMPLETE**  
 **Implementation Date**: 2025-11-11  
 **Migration Progress**: 85% Complete (7/9 phases)  
-**Phase Dependencies**: Builds on Phase 8 (Production Deployment Infrastructure)  
+**Phase Dependencies**: Builds on Phase 8 (Production Deployment Infrastructure)
 
 This phase implements comprehensive Kubernetes infrastructure for the PostgreSQL-backed Hyperpage, including production-ready deployments, services, networking, and scaling configurations. **Now includes complete Infrastructure as Code (IaC) with Terraform for AWS EKS deployment**.
 
 ## Phase 5 Objectives
 
 ### 1. **Production-Ready Kubernetes Manifests**
+
 - ✅ Complete deployment configurations for all components
 - ✅ Service mesh integration with Istio
 - ✅ ConfigMaps and secrets management
@@ -19,6 +20,7 @@ This phase implements comprehensive Kubernetes infrastructure for the PostgreSQL
 - ✅ Resource quotas and limit ranges
 
 ### 2. **Enterprise Networking & Security**
+
 - ✅ Advanced network policies with strict isolation
 - ✅ Ingress controllers with TLS termination
 - ✅ RBAC configurations for service accounts
@@ -26,6 +28,7 @@ This phase implements comprehensive Kubernetes infrastructure for the PostgreSQL
 - ✅ Security context and Pod Security Standards
 
 ### 3. **Scaling & Performance Optimization**
+
 - ✅ Horizontal Pod Autoscaler with custom metrics
 - ✅ Resource limits and requests optimization
 - ✅ Node affinity and anti-affinity rules
@@ -33,6 +36,7 @@ This phase implements comprehensive Kubernetes infrastructure for the PostgreSQL
 - ✅ Cost optimization configurations
 
 ### 4. **Storage & Data Management**
+
 - ✅ PostgreSQL persistent storage configurations
 - ✅ Automated backup strategies with CronJobs
 - ✅ Disaster recovery procedures
@@ -40,6 +44,7 @@ This phase implements comprehensive Kubernetes infrastructure for the PostgreSQL
 - ✅ Multi-environment storage separation
 
 ### 5. **Monitoring & Observability**
+
 - ✅ Kubernetes-native monitoring with Prometheus
 - ✅ Grafana integration and dashboards
 - ✅ Custom alerting rules
@@ -47,6 +52,7 @@ This phase implements comprehensive Kubernetes infrastructure for the PostgreSQL
 - ✅ Performance SLI/SLO definitions
 
 ### 6. **Infrastructure as Code (Terraform)**
+
 - ✅ Complete AWS EKS infrastructure with Terraform
 - ✅ Multi-environment support (dev/staging/prod)
 - ✅ Automated state management and deployment
@@ -58,6 +64,7 @@ This phase implements comprehensive Kubernetes infrastructure for the PostgreSQL
 ### Terraform Infrastructure (NEW)
 
 #### 1. **Complete AWS Infrastructure** (`terraform/`)
+
 - **VPC Configuration**: Multi-AZ VPC with public/private/database subnets
 - **EKS Cluster**: Managed Kubernetes with multiple node groups
 - **Security**: Comprehensive security groups and IAM roles
@@ -65,6 +72,7 @@ This phase implements comprehensive Kubernetes infrastructure for the PostgreSQL
 - **State Management**: S3 backend with DynamoDB locking
 
 #### 2. **EKS Cluster Features**
+
 ```hcl
 # Main node group (3-10 instances)
 eks_managed_node_groups = {
@@ -74,7 +82,7 @@ eks_managed_node_groups = {
     min_capacity     = 3
     instance_types   = ["c5.large", "c5.xlarge", "c5a.xlarge"]
   }
-  
+
   # Critical workload node group
   critical = {
     desired_capacity = 1
@@ -83,7 +91,7 @@ eks_managed_node_groups = {
     instance_types   = ["c5.2xlarge", "c5a.2xlarge"]
     taints = [{ key = "critical", value = "true", effect = "NO_SCHEDULE" }]
   }
-  
+
   # Spot instances for cost optimization
   spot = {
     min_size     = 0
@@ -96,6 +104,7 @@ eks_managed_node_groups = {
 ```
 
 #### 3. **Network Architecture**
+
 ```hcl
 # VPC: 10.0.0.0/16
 # Public Subnets: 10.0.20.0/24, 10.0.21.0/24, 10.0.22.0/24
@@ -104,12 +113,14 @@ eks_managed_node_groups = {
 ```
 
 #### 4. **Security Implementation**
+
 - **IAM Roles**: Cluster and node roles with minimal permissions
 - **Security Groups**: Isolated groups for cluster, nodes, load balancers, database
 - **VPC Endpoints**: S3, ECR, CloudWatch logs for private connectivity
 - **Encryption**: EBS and RDS encryption enabled by default
 
 #### 5. **Cost Optimization**
+
 - **Spot Instances**: Up to 70% cost savings for non-critical workloads
 - **Auto-scaling**: Intelligent scaling based on resource utilization
 - **Resource Quotas**: Prevent resource over-provisioning
@@ -118,6 +129,7 @@ eks_managed_node_groups = {
 ### Kubernetes Manifests
 
 #### 1. **Application Deployment** (`k8s/deployment.yaml`)
+
 - **Replicas**: 1 (configurable, HPA handles scaling)
 - **Security**: Non-root execution, seccomp profiles
 - **Health Checks**: Liveness, readiness, and startup probes
@@ -125,6 +137,7 @@ eks_managed_node_groups = {
 - **Volumes**: Optional data and log persistence
 
 #### 2. **PostgreSQL Deployment** (`k8s/postgres-config.yaml`)
+
 - **Database**: PostgreSQL 15 Alpine
 - **Storage**: 10GB PVC with configurable storage class
 - **Configuration**: Optimized postgresql.conf
@@ -132,18 +145,21 @@ eks_managed_node_groups = {
 - **Health**: Custom pg_isready probes
 
 #### 3. **Scaling Infrastructure** (`k8s/hpa.yaml`)
+
 - **Range**: 3-50 replicas
 - **Metrics**: CPU (70%), Memory (80%), Custom metrics
 - **Behavior**: Intelligent scale-up/down policies
 - **Stability**: Stabilization windows for gradual scaling
 
 #### 4. **Service Mesh** (`k8s/advanced-features.yaml`)
+
 - **Istio Integration**: Virtual services, gateways, destination rules
 - **mTLS**: Strict peer authentication
 - **Authorization**: RBAC-based service-to-service auth
 - **Traffic Management**: Circuit breakers, retries, timeouts
 
 #### 5. **Monitoring Stack** (`k8s/monitoring.yaml`)
+
 - **Prometheus**: Metrics collection and storage
 - **Grafana**: Visualization and dashboards
 - **AlertManager**: Alert routing and notifications
@@ -152,6 +168,7 @@ eks_managed_node_groups = {
 ## Deployment Methods
 
 ### 1. **Terraform Infrastructure Deployment**
+
 ```bash
 # Complete infrastructure with one command
 ./scripts/deploy-terraform.sh production
@@ -162,6 +179,7 @@ eks_managed_node_groups = {
 ```
 
 **Features**:
+
 - ✅ Automated prerequisite checking
 - ✅ S3 state backend with DynamoDB locking
 - ✅ Multi-environment support
@@ -170,6 +188,7 @@ eks_managed_node_groups = {
 - ✅ Complete validation and status reporting
 
 ### 2. **Individual Component Deployment**
+
 ```bash
 # Terraform infrastructure
 cd terraform
@@ -191,36 +210,42 @@ kubectl apply -f k8s/advanced-features.yaml
 ### Core Infrastructure Files
 
 #### `terraform/main.tf`
+
 - Provider configuration (AWS, Kubernetes, Helm)
 - Local values and common configurations
 - Node group definitions
 - Backend S3 state management
 
 #### `terraform/vpc.tf`
+
 - VPC and subnet creation
 - NAT gateways and routing
 - Security groups
 - VPC endpoints
 
 #### `terraform/eks.tf`
+
 - EKS cluster configuration
 - Managed and self-managed node groups
 - Cluster add-ons (EBS CSI, Load Balancer Controller)
 - IAM roles and policies
 
 #### `terraform/variables.tf`
+
 - 50+ configurable variables
 - Environment-specific settings
 - Security and compliance options
 - Cost optimization parameters
 
 #### `terraform/outputs.tf`
+
 - Infrastructure endpoints and ARNs
 - kubectl configuration
 - Useful deployment commands
 - Next steps guidance
 
 #### `terraform/providers.tf`
+
 - Multi-provider configuration
 - State management setup
 - Regional provider support
@@ -228,6 +253,7 @@ kubectl apply -f k8s/advanced-features.yaml
 ## Advanced Features
 
 ### 1. **High Availability**
+
 ```yaml
 # Pod Disruption Budget
 minAvailable: 2  # Maintains availability during maintenance
@@ -237,6 +263,7 @@ availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
 ```
 
 ### 2. **Resource Management**
+
 ```yaml
 # Resource Quota
 requests.cpu: "2"
@@ -248,6 +275,7 @@ requests.storage: 20Gi
 ```
 
 ### 3. **Security Hardening**
+
 ```yaml
 # Network Policies
 policyTypes:
@@ -257,23 +285,26 @@ policyTypes:
 ```
 
 ### 4. **Backup Automation**
+
 ```yaml
 # Daily Backup CronJob
-schedule: "0 2 * * *"  # 2 AM daily
+schedule: "0 2 * * *" # 2 AM daily
 # Includes compression and cleanup
 ```
 
 ### 5. **Multi-Environment Support**
+
 ```yaml
 # Environment-Specific Configurations
-development:  # High limits, debug enabled
-staging:      # Medium limits, reduced debug
-production:   # Optimized limits, minimal logging
+development: # High limits, debug enabled
+staging: # Medium limits, reduced debug
+production: # Optimized limits, minimal logging
 ```
 
 ## Validation & Testing
 
 ### Automated Validation Job
+
 ```yaml
 # Built-in validation checks:
 - Service availability
@@ -284,6 +315,7 @@ production:   # Optimized limits, minimal logging
 ```
 
 ### Terraform Validation
+
 ```bash
 # Format and validate
 terraform fmt -recursive
@@ -293,6 +325,7 @@ terraform plan
 ```
 
 ### Manual Validation Commands
+
 ```bash
 # Check infrastructure
 cd terraform && terraform output
@@ -313,18 +346,21 @@ curl http://localhost:8080/api/health
 ## Performance Optimizations
 
 ### 1. **Auto-scaling Intelligence**
+
 - **CPU Threshold**: 70% (scaling up), 50% (scaling down)
 - **Memory Threshold**: 80% (scaling up), 60% (scaling down)
 - **Stabilization**: 60s scale-up, 300s scale-down
 - **Max Surge**: 50% during rolling updates
 
 ### 2. **Resource Management**
+
 - **Default Limits**: 500m CPU, 1Gi Memory
 - **Request Limits**: 100m CPU, 512Mi Memory
 - **Max Limits**: 2 CPU, 4Gi Memory per pod
 - **Priority Classes**: Critical (1000), Normal (500)
 
 ### 3. **Storage Optimization**
+
 - **Database**: 10Gi SSD storage
 - **Backups**: 10Gi HDD storage with 7-day retention
 - **Logs**: 5Gi with automatic rotation
@@ -333,6 +369,7 @@ curl http://localhost:8080/api/health
 ## Security Implementation
 
 ### 1. **Network Security**
+
 ```yaml
 # Strict Network Policy
 - Only ingress controller traffic allowed
@@ -342,6 +379,7 @@ curl http://localhost:8080/api/health
 ```
 
 ### 2. **Pod Security**
+
 ```yaml
 # Security Context
 runAsNonRoot: true
@@ -353,6 +391,7 @@ seccompProfile:
 ```
 
 ### 3. **RBAC Configuration**
+
 ```yaml
 # Service Account Permissions
 - pods, nodes, services: get, list, watch
@@ -361,6 +400,7 @@ seccompProfile:
 ```
 
 ### 4. **Secrets Management**
+
 - All sensitive data in Kubernetes secrets
 - Environment-specific secret templates
 - Container registry pull secrets
@@ -369,24 +409,28 @@ seccompProfile:
 ## Monitoring & Alerting
 
 ### 1. **Application Metrics**
+
 - Response time P95 < 500ms
 - Error rate < 1%
 - Availability SLO 99.9%
 - Custom business metrics
 
 ### 2. **Database Metrics**
+
 - Connection pool utilization
 - Query performance
 - Storage usage
 - Backup status
 
 ### 3. **Infrastructure Metrics**
+
 - Pod CPU/Memory utilization
 - HPA scaling events
 - Network traffic
 - Storage performance
 
 ### 4. **Alert Rules**
+
 ```yaml
 # Critical Alerts
 - Application down (1m)
@@ -404,18 +448,21 @@ seccompProfile:
 ## Disaster Recovery
 
 ### 1. **Automated Backups**
+
 - **Schedule**: Daily at 2 AM
 - **Retention**: 7 days local, configurable cloud storage
 - **Compression**: Automatic gzip compression
 - **Validation**: Backup integrity checks
 
 ### 2. **Recovery Procedures**
+
 - **Point-in-time recovery**: PostgreSQL WAL archiving
 - **Full database restore**: Automated script included
 - **Application state recovery**: Configuration persistence
 - **Rollback procedures**: Phase 9 documented
 
 ### 3. **Business Continuity**
+
 - **RTO**: < 30 minutes (Recovery Time Objective)
 - **RPO**: < 1 hour (Recovery Point Objective)
 - **Multi-AZ deployment**: Configurable for production
@@ -424,6 +471,7 @@ seccompProfile:
 ## Multi-Environment Support
 
 ### 1. **Development Environment**
+
 ```yaml
 resources:
   requests.cpu: 200m
@@ -437,6 +485,7 @@ features:
 ```
 
 ### 2. **Staging Environment**
+
 ```yaml
 resources:
   requests.cpu: 500m
@@ -450,6 +499,7 @@ features:
 ```
 
 ### 3. **Production Environment**
+
 ```yaml
 resources:
   requests.cpu: 1
@@ -467,24 +517,28 @@ features:
 ## Cost Optimization
 
 ### 1. **Resource Right-sizing**
+
 - Start with conservative limits
 - Monitor actual usage for 1-2 weeks
 - Adjust HPA thresholds based on real metrics
 - Use node affinity for workload distribution
 
 ### 2. **Storage Optimization**
+
 - SSD for database (performance)
 - HDD for backups (cost-effective)
 - Data retention policies
 - Automatic cleanup of old backups
 
 ### 3. **Network Optimization**
+
 - Compression for API responses
 - CDN for static assets
 - Efficient caching strategies
 - Monitor network costs
 
 ### 4. **Auto-scaling Benefits**
+
 - Scale to zero during low traffic
 - Gradual scaling to handle traffic spikes
 - Predictable costs with max replica limits
@@ -493,6 +547,7 @@ features:
 ## GitOps Integration
 
 ### 1. **ArgoCD Configuration**
+
 ```yaml
 # Application definition for GitOps
 source:
@@ -505,6 +560,7 @@ syncPolicy:
 ```
 
 ### 2. **Environment Promotion**
+
 - Dev → Staging → Production
 - Automated testing before promotion
 - Rollback capabilities
@@ -513,6 +569,7 @@ syncPolicy:
 ## Performance Benchmarks
 
 ### Expected Performance Characteristics
+
 - **Infrastructure Provisioning**: 10-15 minutes (Terraform)
 - **Cluster Startup Time**: < 5 minutes
 - **Application Startup**: < 30 seconds (cold start)
@@ -522,12 +579,14 @@ syncPolicy:
 - **Scaling Response**: < 60 seconds (scale up)
 
 ### Scalability Targets
+
 - **Concurrent Users**: 1,000+ (with proper HPA configuration)
 - **Requests per Second**: 100+ (per pod)
 - **Database Connections**: 100 (configurable)
 - **Storage Growth**: 1GB/month (typical usage)
 
 ### Cost Estimates
+
 ```
 VPC with 3 NAT Gateways: ~$45/month
 EKS cluster: ~$0.10/hour
@@ -542,12 +601,14 @@ Total estimated: ~$210-250/month (excluding RDS)
 ## Integration with Previous Phases
 
 ### Phase 8 Integration
+
 - ✅ Builds on production deployment infrastructure
 - ✅ Uses Phase 8 health check endpoints
 - ✅ Integrates with Phase 8 monitoring configurations
 - ✅ Leverages Phase 8 database migration scripts
 
 ### Phase 6, 7 Integration
+
 - ✅ Database schema changes compatible with K8s deployment
 - ✅ Testing results inform HPA and resource configurations
 - ✅ Performance metrics guide optimization decisions
@@ -555,6 +616,7 @@ Total estimated: ~$210-250/month (excluding RDS)
 ## Next Steps (Phase 6)
 
 ### Phase 6: Data Migration
+
 1. **SQLite to PostgreSQL Migration**
    - Schema conversion scripts
    - Data migration procedures
@@ -589,6 +651,7 @@ Total estimated: ~$210-250/month (excluding RDS)
 **🎉 Phase 5: Kubernetes Implementation - COMPLETE**
 
 **Key Achievements**:
+
 - ✅ Enterprise-grade Kubernetes infrastructure
 - ✅ Production-ready deployments with security hardening
 - ✅ Advanced auto-scaling and monitoring
@@ -603,9 +666,10 @@ Total estimated: ~$210-250/month (excluding RDS)
 
 **Total Implementation Time**: Single session  
 **Confidence Level**: 95% ready for production  
-**Documentation**: Complete with examples and procedures  
+**Documentation**: Complete with examples and procedures
 
 **New Terraform Features**:
+
 - 🚀 **Complete AWS EKS infrastructure** with Terraform
 - 🌍 **Multi-environment support** (dev/staging/prod)
 - 💰 **Cost optimization** with spot instances and auto-scaling
@@ -618,4 +682,4 @@ Total estimated: ~$210-250/month (excluding RDS)
 
 **Next Phase**: [Phase 6: Data Migration](phase-6-data-migration.md)
 
-*This phase provides the foundation for running Hyperpage in a production Kubernetes environment with PostgreSQL, complete with all enterprise-grade features required for scalable, secure, and reliable operation. The addition of Terraform Infrastructure as Code enables reproducible, version-controlled infrastructure deployment across multiple environments.*
+_This phase provides the foundation for running Hyperpage in a production Kubernetes environment with PostgreSQL, complete with all enterprise-grade features required for scalable, secure, and reliable operation. The addition of Terraform Infrastructure as Code enables reproducible, version-controlled infrastructure deployment across multiple environments._

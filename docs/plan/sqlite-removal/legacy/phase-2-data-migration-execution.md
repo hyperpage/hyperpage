@@ -27,6 +27,7 @@ Phase 2 executes the actual data migration from SQLite to PostgreSQL using the v
 **Task**: Execute final pre-migration validation and setup
 
 **Actions**:
+
 - [ ] Verify SQLite database integrity one final time
 - [ ] Confirm PostgreSQL target database is ready and clean
 - [ ] Create final SQLite backup before migration start
@@ -35,11 +36,13 @@ Phase 2 executes the actual data migration from SQLite to PostgreSQL using the v
 - [ ] Prepare communication channels for migration progress
 
 **Deliverables**:
+
 - Pre-migration checklist completion
 - Final SQLite backup with verification
 - Migration monitoring dashboard
 
 **Commands**:
+
 ```bash
 # Final SQLite integrity check
 sqlite3 $SQLITE_PATH "PRAGMA integrity_check;"
@@ -55,6 +58,7 @@ psql $POSTGRES_URL -c "SELECT COUNT(*) FROM information_schema.tables WHERE tabl
 **Task**: Create PostgreSQL schema structure matching SQLite data
 
 **Actions**:
+
 - [ ] Generate PostgreSQL DDL from existing schema definitions
 - [ ] Create all tables, indexes, and constraints in PostgreSQL
 - [ ] Verify schema compatibility and data type mapping
@@ -63,11 +67,13 @@ psql $POSTGRES_URL -c "SELECT COUNT(*) FROM information_schema.tables WHERE tabl
 - [ ] Set up database roles and permissions
 
 **Deliverables**:
+
 - PostgreSQL schema created and verified
 - Indexes and performance optimizations applied
 - Database permissions and roles configured
 
 **Commands**:
+
 ```bash
 # Generate and apply DDL
 npx drizzle-kit generate:pg --config=drizzle.config.ts
@@ -83,6 +89,7 @@ psql $POSTGRES_URL -c "\di" # List indexes
 **Task**: Execute the actual data transfer from SQLite to PostgreSQL
 
 **Actions**:
+
 - [ ] Run migration script for each table in dependency order
 - [ ] Monitor migration progress and performance
 - [ ] Handle large tables with batch processing
@@ -92,6 +99,7 @@ psql $POSTGRES_URL -c "\di" # List indexes
 - [ ] Process incremental updates if needed
 
 **Migration Order**:
+
 1. `users` (minimal dependencies)
 2. `tool_configs` (depends on users)
 3. `oauth_tokens` (depends on users)
@@ -101,11 +109,13 @@ psql $POSTGRES_URL -c "\di" # List indexes
 7. `job_history` (depends on jobs)
 
 **Deliverables**:
+
 - Complete data migration with progress tracking
 - Migration performance metrics and logs
 - Error handling and recovery procedures
 
 **Commands**:
+
 ```bash
 # Execute migration by table order
 npm run migrate-sqlite-to-postgresql --tables users --batch-size 1000
@@ -125,6 +135,7 @@ npm run migrate-sqlite-to-postgresql --batch-size 1000 --validate-data
 **Task**: Comprehensive validation of migrated data integrity and completeness
 
 **Actions**:
+
 - [ ] Compare record counts between SQLite and PostgreSQL
 - [ ] Validate data content and format consistency
 - [ ] Check referential integrity and foreign key relationships
@@ -135,6 +146,7 @@ npm run migrate-sqlite-to-postgresql --batch-size 1000 --validate-data
 - [ ] Cross-reference data with sample records
 
 **Validation Queries**:
+
 ```sql
 -- Record count comparison
 SELECT 'users' as table_name, COUNT(*) as pg_count FROM users
@@ -157,11 +169,12 @@ SELECT * FROM jobs WHERE payload::text IS NULL OR payload::text = '{}';
 SELECT * FROM tool_configs WHERE config::text IS NULL;
 
 -- Foreign key validation
-SELECT * FROM oauth_tokens ot 
+SELECT * FROM oauth_tokens ot
 WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ot.user_id);
 ```
 
 **Deliverables**:
+
 - Data integrity validation report
 - Record count verification results
 - Data quality assessment
@@ -171,6 +184,7 @@ WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ot.user_id);
 **Task**: Optimize PostgreSQL performance for migrated data
 
 **Actions**:
+
 - [ ] Analyze query performance with migrated data
 - [ ] Create additional indexes for frequently queried columns
 - [ ] Optimize query plans and execution strategies
@@ -180,6 +194,7 @@ WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ot.user_id);
 - [ ] Configure PostgreSQL-specific optimizations
 
 **Performance Tests**:
+
 ```sql
 -- Analyze query performance
 EXPLAIN ANALYZE SELECT * FROM jobs WHERE status = 'pending' ORDER BY scheduled_at;
@@ -193,6 +208,7 @@ ORDER BY idx_scan DESC;
 ```
 
 **Deliverables**:
+
 - Performance optimization report
 - Optimized query execution plans
 - PostgreSQL configuration tuning
@@ -202,6 +218,7 @@ ORDER BY idx_scan DESC;
 **Task**: Test application integration with PostgreSQL data
 
 **Actions**:
+
 - [ ] Run application test suite against PostgreSQL
 - [ ] Test all API endpoints with migrated data
 - [ ] Validate OAuth token functionality
@@ -211,6 +228,7 @@ ORDER BY idx_scan DESC;
 - [ ] Validate monitoring and health checks
 
 **Integration Tests**:
+
 ```bash
 # Run application tests
 npm test -- --db-engine=postgres
@@ -225,6 +243,7 @@ npm run test:load -- --target=postgresql
 ```
 
 **Deliverables**:
+
 - Integration test results
 - API endpoint validation report
 - Load testing performance metrics
@@ -234,6 +253,7 @@ npm run test:load -- --target=postgresql
 **Task**: Set up comprehensive monitoring for PostgreSQL operations
 
 **Actions**:
+
 - [ ] Configure PostgreSQL performance monitoring
 - [ ] Set up alerts for database connection issues
 - [ ] Monitor query performance and slow queries
@@ -242,6 +262,7 @@ npm run test:load -- --target=postgresql
 - [ ] Set up automated health checks
 
 **Monitoring Setup**:
+
 ```bash
 # Add to Grafana dashboard (if configured)
 # Database connection monitoring
@@ -250,6 +271,7 @@ npm run test:load -- --target=postgresql
 ```
 
 **Deliverables**:
+
 - PostgreSQL monitoring dashboard
 - Alert configuration and thresholds
 - Monitoring integration test results
@@ -259,6 +281,7 @@ npm run test:load -- --target=postgresql
 **Task**: Update backup procedures for PostgreSQL
 
 **Actions**:
+
 - [ ] Configure automated PostgreSQL backups
 - [ ] Test backup and restore procedures
 - [ ] Set up backup rotation and retention policies
@@ -267,6 +290,7 @@ npm run test:load -- --target=postgresql
 - [ ] Test point-in-time recovery capabilities
 
 **Backup Commands**:
+
 ```bash
 # PostgreSQL backup
 pg_dump $POSTGRES_URL > backup_$(date +%Y%m%d_%H%M%S).sql
@@ -278,6 +302,7 @@ psql $POSTGRES_URL -c "SELECT pg_stop_backup();"
 ```
 
 **Deliverables**:
+
 - Updated backup procedures documentation
 - Backup and restore testing results
 - Disaster recovery plan updates
@@ -285,18 +310,21 @@ psql $POSTGRES_URL -c "SELECT pg_stop_backup();"
 ## Phase 2 Completion Criteria
 
 **Data Migration Success**:
+
 - [ ] All tables migrated successfully with correct record counts
 - [ ] Data integrity validation passed for all tables
 - [ ] Performance benchmarks meet or exceed expectations
 - [ ] Application integration tests pass completely
 
 **Infrastructure Readiness**:
+
 - [ ] PostgreSQL fully configured and optimized
 - [ ] Monitoring and alerting operational
 - [ ] Backup procedures tested and documented
 - [ ] Performance optimizations applied
 
 **Quality Assurance**:
+
 - [ ] Comprehensive testing completed
 - [ ] Load testing passed
 - [ ] Security validation completed
@@ -312,6 +340,7 @@ psql $POSTGRES_URL -c "SELECT pg_stop_backup();"
 ## Phase 2 Exit Conditions
 
 Phase 2 is complete when:
+
 1. All data successfully migrated to PostgreSQL
 2. Data integrity validation passes 100%
 3. Application integration tests pass with PostgreSQL
@@ -321,6 +350,7 @@ Phase 2 is complete when:
 ## Rollback Triggers
 
 Immediate rollback if:
+
 - Data integrity validation fails
 - Application tests fail consistently
 - Performance degrades significantly
@@ -330,6 +360,7 @@ Immediate rollback if:
 ## Phase 2 Exit Procedures
 
 If rollback is triggered:
+
 1. Stop all application writes immediately
 2. Restore SQLite from backup
 3. Switch application back to SQLite
@@ -339,6 +370,7 @@ If rollback is triggered:
 ## Next Phase Preview
 
 Phase 3 will focus on **Application Code Migration & Path Updates**, including:
+
 - Update application code to use PostgreSQL by default
 - Remove SQLite-specific optimizations
 - Update configuration management

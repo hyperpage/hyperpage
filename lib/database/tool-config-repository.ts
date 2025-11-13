@@ -174,7 +174,6 @@ export class ToolConfigRepository {
       notifications: config.notifications,
     };
   }
-
 }
 
 /**

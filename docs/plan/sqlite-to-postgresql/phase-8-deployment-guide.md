@@ -13,8 +13,9 @@ Phase 8 of the SQLite to PostgreSQL migration has been successfully implemented 
 ### ✅ Completed Components
 
 #### 1. PostgreSQL Production Configuration
+
 - **File**: `k8s/postgres-config.yaml`
-- **Components**: 
+- **Components**:
   - ConfigMap with optimized PostgreSQL settings
   - Secret management for credentials
   - Production-ready deployment with health checks
@@ -22,6 +23,7 @@ Phase 8 of the SQLite to PostgreSQL migration has been successfully implemented 
   - Security context with non-root containers
 
 #### 2. Production Environment Template
+
 - **File**: `.env.production.sample`
 - **Features**:
   - Comprehensive environment variable documentation
@@ -31,7 +33,8 @@ Phase 8 of the SQLite to PostgreSQL migration has been successfully implemented 
   - Complete checklist for production readiness
 
 #### 3. Deployment Automation Scripts
-- **Files**: 
+
+- **Files**:
   - `scripts/deploy-production.sh` - Main deployment script
   - `scripts/migrate-to-postgresql-production.sh` - Data migration script
 - **Capabilities**:
@@ -42,6 +45,7 @@ Phase 8 of the SQLite to PostgreSQL migration has been successfully implemented 
   - Rollback file generation
 
 #### 4. Production Health Checks
+
 - **File**: `app/api/health/production/route.ts`
 - **Features**:
   - Comprehensive system health monitoring
@@ -51,6 +55,7 @@ Phase 8 of the SQLite to PostgreSQL migration has been successfully implemented 
   - Detailed health status reporting
 
 #### 5. Monitoring & Alerting
+
 - **File**: `k8s/monitoring.yaml`
 - **Components**:
   - Prometheus configuration
@@ -61,6 +66,7 @@ Phase 8 of the SQLite to PostgreSQL migration has been successfully implemented 
   - Comprehensive alerting rules
 
 #### 6. Rollback Procedures
+
 - **File**: `docs/sqlite-to-postgresql/phase-9-rollback-procedures.md`
 - **Features**:
   - Emergency rollback procedures (<5 minutes)
@@ -199,18 +205,21 @@ LOG_LEVEL=info
 ### Kubernetes Resources
 
 #### PostgreSQL Deployment
+
 - **Replicas**: 1 (can be scaled for HA)
 - **Resources**: 512Mi-2Gi memory, 250m-1CPU
 - **Storage**: 10GB PVC with default storage class
 - **Health**: Liveness and readiness probes
 
 #### Application Deployment
+
 - **Replicas**: 3 (with HPA: 3-20)
 - **Resources**: 256Mi-512Mi memory, 100m-500mCPU
 - **Health**: HTTP health checks every 10 seconds
 - **Scaling**: CPU 70%, Memory 80%, Custom metrics
 
 #### Monitoring
+
 - **Prometheus**: Application and database metrics
 - **Alert Manager**: Email and webhook notifications
 - **PostgreSQL Exporter**: Database performance metrics
@@ -284,6 +293,7 @@ kubectl run perf-validation -n hyperpage --image=hyperpage:v0.1.0 \
 ### Alert Configuration
 
 Critical alerts configured for:
+
 - Application down (>1 minute)
 - Database connection failures
 - High error rates (>10%)
@@ -293,6 +303,7 @@ Critical alerts configured for:
 ### Monitoring Dashboards
 
 Access monitoring at:
+
 - **Application Metrics**: `http://your-domain.com/api/metrics`
 - **Health Endpoint**: `http://your-domain.com/api/health/production`
 - **PostgreSQL Exporter**: `http://postgres-exporter:9187/metrics`
@@ -328,6 +339,7 @@ kubectl exec -n hyperpage deployment/hyperpage -- \
 ### Common Issues
 
 #### Database Connection Issues
+
 ```bash
 # Check PostgreSQL status
 kubectl logs deployment/hyperpage-postgres -n hyperpage
@@ -338,6 +350,7 @@ kubectl exec -n hyperpage deployment/hyperpage -- \
 ```
 
 #### Application Health Issues
+
 ```bash
 # Check pod status
 kubectl get pods -l app=hyperpage -n hyperpage
@@ -350,6 +363,7 @@ curl http://hyperpage-service.hyperpage.svc.cluster.local/api/health
 ```
 
 #### Performance Issues
+
 ```bash
 # Check resource usage
 kubectl top pods -l app=hyperpage -n hyperpage
@@ -362,11 +376,13 @@ kubectl exec -n hyperpage deployment/hyperpage-postgres -- \
 ### Emergency Procedures
 
 1. **Immediate Rollback**
+
    ```bash
    ./scripts/emergency-rollback.sh
    ```
 
 2. **Database Recovery**
+
    ```bash
    ./scripts/recover-data-from-postgres.sh
    ```

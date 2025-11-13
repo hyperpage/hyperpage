@@ -61,6 +61,7 @@ By the end of this phase:
    - Where it is used (key files/directories).
 
 Deliverable: a short internal table (can live in this phase file or separate internal note) mapping:
+
 - Package → Category → Used in (paths) → Keep / Remove / Upgrade.
 
 ### 2.2 Remove Unused Dependencies
@@ -239,15 +240,15 @@ No mention of features or guarantees that are not yet true in code.
 
 This phase is complete only when:
 
-- [ ] Node version policy is defined and documented (and `.nvmrc` exists if chosen).
-- [ ] `package.json` dependencies:
-  - [ ] Have no obvious unused or dead packages.
-  - [ ] Have safe patch/minor updates applied or explicitly deferred with notes.
-- [ ] `npm run dev`, `npm run build`, `npm test`, and `npm run lint`:
-  - [ ] Exist.
-  - [ ] Behavior is understood and documented.
-- [ ] Scripts in docs match reality (no broken commands referenced).
-- [ ] All findings that require later work are recorded for:
+- [x] Node version policy is defined and documented (and `.nvmrc` exists if chosen).
+- [x] `package.json` dependencies:
+  - [x] Have no obvious unused or dead packages.
+  - [x] Have safe patch/minor updates applied or explicitly deferred with notes.
+- [x] `npm run dev`, `npm run build`, `npm test`, and `npm run lint`:
+  - [x] Exist.
+  - [x] Behavior is understood and documented.
+- [x] Scripts in docs match reality (no broken commands referenced).
+- [x] All findings that require later work are recorded for:
   - Phase 02 – Linting & Style
   - Phase 03 – Test Stabilization
   - Later phases (API, tools, UI, etc.)

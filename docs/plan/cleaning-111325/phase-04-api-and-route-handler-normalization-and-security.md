@@ -57,6 +57,7 @@ For each route:
    - **Experimental/legacy**.
 
 Deliverable: a table (kept in this phase file) mapping:
+
 - Route → Methods → Owner → Category → Keep / Refine / Deprecate.
 
 ---
@@ -99,7 +100,6 @@ Document any deviations that require broader architectural decisions.
 Per `.clinerules/security-practices.md`, every dynamic segment must be validated:
 
 1. For any `[param]` in path (e.g. `[tool]`, `[endpoint]`, `[sessionId]`):
-
    - Apply strict validation:
      - Whitelist pattern: `^[a-zA-Z0-9._-]+$` (adapt per domain).
    - Reject invalid values:
@@ -117,21 +117,18 @@ Per `.clinerules/security-practices.md`, every dynamic segment must be validated
 For bodies and query strings:
 
 1. Define per-route schemas (lightweight or using existing validation helpers):
-
    - Example categories:
      - Pagination (`page`, `limit`).
      - Filters (`status`, `tool`, `project`).
      - Actions (`enable`, `disable`, etc.).
 
 2. Requirements:
-
    - Validate types and ranges.
    - Coerce safely or reject:
      - On failure:
        - Respond with `400` and generic error structure.
 
 3. No leaky details:
-
    - Do not echo untrusted input in error messages beyond what is needed.
 
 ---
@@ -193,14 +190,12 @@ Ensure this pattern is reused (shared helper in `lib/api/` if appropriate).
 Enforce the architecture described in `.clinerules/coding-principles.md`:
 
 1. All tool-specific API calls (GitHub, GitLab, Jira, etc.) must route through:
-
    - Central registry (`tools/index.ts`, `tools/registry.ts`).
    - Unified handlers mapping:
      - Tool key → `handlers` object.
      - Each endpoint → specific handler function.
 
 2. For `/api/tools/[tool]/[endpoint]`:
-
    - Validate:
      - `[tool]` is in enabled tools.
      - `[endpoint]` is declared in tool definition.
@@ -267,7 +262,6 @@ For `/api/health` and similar:
 ### 7.1 Identify Dead Routes
 
 1. For each route discovered in §1:
-
    - Search for usages:
      - In frontend (app/components, hooks).
      - In tools.
@@ -275,7 +269,6 @@ For `/api/health` and similar:
      - In docs.
 
 2. If no usage and no longer part of product design:
-
    - Mark as candidate for removal.
 
 ### 7.2 Controlled Removal

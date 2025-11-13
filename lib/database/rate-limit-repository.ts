@@ -47,9 +47,7 @@ export class RateLimitRepository {
 
     return rows
       .map((row) => this.fromPostgresRow(row))
-      .filter(
-        (record): record is NormalizedRateLimitRecord => record !== null,
-      );
+      .filter((record): record is NormalizedRateLimitRecord => record !== null);
   }
 
   /**
@@ -158,7 +156,6 @@ export class RateLimitRepository {
     const [platform] = key.split(":", 1);
     return platform || null;
   }
-
 }
 
 /**

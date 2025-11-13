@@ -55,7 +55,8 @@ export class TestDatabaseManager {
 
   async setup(): Promise<void> {
     try {
-      console.log("🧪 Setting up PostgreSQL test database...");
+      const { default: logger } = await import("./lib/logger");
+      logger.info("🧪 Setting up PostgreSQL test database...");
 
       // Drop and recreate test database, then initialize pool + drizzle
       await this.dropDatabase();
@@ -63,11 +64,10 @@ export class TestDatabaseManager {
       await this.initPoolAndDrizzle();
       await this.runMigrations();
 
-      console.log("✅ PostgreSQL test database setup complete");
+      logger.info("✅ PostgreSQL test database setup complete");
     } catch (error) {
       const { default: logger } = await import("./lib/logger");
-      const message =
-        error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
 
       // Provide a concise, environment-tolerant hint instead of only raw driver errors.
       logger.error(
@@ -96,18 +96,18 @@ export class TestDatabaseManager {
 
   async cleanup(): Promise<void> {
     try {
-      console.log("🧹 Cleaning up PostgreSQL test database...");
+      const { default: logger } = await import("./lib/logger");
+      logger.info("🧹 Cleaning up PostgreSQL test database...");
       if (this.pool) {
         await this.pool.end();
         this.pool = null;
       }
       this.db = null;
       await this.dropDatabase();
-      console.log("✅ PostgreSQL test database cleanup complete");
+      logger.info("✅ PostgreSQL test database cleanup complete");
     } catch (error) {
       const { default: logger } = await import("./lib/logger");
-      const errMessage =
-        error instanceof Error ? error.message : String(error);
+      const errMessage = error instanceof Error ? error.message : String(error);
 
       logger.error(errMessage, "Test DB cleanup failed");
     }
@@ -123,8 +123,7 @@ export class TestDatabaseManager {
       await tempPool.query(`CREATE DATABASE "${this.dbName}"`);
     } catch (error) {
       const { default: logger } = await import("./lib/logger");
-      const message =
-        error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
 
       logger.warn(message, "Test database already exists");
     } finally {
@@ -164,8 +163,7 @@ export class TestDatabaseManager {
       await tempPool.query(`DROP DATABASE IF EXISTS "${this.dbName}"`);
     } catch (error) {
       const { default: logger } = await import("./lib/logger");
-      const message =
-        error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
 
       logger.warn(message, "Test database already exists");
     } finally {
@@ -207,14 +205,15 @@ export class TestDatabaseManager {
       }
     } catch (error) {
       const { default: logger } = await import("./lib/logger");
-      const errMessage =
-        error instanceof Error ? error.message : String(error);
+      const errMessage = error instanceof Error ? error.message : String(error);
 
       logger.warn(errMessage, "Migration journal creation issue");
     }
 
     if (!this.db) {
-      throw new Error("Test database not initialized before running migrations");
+      throw new Error(
+        "Test database not initialized before running migrations",
+      );
     }
 
     // First try drizzle's file-based migrator. In some TS/Vitest setups this may
@@ -247,10 +246,9 @@ export class TestDatabaseManager {
           ].join("\n"),
         );
 
-        const {
-          MIGRATIONS_REGISTRY,
-          getMigrationNames,
-        } = await import("./lib/database/migrations");
+        const { MIGRATIONS_REGISTRY, getMigrationNames } = await import(
+          "./lib/database/migrations"
+        );
 
         for (const name of getMigrationNames()) {
           const migration = MIGRATIONS_REGISTRY[name];
@@ -331,8 +329,7 @@ export class TestDatabaseManager {
       }
     } catch (error) {
       const { default: logger } = await import("./lib/logger");
-      const message =
-        error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
       logger.error(
         message,
         "Test DB seed preflight failed - migrations likely did not run",
@@ -429,7 +426,9 @@ export class TestDatabaseManager {
     return result[0];
   }
 
-  async createTestUser(): Promise<Array<typeof pgSchema.users.$inferInsert>[0]> {
+  async createTestUser(): Promise<
+    Array<typeof pgSchema.users.$inferInsert>[0]
+  > {
     const user = {
       email: "test@example.com",
       name: "Test User",
@@ -440,7 +439,10 @@ export class TestDatabaseManager {
     if (!this.db) {
       throw new Error("Test database not initialized before createTestUser");
     }
-    const result = await this.db.insert(pgSchema.users).values(user).returning();
+    const result = await this.db
+      .insert(pgSchema.users)
+      .values(user)
+      .returning();
     return result[0];
   }
 

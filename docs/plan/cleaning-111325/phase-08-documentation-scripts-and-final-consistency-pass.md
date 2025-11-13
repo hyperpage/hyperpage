@@ -70,6 +70,7 @@ Checklist:
      - Real flows (portal, widgets, tools).
 
 Actions:
+
 - Update or remove any sections referencing deprecated tools, endpoints, or configs identified in Phases 04–07.
 
 ### 1.2 Architecture & Security Docs
@@ -133,6 +134,7 @@ Checklist:
      - Each phase’s exit criteria reflect actual intended target, not fantasy.
 
 Result:
+
 - New contributors can reliably run tests and understand coverage expectations.
 
 ---

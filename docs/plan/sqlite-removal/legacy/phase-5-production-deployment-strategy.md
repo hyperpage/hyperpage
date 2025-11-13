@@ -27,6 +27,7 @@ Phase 5 executes the production deployment strategy to transition the applicatio
 **Task**: Prepare production environment for PostgreSQL deployment
 
 **Actions**:
+
 - [ ] Provision production PostgreSQL database instance
 - [ ] Configure PostgreSQL security, backups, and monitoring
 - [ ] Set up production database users and permissions
@@ -35,6 +36,7 @@ Phase 5 executes the production deployment strategy to transition the applicatio
 - [ ] Prepare production environment variables
 
 **Production PostgreSQL Setup**:
+
 ```bash
 # Production PostgreSQL configuration
 psql $PRODUCTION_DATABASE_URL << EOF
@@ -54,6 +56,7 @@ EOF
 ```
 
 **Deliverables**:
+
 - Production PostgreSQL instance configured
 - Database security and access controls implemented
 - Production monitoring and alerting configured
@@ -63,6 +66,7 @@ EOF
 **Task**: Set up blue-green deployment infrastructure
 
 **Actions**:
+
 - [ ] Create "Blue" environment (current SQLite production)
 - [ ] Create "Green" environment (new PostgreSQL production)
 - [ ] Configure load balancer for traffic switching
@@ -71,6 +75,7 @@ EOF
 - [ ] Configure monitoring for both environments
 
 **Blue-Green Configuration**:
+
 ```yaml
 # docker-compose.blue.yml (Current Production)
 services:
@@ -89,7 +94,7 @@ services:
       - DATABASE_URL=postgresql://hyperpage_app:***@db:5432/hyperpage_production
     depends_on:
       - db
-  
+
   db:
     image: postgres:15
     environment:
@@ -100,6 +105,7 @@ services:
 ```
 
 **Deliverables**:
+
 - Blue-green deployment infrastructure configured
 - Traffic switching mechanism prepared
 - Health check monitoring implemented
@@ -109,6 +115,7 @@ services:
 **Task**: Execute production data migration from SQLite to PostgreSQL
 
 **Actions**:
+
 - [ ] Perform final SQLite backup before migration
 - [ ] Execute production data migration using validated scripts
 - [ ] Monitor migration progress and performance
@@ -117,6 +124,7 @@ services:
 - [ ] Keep SQLite backup for emergency rollback
 
 **Production Migration Commands**:
+
 ```bash
 #!/bin/bash
 # production-migration.sh
@@ -145,6 +153,7 @@ echo "Production migration completed at $(date)"
 ```
 
 **Deliverables**:
+
 - Production data successfully migrated
 - Data integrity validation completed
 - Critical functionality tested and validated
@@ -154,6 +163,7 @@ echo "Production migration completed at $(date)"
 **Task**: Deploy updated application to Green environment
 
 **Actions**:
+
 - [ ] Deploy PostgreSQL-optimized application to Green environment
 - [ ] Configure Green environment with production settings
 - [ ] Test Green environment functionality
@@ -162,6 +172,7 @@ echo "Production migration completed at $(date)"
 - [ ] Prepare Green environment for production traffic
 
 **Green Environment Deployment**:
+
 ```bash
 #!/bin/bash
 # deploy-green.sh
@@ -183,6 +194,7 @@ echo "Green environment deployment completed"
 ```
 
 **Deliverables**:
+
 - Green environment fully deployed and operational
 - Integration tests pass on Green environment
 - Green environment monitoring configured
@@ -192,6 +204,7 @@ echo "Green environment deployment completed"
 **Task**: Switch traffic from Blue to Green environment
 
 **Actions**:
+
 - [ ] Gradually shift traffic from Blue to Green (10%, 25%, 50%, 100%)
 - [ ] Monitor application performance during traffic shift
 - [ ] Validate user experience at each traffic level
@@ -200,6 +213,7 @@ echo "Green environment deployment completed"
 - [ ] Keep Blue environment ready for immediate rollback
 
 **Traffic Switching Script**:
+
 ```bash
 #!/bin/bash
 # traffic-switch.sh
@@ -208,19 +222,19 @@ TRAFFIC_PERCENTAGES=(10 25 50 100)
 
 for percentage in "${TRAFFIC_PERCENTAGES[@]}"; do
   echo "Switching ${percentage}% traffic to Green environment..."
-  
+
   # Switch traffic percentage
   aws elbv1 modify-listener \
     --listener-arn $LISTENER_ARN \
     --default-actions Type=weighted,TargetGroupArn=$GREEN_TARGET_ARN,Weight=$percentage
-  
+
   # Monitor for 10 minutes at each level
   echo "Monitoring for 10 minutes..."
   sleep 600
-  
+
   # Run health checks
   ./scripts/health-check-validation.sh --percentage=$percentage
-  
+
   # Check error rates
   error_rate=$(./scripts/check-error-rate.sh)
   if (( $(echo "$error_rate > 0.1" | bc -l) )); then
@@ -228,7 +242,7 @@ for percentage in "${TRAFFIC_PERCENTAGES[@]}"; do
     ./scripts/emergency-rollback.sh
     exit 1
   fi
-  
+
   echo "Traffic switch to ${percentage}% successful"
 done
 
@@ -236,6 +250,7 @@ echo "All traffic successfully switched to Green environment"
 ```
 
 **Deliverables**:
+
 - Traffic successfully switched to Green environment
 - Application performance validated at each traffic level
 - User experience remains acceptable throughout switch
@@ -245,6 +260,7 @@ echo "All traffic successfully switched to Green environment"
 **Task**: Comprehensive monitoring and validation after deployment
 
 **Actions**:
+
 - [ ] Monitor application performance for 24-48 hours
 - [ ] Validate all critical business functions
 - [ ] Monitor database performance and optimization
@@ -253,6 +269,7 @@ echo "All traffic successfully switched to Green environment"
 - [ ] Document deployment success and learnings
 
 **Post-Deployment Monitoring**:
+
 ```bash
 #!/bin/bash
 # post-deployment-monitoring.sh
@@ -260,25 +277,25 @@ echo "All traffic successfully switched to Green environment"
 # Run for 48 hours with hourly checks
 for i in {1..48}; do
   echo "Hour $i monitoring check at $(date)"
-  
+
   # Application health check
   if ! curl -f https://app.hyperpage.com/health > /dev/null 2>&1; then
     echo "ERROR: Application health check failed"
     ./scripts/emergency-rollback.sh
     exit 1
   fi
-  
+
   # Database performance check
   db_performance=$(./scripts/check-db-performance.sh)
   echo "Database performance: $db_performance"
-  
+
   # Error rate check
   error_rate=$(./scripts/check-error-rate.sh)
   echo "Error rate: $error_rate%"
-  
+
   # User functionality check
   ./scripts/test-critical-user-paths.sh
-  
+
   # Sleep for 1 hour
   sleep 3600
 done
@@ -287,6 +304,7 @@ echo "48-hour post-deployment monitoring completed successfully"
 ```
 
 **Deliverables**:
+
 - 48-hour post-deployment monitoring report
 - Performance validation results
 - User experience validation completed
@@ -296,6 +314,7 @@ echo "48-hour post-deployment monitoring completed successfully"
 **Task**: Prepare Blue environment for decommissioning after validation period
 
 **Actions**:
+
 - [ ] Confirm Green environment stability for 48+ hours
 - [ ] Archive Blue environment data and configurations
 - [ ] Prepare Blue environment cleanup procedures
@@ -304,6 +323,7 @@ echo "48-hour post-deployment monitoring completed successfully"
 - [ ] Update infrastructure documentation
 
 **Blue Environment Archive**:
+
 ```bash
 #!/bin/bash
 # archive-blue-environment.sh
@@ -327,6 +347,7 @@ echo "Blue environment archived successfully"
 ```
 
 **Deliverables**:
+
 - Blue environment archived and documented
 - Final SQLite backup preserved
 - Decommissioning procedures documented
@@ -336,6 +357,7 @@ echo "Blue environment archived successfully"
 **Task**: Maintain rollback capability and emergency response procedures
 
 **Actions**:
+
 - [ ] Keep Blue environment ready for immediate rollback
 - [ ] Maintain automated rollback scripts
 - [ ] Test rollback procedures regularly
@@ -344,6 +366,7 @@ echo "Blue environment archived successfully"
 - [ ] Prepare incident communication plan
 
 **Rollback Procedures**:
+
 ```bash
 #!/bin/bash
 # emergency-rollback.sh
@@ -375,6 +398,7 @@ echo "Emergency rollback completed at $(date)"
 ```
 
 **Deliverables**:
+
 - Emergency rollback procedures tested and validated
 - Operations team trained on rollback procedures
 - Incident response plan documented
@@ -384,6 +408,7 @@ echo "Emergency rollback completed at $(date)"
 **Task**: Optimize PostgreSQL performance in production environment
 
 **Actions**:
+
 - [ ] Monitor production database performance
 - [ ] Optimize queries based on real production patterns
 - [ ] Adjust connection pooling for production load
@@ -392,27 +417,29 @@ echo "Emergency rollback completed at $(date)"
 - [ ] Set up automated performance monitoring
 
 **Production Optimization**:
+
 ```sql
 -- Production PostgreSQL optimizations
 -- Based on actual usage patterns
 
 -- Optimize job queries (most frequent)
-CREATE INDEX CONCURRENTLY idx_jobs_status_scheduled 
-ON jobs(status, scheduled_at) 
+CREATE INDEX CONCURRENTLY idx_jobs_status_scheduled
+ON jobs(status, scheduled_at)
 WHERE status IN ('pending', 'processing');
 
 -- Optimize tool configuration queries
-CREATE INDEX CONCURRENTLY idx_tool_configs_enabled_key 
-ON tool_configs(enabled, key) 
+CREATE INDEX CONCURRENTLY idx_tool_configs_enabled_key
+ON tool_configs(enabled, key)
 WHERE enabled = true;
 
 -- Optimize rate limiting queries
-CREATE INDEX CONCURRENTLY idx_rate_limits_key_reset 
-ON rate_limits(key, reset_at) 
+CREATE INDEX CONCURRENTLY idx_rate_limits_key_reset
+ON rate_limits(key, reset_at)
 WHERE reset_at > NOW();
 ```
 
 **Deliverables**:
+
 - Production performance optimized
 - Database indexes created based on real usage
 - Connection pooling configured for production load
@@ -422,6 +449,7 @@ WHERE reset_at > NOW();
 **Task**: Document deployment process and capture lessons learned
 
 **Actions**:
+
 - [ ] Document complete deployment process
 - [ ] Capture lessons learned and improvements
 - [ ] Update deployment runbooks
@@ -430,10 +458,12 @@ WHERE reset_at > NOW();
 - [ ] Update disaster recovery procedures
 
 **Deployment Documentation Template**:
+
 ```markdown
 # Production Deployment Report - PostgreSQL Migration
 
 ## Deployment Summary
+
 - **Date**: [Deployment Date]
 - **Duration**: [Total Deployment Time]
 - **Traffic Switch**: [Traffic Switch Method and Duration]
@@ -441,35 +471,41 @@ WHERE reset_at > NOW();
 - **Status**: [SUCCESS/ROLLBACK]
 
 ## Pre-Deployment
+
 - Blue environment prepared: [Status]
 - Green environment prepared: [Status]
 - Data migration completed: [Status and Duration]
 - Integration tests passed: [Results]
 
 ## Deployment Execution
+
 - Traffic switching progression: [10% → 25% → 50% → 100%]
 - Monitoring results: [Performance metrics]
 - Issues encountered: [List any issues]
 - Resolutions: [How issues were resolved]
 
 ## Post-Deployment
+
 - 24-hour monitoring: [Results]
 - Performance validation: [Metrics]
 - User feedback: [Summary]
 - Database optimization: [Changes made]
 
 ## Lessons Learned
+
 - What went well: [Successes]
 - What could be improved: [Improvements]
 - Future recommendations: [Next steps]
 
 ## Rollback Capability
+
 - Rollback procedures tested: [Status]
 - Time to rollback: [Duration]
 - Data preservation: [Status]
 ```
 
 **Deliverables**:
+
 - Complete deployment documentation
 - Lessons learned report
 - Updated deployment procedures
@@ -478,6 +514,7 @@ WHERE reset_at > NOW();
 ## Phase 5 Completion Criteria
 
 **Deployment Success**:
+
 - [ ] Production data successfully migrated to PostgreSQL
 - [ ] Blue-green deployment executed without issues
 - [ ] Traffic successfully switched to PostgreSQL environment
@@ -485,6 +522,7 @@ WHERE reset_at > NOW();
 - [ ] All critical business functions operational
 
 **Quality Assurance**:
+
 - [ ] 48-hour post-deployment monitoring completed
 - [ ] Performance optimization implemented
 - [ ] Security validation completed in production
@@ -492,6 +530,7 @@ WHERE reset_at > NOW();
 - [ ] Database performance optimized for production load
 
 **Operational Readiness**:
+
 - [ ] Blue environment archived and documented
 - [ ] Rollback procedures tested and validated
 - [ ] Operations team trained and prepared
@@ -508,6 +547,7 @@ WHERE reset_at > NOW();
 ## Phase 5 Exit Conditions
 
 Phase 5 is complete when:
+
 1. Production deployment successfully executed
 2. All traffic switched to PostgreSQL environment
 3. 48-hour monitoring period completed successfully
@@ -517,6 +557,7 @@ Phase 5 is complete when:
 ## Emergency Procedures
 
 **Immediate Rollback Triggers**:
+
 - Application becomes unavailable for >5 minutes
 - Error rate exceeds 5% for >10 minutes
 - Database performance degrades significantly
@@ -524,6 +565,7 @@ Phase 5 is complete when:
 - User experience severely impacted
 
 **Rollback Execution**:
+
 1. Execute emergency rollback script
 2. Switch all traffic back to Blue environment
 3. Stop Green environment to prevent data divergence
@@ -533,6 +575,7 @@ Phase 5 is complete when:
 ## Quality Gates
 
 **Before Proceeding to Phase 6**:
+
 1. **Production Validation**: All production functionality validated
 2. **Performance Review**: Production performance meets requirements
 3. **Operations Review**: Operations team approves transition
@@ -542,6 +585,7 @@ Phase 5 is complete when:
 ## Next Phase Preview
 
 Phase 6 will focus on **Cleanup & Finalization**, including:
+
 - Blue environment decommissioning
 - SQLite cleanup and removal
 - Final documentation updates

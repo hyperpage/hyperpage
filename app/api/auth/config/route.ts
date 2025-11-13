@@ -10,14 +10,14 @@ import path from "path";
  */
 function loadEnvFile() {
   try {
-    const envPath = path.join(process.cwd(), '.env.local');
+    const envPath = path.join(process.cwd(), ".env.local");
     if (fs.existsSync(envPath)) {
-      const envContent = fs.readFileSync(envPath, 'utf8');
-      envContent.split('\n').forEach(line => {
+      const envContent = fs.readFileSync(envPath, "utf8");
+      envContent.split("\n").forEach((line) => {
         line = line.trim();
-        if (line && !line.startsWith('#') && line.includes('=')) {
-          const [key, ...valueParts] = line.split('=');
-          const value = valueParts.join('=');
+        if (line && !line.startsWith("#") && line.includes("=")) {
+          const [key, ...valueParts] = line.split("=");
+          const value = valueParts.join("=");
           // Only set if not already set to avoid overriding runtime values
           if (!process.env[key.trim()]) {
             process.env[key.trim()] = value.trim();
@@ -38,7 +38,7 @@ export async function GET() {
   try {
     // Load environment variables from .env.local
     loadEnvFile();
-    
+
     const tools = ["github", "gitlab", "jira"];
     const configured = {} as Record<string, boolean>;
 

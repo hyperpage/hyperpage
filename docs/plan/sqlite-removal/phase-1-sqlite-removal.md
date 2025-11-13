@@ -21,6 +21,7 @@ Phase 1 focuses on removing all SQLite dependencies from the codebase and establ
 **Action**: Remove SQLite packages from package.json
 
 **Commands**:
+
 ```bash
 # Remove SQLite dependencies
 npm uninstall better-sqlite3 @types/better-sqlite3
@@ -30,6 +31,7 @@ npm ls better-sqlite3
 ```
 
 **Verification**:
+
 ```bash
 # Check for remaining SQLite references
 grep -r "better-sqlite3" . --exclude-dir=node_modules --exclude-dir=.next
@@ -42,6 +44,7 @@ grep -r "better-sqlite3" . --exclude-dir=node_modules --exclude-dir=.next
 **Action**: Update npm scripts for PostgreSQL-only operations
 
 **Updated package.json section**:
+
 ```json
 {
   "scripts": {
@@ -69,6 +72,7 @@ grep -r "better-sqlite3" . --exclude-dir=node_modules --exclude-dir=.next
 ```
 
 **Dependencies after cleanup**:
+
 ```json
 {
   "dependencies": {
@@ -106,6 +110,7 @@ grep -r "better-sqlite3" . --exclude-dir=node_modules --exclude-dir=.next
 **Action**: Move SQLite schema to legacy folder for reference
 
 **Commands**:
+
 ```bash
 # Create legacy directory
 mkdir -p docs/plan/sqlite-removal/legacy
@@ -135,6 +140,7 @@ Purpose: Reference for understanding original data structure.
 **Action**: Find and replace all SQLite schema imports
 
 **Search and replace pattern**:
+
 ```bash
 # Find all files importing SQLite schema
 grep -r "import.*sqliteSchema\|from.*schema" . --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.next
@@ -145,11 +151,13 @@ grep -r "import.*sqliteSchema\|from.*schema" . --include="*.ts" --include="*.tsx
 ```
 
 **Files to update** (based on search results):
+
 - Repository files: `lib/database/*-repository.ts`
 - API routes: `app/api/*/route.ts`
 - Service files: `lib/*/*.ts`
 
 **Example import updates**:
+
 ```typescript
 // lib/database/job-repository.ts
 // OLD:
@@ -168,6 +176,7 @@ import * as pgSchema from "./pg-schema";
 **Action**: Create backup of existing connection logic
 
 **Commands**:
+
 ```bash
 # Create backup
 cp lib/database/connection.ts lib/database/connection.ts.backup
@@ -197,6 +206,7 @@ EOF
 **Action**: Replace `lib/database/connection.ts` with PostgreSQL-only implementation
 
 **Implementation**:
+
 ```typescript
 // lib/database/connection.ts - PostgreSQL Only
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
@@ -239,7 +249,7 @@ export async function checkDatabaseConnectivity(): Promise<{
   try {
     const db = getPostgresDrizzleDb();
     await db.execute({ sql: "SELECT 1" });
-    
+
     return {
       status: "healthy",
       details: {
@@ -285,28 +295,34 @@ export function getDatabaseStats(): {
 **Action**: Test PostgreSQL connectivity
 
 **Create validation script**:
+
 ```typescript
 // scripts/validate-postgresql-connection.ts
-import { getPostgresDrizzleDb, checkDatabaseConnectivity } from "../lib/database/connection";
+import {
+  getPostgresDrizzleDb,
+  checkDatabaseConnectivity,
+} from "../lib/database/connection";
 
 async function validateConnection() {
   try {
     console.log("🔍 Validating PostgreSQL connection...");
-    
+
     // Test basic connectivity
     const health = await checkDatabaseConnectivity();
     console.log("Health check:", health);
-    
+
     if (health.status !== "healthy") {
-      throw new Error(`PostgreSQL health check failed: ${health.details.message}`);
+      throw new Error(
+        `PostgreSQL health check failed: ${health.details.message}`,
+      );
     }
-    
+
     // Test database query
     const db = getPostgresDrizzleDb();
     const result = await db.execute({ sql: "SELECT version()" });
     console.log("✅ PostgreSQL connection successful");
     console.log("Version:", result.rows[0]);
-    
+
     process.exit(0);
   } catch (error) {
     console.error("❌ PostgreSQL validation failed:", error);
@@ -318,6 +334,7 @@ validateConnection();
 ```
 
 **Test connection**:
+
 ```bash
 npm run db:validate
 ```
@@ -331,6 +348,7 @@ npm run db:validate
 **Action**: Clean up environment variables for PostgreSQL-only
 
 **Updated .env.local.sample**:
+
 ```env
 # Database Configuration (PostgreSQL Only)
 DATABASE_URL=postgresql://user:password@localhost:5432/hyperpage
@@ -350,6 +368,7 @@ POSTGRES_PASSWORD=password
 **Action**: Update docker-compose.yml for PostgreSQL-only
 
 **Updated docker-compose.yml**:
+
 ```yaml
 # docker-compose.yml - PostgreSQL Only
 services:
@@ -365,7 +384,7 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-  
+
   db:
     image: postgres:15
     environment:
@@ -395,6 +414,7 @@ volumes:
 **Action**: Configure for PostgreSQL-only
 
 **Updated drizzle.config.ts**:
+
 ```typescript
 import type { Config } from "drizzle-kit";
 import * as dotenv from "dotenv";
@@ -421,7 +441,8 @@ export default {
 
 **Action**: Clean up E2E test environment variables
 
-**Updated __tests__/e2e/.env.e2e**:
+**Updated **tests**/e2e/.env.e2e**:
+
 ```env
 # E2E Test Environment (PostgreSQL)
 DATABASE_URL=postgresql://test:test@localhost:5432/hyperpage_e2e
@@ -435,7 +456,8 @@ TEST_DATABASE_URL=postgresql://test:test@localhost:5432/hyperpage_test
 
 **Action**: Create PostgreSQL test database utilities
 
-**Create __tests__/setup/test-database.ts**:
+**Create **tests**/setup/test-database.ts**:
+
 ```typescript
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -448,7 +470,8 @@ export interface TestDatabase {
 
 export async function setupTestDatabase(): Promise<TestDatabase> {
   const testPool = new Pool({
-    connectionString: process.env.TEST_DATABASE_URL || 
+    connectionString:
+      process.env.TEST_DATABASE_URL ||
       "postgresql://test:test@localhost:5432/hyperpage_test",
   });
 
@@ -456,11 +479,13 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
 
   // Initialize test database
   await db.execute({ sql: `CREATE EXTENSION IF NOT EXISTS "uuid-ossp";` });
-  
+
   const cleanup = async () => {
-    await db.execute({ sql: `
+    await db.execute({
+      sql: `
       TRUNCATE TABLE jobs, tool_configs, rate_limits, app_state, oauth_tokens, users CASCADE;
-    `});
+    `,
+    });
     await testPool.end();
   };
 
@@ -477,6 +502,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
 **Action**: Ensure application builds successfully
 
 **Commands**:
+
 ```bash
 # Type check
 npm run type-check
@@ -493,6 +519,7 @@ npm run build
 **Action**: Test PostgreSQL connectivity in all environments
 
 **Commands**:
+
 ```bash# Development environment
 npm run dev &
 sleep 10
@@ -513,6 +540,7 @@ pkill -f "next start"
 **Action**: Run basic integration tests
 
 **Commands**:
+
 ```bash
 # Run unit tests
 npm test
@@ -524,12 +552,14 @@ npm run test:integration
 ## Phase 1 Completion Checklist
 
 ### Dependencies Removed
+
 - [ ] `better-sqlite3` and `@types/better-sqlite3` removed from package.json
 - [ ] No SQLite import statements remain in codebase
 - [ ] SQLite schema file archived to legacy folder
 - [ ] All SQLite references found and replaced
 
 ### Configuration Updated
+
 - [ ] Database connection simplified for PostgreSQL-only
 - [ ] Environment variables cleaned up (.env.local.sample)
 - [ ] Docker configuration updated (docker-compose.yml)
@@ -537,6 +567,7 @@ npm run test:integration
 - [ ] Test configurations updated
 
 ### Code Cleaned
+
 - [ ] `lib/database/connection.ts` simplified
 - [ ] Dual-engine logic removed
 - [ ] SQLite health checks removed
@@ -544,6 +575,7 @@ npm run test:integration
 - [ ] All exports maintained for compatibility
 
 ### Validation Passed
+
 - [ ] Application builds successfully
 - [ ] PostgreSQL connectivity validated
 - [ ] Basic tests pass
@@ -562,16 +594,17 @@ npm run test:integration
 If issues arise during Phase 1:
 
 1. **Immediate rollback**:
+
    ```bash
    # Restore SQLite schema
    cp docs/plan/sqlite-removal/legacy/sqlite-schema.ts lib/database/schema.ts
-   
+
    # Restore connection layer
    cp lib/database/connection.ts.backup lib/database/connection.ts
-   
+
    # Reinstall SQLite dependencies
    npm install better-sqlite3 @types/better-sqlite3
-   
+
    # Restore environment variables
    git checkout HEAD -- .env.local.sample
    ```
@@ -584,6 +617,7 @@ If issues arise during Phase 1:
 ## Success Criteria
 
 Phase 1 is successfully completed when:
+
 1. All SQLite dependencies are removed from the codebase
 2. PostgreSQL connection layer is functional
 3. Application builds and runs successfully with PostgreSQL
@@ -593,6 +627,7 @@ Phase 1 is successfully completed when:
 ## Next Steps Preview
 
 Phase 2 will focus on **Application Code Updates**:
+
 - Update repository classes for PostgreSQL
 - Modify API endpoints for PostgreSQL patterns
 - Clean up configuration management

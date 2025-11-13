@@ -673,18 +673,14 @@ export class UnifiedRateLimitService {
    * Convert in-memory RateLimitStatus into NormalizedRateLimitRecord
    * used by the Postgres repository.
    */
-  private toNormalizedRecord(
-    status: RateLimitStatus,
-  ):
-    | {
-        id: string;
-        platform: string;
-        limitRemaining: number | null;
-        limitTotal: number | null;
-        resetTime: number | null;
-        lastUpdated: number;
-      }
-    | null {
+  private toNormalizedRecord(status: RateLimitStatus): {
+    id: string;
+    platform: string;
+    limitRemaining: number | null;
+    limitTotal: number | null;
+    resetTime: number | null;
+    lastUpdated: number;
+  } | null {
     const platform = status.platform;
     const id = `${platform}:global`;
 
@@ -741,8 +737,16 @@ export class UnifiedRateLimitService {
       limits.github = {
         core,
         // For reconstructed state, mirror core values to required keys to satisfy type
-        search: this.createLimitEntry(core.limit, core.remaining, core.resetTime),
-        graphql: this.createLimitEntry(core.limit, core.remaining, core.resetTime),
+        search: this.createLimitEntry(
+          core.limit,
+          core.remaining,
+          core.resetTime,
+        ),
+        graphql: this.createLimitEntry(
+          core.limit,
+          core.remaining,
+          core.resetTime,
+        ),
       };
     } else if (platform === "gitlab") {
       limits.gitlab = {

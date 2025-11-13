@@ -16,8 +16,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:all": "vitest run && test:e2e:docker",
-    "test:e2e:docker": "docker-compose -f __tests__/e2e/docker-compose.e2e.yml --profile e2e up --abort-on-container-exit --build"
+    "test:all": "vitest run && npm run test:e2e:docker",
+    "test:e2e:docker": "docker-compose -f __tests__/e2e/docker-compose.e2e.yml --profile e2e up --abort-on-container-exit --build",
+    "validate": "npm run prettier:fix && npm run lint && npm run lint:sec && npm run type-check && npm test"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.16",

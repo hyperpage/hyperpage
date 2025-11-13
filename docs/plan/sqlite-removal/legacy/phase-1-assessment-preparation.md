@@ -26,6 +26,7 @@ Phase 1 focuses on comprehensive assessment of the current SQLite implementation
 **Task**: Create comprehensive mapping of all SQLite usage across the codebase
 
 **Actions**:
+
 - [ ] Scan entire codebase for SQLite imports and usage patterns
 - [ ] Document all repository classes and their SQLite dependencies
 - [ ] Identify test files that depend on SQLite
@@ -33,10 +34,12 @@ Phase 1 focuses on comprehensive assessment of the current SQLite implementation
 - [ ] Document configuration files and environment variables
 
 **Deliverables**:
+
 - `docs/plan/sqlite-removal/sqlite-dependency-audit.md` - Complete dependency mapping
 - Updated `lib/database/` README with SQLite usage patterns
 
 **Tools**:
+
 - `grep -r "better-sqlite3\|sqlite\|database/schema" src/ --include="*.ts" --include="*.tsx"`
 - `grep -r "from.*schema\|import.*schema" src/ --include="*.ts" --include="*.tsx"`
 
@@ -45,6 +48,7 @@ Phase 1 focuses on comprehensive assessment of the current SQLite implementation
 **Task**: Analyze current SQLite data volumes and performance characteristics
 
 **Actions**:
+
 - [ ] Generate database statistics (table sizes, record counts, indexes)
 - [ ] Analyze query performance patterns
 - [ ] Document data relationships and constraints
@@ -52,16 +56,18 @@ Phase 1 focuses on comprehensive assessment of the current SQLite implementation
 - [ ] Assess current connection pooling and concurrency patterns
 
 **Deliverables**:
+
 - `docs/plan/sqlite-removal/data-volume-analysis.md` - Database statistics and analysis
 - Migration performance baseline measurements
 
 **Commands**:
+
 ```sql
 -- SQLite commands to run on production copy
 .tables
-SELECT name, COUNT(*) as record_count FROM sqlite_master JOIN 
-  (SELECT 'jobs' as name UNION ALL SELECT 'tool_configs' UNION ALL 
-   SELECT 'rate_limits' UNION ALL SELECT 'app_state' UNION ALL 
+SELECT name, COUNT(*) as record_count FROM sqlite_master JOIN
+  (SELECT 'jobs' as name UNION ALL SELECT 'tool_configs' UNION ALL
+   SELECT 'rate_limits' UNION ALL SELECT 'app_state' UNION ALL
    SELECT 'oauth_tokens' UNION ALL SELECT 'users') USING(name);
 .schema
 PRAGMA integrity_check;
@@ -73,6 +79,7 @@ PRAGMA table_info(jobs);
 **Task**: Validate and enhance existing migration scripts for production use
 
 **Actions**:
+
 - [ ] Review and test `scripts/migrate-sqlite-to-postgresql.ts`
 - [ ] Validate migration orchestrator and schema converter functionality
 - [ ] Test migration rollback capabilities
@@ -82,11 +89,13 @@ PRAGMA table_info(jobs);
 - [ ] Validate batch processing for large datasets
 
 **Deliverables**:
+
 - Updated migration scripts with production-grade error handling
 - `docs/plan/sqlite-removal/migration-validation-report.md`
 - Migration testing results
 
 **Testing Commands**:
+
 ```bash
 # Test migration script
 npm run migrate-sqlite-to-postgresql --dry-run
@@ -98,6 +107,7 @@ npm run migrate-sqlite-to-postgresql --tables jobs --batch-size 100
 **Task**: Ensure PostgreSQL infrastructure is production-ready
 
 **Actions**:
+
 - [ ] Validate PostgreSQL connection and pool configuration
 - [ ] Test database migrations with drizzle-kit
 - [ ] Verify PostgreSQL performance with expected data volumes
@@ -106,11 +116,13 @@ npm run migrate-sqlite-to-postgresql --tables jobs --batch-size 100
 - [ ] Validate monitoring and alerting setup
 
 **Deliverables**:
+
 - PostgreSQL infrastructure validation report
 - Performance benchmarking results
 - Backup/restore procedure documentation
 
 **Commands**:
+
 ```bash
 # Test PostgreSQL connectivity
 psql $DATABASE_URL -c "SELECT version();"
@@ -122,6 +134,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 **Task**: Enhance application health checks for database operations
 
 **Actions**:
+
 - [ ] Review and enhance `/api/health` endpoint for PostgreSQL
 - [ ] Add database-specific health checks for both engines
 - [ ] Create database connectivity monitoring
@@ -129,6 +142,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 - [ ] Implement graceful degradation for database issues
 
 **Deliverables**:
+
 - Enhanced health check endpoints
 - Database monitoring dashboard setup
 - Alert configuration for database issues
@@ -138,6 +152,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 **Task**: Create comprehensive rollback procedures
 
 **Actions**:
+
 - [ ] Document step-by-step rollback procedures
 - [ ] Test rollback scenarios in development environment
 - [ ] Create automated rollback scripts
@@ -145,6 +160,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 - [ ] Plan communication strategy for rollback scenarios
 
 **Deliverables**:
+
 - `docs/plan/sqlite-removal/rollback-procedures.md`
 - Automated rollback scripts
 - Rollback testing results
@@ -154,6 +170,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 **Task**: Create detailed execution timeline with resource allocation
 
 **Actions**:
+
 - [ ] Define phase-by-phase execution timeline
 - [ ] Identify required personnel and their roles
 - [ ] Plan maintenance windows and deployment schedules
@@ -161,6 +178,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 - [ ] Define success criteria for each phase
 
 **Deliverables**:
+
 - `docs/plan/sqlite-removal/execution-timeline.md`
 - Resource allocation matrix
 - Stakeholder communication plan
@@ -170,6 +188,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 **Task**: Identify and plan mitigation for potential migration risks
 
 **Actions**:
+
 - [ ] Identify data loss risks and prevention strategies
 - [ ] Plan for application downtime mitigation
 - [ ] Create contingency plans for migration failures
@@ -177,6 +196,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 - [ ] Plan for data consistency verification
 
 **Deliverables**:
+
 - `docs/plan/sqlite-removal/risk-assessment.md`
 - Risk mitigation strategies
 - Contingency planning documentation
@@ -184,6 +204,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 ## Phase 1 Completion Criteria
 
 **Technical Readiness**:
+
 - [ ] Complete SQLite dependency audit completed
 - [ ] Migration scripts tested and validated
 - [ ] PostgreSQL infrastructure verified
@@ -191,12 +212,14 @@ psql $DATABASE_URL -c "\dt" # List tables
 - [ ] Health monitoring enhanced
 
 **Documentation**:
+
 - [ ] All Phase 1 deliverables created and reviewed
 - [ ] Migration execution timeline approved
 - [ ] Risk assessment completed
 - [ ] Stakeholder communication plan finalized
 
 **Team Readiness**:
+
 - [ ] Development team briefed on migration procedures
 - [ ] Operations team trained on new infrastructure
 - [ ] Support team prepared for potential issues
@@ -211,6 +234,7 @@ psql $DATABASE_URL -c "\dt" # List tables
 ## Phase 1 Exit Conditions
 
 Phase 1 is complete when:
+
 1. All SQLite dependencies are mapped and documented
 2. Migration infrastructure is proven and tested
 3. Rollback procedures are documented and validated
@@ -220,6 +244,7 @@ Phase 1 is complete when:
 ## Next Phase Preview
 
 Phase 2 will focus on **Data Migration Execution & Validation**, including:
+
 - Executing the actual data migration
 - Data integrity validation
 - Performance optimization

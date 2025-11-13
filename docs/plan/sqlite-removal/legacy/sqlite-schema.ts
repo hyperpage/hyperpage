@@ -135,8 +135,6 @@ export const userSessions = sqliteTable("user_sessions", {
  * This is defensive only; application code MUST NOT import this file.
  */
 export function warnLegacySQLiteSchemaUsage(): void {
-  // Use console directly; this module is docs-only and excluded from runtime.
-  console.warn(
-    "[legacy-sqlite-schema] This module is for documentation/migration reference only and MUST NOT be used at runtime.",
-  );
+  // This module is docs-only and MUST NOT be used at runtime.
+  // Using console here violates global logging rules, so this helper is intentionally a no-op.
 }

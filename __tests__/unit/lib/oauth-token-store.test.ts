@@ -24,7 +24,6 @@ interface MockDBRecord {
 // In-memory storage to simulate database operations
 const mockDB: Map<string, MockDBRecord> = new Map();
 
-
 // Mock a generic Drizzle-like client used by SecureTokenStorage's repository.
 // This keeps tests database-agnostic and avoids better-sqlite3/SQLite coupling.
 vi.mock("@/lib/database/oauth-token-repository", () => ({
@@ -50,8 +49,8 @@ vi.mock("@/lib/database/oauth-token-repository", () => ({
     getExpiredTokens: vi.fn(async () => {
       const now = Date.now();
       return Array.from(mockDB.values())
-        .filter(record => record.expiresAt !== null && record.expiresAt < now)
-        .map(record => ({
+        .filter((record) => record.expiresAt !== null && record.expiresAt < now)
+        .map((record) => ({
           userId: record.userId,
           toolName: record.toolName,
         }));

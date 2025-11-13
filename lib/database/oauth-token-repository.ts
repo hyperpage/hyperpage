@@ -380,7 +380,6 @@ export class PostgresOAuthTokenRepository implements OAuthTokenRepository {
   }
 }
 
-
 let _oauthRepo: OAuthTokenRepository | null = null;
 
 /**

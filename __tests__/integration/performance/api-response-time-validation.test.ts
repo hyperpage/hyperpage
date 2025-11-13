@@ -26,14 +26,11 @@ const PERFORMANCE_ENABLED = process.env.PERFORMANCE_TESTS === "1";
 
 // When not enabled, define a single skipped suite so this file is inert by default
 if (!PERFORMANCE_ENABLED) {
-  describe.skip(
-    "API Response Time Validation Suite (Optional, disabled by default)",
-    () => {
-      it("is disabled because PERFORMANCE_TESTS is not enabled", () => {
-        expect(true).toBe(true);
-      });
-    },
-  );
+  describe.skip("API Response Time Validation Suite (Optional, disabled by default)", () => {
+    it("is disabled because PERFORMANCE_TESTS is not enabled", () => {
+      expect(true).toBe(true);
+    });
+  });
 } else {
   describe("API Response Time Validation Suite (Optional)", () => {
     // NOTE:
@@ -630,8 +627,7 @@ if (!PERFORMANCE_ENABLED) {
 
           windowResults[window.name] = {
             avg:
-              responseTimes.reduce((a, b) => a + b, 0) /
-              responseTimes.length,
+              responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length,
             max: Math.max(...responseTimes),
             min: Math.min(...responseTimes),
           };

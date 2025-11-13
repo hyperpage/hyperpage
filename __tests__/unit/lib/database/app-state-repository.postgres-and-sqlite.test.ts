@@ -39,103 +39,106 @@ interface FakePgDbForDetection {
   };
 }
 
-describeLegacy("getAppStateRepository - engine selection and singleton (LEGACY)", () => {
-  let setFakeReadWriteDb: (db: unknown) => void;
+describeLegacy(
+  "getAppStateRepository - engine selection and singleton (LEGACY)",
+  () => {
+    let setFakeReadWriteDb: (db: unknown) => void;
 
-  beforeEach(async () => {
-    vi.resetModules();
-    vi.clearAllMocks();
+    beforeEach(async () => {
+      vi.resetModules();
+      vi.clearAllMocks();
 
-    vi.doMock("@/lib/database/connection", async () => {
-      const actual = await vi.importActual<
-        typeof import("@/lib/database/connection")
-      >("@/lib/database/connection");
+      vi.doMock("@/lib/database/connection", async () => {
+        const actual = await vi.importActual<
+          typeof import("@/lib/database/connection")
+        >("@/lib/database/connection");
 
-      let fakeDb: unknown = null;
+        let fakeDb: unknown = null;
 
-      return {
-        ...actual,
-        getReadWriteDb: () => (fakeDb ?? actual.getReadWriteDb()),
-        __setFakeReadWriteDb: (db: unknown) => {
-          fakeDb = db;
-        },
+        return {
+          ...actual,
+          getReadWriteDb: () => fakeDb ?? actual.getReadWriteDb(),
+          __setFakeReadWriteDb: (db: unknown) => {
+            fakeDb = db;
+          },
+        };
+      });
+
+      const mocked = (await import(
+        "@/lib/database/connection"
+      )) as typeof import("@/lib/database/connection") & {
+        __setFakeReadWriteDb?: (db: unknown) => void;
       };
+
+      if (typeof mocked.__setFakeReadWriteDb !== "function") {
+        throw new Error("__setFakeReadWriteDb test hook was not registered");
+      }
+
+      setFakeReadWriteDb = mocked.__setFakeReadWriteDb;
     });
 
-    const mocked = (await import(
-      "@/lib/database/connection"
-    )) as typeof import("@/lib/database/connection") & {
-      __setFakeReadWriteDb?: (db: unknown) => void;
-    };
+    it("is sensitive to a Postgres-shaped $schema for engine selection (contract check, non-fragile)", async () => {
+      const fakePgDb: FakePgDbForDetection = {
+        $schema: {
+          appState: pgSchema.appState,
+        },
+      };
 
-    if (typeof mocked.__setFakeReadWriteDb !== "function") {
-      throw new Error("__setFakeReadWriteDb test hook was not registered");
-    }
+      /**
+       * NOTE:
+       * We do NOT assert concrete PostgresAppStateRepository instance here.
+       * That is already covered hermetically in app-state-repository.postgres.test.ts.
+       *
+       * This test only verifies that:
+       * - getAppStateRepository reads from getReadWriteDb()
+       * - The decision logic is wired after our connection mock is in place
+       * - The call is stable under our test harness (no early throws)
+       *
+       * Any regression in schema-based detection or factory wiring will surface
+       * either as an unexpected throw here or in the dedicated Postgres tests.
+       */
 
-    setFakeReadWriteDb = mocked.__setFakeReadWriteDb;
-  });
+      setFakeReadWriteDb(fakePgDb);
 
-  it("is sensitive to a Postgres-shaped $schema for engine selection (contract check, non-fragile)", async () => {
-    const fakePgDb: FakePgDbForDetection = {
-      $schema: {
-        appState: pgSchema.appState,
-      },
-    };
+      const { getAppStateRepository } = await import(
+        "@/lib/database/app-state-repository"
+      );
+      const repo = getAppStateRepository();
 
-    /**
-     * NOTE:
-     * We do NOT assert concrete PostgresAppStateRepository instance here.
-     * That is already covered hermetically in app-state-repository.postgres.test.ts.
-     *
-     * This test only verifies that:
-     * - getAppStateRepository reads from getReadWriteDb()
-     * - The decision logic is wired after our connection mock is in place
-     * - The call is stable under our test harness (no early throws)
-     *
-     * Any regression in schema-based detection or factory wiring will surface
-     * either as an unexpected throw here or in the dedicated Postgres tests.
-     */
+      expect(repo).toBeDefined();
+    });
 
-    setFakeReadWriteDb(fakePgDb);
+    it("uses SqliteAppStateRepository when db is not recognized as Postgres", async () => {
+      // Force engine to sqlite so getPrimaryDrizzleDb() resolves to SQLite,
+      // and our mocked getReadWriteDb returns a non-Postgres-shaped db.
+      process.env.DB_ENGINE = "sqlite";
+      setFakeReadWriteDb({});
 
-    const { getAppStateRepository } = await import(
-      "@/lib/database/app-state-repository"
-    );
-    const repo = getAppStateRepository();
+      const { getAppStateRepository } = await import(
+        "@/lib/database/app-state-repository"
+      );
+      const repo = getAppStateRepository();
 
-    expect(repo).toBeDefined();
-  });
+      expect(repo).not.toBeInstanceOf(PostgresAppStateRepository);
+    });
 
-  it("uses SqliteAppStateRepository when db is not recognized as Postgres", async () => {
-    // Force engine to sqlite so getPrimaryDrizzleDb() resolves to SQLite,
-    // and our mocked getReadWriteDb returns a non-Postgres-shaped db.
-    process.env.DB_ENGINE = "sqlite";
-    setFakeReadWriteDb({});
+    it("returns a singleton instance", async () => {
+      const fakePgDb: FakePgDbForDetection = {
+        $schema: {
+          appState: pgSchema.appState,
+        },
+      };
 
-    const { getAppStateRepository } = await import(
-      "@/lib/database/app-state-repository"
-    );
-    const repo = getAppStateRepository();
+      setFakeReadWriteDb(fakePgDb);
 
-    expect(repo).not.toBeInstanceOf(PostgresAppStateRepository);
-  });
+      const { getAppStateRepository } = await import(
+        "@/lib/database/app-state-repository"
+      );
 
-  it("returns a singleton instance", async () => {
-    const fakePgDb: FakePgDbForDetection = {
-      $schema: {
-        appState: pgSchema.appState,
-      },
-    };
+      const first = getAppStateRepository();
+      const second = getAppStateRepository();
 
-    setFakeReadWriteDb(fakePgDb);
-
-    const { getAppStateRepository } = await import(
-      "@/lib/database/app-state-repository"
-    );
-
-    const first = getAppStateRepository();
-    const second = getAppStateRepository();
-
-    expect(first).toBe(second);
-  });
-});
+      expect(first).toBe(second);
+    });
+  },
+);

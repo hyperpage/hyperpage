@@ -80,10 +80,10 @@ export class SessionManager {
       // Import RedisClient directly and create a dedicated instance
       const { RedisClient } = await import("@/lib/cache/redis-client");
       const sessionRedisClient = new RedisClient(sessionRedisUrl);
-      
+
       // Connect to Redis
       await sessionRedisClient.connect();
-      
+
       // Store the client for session operations
       this.redisClient = sessionRedisClient.getClient();
       this.connected = true;

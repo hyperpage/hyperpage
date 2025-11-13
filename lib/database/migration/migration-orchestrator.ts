@@ -39,7 +39,7 @@ interface MigrationProgress {
   failedRecords: number;
   startTime: number;
   endTime?: number;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   errors: string[];
 }
 
@@ -68,7 +68,7 @@ interface TableMigrationResult {
  * Validation result
  */
 interface ValidationResult {
-  type: 'count' | 'sample' | 'integrity';
+  type: "count" | "sample" | "integrity";
   passed: boolean;
   message: string;
   details?: Record<string, unknown>;
@@ -90,7 +90,7 @@ export class MigrationOrchestrator {
    */
   async execute(): Promise<MigrationResult> {
     const startTime = Date.now();
-    console.log("🔄 Starting SQLite to PostgreSQL migration...");
+    logger.info("🔄 Starting SQLite to PostgreSQL migration...");
 
     const tableResults: TableMigrationResult[] = [];
 
@@ -104,8 +104,14 @@ export class MigrationOrchestrator {
       await this.validateMigration();
 
       const totalTime = Date.now() - startTime;
-      const totalRecords = tableResults.reduce((sum, r) => sum + r.recordsMigrated, 0);
-      const totalErrors = tableResults.reduce((sum, r) => sum + r.errors.length, 0);
+      const totalRecords = tableResults.reduce(
+        (sum, r) => sum + r.recordsMigrated,
+        0,
+      );
+      const totalErrors = tableResults.reduce(
+        (sum, r) => sum + r.errors.length,
+        0,
+      );
 
       const result: MigrationResult = {
         success: true,
@@ -115,13 +121,12 @@ export class MigrationOrchestrator {
         totalErrors,
       };
 
-      console.log(`✅ Migration completed successfully!`);
-      console.log(`   - Total records: ${totalRecords}`);
-      console.log(`   - Total errors: ${totalErrors}`);
-      console.log(`   - Total time: ${totalTime}ms`);
+      logger.info("✅ Migration completed successfully!");
+      logger.info(`   - Total records: ${totalRecords}`);
+      logger.info(`   - Total errors: ${totalErrors}`);
+      logger.info(`   - Total time: ${totalTime}ms`);
 
       return result;
-
     } catch (error) {
       logger.error(
         "Migration execution failed",
@@ -144,22 +149,26 @@ export class MigrationOrchestrator {
   /**
    * Migrate a single table
    */
-  private async migrateTable(mapping: TableMapping): Promise<TableMigrationResult> {
-    const tableName = SchemaConverter.analyzeSQLiteTable(mapping.sqliteTable).name;
+  private async migrateTable(
+    mapping: TableMapping,
+  ): Promise<TableMigrationResult> {
+    const tableName = SchemaConverter.analyzeSQLiteTable(
+      mapping.sqliteTable,
+    ).name;
     const progress: MigrationProgress = {
       table: tableName,
       totalRecords: 0,
       processedRecords: 0,
       failedRecords: 0,
       startTime: Date.now(),
-      status: 'pending',
+      status: "pending",
       errors: [],
     };
 
     this.progress.set(tableName, progress);
-    progress.status = 'running';
+    progress.status = "running";
 
-    console.log(`📊 Migrating table: ${tableName}`);
+    logger.info(`📊 Migrating table: ${tableName}`);
 
     try {
       // Get source record count
@@ -167,10 +176,10 @@ export class MigrationOrchestrator {
       progress.totalRecords = sourceCount;
 
       if (sourceCount === 0) {
-        console.log(`   - No records to migrate`);
-        progress.status = 'completed';
+        logger.info(`   - No records to migrate`);
+        progress.status = "completed";
         progress.endTime = Date.now();
-        
+
         return {
           table: tableName,
           recordsMigrated: 0,
@@ -202,7 +211,7 @@ export class MigrationOrchestrator {
           recordsMigrated += batch.length;
           progress.processedRecords = recordsMigrated;
 
-          console.log(
+          logger.info(
             `   - Progress: ${recordsMigrated}/${sourceCount} (${Math.round(
               (recordsMigrated / sourceCount) * 100,
             )}%)`,
@@ -218,8 +227,8 @@ export class MigrationOrchestrator {
             error instanceof Error
               ? error.message
               : typeof error === "string"
-              ? error
-              : JSON.stringify(error);
+                ? error
+                : JSON.stringify(error);
 
           const errorMsg = `Batch migration failed at offset ${offset}: ${message}`;
 
@@ -227,29 +236,29 @@ export class MigrationOrchestrator {
           progress.failedRecords += batchSize;
           errors.push(errorMsg);
 
-          logger.error(
-            "Batch migration failed",
-            {
-              table: tableName,
-              offset,
-              batchSize,
-              error:
-                error instanceof Error
-                  ? { message: error.message, stack: error.stack }
-                  : { error },
-            },
-          );
+          logger.error("Batch migration failed", {
+            table: tableName,
+            offset,
+            batchSize,
+            error:
+              error instanceof Error
+                ? { message: error.message, stack: error.stack }
+                : { error },
+          });
         }
       }
 
-      progress.status = 'completed';
+      progress.status = "completed";
       progress.endTime = Date.now();
 
       // Validate migrated data
-      const validationResults = this.config.validateData ? 
-        await this.validateTable(mapping) : [];
+      const validationResults = this.config.validateData
+        ? await this.validateTable(mapping)
+        : [];
 
-      console.log(`✅ Table ${tableName} migration completed: ${recordsMigrated} records`);
+      logger.info(
+        `✅ Table ${tableName} migration completed: ${recordsMigrated} records`,
+      );
 
       return {
         table: tableName,
@@ -257,14 +266,13 @@ export class MigrationOrchestrator {
         errors,
         validationResults,
       };
-
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : typeof error === "string"
-          ? error
-          : JSON.stringify(error);
+            ? error
+            : JSON.stringify(error);
 
       const errorMsg = `Table migration failed: ${message}`;
 
@@ -272,16 +280,13 @@ export class MigrationOrchestrator {
       progress.endTime = Date.now();
       progress.errors.push(errorMsg);
 
-      logger.error(
-        "Table migration failed",
-        {
-          table: tableName,
-          error:
-            error instanceof Error
-              ? { message: error.message, stack: error.stack }
-              : { error },
-        },
-      );
+      logger.error("Table migration failed", {
+        table: tableName,
+        error:
+          error instanceof Error
+            ? { message: error.message, stack: error.stack }
+            : { error },
+      });
 
       return {
         table: tableName,
@@ -296,24 +301,25 @@ export class MigrationOrchestrator {
    * Get source record count
    */
   private async getSourceRecordCount(mapping: TableMapping): Promise<number> {
-    const tableName = SchemaConverter.analyzeSQLiteTable(mapping.sqliteTable).name;
-    
+    const tableName = SchemaConverter.analyzeSQLiteTable(
+      mapping.sqliteTable,
+    ).name;
+
     try {
       // This should be implemented using proper drizzle queries with table references
       // For now, return 0 to avoid compilation issues
-      console.log(`Warning: getSourceRecordCount needs proper drizzle query implementation for table: ${tableName}`);
+      logger.warn(
+        `getSourceRecordCount needs proper drizzle query implementation for table: ${tableName}`,
+      );
       return 0;
     } catch (error) {
-      logger.error(
-        "Error getting source record count",
-        {
-          table: tableName,
-          error:
-            error instanceof Error
-              ? { message: error.message, stack: error.stack }
-              : { error },
-        },
-      );
+      logger.error("Error getting source record count", {
+        table: tableName,
+        error:
+          error instanceof Error
+            ? { message: error.message, stack: error.stack }
+            : { error },
+      });
       return 0;
     }
   }
@@ -324,24 +330,25 @@ export class MigrationOrchestrator {
   private async getSourceBatch(
     mapping: TableMapping,
   ): Promise<Record<string, unknown>[]> {
-    const tableName = SchemaConverter.analyzeSQLiteTable(mapping.sqliteTable).name;
-    
+    const tableName = SchemaConverter.analyzeSQLiteTable(
+      mapping.sqliteTable,
+    ).name;
+
     try {
       // This should be implemented using proper drizzle queries with table references
       // For now, return empty array to avoid compilation issues
-      console.log(`Warning: getSourceBatch needs proper drizzle query implementation for table: ${tableName}`);
+      logger.warn(
+        `getSourceBatch needs proper drizzle query implementation for table: ${tableName}`,
+      );
       return [];
     } catch (error) {
-      logger.error(
-        "Failed to get source batch",
-        {
-          table: tableName,
-          error:
-            error instanceof Error
-              ? { message: error.message, stack: error.stack }
-              : { error },
-        },
-      );
+      logger.error("Failed to get source batch", {
+        table: tableName,
+        error:
+          error instanceof Error
+            ? { message: error.message, stack: error.stack }
+            : { error },
+      });
       return [];
     }
   }
@@ -349,7 +356,10 @@ export class MigrationOrchestrator {
   /**
    * Transform data from SQLite to PostgreSQL format
    */
-  private async transformData(data: Record<string, unknown>[], mapping: TableMapping): Promise<Record<string, unknown>[]> {
+  private async transformData(
+    data: Record<string, unknown>[],
+    mapping: TableMapping,
+  ): Promise<Record<string, unknown>[]> {
     return data.map((row) => {
       const transformed: Record<string, unknown> = {};
 
@@ -358,16 +368,24 @@ export class MigrationOrchestrator {
         let targetValue = sourceValue;
 
         // Handle type conversions
-        if (column.pgType === 'jsonb' && column.sqliteType === 'text') {
+        if (column.pgType === "jsonb" && column.sqliteType === "text") {
           try {
-            targetValue = sourceValue ? JSON.parse(sourceValue as string) : null;
+            targetValue = sourceValue
+              ? JSON.parse(sourceValue as string)
+              : null;
           } catch {
             // Keep as text if JSON parsing fails
             targetValue = sourceValue;
           }
-        } else if (column.pgType === 'timestamp with time zone' && column.sqliteType === 'integer') {
+        } else if (
+          column.pgType === "timestamp with time zone" &&
+          column.sqliteType === "integer"
+        ) {
           targetValue = sourceValue ? new Date(sourceValue as number) : null;
-        } else if (column.pgType === 'bigserial' && column.sqliteType === 'integer') {
+        } else if (
+          column.pgType === "bigserial" &&
+          column.sqliteType === "integer"
+        ) {
           // Don't include auto-increment columns
           continue;
         }
@@ -385,28 +403,39 @@ export class MigrationOrchestrator {
   private async createTargetTable(mapping: TableMapping): Promise<void> {
     // This should be implemented using drizzle's schema generation
     // For now, just log that it would create the table
-    console.log(`   - Would create target table: ${SchemaConverter.analyzeSQLiteTable(mapping.pgTable).name}`);
+    logger.info(
+      `   - Would create target table: ${SchemaConverter.analyzeSQLiteTable(mapping.pgTable).name}`,
+    );
   }
 
   /**
    * Insert batch into target
    */
-  private async insertTargetBatch(data: Record<string, unknown>[], mapping: TableMapping): Promise<void> {
+  private async insertTargetBatch(
+    data: Record<string, unknown>[],
+    mapping: TableMapping,
+  ): Promise<void> {
     const tableName = SchemaConverter.analyzeSQLiteTable(mapping.pgTable).name;
-    
+
     try {
       // This should be implemented using proper drizzle inserts
       // For now, just log that it would insert data
-      console.log(`   - Would insert ${data.length} records into table: ${tableName}`);
+      logger.info(
+        `   - Would insert ${data.length} records into table: ${tableName}`,
+      );
     } catch (error) {
-      throw new Error(`Failed to insert batch into ${tableName}: ${String(error)}`);
+      throw new Error(
+        `Failed to insert batch into ${tableName}: ${String(error)}`,
+      );
     }
   }
 
   /**
    * Validate table migration
    */
-  private async validateTable(mapping: TableMapping): Promise<ValidationResult[]> {
+  private async validateTable(
+    mapping: TableMapping,
+  ): Promise<ValidationResult[]> {
     const tableName = SchemaConverter.analyzeSQLiteTable(mapping.pgTable).name;
     const results: ValidationResult[] = [];
 
@@ -414,32 +443,28 @@ export class MigrationOrchestrator {
       // This should be implemented using proper drizzle queries
       // For now, return a placeholder validation result
       results.push({
-        type: 'integrity',
+        type: "integrity",
         passed: true,
-        message: 'Validation placeholder - needs proper implementation',
+        message: "Validation placeholder - needs proper implementation",
         details: { tableName },
       });
-
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : typeof error === "string"
-          ? error
-          : JSON.stringify(error);
+            ? error
+            : JSON.stringify(error);
 
       const errorMsg = `Validation failed: ${message}`;
 
-      logger.error(
-        "Table validation failed",
-        {
-          table: tableName,
-          error:
-            error instanceof Error
-              ? { message: error.message, stack: error.stack }
-              : { error },
-        },
-      );
+      logger.error("Table validation failed", {
+        table: tableName,
+        error:
+          error instanceof Error
+            ? { message: error.message, stack: error.stack }
+            : { error },
+      });
 
       results.push({
         type: "integrity",
@@ -456,9 +481,9 @@ export class MigrationOrchestrator {
    * Validate entire migration
    */
   private async validateMigration(): Promise<void> {
-    console.log("🔍 Validating migration results...");
+    logger.info("🔍 Validating migration results...");
     // This would implement comprehensive migration validation
-    console.log("✅ Migration validation completed");
+    logger.info("✅ Migration validation completed");
   }
 
   /**
@@ -472,7 +497,7 @@ export class MigrationOrchestrator {
    * Sleep utility
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 

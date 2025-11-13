@@ -28,6 +28,7 @@ Phase 4 focuses on comprehensive testing and verification of the PostgreSQL-only
 **Task**: Update and execute comprehensive unit testing with PostgreSQL
 
 **Actions**:
+
 - [ ] Update all unit tests to use PostgreSQL test database
 - [ ] Remove SQLite-specific test utilities and mocks
 - [ ] Update test data factories for PostgreSQL schema
@@ -36,35 +37,37 @@ Phase 4 focuses on comprehensive testing and verification of the PostgreSQL-only
 - [ ] Add PostgreSQL-specific edge case tests
 
 **Unit Test Updates**:
+
 ```typescript
 // __tests__/unit/database/job-repository.test.ts
-describe('JobRepository', () => {
+describe("JobRepository", () => {
   let testDb: NodePgDatabase<typeof pgSchema>;
-  
+
   beforeAll(async () => {
     testDb = await createTestDatabase();
   });
-  
+
   afterAll(async () => {
     await testDb.$client.end();
   });
-  
-  it('should create job with PostgreSQL schema', async () => {
+
+  it("should create job with PostgreSQL schema", async () => {
     const jobData = {
-      type: 'test',
+      type: "test",
       payload: { test: true },
-      status: 'pending',
-      scheduledAt: new Date().toISOString()
+      status: "pending",
+      scheduledAt: new Date().toISOString(),
     };
-    
+
     const result = await jobRepository.create(jobData);
     expect(result.id).toBeDefined();
-    expect(result.type).toBe('test');
+    expect(result.type).toBe("test");
   });
 });
 ```
 
 **Deliverables**:
+
 - Updated unit test suite
 - PostgreSQL-optimized test patterns
 - Test execution performance metrics
@@ -74,6 +77,7 @@ describe('JobRepository', () => {
 **Task**: Build comprehensive integration testing framework for PostgreSQL
 
 **Actions**:
+
 - [ ] Create integration test environment with PostgreSQL
 - [ ] Test all database repository operations
 - [ ] Validate API endpoints with real PostgreSQL data
@@ -82,40 +86,42 @@ describe('JobRepository', () => {
 - [ ] Test configuration management features
 
 **Integration Test Framework**:
+
 ```typescript
 // __tests__/integration/database/repository-integration.test.ts
-describe('Repository Integration Tests', () => {
+describe("Repository Integration Tests", () => {
   let db: NodePgDatabase<typeof pgSchema>;
-  
+
   beforeAll(async () => {
     db = await setupIntegrationTestDatabase();
   });
-  
+
   afterAll(async () => {
     await cleanupIntegrationTestDatabase(db);
   });
-  
-  describe('Job Management', () => {
-    it('should handle complete job lifecycle', async () => {
+
+  describe("Job Management", () => {
+    it("should handle complete job lifecycle", async () => {
       // Create job
       const job = await jobRepository.create({
-        type: 'integration_test',
+        type: "integration_test",
         payload: { test: true },
-        status: 'pending'
+        status: "pending",
       });
-      
+
       // Process job
       await jobProcessor.processJob(job.id);
-      
+
       // Validate job completed
       const updatedJob = await jobRepository.findById(job.id);
-      expect(updatedJob?.status).toBe('completed');
+      expect(updatedJob?.status).toBe("completed");
     });
   });
 });
 ```
 
 **Deliverables**:
+
 - Integration test suite
 - Database integration test results
 - API integration test results
@@ -125,6 +131,7 @@ describe('Repository Integration Tests', () => {
 **Task**: Update end-to-end tests for PostgreSQL-only operation
 
 **Actions**:
+
 - [ ] Update E2E test environment for PostgreSQL
 - [ ] Test complete user workflows with PostgreSQL
 - [ ] Validate OAuth authentication flows
@@ -133,22 +140,23 @@ describe('Repository Integration Tests', () => {
 - [ ] Test configuration management UI
 
 **E2E Test Updates**:
+
 ```typescript
 // __tests__/e2e/user-workflows.spec.ts
-describe('User Workflows', () => {
-  test('complete OAuth flow with PostgreSQL', async () => {
+describe("User Workflows", () => {
+  test("complete OAuth flow with PostgreSQL", async () => {
     // Navigate to application
-    await page.goto('/');
-    
+    await page.goto("/");
+
     // Trigger OAuth flow
     await page.click('[data-testid="oauth-button"]');
-    
+
     // Complete OAuth process
     await completeOAuthFlow(page);
-    
+
     // Verify user is logged in
     await expect(page.locator('[data-testid="user-menu"]')).toBeVisible();
-    
+
     // Test tool configuration
     await page.click('[data-testid="tool-config"]');
     await expect(page.locator('[data-testid="tool-settings"]')).toBeVisible();
@@ -157,6 +165,7 @@ describe('User Workflows', () => {
 ```
 
 **Deliverables**:
+
 - Updated E2E test suite
 - User workflow validation results
 - Cross-browser compatibility results
@@ -166,6 +175,7 @@ describe('User Workflows', () => {
 **Task**: Comprehensive performance testing and benchmarking
 
 **Actions**:
+
 - [ ] Establish performance baseline with SQLite (if available)
 - [ ] Test database query performance with PostgreSQL
 - [ ] Validate API response times
@@ -175,6 +185,7 @@ describe('User Workflows', () => {
 - [ ] Validate memory usage patterns
 
 **Performance Test Suite**:
+
 ```bash
 # Performance testing scripts
 npm run test:performance -- --database=postgresql
@@ -189,35 +200,39 @@ EXPLAIN ANALYZE SELECT * FROM tool_configs WHERE enabled = true;
 ```
 
 **Performance Benchmarks**:
+
 ```typescript
 // __tests__/performance/database-performance.test.ts
-describe('Database Performance', () => {
-  it('should query jobs efficiently', async () => {
+describe("Database Performance", () => {
+  it("should query jobs efficiently", async () => {
     const startTime = Date.now();
-    
+
     const jobs = await db
       .select()
       .from(pgSchema.jobs)
-      .where(eq(pgSchema.jobs.status, 'pending'))
+      .where(eq(pgSchema.jobs.status, "pending"))
       .limit(100);
-    
+
     const queryTime = Date.now() - startTime;
     expect(queryTime).toBeLessThan(100); // < 100ms
   });
-  
-  it('should handle concurrent queries', async () => {
-    const concurrentQueries = Array(10).fill(0).map(async () => {
-      return db.select().from(pgSchema.jobs).limit(10);
-    });
-    
+
+  it("should handle concurrent queries", async () => {
+    const concurrentQueries = Array(10)
+      .fill(0)
+      .map(async () => {
+        return db.select().from(pgSchema.jobs).limit(10);
+      });
+
     const results = await Promise.all(concurrentQueries);
     expect(results).toHaveLength(10);
-    expect(results.every(r => r.length === 10)).toBe(true);
+    expect(results.every((r) => r.length === 10)).toBe(true);
   });
 });
 ```
 
 **Deliverables**:
+
 - Performance test results
 - Benchmark comparison report
 - Performance optimization recommendations
@@ -227,6 +242,7 @@ describe('Database Performance', () => {
 **Task**: Comprehensive security testing with PostgreSQL implementation
 
 **Actions**:
+
 - [ ] Test OAuth token security with PostgreSQL
 - [ ] Validate user authentication and authorization
 - [ ] Test SQL injection prevention
@@ -235,46 +251,45 @@ describe('Database Performance', () => {
 - [ ] Audit database access patterns
 
 **Security Test Suite**:
+
 ```typescript
 // __tests__/security/oauth-security.test.ts
-describe('OAuth Security', () => {
-  it('should encrypt tokens in PostgreSQL', async () => {
+describe("OAuth Security", () => {
+  it("should encrypt tokens in PostgreSQL", async () => {
     const token = await oauthStore.storeToken({
-      userId: 'test-user',
-      provider: 'github',
-      accessToken: 'sensitive-token',
-      refreshToken: 'refresh-token'
+      userId: "test-user",
+      provider: "github",
+      accessToken: "sensitive-token",
+      refreshToken: "refresh-token",
     });
-    
+
     // Verify tokens are encrypted in database
     const dbToken = await db
       .select()
       .from(pgSchema.oauthTokens)
-      .where(eq(pgSchema.oauthTokens.userId, 'test-user'))
+      .where(eq(pgSchema.oauthTokens.userId, "test-user"))
       .limit(1);
-    
-    expect(dbToken[0]?.accessToken).not.toBe('sensitive-token');
+
+    expect(dbToken[0]?.accessToken).not.toBe("sensitive-token");
     expect(dbToken[0]?.accessToken).toMatch(/^[A-Za-z0-9+/=]+$/);
   });
-  
-  it('should prevent SQL injection', async () => {
+
+  it("should prevent SQL injection", async () => {
     const maliciousInput = "'; DROP TABLE users; --";
     const result = await userRepository.findByEmail(maliciousInput);
-    
+
     // Should not execute malicious SQL
     expect(result).toBeNull();
-    
+
     // Verify table still exists
-    const tableExists = await db
-      .select()
-      .from(pgSchema.users)
-      .limit(1);
+    const tableExists = await db.select().from(pgSchema.users).limit(1);
     expect(tableExists).toBeDefined();
   });
 });
 ```
 
 **Deliverables**:
+
 - Security test results
 - Security audit report
 - Vulnerability assessment results
@@ -284,6 +299,7 @@ describe('OAuth Security', () => {
 **Task**: Comprehensive load and stress testing
 
 **Actions**:
+
 - [ ] Design realistic load testing scenarios
 - [ ] Test concurrent user access patterns
 - [ ] Validate job queue performance under load
@@ -292,6 +308,7 @@ describe('OAuth Security', () => {
 - [ ] Test failover and recovery scenarios
 
 **Load Testing Scenarios**:
+
 ```yaml
 # load-test-scenarios.yml
 scenarios:
@@ -303,7 +320,7 @@ scenarios:
       - view_dashboard
       - configure_tool
       - run_integration
-    
+
   peak_load:
     users: 200
     duration: 10m
@@ -312,7 +329,7 @@ scenarios:
       - dashboard_heavy_usage
       - multiple_tool_configs
       - concurrent_jobs
-      
+
   stress_test:
     users: 500
     duration: 15m
@@ -324,6 +341,7 @@ scenarios:
 ```
 
 **Load Testing Commands**:
+
 ```bash
 # Execute load tests
 npm run test:load -- --scenario=normal_load
@@ -336,6 +354,7 @@ pg_top -d $DATABASE_URL
 ```
 
 **Deliverables**:
+
 - Load test results and analysis
 - Performance metrics under various loads
 - Bottleneck identification and recommendations
@@ -345,6 +364,7 @@ pg_top -d $DATABASE_URL
 **Task**: Comprehensive regression testing to ensure no functionality is broken
 
 **Actions**:
+
 - [ ] Run complete test suite against PostgreSQL
 - [ ] Test all user-facing functionality
 - [ ] Validate all API endpoints
@@ -365,6 +385,7 @@ pg_top -d $DATABASE_URL
 | Data Persistence | Integration | Critical | [ ] |
 
 **Deliverables**:
+
 - Complete regression test results
 - Feature compatibility matrix
 - Regression issues and fixes
@@ -374,6 +395,7 @@ pg_top -d $DATABASE_URL
 **Task**: Set up production-ready performance monitoring
 
 **Actions**:
+
 - [ ] Configure PostgreSQL performance monitoring
 - [ ] Set up application performance monitoring
 - [ ] Configure alerts for performance degradation
@@ -382,6 +404,7 @@ pg_top -d $DATABASE_URL
 - [ ] Document monitoring procedures
 
 **Monitoring Configuration**:
+
 ```typescript
 // lib/monitoring/performance-monitor.ts
 export class PostgreSQLPerformanceMonitor {
@@ -393,7 +416,7 @@ export class PostgreSQLPerformanceMonitor {
       cacheHitRatio: await this.getCacheHitRatio(),
     };
   }
-  
+
   async checkApplicationPerformance(): Promise<AppMetrics> {
     return {
       apiResponseTime: await this.measureApiResponseTime(),
@@ -406,6 +429,7 @@ export class PostgreSQLPerformanceMonitor {
 ```
 
 **Deliverables**:
+
 - Performance monitoring setup
 - Alert configuration
 - Performance dashboard
@@ -416,6 +440,7 @@ export class PostgreSQLPerformanceMonitor {
 **Task**: Final QA validation before production deployment
 
 **Actions**:
+
 - [ ] Execute full QA test plan
 - [ ] Validate all user acceptance criteria
 - [ ] Test cross-platform compatibility
@@ -424,10 +449,12 @@ export class PostgreSQLPerformanceMonitor {
 - [ ] Document QA results
 
 **QA Test Plan**:
+
 ```markdown
 ## QA Test Plan - PostgreSQL Migration
 
 ### Functional Testing
+
 - [ ] User registration and login
 - [ ] OAuth provider integrations
 - [ ] Tool configuration and management
@@ -437,6 +464,7 @@ export class PostgreSQLPerformanceMonitor {
 - [ ] Configuration persistence
 
 ### Non-Functional Testing
+
 - [ ] Performance under normal load
 - [ ] Performance under peak load
 - [ ] Security vulnerabilities
@@ -446,6 +474,7 @@ export class PostgreSQLPerformanceMonitor {
 - [ ] Mobile responsiveness
 
 ### User Acceptance Testing
+
 - [ ] All existing features work as expected
 - [ ] Performance is acceptable
 - [ ] No data loss or corruption
@@ -453,6 +482,7 @@ export class PostgreSQLPerformanceMonitor {
 ```
 
 **Deliverables**:
+
 - QA test results
 - User acceptance validation
 - Compatibility testing results
@@ -462,6 +492,7 @@ export class PostgreSQLPerformanceMonitor {
 **Task**: Comprehensive documentation of all testing activities and results
 
 **Actions**:
+
 - [ ] Document all test procedures
 - [ ] Create test execution reports
 - [ ] Document performance benchmarks
@@ -470,22 +501,26 @@ export class PostgreSQLPerformanceMonitor {
 - [ ] Create rollback procedures if needed
 
 **Test Documentation**:
+
 ```markdown
 # Test Execution Report - Phase 4
 
 ## Summary
+
 - Total Tests: 1,247
 - Passed: 1,231 (98.7%)
 - Failed: 16 (1.3%)
 - Skipped: 0 (0%)
 
 ## Performance Results
+
 - Average API Response Time: 127ms
 - Database Query Time: 23ms (avg)
 - Job Processing Time: 1.2s (avg)
 - Memory Usage: 142MB (avg)
 
 ## Security Results
+
 - SQL Injection Tests: All Passed
 - Authentication Tests: All Passed
 - Authorization Tests: All Passed
@@ -495,6 +530,7 @@ export class PostgreSQLPerformanceMonitor {
 ```
 
 **Deliverables**:
+
 - Comprehensive test execution report
 - Performance benchmarking report
 - Security assessment report
@@ -503,6 +539,7 @@ export class PostgreSQLPerformanceMonitor {
 ## Phase 4 Completion Criteria
 
 **Test Coverage Success**:
+
 - [ ] 95%+ test pass rate across all test suites
 - [ ] All critical functionality tested and validated
 - [ ] Performance benchmarks meet or exceed requirements
@@ -510,6 +547,7 @@ export class PostgreSQLPerformanceMonitor {
 - [ ] Load testing demonstrates stability
 
 **Quality Assurance**:
+
 - [ ] Complete regression testing passed
 - [ ] User acceptance criteria validated
 - [ ] Cross-platform compatibility verified
@@ -517,6 +555,7 @@ export class PostgreSQLPerformanceMonitor {
 - [ ] Accessibility requirements met
 
 **Performance Validation**:
+
 - [ ] Database performance optimized
 - [ ] API response times acceptable
 - [ ] Memory usage within limits
@@ -533,6 +572,7 @@ export class PostgreSQLPerformanceMonitor {
 ## Phase 4 Exit Conditions
 
 Phase 4 is complete when:
+
 1. All test suites pass with 95%+ success rate
 2. Performance meets all requirements
 3. Security validation completes successfully
@@ -542,6 +582,7 @@ Phase 4 is complete when:
 ## Rollback Triggers
 
 Immediate rollback to Phase 3 if:
+
 - Critical tests fail consistently
 - Performance significantly degrades under load
 - Security vulnerabilities discovered
@@ -551,6 +592,7 @@ Immediate rollback to Phase 3 if:
 ## Quality Gates
 
 **Before Proceeding to Phase 5**:
+
 1. **Test Results Review**: All test results analyzed and approved
 2. **Performance Review**: Performance benchmarks validated
 3. **Security Review**: Security assessment completed
@@ -560,6 +602,7 @@ Immediate rollback to Phase 3 if:
 ## Next Phase Preview
 
 Phase 5 will focus on **Production Deployment Strategy**, including:
+
 - Production deployment planning
 - Blue-green deployment setup
 - Database migration execution

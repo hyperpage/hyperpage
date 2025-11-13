@@ -1,14 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  PostgresJobQueue,
-  getPostgresJobQueue,
-} from "@/lib/jobs";
-import {
-  JobPriority,
-  JobStatus,
-  JobType,
-  type IJob,
-} from "@/lib/types/jobs";
+import { PostgresJobQueue, getPostgresJobQueue } from "@/lib/jobs";
+import { JobPriority, JobStatus, JobType, type IJob } from "@/lib/types/jobs";
 import type { Tool } from "@/tools/tool-types";
 import type {
   JobRepository,
@@ -135,9 +127,7 @@ describe("PostgresJobQueue", () => {
       new Error("insert failed"),
     );
 
-    await expect(queue.enqueue(job)).rejects.toThrow(
-      "Failed to enqueue job",
-    );
+    await expect(queue.enqueue(job)).rejects.toThrow("Failed to enqueue job");
   });
 
   it("getActiveJobs returns repository results", async () => {
@@ -191,8 +181,9 @@ describe("PostgresJobQueue", () => {
   });
 
   it("updateStatus throws when repository updateStatus fails", async () => {
-    (repo.updateStatus as unknown as ReturnType<typeof vi.fn>)
-      .mockRejectedValueOnce(new Error("update failed"));
+    (
+      repo.updateStatus as unknown as ReturnType<typeof vi.fn>
+    ).mockRejectedValueOnce(new Error("update failed"));
 
     await expect(
       queue.updateStatus("job-1", {

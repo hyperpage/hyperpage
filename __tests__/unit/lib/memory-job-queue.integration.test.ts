@@ -1,7 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { JobStatus, JobType, JobPriority, type IJob } from "@/lib/types/jobs";
-import { getJobRepository, type JobRepository } from "@/lib/database/job-repository";
+import {
+  getJobRepository,
+  type JobRepository,
+} from "@/lib/database/job-repository";
 import { MemoryJobQueue } from "@/lib/jobs/memory-job-queue";
 
 /**
@@ -124,7 +127,9 @@ describe("MemoryJobQueue & JobRepository integration (hermetic)", () => {
     const { repo, state } = createFakeJobRepository();
 
     const mockedGetJobRepository = vi.mocked(getJobRepository);
-    mockedGetJobRepository.mockReturnValueOnce(repo as unknown as JobRepository);
+    mockedGetJobRepository.mockReturnValueOnce(
+      repo as unknown as JobRepository,
+    );
 
     const queue = new MemoryJobQueue();
     const job: IJob = {
@@ -214,7 +219,9 @@ describe("MemoryJobQueue & JobRepository integration (hermetic)", () => {
 
     // Also ensure the fake's loadActiveJobs was indeed the source.
     expect(
-      state.jobs.some((j) => j.id === activeJob.id && j.status === JobStatus.PENDING),
+      state.jobs.some(
+        (j) => j.id === activeJob.id && j.status === JobStatus.PENDING,
+      ),
     ).toBe(true);
   });
 

@@ -39,7 +39,7 @@ By the end of this phase:
      - `@typescript-eslint/no-unused-vars`
      - Import order rules
      - React hooks rules
-   ).
+       ).
    - Ignore patterns (e.g. `.next`, `dist`, `build`, etc.).
 2. Verify alignment with:
    - Global `.clinerules/typescript-lint-prevention.md`.
@@ -133,6 +133,7 @@ Deliverable: section in this file summarizing actual effective ESLint config and
      - If large/architectural: document and defer to specific later phases (API normalization, tool registry cleanup, etc.) with clear references.
 
 Exit condition for TS:
+
 - `tsc --noEmit` runs clean or has only explicitly documented, tracked exceptions scheduled for other phases (no unknown or ignored errors).
 
 ---
@@ -153,6 +154,7 @@ Exit condition for TS:
    - Prefer stable entrypoints (e.g. `lib/index.ts` where appropriate).
 
 If an import-order rule is not yet codified in ESLint:
+
 - Add standardized `import/order` rules there.
 - Re-run lint and auto-fix where possible.
 

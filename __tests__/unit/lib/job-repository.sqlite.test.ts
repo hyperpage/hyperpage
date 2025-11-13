@@ -83,153 +83,156 @@ vi.mock("@/lib/database/schema", async () => {
   };
 });
 
-describeLegacy("SqliteJobRepository via getJobRepository (LEGACY - skipped in Phase 1)", () => {
-  const baseJob: IJob = {
-    id: "sqlite-job-1",
-    type: "tool-execution" as IJob["type"],
-    name: "SQLite Test Job",
-    priority: JobPriority.MEDIUM,
-    status: JobStatus.PENDING,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    payload: {
-      data: { foo: "bar" },
-      timeoutMs: 1000,
-      maxRetries: 3,
-      dependencies: [],
-      tags: [],
-    },
-    retryCount: 0,
-    executionHistory: [],
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
-
-  it("insert() enforces unique id and persists expected fields", async () => {
-    const selectSpy = vi.fn().mockReturnValue({
-      from: () => ({
-        where: () => ({
-          limit: () => Promise.resolve([]), // no existing job -> ok
-        }),
-      }),
-    });
-
-    const insertSpy = vi.fn((values: SqliteInsertValues) => {
-      expect(values.id).toBe(baseJob.id);
-      expect(values.type).toBe(baseJob.type);
-      expect(values.name).toBe(baseJob.name);
-      expect(values.priority).toBe(baseJob.priority);
-      expect(values.status).toBe(baseJob.status);
-      expect(typeof values.payload).toBe("string");
-      expect(values.createdAt).toBe(baseJob.createdAt);
-      expect(values.updatedAt).toBe(baseJob.updatedAt);
-      expect(values.retryCount).toBe(baseJob.retryCount);
-      expect(typeof values.persistedAt).toBe("number");
-    });
-
-    const mockDrizzle: MockSqliteDrizzle = {
-      select: selectSpy,
-      insert: () => ({
-        values: insertSpy,
-      }),
-      update: () => ({
-        set: () => ({
-          where: vi.fn(),
-        }),
-      }),
-      delete: () => ({
-        where: vi.fn().mockResolvedValue({ rowsAffected: 0 }),
-      }),
+describeLegacy(
+  "SqliteJobRepository via getJobRepository (LEGACY - skipped in Phase 1)",
+  () => {
+    const baseJob: IJob = {
+      id: "sqlite-job-1",
+      type: "tool-execution" as IJob["type"],
+      name: "SQLite Test Job",
+      priority: JobPriority.MEDIUM,
+      status: JobStatus.PENDING,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      payload: {
+        data: { foo: "bar" },
+        timeoutMs: 1000,
+        maxRetries: 3,
+        dependencies: [],
+        tags: [],
+      },
+      retryCount: 0,
+      executionHistory: [],
     };
 
-    const { getAppDatabase, getReadWriteDb } = (await import(
-      "@/lib/database/connection"
-    )) as unknown as {
-      getAppDatabase: Mock;
-      getReadWriteDb: Mock;
-    };
-
-    // Force SQLite path: getReadWriteDb returns object without pg-schema markers
-    getReadWriteDb.mockReturnValue({});
-
-    getAppDatabase.mockReturnValue({
-      drizzle: mockDrizzle,
+    beforeEach(() => {
+      vi.clearAllMocks();
+      vi.resetModules();
     });
 
-    const { getJobRepository: freshGetJobRepository } = await import(
-      "@/lib/database/job-repository"
-    );
-    const repo = freshGetJobRepository();
-
-    await repo.insert(baseJob);
-
-    expect(getReadWriteDb).toHaveBeenCalled();
-    expect(selectSpy).toHaveBeenCalled();
-    expect(insertSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("exists() returns true when row present and false otherwise", async () => {
-    const existingRow = { id: baseJob.id };
-
-    const selectSpy = vi
-      .fn()
-      // First call: present
-      .mockReturnValueOnce({
+    it("insert() enforces unique id and persists expected fields", async () => {
+      const selectSpy = vi.fn().mockReturnValue({
         from: () => ({
           where: () => ({
-            limit: () => Promise.resolve([existingRow]),
-          }),
-        }),
-      })
-      // Second call: empty
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () => ({
-            limit: () => Promise.resolve([]),
+            limit: () => Promise.resolve([]), // no existing job -> ok
           }),
         }),
       });
 
-    const mockDrizzle: MockSqliteDrizzle = {
-      select: selectSpy,
-      insert: () => ({
-        values: vi.fn(),
-      }),
-      update: () => ({
-        set: () => ({
-          where: vi.fn(),
+      const insertSpy = vi.fn((values: SqliteInsertValues) => {
+        expect(values.id).toBe(baseJob.id);
+        expect(values.type).toBe(baseJob.type);
+        expect(values.name).toBe(baseJob.name);
+        expect(values.priority).toBe(baseJob.priority);
+        expect(values.status).toBe(baseJob.status);
+        expect(typeof values.payload).toBe("string");
+        expect(values.createdAt).toBe(baseJob.createdAt);
+        expect(values.updatedAt).toBe(baseJob.updatedAt);
+        expect(values.retryCount).toBe(baseJob.retryCount);
+        expect(typeof values.persistedAt).toBe("number");
+      });
+
+      const mockDrizzle: MockSqliteDrizzle = {
+        select: selectSpy,
+        insert: () => ({
+          values: insertSpy,
         }),
-      }),
-      delete: () => ({
-        where: vi.fn().mockResolvedValue({ rowsAffected: 0 }),
-      }),
-    };
+        update: () => ({
+          set: () => ({
+            where: vi.fn(),
+          }),
+        }),
+        delete: () => ({
+          where: vi.fn().mockResolvedValue({ rowsAffected: 0 }),
+        }),
+      };
 
-    const { getAppDatabase, getReadWriteDb } = (await import(
-      "@/lib/database/connection"
-    )) as unknown as {
-      getAppDatabase: Mock;
-      getReadWriteDb: Mock;
-    };
+      const { getAppDatabase, getReadWriteDb } = (await import(
+        "@/lib/database/connection"
+      )) as unknown as {
+        getAppDatabase: Mock;
+        getReadWriteDb: Mock;
+      };
 
-    getReadWriteDb.mockReturnValue({});
-    getAppDatabase.mockReturnValue({
-      drizzle: mockDrizzle,
+      // Force SQLite path: getReadWriteDb returns object without pg-schema markers
+      getReadWriteDb.mockReturnValue({});
+
+      getAppDatabase.mockReturnValue({
+        drizzle: mockDrizzle,
+      });
+
+      const { getJobRepository: freshGetJobRepository } = await import(
+        "@/lib/database/job-repository"
+      );
+      const repo = freshGetJobRepository();
+
+      await repo.insert(baseJob);
+
+      expect(getReadWriteDb).toHaveBeenCalled();
+      expect(selectSpy).toHaveBeenCalled();
+      expect(insertSpy).toHaveBeenCalledTimes(1);
     });
 
-    const { getJobRepository: freshGetJobRepository } = await import(
-      "@/lib/database/job-repository"
-    );
-    const repo = freshGetJobRepository();
+    it("exists() returns true when row present and false otherwise", async () => {
+      const existingRow = { id: baseJob.id };
 
-    const existsTrue = await repo.exists(baseJob.id);
-    const existsFalse = await repo.exists("missing-id");
+      const selectSpy = vi
+        .fn()
+        // First call: present
+        .mockReturnValueOnce({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([existingRow]),
+            }),
+          }),
+        })
+        // Second call: empty
+        .mockReturnValueOnce({
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([]),
+            }),
+          }),
+        });
 
-    expect(existsTrue).toBe(true);
-    expect(existsFalse).toBe(false);
-    expect(selectSpy).toHaveBeenCalledTimes(2);
-  });
-});
+      const mockDrizzle: MockSqliteDrizzle = {
+        select: selectSpy,
+        insert: () => ({
+          values: vi.fn(),
+        }),
+        update: () => ({
+          set: () => ({
+            where: vi.fn(),
+          }),
+        }),
+        delete: () => ({
+          where: vi.fn().mockResolvedValue({ rowsAffected: 0 }),
+        }),
+      };
+
+      const { getAppDatabase, getReadWriteDb } = (await import(
+        "@/lib/database/connection"
+      )) as unknown as {
+        getAppDatabase: Mock;
+        getReadWriteDb: Mock;
+      };
+
+      getReadWriteDb.mockReturnValue({});
+      getAppDatabase.mockReturnValue({
+        drizzle: mockDrizzle,
+      });
+
+      const { getJobRepository: freshGetJobRepository } = await import(
+        "@/lib/database/job-repository"
+      );
+      const repo = freshGetJobRepository();
+
+      const existsTrue = await repo.exists(baseJob.id);
+      const existsFalse = await repo.exists("missing-id");
+
+      expect(existsTrue).toBe(true);
+      expect(existsFalse).toBe(false);
+      expect(selectSpy).toHaveBeenCalledTimes(2);
+    });
+  },
+);

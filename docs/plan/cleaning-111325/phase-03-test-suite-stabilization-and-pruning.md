@@ -175,6 +175,7 @@ Record all failures and classification in this phase file or a referenced checkl
 ### 4.1 Database & Persistence Tests
 
 Targets:
+
 - `__tests__/integration/database/**`
 - `__tests__/unit/lib/database/**`
 - `__tests__/performance/database.test.ts`
@@ -198,6 +199,7 @@ Checklist:
 ### 4.2 Tool Integration Tests
 
 Targets:
+
 - `__tests__/integration/tools/github.spec.ts`
 - `__tests__/integration/tools/gitlab.spec.ts`
 - `__tests__/integration/tools/jira.spec.ts`
@@ -216,6 +218,7 @@ Checklist:
 ### 4.3 Workflow & E2E Tests
 
 Targets:
+
 - `__tests__/integration/workflows/**`
 - `__tests__/e2e/portal.spec.ts`
 - `__tests__/e2e/rate-limit-handling.spec.ts`

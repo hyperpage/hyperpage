@@ -2,9 +2,9 @@
 /**
  * SQLite to PostgreSQL Migration Script
  * Phase 6: Data Migration
- * 
+ *
  * Usage: npm run migrate-sqlite-to-postgresql
- * 
+ *
  * This script performs a complete data migration from SQLite to PostgreSQL
  * with comprehensive validation, error handling, and rollback capabilities.
  */
@@ -60,28 +60,28 @@ interface MigrationResultSummary {
  */
 async function main() {
   const startTime = Date.now();
-  
+
   try {
-    console.log("🚀 Starting SQLite to PostgreSQL Migration");
-    console.log("=" .repeat(50));
-    
+    logger.info("🚀 Starting SQLite to PostgreSQL Migration");
+    logger.info("=".repeat(50));
+
     // Parse command line arguments
     const options = parseCommandLineArgs();
-    
+
     if (options.dryRun) {
-      console.log("🔍 DRY RUN MODE - No actual data will be migrated");
+      logger.info("🔍 DRY RUN MODE - No actual data will be migrated");
     }
-    
+
     // Validate database connections
-    console.log("🔌 Validating database connections...");
-    
+    logger.info("🔌 Validating database connections...");
+
     // Legacy note:
     // Phase 1 runtime is PostgreSQL-only. This script is retained as migration tooling.
     // To run a real migration, provide a SQLite drizzle instance here via a local change.
     const pgDb = getPostgresDrizzleDb();
-    
-    console.log("✅ PostgreSQL connection established");
-    
+
+    logger.info("✅ PostgreSQL connection established");
+
     // Create migration configuration (placeholder sqlite source)
     const config: MigrationConfig = {
       /**
@@ -99,57 +99,58 @@ async function main() {
       handleTimestamps: options.handleTimestamps !== false,
       handleJsonFields: options.handleJsonFields !== false,
     };
-    
+
     // Filter tables if specified
     if (options.tables && options.tables.length > 0) {
-      config.tables = config.tables.filter(mapping => {
-        const tableName = SchemaConverter.analyzeSQLiteTable(mapping.sqliteTable).name;
+      config.tables = config.tables.filter((mapping) => {
+        const tableName = SchemaConverter.analyzeSQLiteTable(
+          mapping.sqliteTable,
+        ).name;
         return options.tables!.includes(tableName);
       });
     }
-    
-    console.log(`📊 Migration Configuration:`);
-    console.log(`   - Tables to migrate: ${config.tables.length}`);
-    console.log(`   - Batch size: ${config.batchSize}`);
-    console.log(`   - Parallel processing: ${config.parallel}`);
-    console.log(`   - Data validation: ${config.validateData}`);
-    console.log(`   - Timestamp conversion: ${config.handleTimestamps}`);
-    console.log(`   - JSON field handling: ${config.handleJsonFields}`);
-    console.log();
-    
+
+    logger.info(`📊 Migration Configuration:`);
+    logger.info(`   - Tables to migrate: ${config.tables.length}`);
+    logger.info(`   - Batch size: ${config.batchSize}`);
+    logger.info(`   - Parallel processing: ${config.parallel}`);
+    logger.info(`   - Data validation: ${config.validateData}`);
+    logger.info(`   - Timestamp conversion: ${config.handleTimestamps}`);
+    logger.info(`   - JSON field handling: ${config.handleJsonFields}`);
+    logger.info("");
+
     if (config.tables.length === 0) {
       throw new Error("No tables configured for migration");
     }
-    
+
     // Create and execute migration orchestrator
     const orchestrator = new MigrationOrchestrator(config);
-    
+
     let result;
     if (options.dryRun) {
       result = await executeDryRun(orchestrator, config);
     } else {
       result = await orchestrator.execute();
     }
-    
+
     // Display results
     displayResults(result, startTime);
-    
+
     // Exit with appropriate code
     if (result.success) {
-      console.log("🎉 Migration completed successfully!");
+      logger.info("🎉 Migration completed successfully!");
       process.exit(0);
     } else {
-      console.error("❌ Migration failed!");
+      logger.error("❌ Migration failed!");
       process.exit(1);
     }
-    
   } catch (error) {
     logger.error("Migration failed", {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
-    
-    console.error("❌ Migration failed:", error);
+
+    logger.error("❌ Migration failed:", error);
     process.exit(1);
   }
 }
@@ -160,23 +161,19 @@ async function main() {
 function createTableMappings() {
   const mappings = [
     // Jobs table
-    SchemaConverter.createTableMapping(
-      sqliteSchema.jobs,
-      pgSchema.jobs,
-      {
-        handleTimestamps: true,
-        handleJsonFields: true,
-        customMappings: {
-          'id': 'text', // Keep string ID for compatibility
-          'createdAt': 'timestamp with time zone',
-          'updatedAt': 'timestamp with time zone',
-          'scheduledAt': 'timestamp with time zone',
-          'startedAt': 'timestamp with time zone',
-          'completedAt': 'timestamp with time zone',
-        }
-      }
-    ),
-    
+    SchemaConverter.createTableMapping(sqliteSchema.jobs, pgSchema.jobs, {
+      handleTimestamps: true,
+      handleJsonFields: true,
+      customMappings: {
+        id: "text", // Keep string ID for compatibility
+        createdAt: "timestamp with time zone",
+        updatedAt: "timestamp with time zone",
+        scheduledAt: "timestamp with time zone",
+        startedAt: "timestamp with time zone",
+        completedAt: "timestamp with time zone",
+      },
+    }),
+
     // Tool configs
     SchemaConverter.createTableMapping(
       sqliteSchema.toolConfigs,
@@ -184,12 +181,12 @@ function createTableMappings() {
       {
         handleJsonFields: true,
         customMappings: {
-          'tool_name': 'key', // Map to standard column name
-          'config': 'jsonb', // Ensure JSONB storage
-        }
-      }
+          tool_name: "key", // Map to standard column name
+          config: "jsonb", // Ensure JSONB storage
+        },
+      },
     ),
-    
+
     // Rate limits
     SchemaConverter.createTableMapping(
       sqliteSchema.rateLimits,
@@ -197,12 +194,12 @@ function createTableMappings() {
       {
         handleTimestamps: true,
         customMappings: {
-          'id': 'key', // Map ID to key for rate limiting
-          'last_updated': 'createdAt',
-        }
-      }
+          id: "key", // Map ID to key for rate limiting
+          last_updated: "createdAt",
+        },
+      },
     ),
-    
+
     // App state
     SchemaConverter.createTableMapping(
       sqliteSchema.appState,
@@ -210,11 +207,11 @@ function createTableMappings() {
       {
         handleJsonFields: true,
         customMappings: {
-          'value': 'jsonb', // Store as JSONB
-        }
-      }
+          value: "jsonb", // Store as JSONB
+        },
+      },
     ),
-    
+
     // OAuth tokens
     SchemaConverter.createTableMapping(
       sqliteSchema.oauthTokens,
@@ -223,29 +220,25 @@ function createTableMappings() {
         handleTimestamps: true,
         handleJsonFields: true,
         customMappings: {
-          'id': 'bigserial', // Auto-increment
-          'toolName': 'provider', // Map to provider
-          'expiresAt': 'expiresAt',
-          'refreshExpiresAt': 'expiresAt',
-          'metadata': 'raw', // Store as JSONB
-        }
-      }
+          id: "bigserial", // Auto-increment
+          toolName: "provider", // Map to provider
+          expiresAt: "expiresAt",
+          refreshExpiresAt: "expiresAt",
+          metadata: "raw", // Store as JSONB
+        },
+      },
     ),
-    
+
     // Users
-    SchemaConverter.createTableMapping(
-      sqliteSchema.users,
-      pgSchema.users,
-      {
-        handleTimestamps: true,
-        customMappings: {
-          'id': 'uuid', // Generate UUIDs
-          'providerUserId': 'email', // Use email as identifier
-        }
-      }
-    ),
+    SchemaConverter.createTableMapping(sqliteSchema.users, pgSchema.users, {
+      handleTimestamps: true,
+      customMappings: {
+        id: "uuid", // Generate UUIDs
+        providerUserId: "email", // Use email as identifier
+      },
+    }),
   ];
-  
+
   return mappings;
 }
 
@@ -253,25 +246,27 @@ function createTableMappings() {
  * Execute dry run (schema validation only)
  */
 async function executeDryRun(
-  orchestrator: MigrationOrchestrator, 
-  config: MigrationConfig
+  orchestrator: MigrationOrchestrator,
+  config: MigrationConfig,
 ): Promise<MigrationResultSummary> {
-  console.log("🔍 Executing dry run...");
-  console.log("📋 Validating table structures and migrations...");
-  
+  logger.info("🔍 Executing dry run...");
+  logger.info("📋 Validating table structures and migrations...");
+
   // This would implement dry run logic
   // For now, return a mock successful result
   return {
     success: true,
-    tableResults: config.tables.map(mapping => ({
+    tableResults: config.tables.map((mapping) => ({
       table: SchemaConverter.analyzeSQLiteTable(mapping.sqliteTable).name,
       recordsMigrated: 0,
       errors: [],
-      validationResults: [{
-        type: 'count',
-        passed: true,
-        message: 'Dry run - schema validation passed',
-      }],
+      validationResults: [
+        {
+          type: "count",
+          passed: true,
+          message: "Dry run - schema validation passed",
+        },
+      ],
     })),
     totalTime: 0,
     totalRecords: 0,
@@ -285,38 +280,38 @@ async function executeDryRun(
 function parseCommandLineArgs(): MigrationOptions {
   const args = process.argv.slice(2);
   const options: MigrationOptions = {};
-  
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
+
     switch (arg) {
-      case '--dry-run':
+      case "--dry-run":
         options.dryRun = true;
         break;
-      case '--no-validation':
+      case "--no-validation":
         options.validateData = false;
         break;
-      case '--batch-size':
+      case "--batch-size":
         options.batchSize = parseInt(args[++i]) || 1000;
         break;
-      case '--parallel':
+      case "--parallel":
         options.parallel = true;
         break;
-      case '--tables':
-        options.tables = args[++i].split(',');
+      case "--tables":
+        options.tables = args[++i].split(",");
         break;
-      case '--no-timestamps':
+      case "--no-timestamps":
         options.handleTimestamps = false;
         break;
-      case '--no-json':
+      case "--no-json":
         options.handleJsonFields = false;
         break;
-      case '--help':
+      case "--help":
         printHelp();
         process.exit(0);
     }
   }
-  
+
   return options;
 }
 
@@ -324,7 +319,7 @@ function parseCommandLineArgs(): MigrationOptions {
  * Print help information
  */
 function printHelp() {
-  console.log(`
+  logger.info(`
 SQLite to PostgreSQL Migration Script
 
 Usage: npm run migrate-sqlite-to-postgresql [options]
@@ -351,35 +346,41 @@ Examples:
  */
 function displayResults(result: MigrationResultSummary, startTime: number) {
   const totalTime = Date.now() - startTime;
-  
-  console.log("\n" + "=".repeat(50));
-  console.log("📊 MIGRATION RESULTS");
-  console.log("=".repeat(50));
-  
-  console.log(`Overall Status: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}`);
-  console.log(`Total Time: ${totalTime}ms`);
-  console.log(`Total Records: ${result.totalRecords}`);
-  console.log(`Total Errors: ${result.totalErrors}`);
-  
+
+  logger.info("\n" + "=".repeat(50));
+  logger.info("📊 MIGRATION RESULTS");
+  logger.info("=".repeat(50));
+
+  logger.info(
+    `Overall Status: ${result.success ? "✅ SUCCESS" : "❌ FAILED"}`,
+  );
+  logger.info(`Total Time: ${totalTime}ms`);
+  logger.info(`Total Records: ${result.totalRecords}`);
+  logger.info(`Total Errors: ${result.totalErrors}`);
+
   if (result.tableResults && result.tableResults.length > 0) {
-    console.log("\n📋 Table Results:");
-    
+    logger.info("\n📋 Table Results:");
+
     for (const tableResult of result.tableResults) {
-      const status = tableResult.errors.length === 0 ? '✅' : '❌';
-      console.log(`  ${status} ${tableResult.table}: ${tableResult.recordsMigrated} records`);
-      
+      const status = tableResult.errors.length === 0 ? "✅" : "❌";
+      logger.info(
+        `  ${status} ${tableResult.table}: ${tableResult.recordsMigrated} records`,
+      );
+
       if (tableResult.errors.length > 0) {
-        console.log(`    Errors:`);
+        logger.info(`    Errors:`);
         for (const error of tableResult.errors) {
-          console.log(`      - ${error}`);
+          logger.error(`      - ${error}`);
         }
       }
-      
+
       if (tableResult.validationResults.length > 0) {
-        console.log(`    Validation:`);
+        logger.info(`    Validation:`);
         for (const validation of tableResult.validationResults) {
-          const vStatus = validation.passed ? '✅' : '❌';
-          console.log(`      ${vStatus} ${validation.type}: ${validation.message}`);
+          const vStatus = validation.passed ? "✅" : "❌";
+          logger.info(
+            `      ${vStatus} ${validation.type}: ${validation.message}`,
+          );
         }
       }
     }
@@ -388,8 +389,8 @@ function displayResults(result: MigrationResultSummary, startTime: number) {
 
 // Run migration if called directly
 if (require.main === module) {
-  main().catch(error => {
-    console.error("Fatal error:", error);
+  main().catch((error) => {
+    logger.error("Fatal error:", error);
     process.exit(1);
   });
 }

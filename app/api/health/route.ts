@@ -140,9 +140,7 @@ export async function GET() {
         hitRate:
           cacheStats.hits + cacheStats.misses > 0
             ? Math.round(
-                (cacheStats.hits /
-                  (cacheStats.hits + cacheStats.misses)) *
-                  100,
+                (cacheStats.hits / (cacheStats.hits + cacheStats.misses)) * 100,
               )
             : 0,
       },

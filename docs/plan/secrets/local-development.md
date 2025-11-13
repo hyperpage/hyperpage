@@ -16,27 +16,35 @@ Hyperpage now uses a secure secrets management system for local development that
 The secrets management system uses two main environment file types:
 
 ### `.env.docker` (Private - Not Committed)
+
 Contains infrastructure secrets for Docker services (PostgreSQL, Redis):
+
 - Database credentials
 - Redis passwords
 - Session and JWT secrets
 - **NEVER commit this file to version control**
 
 ### `.env.docker.sample` (Template - Committed)
+
 Contains template values for Docker secrets:
+
 - Provides setup instructions
 - Shows required variables
 - Safe to commit to version control
 
 ### `.env.local` (Private - Not Committed)
+
 Contains application-specific configuration:
+
 - API tokens for tools (GitHub, GitLab, Jira)
 - OAuth credentials
 - Service-specific settings
 - **NEVER commit this file to version control**
 
 ### `.env.local.sample` (Template - Committed)
+
 Contains template for application configuration:
+
 - Documents available options
 - Provides setup instructions
 - Safe to commit to version control
@@ -46,24 +54,28 @@ Contains template for application configuration:
 ### For New Developers
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd hyperpage
    ```
 
 2. **Setup Docker secrets**
+
    ```bash
    cp .env.docker.sample .env.docker
    # Edit .env.docker with secure passwords
    ```
 
 3. **Setup application configuration**
+
    ```bash
    cp .env.local.sample .env.local
    # Edit .env.local with your API tokens
    ```
 
 4. **Start services**
+
    ```bash
    docker-compose up -d
    ```
@@ -78,11 +90,13 @@ Contains template for application configuration:
 If you already have a working setup, you have two options:
 
 #### Option 1: Upgrade to New System (Recommended)
+
 1. Backup your current configuration
 2. Follow the new setup process above
 3. Migrate any custom settings to the new files
 
 #### Option 2: Continue with Legacy Setup
+
 The old system continues to work for backward compatibility, but we recommend upgrading for better security.
 
 ## 🔧 Configuration Details
@@ -110,6 +124,7 @@ OAUTH_ENCRYPTION_KEY=your_oauth_encryption_key
 ```
 
 **Security Notes:**
+
 - Change default passwords to something secure
 - Use different passwords for different environments
 - Generate strong secrets: `openssl rand -hex 32`
@@ -138,6 +153,7 @@ GITHUB_OAUTH_CLIENT_SECRET=your_client_secret
 ### Password and Secret Generation
 
 **Generate Secure Passwords:**
+
 ```bash
 # Generate a secure database password
 openssl rand -base64 32
@@ -153,6 +169,7 @@ openssl rand -hex 32
 ```
 
 **Use Strong Passwords:**
+
 - Minimum 16 characters
 - Mix of uppercase, lowercase, numbers, and symbols
 - Use password managers to generate and store
@@ -161,12 +178,14 @@ openssl rand -hex 32
 ### Environment Separation
 
 **Development:**
+
 - Use the Docker setup described above
 - Apply reasonable rate limits (10000 requests/hour)
 - Use development OAuth applications
 - Test with sample data when possible
 
 **Production:**
+
 - Never use development secrets in production
 - Use production OAuth applications
 - Implement proper rate limiting
@@ -176,6 +195,7 @@ openssl rand -hex 32
 ### Access Control
 
 **File Permissions:**
+
 ```bash
 # Set restrictive permissions on secret files
 chmod 600 .env.docker
@@ -185,6 +205,7 @@ chmod 644 .env.local.sample
 ```
 
 **Version Control:**
+
 - Only commit template files (`.sample` files)
 - Use `.gitignore` to prevent committing real secrets
 - Regularly audit for accidental secret commits
@@ -195,29 +216,37 @@ chmod 644 .env.local.sample
 ### Common Issues
 
 #### Services Won't Start
+
 **Problem:** Docker services fail to start
-**Solution:** 
+**Solution:**
+
 1. Check `.env.docker` exists and has correct permissions
 2. Verify all required variables are set
 3. Check Docker logs: `docker-compose logs`
 
 #### Database Connection Failed
+
 **Problem:** Application can't connect to database
 **Solution:**
+
 1. Verify `POSTGRES_PASSWORD` matches in `.env.docker` and `DATABASE_URL`
 2. Check PostgreSQL container is running: `docker-compose ps`
 3. Test connection: `docker-compose exec postgres pg_isready`
 
 #### Redis Connection Failed
+
 **Problem:** Application can't connect to Redis
 **Solution:**
+
 1. Verify `REDIS_PASSWORD` in `.env.docker`
 2. Check Redis container is running: `docker-compose ps`
 3. Test connection: `docker-compose exec redis redis-cli ping`
 
 #### API Tokens Not Working
+
 **Problem:** Tools not fetching data
 **Solution:**
+
 1. Verify `ENABLE_*` flags are set to `true`
 2. Check API tokens are valid and have correct permissions
 3. Test API access manually: `curl -H "Authorization: token YOUR_TOKEN" https://api.github.com/user`
@@ -225,6 +254,7 @@ chmod 644 .env.local.sample
 ### Debugging Commands
 
 **Check Environment Variables:**
+
 ```bash
 # View Docker environment (without exposing secrets)
 docker-compose config
@@ -239,6 +269,7 @@ docker-compose logs hyperpage
 ```
 
 **Test Connectivity:**
+
 ```bash
 # Test database connection
 docker-compose exec postgres psql -U hyperpage -d hyperpage -c "SELECT 1;"
@@ -257,17 +288,20 @@ curl http://localhost:3000/api/health
 If you were using the old setup with hardcoded passwords in `docker-compose.yml`:
 
 1. **Backup Current Setup**
+
    ```bash
    cp docker-compose.yml docker-compose.yml.backup
    ```
 
 2. **Setup New System**
+
    ```bash
    cp .env.docker.sample .env.docker
    # Edit .env.docker with your existing passwords
    ```
 
 3. **Test New Setup**
+
    ```bash
    docker-compose down
    docker-compose up -d
@@ -288,11 +322,13 @@ If you were using the old setup with hardcoded passwords in `docker-compose.yml`
 If the new system causes issues:
 
 1. **Restore Old Configuration**
+
    ```bash
    cp docker-compose.yml.backup docker-compose.yml
    ```
 
 2. **Start Services**
+
    ```bash
    docker-compose up -d
    ```
@@ -305,26 +341,31 @@ If the new system causes issues:
 ## 📚 Additional Resources
 
 ### Documentation
+
 - [Installation Guide](installation.md) - Detailed setup instructions
 - [Security Guidelines](security.md) - Security best practices
 - [Tool Integration](tool-integration-system.md) - Configuring external tools
 
 ### Docker Documentation
+
 - [Docker Compose Environment Variables](https://docs.docker.com/compose/environment-variables/)
 - [Docker Secrets](https://docs.docker.com/engine/swarm/secrets/)
 
 ### Security Resources
+
 - [OWASP Environment Variables Security](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation/04-Testing_for_HTTP_Parameter_Pollution)
 - [NIST Password Guidelines](https://pages.nist.gov/800-63-3/sp800-63b.html)
 
 ## 🤝 Getting Help
 
 ### Team Support
+
 - **Slack**: #development channel
 - **Email**: dev-team@company.com
 - **Issues**: Create a GitHub issue
 
 ### External Resources
+
 - **Docker Issues**: [Docker Forums](https://forums.docker.com/)
 - **Security Concerns**: Follow responsible disclosure
 

@@ -22,6 +22,7 @@ Phase 3 focuses on comprehensive testing and validation of the PostgreSQL-only i
 **Action**: Create comprehensive PostgreSQL test utilities
 
 **Implementation**:
+
 ```typescript
 // __tests__/setup/test-database.ts
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -36,7 +37,8 @@ export interface TestDatabase {
 
 export async function setupTestDatabase(): Promise<TestDatabase> {
   const testPool = new Pool({
-    connectionString: process.env.TEST_DATABASE_URL || 
+    connectionString:
+      process.env.TEST_DATABASE_URL ||
       "postgresql://test:test@localhost:5432/hyperpage_test",
     max: 10,
     idleTimeoutMillis: 30000,
@@ -47,20 +49,24 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
 
   // Initialize test database
   await db.execute({ sql: `CREATE EXTENSION IF NOT EXISTS "uuid-ossp";` });
-  
+
   // Clean up function
   const cleanup = async () => {
     // Clean up test data in reverse dependency order
-    await db.execute({ sql: `
+    await db.execute({
+      sql: `
       TRUNCATE TABLE job_history, oauth_tokens, rate_limits, app_state, tool_configs, jobs, users CASCADE;
-    `});
+    `,
+    });
     await testPool.end();
   };
 
   return { db, pool: testPool, cleanup };
 }
 
-export async function createTestData(db: ReturnType<typeof drizzle>): Promise<void> {
+export async function createTestData(
+  db: ReturnType<typeof drizzle>,
+): Promise<void> {
   // Create test users
   await db.insert(pgSchema.users).values([
     {
@@ -144,6 +150,7 @@ export async function createTestData(db: ReturnType<typeof drizzle>): Promise<vo
 **Action**: Update all unit tests for PostgreSQL
 
 **Job Repository Tests**:
+
 ```typescript
 // __tests__/unit/database/job-repository.test.ts
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
@@ -184,7 +191,7 @@ describe("JobRepository - PostgreSQL", () => {
       };
 
       const created = await jobRepository.create(jobData);
-      
+
       expect(created.id).toBe("new-test-job");
       expect(created.type).toBe("test_type");
       expect(created.status).toBe("pending");
@@ -205,18 +212,20 @@ describe("JobRepository - PostgreSQL", () => {
       };
 
       await jobRepository.create(jobData);
-      
-      await expect(jobRepository.create({
-        ...jobData,
-        name: "Different Name"
-      })).rejects.toThrow();
+
+      await expect(
+        jobRepository.create({
+          ...jobData,
+          name: "Different Name",
+        }),
+      ).rejects.toThrow();
     });
   });
 
   describe("findById", () => {
     it("should find existing job by ID", async () => {
       const job = await jobRepository.findById("test-job-1");
-      
+
       expect(job).toBeDefined();
       expect(job?.id).toBe("test-job-1");
       expect(job?.type).toBe("github_pull_request");
@@ -232,7 +241,7 @@ describe("JobRepository - PostgreSQL", () => {
   describe("findPending", () => {
     it("should return pending jobs ordered by scheduled time", async () => {
       const pendingJobs = await jobRepository.findPending(10);
-      
+
       expect(pendingJobs).toHaveLength(1);
       expect(pendingJobs[0].id).toBe("test-job-1");
       expect(pendingJobs[0].status).toBe("pending");
@@ -247,7 +256,7 @@ describe("JobRepository - PostgreSQL", () => {
   describe("updateStatus", () => {
     it("should update job status", async () => {
       await jobRepository.updateStatus("test-job-1", "processing");
-      
+
       const updatedJob = await jobRepository.findById("test-job-1");
       expect(updatedJob?.status).toBe("processing");
     });
@@ -256,7 +265,7 @@ describe("JobRepository - PostgreSQL", () => {
   describe("getJobStats", () => {
     it("should return correct job statistics", async () => {
       const stats = await jobRepository.getJobStats();
-      
+
       expect(stats.total).toBe(2);
       expect(stats.pending).toBe(1);
       expect(stats.completed).toBe(1);
@@ -272,6 +281,7 @@ describe("JobRepository - PostgreSQL", () => {
 **Action**: Create comprehensive integration test suite
 
 **Repository Integration Tests**:
+
 ```typescript
 // __tests__/integration/repository-integration.test.ts
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
@@ -322,15 +332,15 @@ describe("Repository Integration - PostgreSQL", () => {
       expect(markedProcessing).toBe(true);
 
       // Update result via repository
-      await jobRepository.updateResult(jobId, { 
-        result: "success", 
-        processedAt: new Date().toISOString() 
+      await jobRepository.updateResult(jobId, {
+        result: "success",
+        processedAt: new Date().toISOString(),
       });
 
       // Mark as completed via queue
-      const completed = await jobQueue.markJobCompleted(jobId, { 
-        result: "success", 
-        processedAt: new Date().toISOString() 
+      const completed = await jobQueue.markJobCompleted(jobId, {
+        result: "success",
+        processedAt: new Date().toISOString(),
       });
       expect(completed).toBe(true);
 
@@ -377,7 +387,7 @@ describe("Repository Integration - PostgreSQL", () => {
         enabled: true,
         config: {
           apiKey: "integration_key",
-          settings: { debug: true, timeout: 30000 }
+          settings: { debug: true, timeout: 30000 },
         },
         refreshInterval: 600000,
         notifications: true,
@@ -387,7 +397,8 @@ describe("Repository Integration - PostgreSQL", () => {
       await toolConfigManager.setConfig(toolName, config);
 
       // Retrieve via repository
-      const retrievedConfig = await toolConfigRepository.findByToolName(toolName);
+      const retrievedConfig =
+        await toolConfigRepository.findByToolName(toolName);
       expect(retrievedConfig).toBeDefined();
       expect(retrievedConfig?.toolName).toBe(toolName);
       expect(retrievedConfig?.enabled).toBe(true);
@@ -431,24 +442,24 @@ describe("Repository Integration - PostgreSQL", () => {
 
       // Process job
       await jobQueue.markJobProcessing(jobId);
-      
+
       // Job depends on GitHub configuration
       const githubConfig = await toolConfigManager.getConfig("github");
       expect(githubConfig?.enabled).toBe(true);
       expect(githubConfig?.config?.token).toBe("test-token");
 
       // Complete job
-      await jobQueue.markJobCompleted(jobId, { 
-        success: true, 
-        repositories: ["repo1", "repo2"] 
+      await jobQueue.markJobCompleted(jobId, {
+        success: true,
+        repositories: ["repo1", "repo2"],
       });
 
       // Verify both are working together
       const completedJob = await jobRepository.findById(jobId);
       const finalConfig = await toolConfigRepository.findEnabled();
-      
+
       expect(completedJob?.status).toBe("completed");
-      expect(finalConfig.find(c => c.toolName === "github")).toBeDefined();
+      expect(finalConfig.find((c) => c.toolName === "github")).toBeDefined();
     });
   });
 });
@@ -463,6 +474,7 @@ describe("Repository Integration - PostgreSQL", () => {
 **Action**: Create comprehensive performance test suite
 
 **Performance Test Implementation**:
+
 ```typescript
 // __tests__/performance/database-performance.test.ts
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
@@ -493,7 +505,7 @@ describe("Database Performance - PostgreSQL", () => {
       const startTime = Date.now();
 
       // Create batch of jobs
-      const jobPromises = Array.from({ length: batchSize }, (_, i) => 
+      const jobPromises = Array.from({ length: batchSize }, (_, i) =>
         jobRepository.create({
           id: `perf_job_${i}`,
           type: "performance_test",
@@ -504,7 +516,7 @@ describe("Database Performance - PostgreSQL", () => {
           retryCount: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        })
+        }),
       );
 
       const createdJobs = await Promise.all(jobPromises);
@@ -538,9 +550,15 @@ describe("Database Performance - PostgreSQL", () => {
       // Test various query patterns
       const queries = [
         { name: "Find all pending", fn: () => jobRepository.findPending(1000) },
-        { name: "Find all completed", fn: () => jobRepository.findByStatus("completed", 1000) },
+        {
+          name: "Find all completed",
+          fn: () => jobRepository.findByStatus("completed", 1000),
+        },
         { name: "Get job statistics", fn: () => jobRepository.getJobStats() },
-        { name: "Find by type", fn: () => jobRepository.findByType("batch_test", 1000) },
+        {
+          name: "Find by type",
+          fn: () => jobRepository.findByType("batch_test", 1000),
+        },
       ];
 
       for (const query of queries) {
@@ -549,8 +567,8 @@ describe("Database Performance - PostgreSQL", () => {
         const queryTime = Date.now() - startTime;
 
         expect(queryTime).toBeLessThan(1000); // Should complete within 1 second
-        expect(Array.isArray(result) || typeof result === 'object').toBe(true);
-        
+        expect(Array.isArray(result) || typeof result === "object").toBe(true);
+
         console.log(`${query.name}: ${queryTime}ms`);
       }
     });
@@ -559,22 +577,27 @@ describe("Database Performance - PostgreSQL", () => {
       const concurrentQueries = 20;
       const startTime = Date.now();
 
-      const queryPromises = Array.from({ length: concurrentQueries }, async (_, i) => {
-        const queries = [
-          jobRepository.findPending(50),
-          jobRepository.getJobStats(),
-          jobRepository.findByStatus("pending", 25),
-        ];
-        return Promise.all(queries);
-      });
+      const queryPromises = Array.from(
+        { length: concurrentQueries },
+        async (_, i) => {
+          const queries = [
+            jobRepository.findPending(50),
+            jobRepository.getJobStats(),
+            jobRepository.findByStatus("pending", 25),
+          ];
+          return Promise.all(queries);
+        },
+      );
 
       const results = await Promise.all(queryPromises);
       const totalTime = Date.now() - startTime;
 
       expect(results).toHaveLength(concurrentQueries);
       expect(totalTime).toBeLessThan(5000); // All queries should complete within 5 seconds
-      
-      console.log(`Executed ${concurrentQueries * 3} queries in ${totalTime}ms`);
+
+      console.log(
+        `Executed ${concurrentQueries * 3} queries in ${totalTime}ms`,
+      );
     });
   });
 
@@ -593,8 +616,8 @@ describe("Database Performance - PostgreSQL", () => {
             status: "pending",
             priority: i % 10,
             retryCount: 0,
-          })
-        )
+          }),
+        ),
       );
 
       const addTime = Date.now() - startTime;
@@ -605,7 +628,8 @@ describe("Database Performance - PostgreSQL", () => {
       const processStartTime = Date.now();
       let processedCount = 0;
 
-      for (let i = 0; i < Math.min(jobCount, 50); i++) { // Process first 50
+      for (let i = 0; i < Math.min(jobCount, 50); i++) {
+        // Process first 50
         const job = await jobQueue.getNextJob();
         if (job) {
           await jobQueue.markJobProcessing(job.id);
@@ -633,11 +657,14 @@ describe("Database Performance - PostgreSQL", () => {
         toolConfigRepository.create({
           toolName: `perf_tool_${i}`,
           enabled: i % 2 === 0,
-          config: JSON.stringify({ apiKey: `key_${i}`, settings: { timeout: 30000 } }),
+          config: JSON.stringify({
+            apiKey: `key_${i}`,
+            settings: { timeout: 30000 },
+          }),
           refreshInterval: 300000,
           notifications: true,
           updatedAt: new Date().toISOString(),
-        })
+        }),
       );
 
       await Promise.all(configPromises);
@@ -669,6 +696,7 @@ describe("Database Performance - PostgreSQL", () => {
 **Action**: Test API endpoint performance
 
 **API Performance Test**:
+
 ```typescript
 // __tests__/performance/api-performance.test.ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -685,13 +713,13 @@ describe("API Performance - PostgreSQL", () => {
   describe("Tools API Performance", () => {
     it("should respond to GET /api/tools/enabled within performance threshold", async () => {
       const startTime = Date.now();
-      
+
       const response = await fetch("http://localhost:3000/api/tools/enabled");
       const responseTime = Date.now() - startTime;
-      
+
       expect(response.ok).toBe(true);
       expect(responseTime).toBeLessThan(500); // Should respond within 500ms
-      
+
       const data = await response.json();
       expect(data.success).toBe(true);
       expect(Array.isArray(data.tools)).toBe(true);
@@ -700,18 +728,20 @@ describe("API Performance - PostgreSQL", () => {
     it("should handle concurrent tool API requests efficiently", async () => {
       const concurrentRequests = 10;
       const startTime = Date.now();
-      
+
       const requests = Array.from({ length: concurrentRequests }, () =>
-        fetch("http://localhost:3000/api/tools/enabled").then(r => r.json())
+        fetch("http://localhost:3000/api/tools/enabled").then((r) => r.json()),
       );
-      
+
       const results = await Promise.all(requests);
       const totalTime = Date.now() - startTime;
-      
+
       expect(totalTime).toBeLessThan(2000); // All requests should complete within 2 seconds
-      expect(results.every(r => r.success)).toBe(true);
-      
-      console.log(`Executed ${concurrentRequests} concurrent requests in ${totalTime}ms`);
+      expect(results.every((r) => r.success)).toBe(true);
+
+      console.log(
+        `Executed ${concurrentRequests} concurrent requests in ${totalTime}ms`,
+      );
       console.log(`Average response time: ${totalTime / concurrentRequests}ms`);
     });
   });
@@ -720,7 +750,7 @@ describe("API Performance - PostgreSQL", () => {
     it("should create jobs efficiently", async () => {
       const jobCount = 50;
       const startTime = Date.now();
-      
+
       const jobPromises = Array.from({ length: jobCount }, (_, i) =>
         fetch("http://localhost:3000/api/batch", {
           method: "POST",
@@ -731,16 +761,16 @@ describe("API Performance - PostgreSQL", () => {
             payload: { index: i, timestamp: Date.now() },
             priority: i % 5,
           }),
-        }).then(r => r.json())
+        }).then((r) => r.json()),
       );
-      
+
       const results = await Promise.all(jobPromises);
       const totalTime = Date.now() - startTime;
-      
+
       expect(totalTime).toBeLessThan(10000); // Should complete within 10 seconds
-      expect(results.every(r => r.success)).toBe(true);
-      expect(results.every(r => r.jobId)).toBe(true);
-      
+      expect(results.every((r) => r.success)).toBe(true);
+      expect(results.every((r) => r.jobId)).toBe(true);
+
       console.log(`Created ${jobCount} jobs in ${totalTime}ms`);
     });
   });
@@ -749,17 +779,17 @@ describe("API Performance - PostgreSQL", () => {
     it("should perform health checks quickly", async () => {
       const checks = 20;
       const startTime = Date.now();
-      
+
       const healthPromises = Array.from({ length: checks }, () =>
-        fetch("http://localhost:3000/api/health").then(r => r.json())
+        fetch("http://localhost:3000/api/health").then((r) => r.json()),
       );
-      
+
       const results = await Promise.all(healthPromises);
       const totalTime = Date.now() - startTime;
-      
+
       expect(totalTime).toBeLessThan(5000); // Should complete within 5 seconds
-      expect(results.every(r => r.status === "healthy")).toBe(true);
-      
+      expect(results.every((r) => r.status === "healthy")).toBe(true);
+
       console.log(`Performed ${checks} health checks in ${totalTime}ms`);
     });
   });
@@ -775,6 +805,7 @@ describe("API Performance - PostgreSQL", () => {
 **Action**: Update E2E tests for PostgreSQL workflows
 
 **E2E Test Implementation**:
+
 ```typescript
 // __tests__/e2e/postgresql-workflows.spec.ts
 import { test, expect } from "@playwright/test";
@@ -790,41 +821,53 @@ test.describe("PostgreSQL Workflows", () => {
     test("should complete tool configuration workflow", async ({ page }) => {
       // Navigate to tools configuration
       await page.click("[data-testid='tool-config-button']");
-      await expect(page.locator("[data-testid='tool-config-panel']")).toBeVisible();
+      await expect(
+        page.locator("[data-testid='tool-config-panel']"),
+      ).toBeVisible();
 
       // Add new tool configuration
       await page.selectOption("[data-testid='tool-selector']", "github");
       await page.fill("[data-testid='api-token-input']", "test_token_123");
       await page.fill("[data-testid='refresh-interval-input']", "300000");
       await page.check("[data-testid='notifications-checkbox']");
-      
+
       // Save configuration
       await page.click("[data-testid='save-config-button']");
-      
+
       // Verify success message
-      await expect(page.locator("[data-testid='success-message']")).toBeVisible();
-      
+      await expect(
+        page.locator("[data-testid='success-message']"),
+      ).toBeVisible();
+
       // Verify configuration appears in list
-      await expect(page.locator("[data-testid='github-config-item']")).toBeVisible();
-      
+      await expect(
+        page.locator("[data-testid='github-config-item']"),
+      ).toBeVisible();
+
       // Verify configuration state
-      await expect(page.locator("[data-testid='github-enabled-badge']")).toContainText("Enabled");
+      await expect(
+        page.locator("[data-testid='github-enabled-badge']"),
+      ).toContainText("Enabled");
     });
 
     test("should disable tool configuration", async ({ page }) => {
       // First enable a tool
       await page.goto("/tools");
       await page.click("[data-testid='enable-github-button']");
-      
+
       // Then disable it
       await page.click("[data-testid='disable-github-button']");
-      await expect(page.locator("[data-testid='github-disabled-badge']")).toContainText("Disabled");
-      
+      await expect(
+        page.locator("[data-testid='github-disabled-badge']"),
+      ).toContainText("Disabled");
+
       // Verify API reflects the change
-      const response = await page.evaluate(() => 
-        fetch("/api/tools/enabled").then(r => r.json())
+      const response = await page.evaluate(() =>
+        fetch("/api/tools/enabled").then((r) => r.json()),
       );
-      expect(response.tools.find((tool: any) => tool.toolName === "github")).toBeUndefined();
+      expect(
+        response.tools.find((tool: any) => tool.toolName === "github"),
+      ).toBeUndefined();
     });
   });
 
@@ -839,16 +882,22 @@ test.describe("PostgreSQL Workflows", () => {
       await page.selectOption("[data-testid='job-type-select']", "github_api");
       await page.fill("[data-testid='job-name-input']", "E2E Test Job");
       await page.fill("[data-testid='job-priority-input']", "5");
-      
+
       await page.click("[data-testid='submit-job-button']");
-      
+
       // Verify job appears in list
-      await expect(page.locator("[data-testid='job-item-e2e-test-job']")).toBeVisible();
-      await expect(page.locator("[data-testid='job-status-pending']")).toBeVisible();
-      
+      await expect(
+        page.locator("[data-testid='job-item-e2e-test-job']"),
+      ).toBeVisible();
+      await expect(
+        page.locator("[data-testid='job-status-pending']"),
+      ).toBeVisible();
+
       // Simulate job processing
       await page.click("[data-testid='process-job-button']");
-      await expect(page.locator("[data-testid='job-status-completed']")).toBeVisible();
+      await expect(
+        page.locator("[data-testid='job-status-completed']"),
+      ).toBeVisible();
     });
 
     test("should handle job errors and retries", async ({ page }) => {
@@ -865,16 +914,20 @@ test.describe("PostgreSQL Workflows", () => {
           }),
         });
       });
-      
+
       // Navigate to jobs
       await page.click("[data-testid='jobs-button']");
-      
+
       // Wait for job to appear and fail
-      await page.waitForSelector("[data-testid='job-status-failed']", { timeout: 10000 });
-      
+      await page.waitForSelector("[data-testid='job-status-failed']", {
+        timeout: 10000,
+      });
+
       // Verify retry mechanism
       await page.click("[data-testid='retry-job-button']");
-      await expect(page.locator("[data-testid='job-status-pending']")).toBeVisible();
+      await expect(
+        page.locator("[data-testid='job-status-pending']"),
+      ).toBeVisible();
     });
   });
 
@@ -883,15 +936,25 @@ test.describe("PostgreSQL Workflows", () => {
       // Navigate to dashboard
       await page.goto("/");
       await expect(page.locator("[data-testid='dashboard']")).toBeVisible();
-      
+
       // Verify job statistics
-      await expect(page.locator("[data-testid='total-jobs-count']")).toContainText(/\d+/);
-      await expect(page.locator("[data-testid='pending-jobs-count']")).toContainText(/\d+/);
-      await expect(page.locator("[data-testid='completed-jobs-count']")).toContainText(/\d+/);
-      
+      await expect(
+        page.locator("[data-testid='total-jobs-count']"),
+      ).toContainText(/\d+/);
+      await expect(
+        page.locator("[data-testid='pending-jobs-count']"),
+      ).toContainText(/\d+/);
+      await expect(
+        page.locator("[data-testid='completed-jobs-count']"),
+      ).toContainText(/\d+/);
+
       // Verify tool configurations
-      await expect(page.locator("[data-testid='enabled-tools-count']")).toContainText(/\d+/);
-      await expect(page.locator("[data-testid='configured-tools-list']")).toBeVisible();
+      await expect(
+        page.locator("[data-testid='enabled-tools-count']"),
+      ).toContainText(/\d+/);
+      await expect(
+        page.locator("[data-testid='configured-tools-list']"),
+      ).toBeVisible();
     });
 
     test("should refresh data and show real-time updates", async ({ page }) => {
@@ -908,20 +971,24 @@ test.describe("PostgreSQL Workflows", () => {
           }),
         });
       });
-      
+
       // Wait for dashboard to refresh
       await page.click("[data-testid='refresh-dashboard-button']");
-      
+
       // Verify job count increased
-      await expect(page.locator("[data-testid='pending-jobs-count']")).toContainText(/\d+/);
+      await expect(
+        page.locator("[data-testid='pending-jobs-count']"),
+      ).toContainText(/\d+/);
     });
   });
 
   test.describe("Error Handling", () => {
-    test("should handle database connection errors gracefully", async ({ page }) => {
+    test("should handle database connection errors gracefully", async ({
+      page,
+    }) => {
       // This would require simulating a database connection failure
       // For now, we'll test general error handling
-      
+
       // Try to create job with invalid data
       const response = await page.evaluate(() => {
         return fetch("/api/batch", {
@@ -934,9 +1001,9 @@ test.describe("PostgreSQL Workflows", () => {
           }),
         });
       });
-      
+
       expect(response.status).toBe(400);
-      
+
       const errorData = await response.json();
       expect(errorData.success).toBe(false);
       expect(errorData.error).toBeDefined();
@@ -944,14 +1011,18 @@ test.describe("PostgreSQL Workflows", () => {
 
     test("should display meaningful error messages", async ({ page }) => {
       // Test various error scenarios and verify user-friendly messages
-      
+
       // Test form validation errors
       await page.goto("/tools");
       await page.click("[data-testid='add-tool-button']");
       await page.click("[data-testid='save-tool-button']");
-      
-      await expect(page.locator("[data-testid='form-error-message']")).toBeVisible();
-      await expect(page.locator("[data-testid='form-error-message']")).toContainText("required");
+
+      await expect(
+        page.locator("[data-testid='form-error-message']"),
+      ).toBeVisible();
+      await expect(
+        page.locator("[data-testid='form-error-message']"),
+      ).toContainText("required");
     });
   });
 });
@@ -966,6 +1037,7 @@ test.describe("PostgreSQL Workflows", () => {
 **Action**: Validate production build and deployment
 
 **Deployment Test Script**:
+
 ```bash
 #!/bin/bash
 # scripts/test-production-deployment.sh
@@ -1080,6 +1152,7 @@ echo "Deployment is ready for production! 🚀"
 **Action**: Test Docker deployment
 
 **Docker Test Script**:
+
 ```bash
 #!/bin/bash
 # scripts/test-docker-deployment.sh
@@ -1132,6 +1205,7 @@ echo "✅ Docker deployment validation completed successfully!"
 **Action**: Create performance benchmarks
 
 **Benchmark Script**:
+
 ```typescript
 // scripts/performance-benchmark.ts
 import { performance } from "perf_hooks";
@@ -1147,19 +1221,19 @@ interface BenchmarkResult {
 async function benchmarkOperation(
   name: string,
   operation: () => Promise<void>,
-  iterations: number = 1000
+  iterations: number = 1000,
 ): Promise<BenchmarkResult> {
   const startTime = performance.now();
-  
+
   for (let i = 0; i < iterations; i++) {
     await operation();
   }
-  
+
   const endTime = performance.now();
   const totalTime = endTime - startTime;
   const avgTime = totalTime / iterations;
   const operationsPerSecond = (iterations / totalTime) * 1000;
-  
+
   return {
     name,
     operations: iterations,
@@ -1171,10 +1245,10 @@ async function benchmarkOperation(
 
 async function runBenchmarks() {
   console.log("🚀 Running PostgreSQL Performance Benchmarks\n");
-  
+
   // Setup test database
   const testDb = await setupTestDatabase();
-  
+
   const benchmarks = [
     {
       name: "Create Job",
@@ -1223,55 +1297,59 @@ async function runBenchmarks() {
       iterations: 100,
     },
   ];
-  
+
   const results: BenchmarkResult[] = [];
-  
+
   for (const benchmark of benchmarks) {
     console.log(`Running ${benchmark.name}...`);
     const result = await benchmarkOperation(
       benchmark.name,
       benchmark.operation,
-      benchmark.iterations
+      benchmark.iterations,
     );
     results.push(result);
-    
+
     console.log(
       `  ${result.name}: ${result.totalTime.toFixed(2)}ms total, ` +
-      `${result.avgTime.toFixed(4)}ms avg, ` +
-      `${result.operationsPerSecond.toFixed(2)} ops/sec\n`
+        `${result.avgTime.toFixed(4)}ms avg, ` +
+        `${result.operationsPerSecond.toFixed(2)} ops/sec\n`,
     );
   }
-  
+
   // Summary
   console.log("📊 Benchmark Summary");
   console.log("=".repeat(50));
-  
+
   for (const result of results) {
     console.log(
       `${result.name.padEnd(20)} | ` +
-      `${result.operations.toString().padStart(4)} ops | ` +
-      `${result.avgTime.toFixed(4).padStart(8)} ms avg | ` +
-      `${result.operationsPerSecond.toFixed(1).padStart(8)} ops/sec`
+        `${result.operations.toString().padStart(4)} ops | ` +
+        `${result.avgTime.toFixed(4).padStart(8)} ms avg | ` +
+        `${result.operationsPerSecond.toFixed(1).padStart(8)} ops/sec`,
     );
   }
-  
+
   // Cleanup
   await testDb.cleanup();
-  
+
   console.log("\n✅ Benchmark completed successfully!");
-  
+
   // Save results for comparison
-  const resultsJson = JSON.stringify({
-    timestamp: new Date().toISOString(),
-    database: "PostgreSQL",
-    results,
-  }, null, 2);
-  
+  const resultsJson = JSON.stringify(
+    {
+      timestamp: new Date().toISOString(),
+      database: "PostgreSQL",
+      results,
+    },
+    null,
+    2,
+  );
+
   require("fs").writeFileSync(
     "./benchmarks/postgresql-benchmarks.json",
-    resultsJson
+    resultsJson,
   );
-  
+
   console.log("💾 Results saved to benchmarks/postgresql-benchmarks.json");
 }
 
@@ -1282,6 +1360,7 @@ runBenchmarks().catch(console.error);
 ## Phase 3 Completion Checklist
 
 ### Test Infrastructure Updated
+
 - [ ] Test database utilities created and functional
 - [ ] All unit tests updated for PostgreSQL
 - [ ] Integration tests validate end-to-end functionality
@@ -1290,6 +1369,7 @@ runBenchmarks().catch(console.error);
 - [ ] No SQLite references remain in tests
 
 ### Performance Validated
+
 - [ ] Database queries perform within acceptable time limits
 - [ ] Concurrent access patterns work efficiently
 - [ ] Job processing handles expected load
@@ -1298,6 +1378,7 @@ runBenchmarks().catch(console.error);
 - [ ] Connection pooling is efficient
 
 ### Deployment Ready
+
 - [ ] Production build works with PostgreSQL
 - [ ] Docker deployment tested and validated
 - [ ] Environment configuration validates
@@ -1306,6 +1387,7 @@ runBenchmarks().catch(console.error);
 - [ ] Performance benchmarks documented
 
 ### Documentation Complete
+
 - [ ] All testing procedures documented
 - [ ] Performance benchmarks recorded
 - [ ] Deployment validation completed
@@ -1322,6 +1404,7 @@ runBenchmarks().catch(console.error);
 ## Success Criteria
 
 Phase 3 is successfully completed when:
+
 1. All tests pass with PostgreSQL-only configuration (95%+ pass rate)
 2. Performance meets or exceeds baseline requirements
 3. Deployment validation completes successfully
@@ -1340,6 +1423,7 @@ Phase 3 is successfully completed when:
 ## Next Steps After Phase 3
 
 With all phases completed:
+
 1. **Production Deployment**: Deploy to production environment
 2. **Monitoring Setup**: Implement production monitoring and alerting
 3. **Team Handover**: Complete knowledge transfer to operations team

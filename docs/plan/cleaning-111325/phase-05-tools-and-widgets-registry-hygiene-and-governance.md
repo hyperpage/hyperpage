@@ -66,6 +66,7 @@ For each tool:
    - **Legacy**: No longer used; candidate for removal.
 
 Deliverable: a mapping table in this file:
+
 - Tool → Env flag(s) → Status (Active/Config-only/Legacy) → Actions.
 
 ### 1.2 Widgets
@@ -130,6 +131,7 @@ For each tool definition:
    - No extra handlers not referenced by `apis`.
 
 If discrepancies exist:
+
 - Fix definitions to match reality.
 - Add tests (Phase 03) around the registry to enforce correctness.
 
@@ -183,6 +185,7 @@ Enforce:
    - Shows tools and widgets **only** if registry reports enabled.
 
 No:
+
 - Hardcoded enablement toggles inside components.
 - Divergence between API-visible tools and UI-visible tools.
 
@@ -219,6 +222,7 @@ For each tool:
    - `/app/components/**` for no direct access to `process.env` tool secrets.
 
 Any leakage:
+
 - Must be fixed immediately.
 - Add regression tests where practical.
 

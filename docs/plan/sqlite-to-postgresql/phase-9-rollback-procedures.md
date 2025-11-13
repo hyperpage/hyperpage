@@ -447,13 +447,13 @@ watch -n 10 "kubectl top pods -l app=hyperpage -n $NAMESPACE"
 
 ## Rollback Decision Matrix
 
-| Scenario | Severity | Rollback Time | Method | Validation |
-|----------|----------|---------------|---------|------------|
-| Database corruption | Critical | <5 min | Emergency | Health check |
-| Security incident | Critical | <5 min | Emergency | Security validation |
-| Performance issues | High | <30 min | Planned | Performance test |
-| Functionality broken | High | <15 min | Emergency | Feature test |
-| Maintenance window | Medium | <60 min | Planned | Full validation |
+| Scenario             | Severity | Rollback Time | Method    | Validation          |
+| -------------------- | -------- | ------------- | --------- | ------------------- |
+| Database corruption  | Critical | <5 min        | Emergency | Health check        |
+| Security incident    | Critical | <5 min        | Emergency | Security validation |
+| Performance issues   | High     | <30 min       | Planned   | Performance test    |
+| Functionality broken | High     | <15 min       | Emergency | Feature test        |
+| Maintenance window   | Medium   | <60 min       | Planned   | Full validation     |
 
 ## Success Criteria
 

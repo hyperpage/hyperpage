@@ -5,13 +5,14 @@
 **Phase 6 Status**: ✅ **COMPLETE**  
 **Implementation Date**: 2025-11-11  
 **Migration Progress**: 67% Complete (6/9 phases)  
-**Phase Dependencies**: Builds on Phase 5 (Kubernetes Implementation)  
+**Phase Dependencies**: Builds on Phase 5 (Kubernetes Implementation)
 
 This phase implements comprehensive data migration infrastructure for moving from SQLite to PostgreSQL, including schema conversion, data transformation, validation, and production-ready migration procedures.
 
 ## Phase 6 Objectives
 
 ### 1. **Schema Analysis and Conversion**
+
 - ✅ Complete SQLite schema analysis and mapping
 - ✅ PostgreSQL data type mappings and conversions
 - ✅ SQLite-specific feature handling (autoincrement, JSON fields)
@@ -19,6 +20,7 @@ This phase implements comprehensive data migration infrastructure for moving fro
 - ✅ Custom field mapping configurations
 
 ### 2. **Data Migration Orchestration**
+
 - ✅ Batch processing with configurable batch sizes
 - ✅ Parallel processing capabilities for performance
 - ✅ Progress tracking and real-time monitoring
@@ -26,6 +28,7 @@ This phase implements comprehensive data migration infrastructure for moving fro
 - ✅ Transaction management and data consistency
 
 ### 3. **Data Validation and Verification**
+
 - ✅ Record count verification between source and target
 - ✅ Data integrity checks and validation queries
 - ✅ Schema validation and structural verification
@@ -33,6 +36,7 @@ This phase implements comprehensive data migration infrastructure for moving fro
 - ✅ Comprehensive validation reporting
 
 ### 4. **Production Migration Tools**
+
 - ✅ Command-line migration script with options
 - ✅ Dry-run capabilities for testing
 - ✅ Table-specific migration filters
@@ -40,6 +44,7 @@ This phase implements comprehensive data migration infrastructure for moving fro
 - ✅ Monitoring and alerting integration
 
 ### 5. **Migration Management**
+
 - ✅ Progress tracking utilities
 - ✅ Rollback procedures and emergency controls
 - ✅ Logging and audit trail capabilities
@@ -51,6 +56,7 @@ This phase implements comprehensive data migration infrastructure for moving fro
 ### Core Migration Components
 
 #### 1. **Schema Converter** (`lib/database/migration/schema-converter.ts`)
+
 ```typescript
 // Complete schema analysis and conversion utilities
 export const SchemaConverter = {
@@ -64,6 +70,7 @@ export const SchemaConverter = {
 ```
 
 **Key Features**:
+
 - SQLite to PostgreSQL type mapping system
 - Custom field mapping configurations
 - Automatic timestamp and JSON field handling
@@ -71,33 +78,40 @@ export const SchemaConverter = {
 - Validation query generation
 
 #### 2. **Migration Orchestrator** (`lib/database/migration/migration-orchestrator.ts`)
+
 ```typescript
 export class MigrationOrchestrator {
-  constructor(config: MigrationConfig)
-  async execute(): Promise<MigrationResult>
-  private async migrateTable(mapping: TableMapping): Promise<TableMigrationResult>
-  private async validateTable(mapping: TableMapping): Promise<ValidationResult[]>
-  getProgress(): Map<string, MigrationProgress>
+  constructor(config: MigrationConfig);
+  async execute(): Promise<MigrationResult>;
+  private async migrateTable(
+    mapping: TableMapping,
+  ): Promise<TableMigrationResult>;
+  private async validateTable(
+    mapping: TableMapping,
+  ): Promise<ValidationResult[]>;
+  getProgress(): Map<string, MigrationProgress>;
 }
 ```
 
 **Migration Configuration**:
+
 ```typescript
 interface MigrationConfig {
   sourceSqlite: BaseSQLiteDatabase;
   targetPostgres: BasePgDatabase;
   tables: TableMapping[];
-  batchSize: number;           // Records per batch (default: 1000)
-  parallel: boolean;           // Enable parallel processing
-  maxConcurrent: number;       // Max concurrent operations (default: 4)
-  validateData: boolean;       // Enable post-migration validation
-  handleTimestamps: boolean;   // Convert timestamps
-  handleJsonFields: boolean;   // Convert JSON fields
+  batchSize: number; // Records per batch (default: 1000)
+  parallel: boolean; // Enable parallel processing
+  maxConcurrent: number; // Max concurrent operations (default: 4)
+  validateData: boolean; // Enable post-migration validation
+  handleTimestamps: boolean; // Convert timestamps
+  handleJsonFields: boolean; // Convert JSON fields
   customMappings?: Record<string, Record<string, string>>;
 }
 ```
 
 #### 3. **Migration Script** (`scripts/migrate-sqlite-to-postgresql.ts`)
+
 ```bash
 # Command line usage
 npm run migrate-sqlite-to-postgresql [options]
@@ -109,6 +123,7 @@ npm run migrate-sqlite-to-postgresql --parallel --batch-size 500
 ```
 
 **Script Options**:
+
 - `--dry-run`: Validate migration without copying data
 - `--no-validation`: Skip post-migration validation
 - `--batch-size N`: Set batch size (default: 1000)
@@ -120,6 +135,7 @@ npm run migrate-sqlite-to-postgresql --parallel --batch-size 500
 ### Table Migrations Supported
 
 #### 1. **Jobs Table Migration**
+
 ```typescript
 // SQLite: text IDs, integer timestamps, JSON payloads
 // PostgreSQL: preserved text IDs, timestamp with time zone, jsonb
@@ -134,6 +150,7 @@ npm run migrate-sqlite-to-postgresql --parallel --batch-size 500
 ```
 
 #### 2. **Tool Configs Migration**
+
 ```typescript
 // SQLite: tool_name primary key, text config
 // PostgreSQL: key field, jsonb config
@@ -146,6 +163,7 @@ npm run migrate-sqlite-to-postgresql --parallel --batch-size 500
 ```
 
 #### 3. **Rate Limits Migration**
+
 ```typescript
 // SQLite: text id, integer timestamps
 // PostgreSQL: key field, timestamp fields
@@ -159,6 +177,7 @@ npm run migrate-sqlite-to-postgresql --parallel --batch-size 500
 ```
 
 #### 4. **App State Migration**
+
 ```typescript
 // SQLite: key-value text pairs
 // PostgreSQL: key-value with JSONB
@@ -169,6 +188,7 @@ npm run migrate-sqlite-to-postgresql --parallel --batch-size 500
 ```
 
 #### 5. **OAuth Tokens Migration**
+
 ```typescript
 // SQLite: integer ID, various text fields
 // PostgreSQL: bigserial ID, proper timestamp handling
@@ -182,6 +202,7 @@ npm run migrate-sqlite-to-postgresql --parallel --batch-size 500
 ```
 
 #### 6. **Users Migration**
+
 ```typescript
 // SQLite: text ID, provider info
 // PostgreSQL: UUID primary key
@@ -196,6 +217,7 @@ npm run migrate-sqlite-to-postgresql --parallel --batch-size 500
 ## Migration Process
 
 ### 1. **Pre-Migration Phase**
+
 ```bash
 # Dry run to validate schema compatibility
 npm run migrate-sqlite-to-postgresql --dry-run
@@ -205,6 +227,7 @@ npm run migrate-sqlite-to-postgresql --tables validation
 ```
 
 **Validation Checks**:
+
 - SQLite database accessibility
 - PostgreSQL database connectivity
 - Schema compatibility verification
@@ -212,6 +235,7 @@ npm run migrate-sqlite-to-postgresql --tables validation
 - Index and constraint compatibility
 
 ### 2. **Schema Migration Phase**
+
 ```typescript
 // Automatic schema creation
 async function createTargetTable(mapping: TableMapping) {
@@ -222,6 +246,7 @@ async function createTargetTable(mapping: TableMapping) {
 ```
 
 **Schema Migration Process**:
+
 - Analyze source table structure
 - Generate PostgreSQL CREATE TABLE statements
 - Create indexes and constraints
@@ -229,16 +254,17 @@ async function createTargetTable(mapping: TableMapping) {
 - Configure data types and defaults
 
 ### 3. **Data Migration Phase**
+
 ```typescript
 // Batch processing with progress tracking
 while (offset < sourceCount) {
   const batch = await getSourceBatch(mapping, offset, batchSize);
   const transformed = await transformData(batch, mapping);
   await insertTargetBatch(transformed, mapping);
-  
+
   progress.processedRecords += batch.length;
   displayProgress(progress);
-  
+
   if (config.parallel) {
     await sleep(10); // Prevent overwhelming databases
   }
@@ -246,6 +272,7 @@ while (offset < sourceCount) {
 ```
 
 **Data Migration Process**:
+
 - Fetch data in configurable batches
 - Transform data according to mapping rules
 - Apply type conversions (JSON, timestamps, etc.)
@@ -253,22 +280,24 @@ while (offset < sourceCount) {
 - Track progress and handle failures
 
 ### 4. **Validation Phase**
+
 ```typescript
 // Comprehensive post-migration validation
 const validationQueries = SchemaConverter.generateValidationQueries(mapping);
 for (const query of [countQuery, ...integrityChecks]) {
   const result = await config.targetPostgres.execute(query);
   const hasValidData = result.rows && result.rows.length > 0;
-  
+
   results.push({
-    type: 'integrity',
+    type: "integrity",
     passed: hasValidData,
-    message: hasValidData ? 'Validation passed' : 'Validation failed'
+    message: hasValidData ? "Validation passed" : "Validation failed",
   });
 }
 ```
 
 **Validation Checks**:
+
 - Record count comparison (SQLite vs PostgreSQL)
 - Data integrity verification
 - Sample data inspection
@@ -278,12 +307,14 @@ for (const query of [countQuery, ...integrityChecks]) {
 ## Performance Optimization
 
 ### 1. **Batch Processing**
+
 - **Default Batch Size**: 1000 records per batch
 - **Configurable**: `--batch-size 500` for smaller batches
 - **Memory Management**: Prevents memory overflow
 - **Progress Tracking**: Real-time progress updates
 
 ### 2. **Parallel Processing**
+
 ```typescript
 // Parallel migration option
 {
@@ -297,12 +328,14 @@ for (const query of [countQuery, ...integrityChecks]) {
 ```
 
 ### 3. **Database Optimization**
+
 - **Connection Pooling**: Efficient database connection management
 - **Transaction Management**: Batch transactions for consistency
 - **Index Optimization**: Post-migration index creation
 - **Vacuum Operations**: PostgreSQL maintenance scheduling
 
 ### 4. **Monitoring and Alerting**
+
 ```typescript
 // Progress tracking interface
 interface MigrationProgress {
@@ -312,7 +345,7 @@ interface MigrationProgress {
   failedRecords: number;
   startTime: number;
   endTime?: number;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   errors: string[];
 }
 ```
@@ -320,6 +353,7 @@ interface MigrationProgress {
 ## Error Handling and Recovery
 
 ### 1. **Batch-Level Error Handling**
+
 ```typescript
 try {
   const batch = await getSourceBatch(mapping, offset, batchSize);
@@ -335,12 +369,14 @@ try {
 ```
 
 ### 2. **Recovery Mechanisms**
+
 - **Partial Migration Support**: Continue from last successful batch
 - **Retry Logic**: Automatic retry with exponential backoff
 - **Data Validation**: Continuous validation during migration
 - **Rollback Procedures**: Emergency rollback to SQLite if needed
 
 ### 3. **Error Reporting**
+
 - **Detailed Error Logs**: Complete error context and stack traces
 - **Progress Tracking**: Real-time error count and status
 - **Recovery Recommendations**: Specific instructions for error resolution
@@ -349,6 +385,7 @@ try {
 ## Production Deployment
 
 ### 1. **Migration Checklist**
+
 - [ ] **Pre-Migration Validation**
   - [ ] Database connectivity verified
   - [ ] Schema compatibility confirmed
@@ -368,6 +405,7 @@ try {
   - [ ] Performance benchmarks met
 
 ### 2. **Migration Window Planning**
+
 ```bash
 # Migration window estimation
 Estimated time = (Total records / Batch size) * (Processing time per batch)
@@ -375,6 +413,7 @@ Example: 1,000,000 records / 1000 per batch * 0.5 seconds = 500 seconds (~8 minu
 ```
 
 **Factors Affecting Migration Time**:
+
 - Database size and complexity
 - Network latency and bandwidth
 - Server resources and load
@@ -382,21 +421,27 @@ Example: 1,000,000 records / 1000 per batch * 0.5 seconds = 500 seconds (~8 minu
 - Data transformation complexity
 
 ### 3. **Monitoring Setup**
+
 ```typescript
 // Real-time progress monitoring
 const monitor = new MigrationMonitor();
 monitor.onProgress((progress) => {
-  console.log(`📊 ${progress.table}: ${progress.processedRecords}/${progress.totalRecords}`);
+  console.log(
+    `📊 ${progress.table}: ${progress.processedRecords}/${progress.totalRecords}`,
+  );
 });
 
 monitor.onComplete((result) => {
-  console.log(`🎉 Migration completed: ${result.totalRecords} records in ${result.totalTime}ms`);
+  console.log(
+    `🎉 Migration completed: ${result.totalRecords} records in ${result.totalTime}ms`,
+  );
 });
 ```
 
 ## Validation Results
 
 ### 1. **Schema Validation**
+
 ```typescript
 // Generated validation queries
 {
@@ -410,12 +455,14 @@ monitor.onComplete((result) => {
 ```
 
 ### 2. **Data Quality Assurance**
+
 - **Record Count Verification**: Exact match between source and target
 - **Data Type Validation**: Proper conversion of all data types
 - **Constraint Verification**: Primary keys, foreign keys, and indexes
 - **Performance Benchmarking**: Query performance comparison
 
 ### 3. **Application Compatibility**
+
 - **API Endpoint Testing**: All endpoints functional with new database
 - **Tool Integration Verification**: All tools working with PostgreSQL
 - **User Authentication**: OAuth flows working correctly
@@ -424,6 +471,7 @@ monitor.onComplete((result) => {
 ## Rollback Procedures
 
 ### 1. **Emergency Rollback**
+
 ```bash
 # Immediate rollback to SQLite
 # 1. Stop PostgreSQL service
@@ -438,22 +486,23 @@ curl -f http://localhost:3000/api/health
 ```
 
 ### 2. **Data Recovery**
+
 ```typescript
 // Rollback data restoration
 async function rollbackMigration() {
   console.log("🔄 Starting rollback to SQLite...");
-  
+
   // Restore from backup if needed
   if (backupAvailable) {
     await restoreSQLiteBackup();
   }
-  
+
   // Clear PostgreSQL data
   await clearPostgreSQLData();
-  
+
   // Verify SQLite functionality
   await verifySQLiteConnectivity();
-  
+
   console.log("✅ Rollback completed");
 }
 ```
@@ -476,12 +525,14 @@ async function rollbackMigration() {
 ## Integration with Previous Phases
 
 ### Phase 5 Integration
+
 - ✅ Uses Kubernetes infrastructure for PostgreSQL deployment
 - ✅ Integrates with Phase 8 monitoring and health checks
 - ✅ Leverages Phase 8 production deployment procedures
 - ✅ Connects with Phase 8 backup and recovery systems
 
 ### Phase 6 and Future Phases
+
 - ✅ Provides data foundation for Phase 7 (Testing and Validation)
 - ✅ Enables Phase 8 (Production Deployment) with migrated data
 - ✅ Supports Phase 9 (Rollback Procedures) with data recovery
@@ -492,6 +543,7 @@ async function rollbackMigration() {
 **🎉 Phase 6: Data Migration - COMPLETE**
 
 **Key Achievements**:
+
 - ✅ Complete SQLite to PostgreSQL migration infrastructure
 - ✅ Schema conversion and data type mapping system
 - ✅ Production-ready migration scripts and tools
@@ -502,9 +554,10 @@ async function rollbackMigration() {
 
 **Total Implementation Time**: Single session  
 **Confidence Level**: 95% ready for production  
-**Documentation**: Complete with examples and procedures  
+**Documentation**: Complete with examples and procedures
 
 **New Migration Features**:
+
 - 🚀 **Complete schema conversion system** with type mappings
 - 📊 **Batch processing with progress tracking** and monitoring
 - 🔄 **Parallel processing capabilities** for performance optimization
@@ -518,4 +571,4 @@ async function rollbackMigration() {
 
 **Next Phase**: [Phase 7: Testing and Validation](phase-7-testing-validation.md)
 
-*This phase provides the complete data migration infrastructure needed to move Hyperpage from SQLite to PostgreSQL, including all tools, scripts, and procedures required for a successful production migration.*
+_This phase provides the complete data migration infrastructure needed to move Hyperpage from SQLite to PostgreSQL, including all tools, scripts, and procedures required for a successful production migration._

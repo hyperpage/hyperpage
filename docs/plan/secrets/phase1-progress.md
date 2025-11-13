@@ -1,5 +1,5 @@
 - [x] Create .env.docker template with secure defaults
-- [x] Create .env.docker.sample as committed template  
+- [x] Create .env.docker.sample as committed template
 - [x] Update docker-compose.yml to use external secrets
 - [x] Add Docker secrets support for enhanced security
 - [x] Update .gitignore to allow .env.docker.sample commit
