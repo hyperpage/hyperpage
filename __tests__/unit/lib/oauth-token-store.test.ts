@@ -24,276 +24,49 @@ interface MockDBRecord {
 // In-memory storage to simulate database operations
 const mockDB: Map<string, MockDBRecord> = new Map();
 
-// Interface for Drizzle condition types
-interface DrizzleEqCondition {
-  eq: {
-    left: unknown;
-    right: unknown;
-  };
-}
 
-// Mock drizzle-orm/better-sqlite3
-vi.mock("drizzle-orm/better-sqlite3", () => {
-  return {
-    drizzle: vi.fn().mockReturnValue({
-      insert: vi.fn().mockImplementation(() => ({
-        values: vi.fn().mockImplementation((data) => ({
-          onConflictDoUpdate: vi.fn().mockImplementation(() => {
-            const key = `${data.userId}_${data.toolName}`;
-            const recordWithId: MockDBRecord & { id?: number } = {
-              ...data,
-              id: Date.now(),
-            };
-            mockDB.set(key, recordWithId as MockDBRecord);
-            return Promise.resolve({});
-          }),
-        })),
-      })),
-      select: vi.fn().mockImplementation(() => {
-        return {
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockImplementation((conditions) => {
-              return {
-                limit: vi.fn().mockImplementation((count) => {
-                  let results = Array.from(mockDB.values());
-
-                  // Enhanced condition processing for getTokens
-                  let conditionArray: DrizzleEqCondition[] = [];
-
-                  if (conditions && Array.isArray(conditions)) {
-                    conditionArray = conditions;
-                  } else if (
-                    conditions &&
-                    typeof conditions === "object" &&
-                    "and" in conditions
-                  ) {
-                    // and() returns { and: single_condition }, but we need an array
-                    const andCondition = (
-                      conditions as { and: DrizzleEqCondition }
-                    ).and;
-                    conditionArray = [andCondition];
-                  }
-
-                  conditionArray.forEach((condition: DrizzleEqCondition) => {
-                    if (
-                      condition?.eq &&
-                      condition.eq.left &&
-                      typeof condition.eq.left === "object"
-                    ) {
-                      // Handle both schema column objects and simple field names
-                      let fieldName: string;
-                      if ("name" in condition.eq.left) {
-                        fieldName = (condition.eq.left as { name: string })
-                          .name;
-                      } else if ("columns" in condition.eq.left) {
-                        // Handle complex column references
-                        fieldName = "userId"; // Default for now
-                      } else {
-                        // Handle direct string field names
-                        fieldName = condition.eq.left as unknown as string;
-                      }
-                      const expectedValue = condition.eq.right;
-
-                      results = results.filter((record) => {
-                        const recordValue = (
-                          record as unknown as Record<string, unknown>
-                        )[fieldName];
-                        return recordValue === expectedValue;
-                      });
-                    }
-                  });
-
-                  return Promise.resolve(results.slice(0, count || 1));
-                }),
-                // Handle SQL template expressions for getExpiredTokens
-                execute: vi.fn().mockImplementation((sqlTemplate) => {
-                  if (
-                    sqlTemplate &&
-                    typeof sqlTemplate === "object" &&
-                    "_type" in sqlTemplate &&
-                    sqlTemplate._type === "sql"
-                  ) {
-                    const now = Date.now();
-                    const expiredRecords = Array.from(mockDB.values()).filter(
-                      (record) => record.expiresAt && record.expiresAt < now,
-                    );
-                    return Promise.resolve(
-                      expiredRecords.map((record) => ({
-                        userId: record.userId,
-                        toolName: record.toolName,
-                      })),
-                    );
-                  }
-                  return Promise.resolve([]);
-                }),
-              };
-            }),
-          }),
-        };
-      }),
-      delete: vi.fn().mockReturnValue({
-        where: vi.fn().mockImplementation((conditions) => {
-          // Handle both array and and-object formats
-          let conditionArray: DrizzleEqCondition[] = [];
-
-          if (conditions && Array.isArray(conditions)) {
-            conditionArray = conditions;
-          } else if (
-            conditions &&
-            typeof conditions === "object" &&
-            "and" in conditions
-          ) {
-            // and() returns { and: single_condition }, but we need an array
-            const andCondition = (conditions as { and: DrizzleEqCondition })
-              .and;
-            conditionArray = [andCondition];
-          }
-
-          if (conditionArray.length > 0) {
-            let userId: string | null = null;
-            let toolName: string | null = null;
-
-            conditionArray.forEach((condition: DrizzleEqCondition) => {
-              if (
-                condition?.eq &&
-                condition.eq.left &&
-                typeof condition.eq.left === "object"
-              ) {
-                // Handle both schema column objects and simple field names
-                let fieldName: string;
-                if ("name" in condition.eq.left) {
-                  fieldName = (condition.eq.left as { name: string }).name;
-                } else if ("columns" in condition.eq.left) {
-                  // Handle complex column references
-                  fieldName = "userId"; // Default for now
-                } else {
-                  // Handle direct string field names
-                  fieldName = condition.eq.left as unknown as string;
-                }
-                const expectedValue = condition.eq.right;
-
-                if (fieldName === "userId") {
-                  userId = expectedValue as string;
-                } else if (fieldName === "toolName") {
-                  toolName = expectedValue as string;
-                }
-              }
-            });
-
-            if (userId && toolName) {
-              const key = `${userId}_${toolName}`;
-              mockDB.delete(key);
-            }
-          }
-          return Promise.resolve({ rowsAffected: 1 });
-        }),
-      }),
-      update: vi.fn().mockImplementation(() => {
-        let setData: Record<string, unknown> = {};
-
-        return {
-          set: vi.fn().mockImplementation((data) => {
-            setData = data;
-            return {
-              where: vi.fn().mockImplementation((conditions) => {
-                // Handle both array and and-object formats
-                let conditionArray: DrizzleEqCondition[] = [];
-
-                if (conditions && Array.isArray(conditions)) {
-                  conditionArray = conditions;
-                } else if (
-                  conditions &&
-                  typeof conditions === "object" &&
-                  "and" in conditions
-                ) {
-                  // and() returns { and: single_condition }, but we need an array
-                  const andCondition = (
-                    conditions as { and: DrizzleEqCondition }
-                  ).and;
-                  conditionArray = [andCondition];
-                }
-
-                if (conditionArray.length > 0) {
-                  let userId: string | null = null;
-                  let toolName: string | null = null;
-
-                  conditionArray.forEach((condition: DrizzleEqCondition) => {
-                    if (
-                      condition?.eq &&
-                      condition.eq.left &&
-                      typeof condition.eq.left === "object"
-                    ) {
-                      // Handle both schema column objects and simple field names
-                      let fieldName: string;
-                      if ("name" in condition.eq.left) {
-                        fieldName = (condition.eq.left as { name: string })
-                          .name;
-                      } else if ("columns" in condition.eq.left) {
-                        // Handle complex column references
-                        fieldName = "userId"; // Default for now
-                      } else {
-                        // Handle direct string field names
-                        fieldName = condition.eq.left as unknown as string;
-                      }
-                      const expectedValue = condition.eq.right;
-
-                      if (fieldName === "userId") {
-                        userId = expectedValue as string;
-                      } else if (fieldName === "toolName") {
-                        toolName = expectedValue as string;
-                      }
-                    }
-                  });
-
-                  if (userId && toolName) {
-                    const key = `${userId}_${toolName}`;
-                    const existing = mockDB.get(key);
-
-                    if (existing) {
-                      const updatedRecord = {
-                        ...existing,
-                        ...setData,
-                        updatedAt: Date.now(),
-                      };
-                      mockDB.set(key, updatedRecord);
-                    }
-                  }
-                }
-                return Promise.resolve({});
-              }),
-            };
-          }),
-        };
-      }),
+// Mock a generic Drizzle-like client used by SecureTokenStorage's repository.
+// This keeps tests database-agnostic and avoids better-sqlite3/SQLite coupling.
+vi.mock("@/lib/database/oauth-token-repository", () => ({
+  getOAuthTokenRepository: () => ({
+    upsertToken: vi.fn(async (record: MockDBRecord) => {
+      const key = `${record.userId}_${record.toolName}`;
+      mockDB.set(key, {
+        ...record,
+        createdAt: record.createdAt ?? Date.now(),
+        updatedAt: record.updatedAt ?? Date.now(),
+      });
     }),
-  };
-});
-
-// Mock drizzle-orm functions (eq, and, sql)
-vi.mock("drizzle-orm", () => ({
-  eq: (left: unknown, right: unknown): DrizzleEqCondition => ({
-    eq: { left, right },
-  }),
-  and: (conditions: DrizzleEqCondition[]): { and: DrizzleEqCondition[] } => ({
-    and: conditions,
-  }),
-  sql: {
-    template: (strings: TemplateStringsArray, ...values: unknown[]) => {
-      return {
-        _type: "sql" as const,
-        getQuery: () => ({ text: strings.join("?"), values }),
-      };
-    },
-  },
-}));
-
-// Mock better-sqlite3
-vi.mock("better-sqlite3", () => ({
-  default: vi.fn().mockImplementation(() => {
-    return {
-      prepare: vi.fn(),
-      close: vi.fn(),
-    };
+    getToken: vi.fn(async (userId: string, toolName: string) => {
+      const key = `${userId}_${toolName}`;
+      const record = mockDB.get(key);
+      return record ?? null;
+    }),
+    deleteToken: vi.fn(async (userId: string, toolName: string) => {
+      const key = `${userId}_${toolName}`;
+      mockDB.delete(key);
+      return { rowsAffected: 1 };
+    }),
+    getExpiredTokens: vi.fn(async () => {
+      const now = Date.now();
+      return Array.from(mockDB.values())
+        .filter(record => record.expiresAt !== null && record.expiresAt < now)
+        .map(record => ({
+          userId: record.userId,
+          toolName: record.toolName,
+        }));
+    }),
+    cleanupExpiredTokens: vi.fn(async () => {
+      const now = Date.now();
+      let removed = 0;
+      for (const [key, record] of mockDB.entries()) {
+        if (record.expiresAt !== null && record.expiresAt < now) {
+          mockDB.delete(key);
+          removed += 1;
+        }
+      }
+      return removed;
+    }),
   }),
 }));
 
@@ -399,24 +172,7 @@ vi.mock("crypto", () => {
   };
 });
 
-// Mock oauthTokens table from schema
-vi.mock("@/lib/database/schema", () => ({
-  oauthTokens: {
-    userId: { name: "userId" },
-    toolName: { name: "toolName" },
-    accessToken: { name: "accessToken" },
-    refreshToken: { name: "refreshToken" },
-    tokenType: { name: "tokenType" },
-    expiresAt: { name: "expiresAt" },
-    refreshExpiresAt: { name: "refreshExpiresAt" },
-    scopes: { name: "scopes" },
-    metadata: { name: "metadata" },
-    ivAccess: { name: "ivAccess" },
-    ivRefresh: { name: "ivRefresh" },
-    createdAt: { name: "createdAt" },
-    updatedAt: { name: "updatedAt" },
-  },
-}));
+// No direct schema mocking; behavior is validated via the repository mock above.
 
 // Mock logger
 vi.mock("@/lib/logger", () => ({

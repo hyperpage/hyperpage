@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GET } from "@/app/api/health/route";
 import { toolRegistry } from "@/tools/registry";
 import { defaultCache } from "@/lib/cache/cache-factory";
+import { checkPostgresConnectivity } from "@/lib/database/connection";
 
 // Type definitions for test
 interface MockTool {
@@ -15,11 +16,17 @@ interface MockTool {
   handlers: Record<string, unknown>;
 }
 
+vi.mock("@/lib/database/connection", () => ({
+  checkPostgresConnectivity: vi.fn(),
+}));
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 describe("GET /api/health", () => {
   const mockRateLimitHandler = vi.fn();
+  const mockCheckPostgresConnectivity =
+    checkPostgresConnectivity as unknown as ReturnType<typeof vi.fn>;
 
   const mockToolGitHub: MockTool = {
     name: "GitHub",
@@ -49,6 +56,14 @@ describe("GET /api/health", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Ensure DB health is mocked for each test (default healthy)
+    mockCheckPostgresConnectivity.mockResolvedValue({
+      status: "healthy",
+      details: {
+        message: "OK",
+      },
+    } as never);
 
     // Set up mock tools in registry
     (toolRegistry as Record<string, MockTool>).github = mockToolGitHub;
@@ -83,7 +98,7 @@ describe("GET /api/health", () => {
     delete (toolRegistry as Record<string, MockTool>).gitlab;
   });
 
-  it("should return enhanced health status with rate limiting metrics", async () => {
+  it("should return enhanced health status with Postgres and rate limiting metrics when DB is healthy", async () => {
     const response = await GET();
     const data = await response.json();
 
@@ -92,12 +107,17 @@ describe("GET /api/health", () => {
     expect(data.timestamp).toBeDefined();
     expect(data.environment).toBeDefined();
 
+    // Database health (Postgres-only)
+    expect(data.database).toBeDefined();
+    expect(data.database.status).toBe("healthy");
+
     // Check cache stats
     expect(data.cache).toBeDefined();
     expect(data.cache.hitRate).toBe(67); // (100 / (100 + 50)) * 100 rounded
 
-    // Check rate limiting metrics
+    // Check rate limiting metrics (new schema)
     expect(data.rateLimits).toBeDefined();
+    expect(data.rateLimits.overallHealth).toBeDefined();
     expect(data.rateLimits.enabledPlatforms).toBe(2);
     expect(data.rateLimits.averageUsagePercent).toBeDefined();
     expect(data.rateLimits.platforms).toBeDefined();
@@ -106,18 +126,36 @@ describe("GET /api/health", () => {
     expect(data.rateLimits.platforms.gitlab).toBeDefined();
   });
 
-  it("should handle API failures gracefully", async () => {
+  it("should handle rate limit API failures gracefully while DB is healthy", async () => {
     // Mock platform failures
     mockRateLimitHandler.mockRejectedValue(new Error("API Error"));
 
     const response = await GET();
     const data = await response.json();
 
+    // DB is still mocked as healthy
     expect(response.status).toBe(200);
     expect(data.status).toBe("healthy");
+    expect(data.database.status).toBe("healthy");
 
     // Should report platforms as unknown when API fails
     expect(data.rateLimits.platforms.github.status).toBe("unknown");
     expect(data.rateLimits.platforms.gitlab.status).toBe("unknown");
+  });
+
+  it("should report unhealthy when Postgres connectivity fails", async () => {
+    mockCheckPostgresConnectivity.mockResolvedValueOnce({
+      status: "unhealthy",
+      details: {
+        message: "connection failed",
+      },
+    } as never);
+
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.status).toBe("unhealthy");
+    expect(data.database.status).toBe("unhealthy");
   });
 });

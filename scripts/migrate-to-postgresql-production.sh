@@ -202,8 +202,6 @@ spec:
           value: "hyperpage"
         - name: NODE_ENV
           value: "production"
-        - name: DB_ENGINE
-          value: "postgres"
         - name: MIGRATION_MODE
           value: "data-migration"
         - name: VALIDATION_ONLY
@@ -269,7 +267,6 @@ EOF
           --env="POSTGRES_DB=hyperpage" \
           --env="POSTGRES_USER=hyperpage" \
           --env="NODE_ENV=production" \
-          --env="DB_ENGINE=postgres" \
           --command -- \
           /bin/sh -c "npm run validate:migration" \
           -n $NAMESPACE
@@ -342,7 +339,6 @@ kubectl run app-connectivity-test-$TIMESTAMP \
   --env="POSTGRES_DB=hyperpage" \
   --env="POSTGRES_USER=hyperpage" \
   --env="NODE_ENV=production" \
-  --env="DB_ENGINE=postgres" \
   --command -- \
   /bin/sh -c "node -e \"const { createPool } = require('./lib/database/client'); const pool = createPool(); pool.query('SELECT 1 as test', (err, res) => { if (err) { console.error('Database connection failed:', err); process.exit(1); } else { console.log('Database connection successful:', res.rows[0]); process.exit(0); } });\"" \
   -n $NAMESPACE || log_warn "Application connectivity test may have issues"

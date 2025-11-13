@@ -1,6 +1,25 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Hyperpage Portal E2E Tests", () => {
+/**
+ * Hyperpage Portal E2E Tests (Playwright, Optional E2E Suite)
+ *
+ * This suite:
+ * - Exercises the full Hyperpage portal UI and navigation via Playwright
+ * - Assumes docker-compose.e2e + .env.e2e wiring and external services where applicable
+ *
+ * It MUST be:
+ * - Explicitly opt-in via E2E_TESTS=1
+ * - Treated as an optional E2E/CI suite, never a default local blocker
+ *
+ * Default behavior:
+ * - If E2E_TESTS is not set to "1", this suite is fully skipped to keep `vitest` and
+ *   unit/integration workflows fast and hermetic by default.
+ */
+const shouldRunE2ESuite = process.env.E2E_TESTS === "1";
+
+const describeE2E = shouldRunE2ESuite ? test.describe : test.describe.skip;
+
+describeE2E("Hyperpage Portal E2E Tests", () => {
   test("should load portal and display initial state", async ({ page }) => {
     await page.goto("/");
 

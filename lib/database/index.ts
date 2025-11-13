@@ -1,22 +1,25 @@
 /**
  * Database layer for Hyperpage data persistence
  *
- * Uses SQLite with Drizzle ORM for type-safe, efficient data operations.
+ * Phase 1+: PostgreSQL-only runtime.
+ *
+ * Uses PostgreSQL with Drizzle ORM for type-safe, efficient data operations.
  * Provides persistence for jobs, rate limits, configurations, and application state.
+ *
+ * IMPORTANT:
+ * - This module MUST NOT import or depend on any SQLite/better-sqlite3 helpers.
+ * - Migration-only utilities (migrate.ts, schema.ts, migration-orchestrator.ts, schema-converter.ts)
+ *   are intentionally excluded from the runtime surface.
  */
 
-import { runMigrations } from "@/lib/database/migrate";
 import {
-  getAppDatabase,
-  closeAllConnections,
-  getDatabaseStats,
-  checkDatabaseConnectivity,
+  getReadWriteDb,
+  checkPostgresConnectivity,
 } from "@/lib/database/connection";
 import { loadPersistedRateLimits } from "@/lib/rate-limit-service";
 import { loadToolConfigurations } from "@/lib/tool-config-manager";
 
-// Get application database instance (singleton)
-const { drizzle: db } = getAppDatabase();
+const db = getReadWriteDb();
 
 // Export the configured database instance
 export { db };
@@ -29,7 +32,7 @@ export type Database = typeof db;
  * Should be called when application shuts down
  */
 export function closeDatabase(): void {
-  closeAllConnections();
+  // Connection pooling is managed by pg; explicit close is handled by process lifecycle in this runtime.
 }
 
 /**
@@ -38,8 +41,8 @@ export function closeDatabase(): void {
  */
 export async function initializeDatabase(): Promise<void> {
   try {
-    // Run migrations to ensure schema is up to date
-    await runMigrations();
+    // NOTE: Schema migrations are managed by dedicated migration tooling.
+    // Runtime initialization assumes PostgreSQL schema has already been migrated.
 
     // Load persisted rate limit data into memory cache
     await loadPersistedRateLimits();
@@ -47,11 +50,11 @@ export async function initializeDatabase(): Promise<void> {
     // Load persisted tool configurations and apply to registry
     await loadToolConfigurations();
 
-    // Verify database connectivity
-    const connectivityCheck = checkDatabaseConnectivity();
+    // Verify PostgreSQL connectivity
+    const connectivityCheck = await checkPostgresConnectivity();
     if (connectivityCheck.status !== "healthy") {
       throw new Error(
-        `Database connectivity check failed: ${connectivityCheck.details.message}`,
+        `PostgreSQL connectivity check failed: ${connectivityCheck.details?.message ?? "unknown error"}`,
       );
     }
   } catch (error) {
@@ -69,21 +72,19 @@ export async function checkDatabaseHealth(): Promise<{
   details: Record<string, unknown>;
 }> {
   try {
-    // First check connectivity
-    const connectivity = checkDatabaseConnectivity();
+    // First check PostgreSQL connectivity
+    const connectivity = await checkPostgresConnectivity();
     if (connectivity.status !== "healthy") {
-      return connectivity;
+      return {
+        status: connectivity.status,
+        details: connectivity.details ?? {},
+      };
     }
-
-    // Note: Record counts would use proper database queries
-    // For now, just return connectivity info
-    const connectionStats = getDatabaseStats();
 
     return {
       status: "healthy",
       details: {
-        ...connectionStats,
-        note: "Database connected and ready. Record counting requires proper Drizzle setup.",
+        note: "PostgreSQL database connected and ready.",
       },
     };
   } catch (error) {
@@ -91,7 +92,6 @@ export async function checkDatabaseHealth(): Promise<{
       status: "unhealthy",
       details: {
         error: (error as Error).message,
-        connectivity: checkDatabaseConnectivity(),
       },
     };
   }

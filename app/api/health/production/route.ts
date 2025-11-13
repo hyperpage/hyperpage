@@ -1,9 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { checkDatabaseConnectivity, checkPostgresConnectivity } from "@/lib/database/connection";
-import { getReadWriteDb } from "@/lib/database/connection";
-import { assertPostgresConnection } from "@/lib/database/client";
+import { NextResponse } from "next/server";
+import { checkPostgresConnectivity } from "@/lib/database/connection";
 
-export async function GET(request: NextRequest) {
+export async function GET(): Promise<NextResponse> {
   try {
     const startTime = Date.now();
     
@@ -26,7 +24,7 @@ export async function GET(request: NextRequest) {
       cpu: process.cpuUsage(),
     };
 
-    // Database health checks
+    // Database health checks (PostgreSQL-only)
     const dbChecks: Array<{
       name: string;
       status: "healthy" | "unhealthy" | "degraded";
@@ -34,16 +32,6 @@ export async function GET(request: NextRequest) {
       details?: Record<string, unknown>;
     }> = [];
 
-    // Check both SQLite and PostgreSQL connectivity
-    const sqliteCheck = await checkDatabaseConnectivity();
-    dbChecks.push({
-      name: "SQLite",
-      status: sqliteCheck.status,
-      responseTime: Date.now() - startTime,
-      details: sqliteCheck.details,
-    });
-
-    // Check PostgreSQL if configured
     const pgCheck = await checkPostgresConnectivity();
     dbChecks.push({
       name: "PostgreSQL",
@@ -52,15 +40,7 @@ export async function GET(request: NextRequest) {
       details: pgCheck.details,
     });
 
-    // Check primary database (based on DB_ENGINE)
-    const primaryDbEngine = (process.env.DB_ENGINE || "sqlite").toLowerCase();
-    const primaryDb = dbChecks.find(db => 
-      db.name.toLowerCase() === primaryDbEngine
-    );
-
-    if (!primaryDb) {
-      systemHealth.status = "degraded";
-    }
+    const primaryDbEngine = "postgresql";
 
     // Application-specific health checks
     const appChecks: Array<{
@@ -182,15 +162,6 @@ export async function GET(request: NextRequest) {
         percentage: Math.round((systemHealth.memory.heapUsed / systemHealth.memory.heapTotal) * 100),
       },
       cpuUsage: systemHealth.cpu,
-    };
-
-    // Clean up CPU usage data to avoid huge objects
-    const healthData = {
-      status: systemHealth.status,
-      timestamp: systemHealth.timestamp,
-      version: systemHealth.version,
-      environment: systemHealth.environment,
-      uptime: systemHealth.uptime,
     };
 
     const response = {

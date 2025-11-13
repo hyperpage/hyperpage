@@ -10,8 +10,11 @@
  */
 
 import "dotenv/config";
-import { getAppDatabase, getPostgresDrizzleDb } from "../lib/database/connection";
-import { MigrationOrchestrator, type MigrationConfig } from "../lib/database/migration/migration-orchestrator";
+import { getPostgresDrizzleDb } from "../lib/database/connection";
+import {
+  MigrationOrchestrator,
+  type MigrationConfig,
+} from "../lib/database/migration/migration-orchestrator";
 import { SchemaConverter } from "../lib/database/migration/schema-converter";
 import * as sqliteSchema from "../lib/database/schema";
 import * as pgSchema from "../lib/database/pg-schema";
@@ -25,6 +28,31 @@ interface MigrationOptions {
   tables?: string[];
   handleTimestamps?: boolean;
   handleJsonFields?: boolean;
+}
+
+/**
+ * Result types for migration orchestration.
+ * Kept in sync with MigrationOrchestrator to avoid `any` usage here.
+ */
+interface MigrationValidationResult {
+  type: string;
+  passed: boolean;
+  message: string;
+}
+
+interface MigrationTableResult {
+  table: string;
+  recordsMigrated: number;
+  errors: string[];
+  validationResults: MigrationValidationResult[];
+}
+
+interface MigrationResultSummary {
+  success: boolean;
+  tableResults: MigrationTableResult[];
+  totalTime: number;
+  totalRecords: number;
+  totalErrors: number;
 }
 
 /**
@@ -47,15 +75,21 @@ async function main() {
     // Validate database connections
     console.log("🔌 Validating database connections...");
     
-    const { drizzle: sqlite } = getAppDatabase();
+    // Legacy note:
+    // Phase 1 runtime is PostgreSQL-only. This script is retained as migration tooling.
+    // To run a real migration, provide a SQLite drizzle instance here via a local change.
     const pgDb = getPostgresDrizzleDb();
     
-    console.log("✅ SQLite connection established");
     console.log("✅ PostgreSQL connection established");
     
-    // Create migration configuration
+    // Create migration configuration (placeholder sqlite source)
     const config: MigrationConfig = {
-      sourceSqlite: sqlite,
+      /**
+       * Phase 1 note:
+       * This script is migration tooling only. To run a real migration,
+       * inject a proper SQLite drizzle instance here via a local change.
+       */
+      sourceSqlite: {} as unknown,
       targetPostgres: pgDb,
       tables: createTableMappings(),
       batchSize: options.batchSize || 1000,
@@ -221,7 +255,7 @@ function createTableMappings() {
 async function executeDryRun(
   orchestrator: MigrationOrchestrator, 
   config: MigrationConfig
-): Promise<any> {
+): Promise<MigrationResultSummary> {
   console.log("🔍 Executing dry run...");
   console.log("📋 Validating table structures and migrations...");
   
@@ -315,7 +349,7 @@ Examples:
 /**
  * Display migration results
  */
-function displayResults(result: any, startTime: number) {
+function displayResults(result: MigrationResultSummary, startTime: number) {
   const totalTime = Date.now() - startTime;
   
   console.log("\n" + "=".repeat(50));

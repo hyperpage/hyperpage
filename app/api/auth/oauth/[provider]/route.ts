@@ -7,9 +7,9 @@ import {
   getOAuthStateClearCookieOptions,
 } from "@/lib/oauth-state-cookies";
 import { sessionManager } from "@/lib/sessions/session-manager";
-import { getAppDatabase } from "@/lib/database/connection";
+import { getReadWriteDb } from "@/lib/database/connection";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
-import { users } from "@/lib/database/schema";
+import { users } from "@/lib/database/pg-schema";
 import { exchangeCodeForTokens } from "@/lib/oauth-config";
 import { eq } from "drizzle-orm";
 import { getToolByName } from "@/tools";
@@ -215,8 +215,8 @@ export async function POST(
       // Generate unique user ID (format: provider:provider_id)
       const userId = `${provider}:${userProfile.id}`;
 
-      // Connect to database
-      const { drizzle: db } = getAppDatabase();
+      // Connect to PostgreSQL database
+      const db = getReadWriteDb();
 
       // Check if user already exists
       const existingUser = await db
@@ -250,17 +250,18 @@ export async function POST(
         return value == null ? null : String(value);
       };
 
+      const now = new Date();
+
       const userData = {
         id: userId,
-        provider: provider,
+        provider,
         providerUserId: getStringValue(userProfile, userMapping.id) || "",
-        email: getStringValue(userProfile, userMapping.email),
+        email: getStringValue(userProfile, userMapping.email) || "",
         username: getStringValue(userProfile, userMapping.username),
         displayName: getStringValue(userProfile, userMapping.name),
         avatarUrl: getStringValue(userProfile, userMapping.avatar),
-        createdAt:
-          existingUser.length > 0 ? existingUser[0].createdAt : Date.now(),
-        updatedAt: Date.now(),
+        createdAt: existingUser[0]?.createdAt ?? now,
+        updatedAt: now,
       };
 
       // Create or update user profile
@@ -271,23 +272,22 @@ export async function POST(
           target: users.id,
           set: {
             email: userData.email,
-            username: userData.username,
-            displayName: userData.displayName,
-            avatarUrl: userData.avatarUrl,
-            updatedAt: Date.now(),
+            // Map into existing schema fields; adjust when pgSchema.users changes.
+            name: userData.displayName ?? userData.username ?? users.name,
+            updatedAt: new Date(),
           },
         });
 
       // Store tokens securely
       const tokenStorage = new SecureTokenStorage();
-      const now = Date.now();
+      const nowMs = Date.now();
 
       await tokenStorage.storeTokens(userId, provider, {
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token || undefined,
         tokenType: tokenResponse.token_type || "Bearer",
         expiresAt: tokenResponse.expires_in
-          ? now + tokenResponse.expires_in * 1000
+          ? nowMs + tokenResponse.expires_in * 1000
           : undefined,
         refreshExpiresAt: undefined,
         scopes: tokenResponse.scope

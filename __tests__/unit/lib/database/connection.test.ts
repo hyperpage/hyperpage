@@ -1,56 +1,32 @@
-import { describe, test, expect, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
+import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { getTestDatabase } from "../../../../vitest.setup";
 import { getReadWriteDb } from "@/lib/database/connection";
 import * as pgSchema from "@/lib/database/pg-schema";
-import * as sqliteSchema from "@/lib/database/schema";
-import { Pool } from "pg";
 
-describe("Database Connection - Dual Engine", () => {
+describe("Database Connection - PostgreSQL Only", () => {
   let testDb: ReturnType<typeof getTestDatabase>;
   let originalEnv: string | undefined;
 
   beforeAll(() => {
-    // Store original environment
-    originalEnv = process.env.DB_ENGINE;
+    originalEnv = process.env.DATABASE_URL;
     testDb = getTestDatabase();
   });
 
   afterAll(() => {
-    // Restore original environment
     if (originalEnv !== undefined) {
-      process.env.DB_ENGINE = originalEnv;
-    } else {
-      delete process.env.DB_ENGINE;
+      process.env.DATABASE_URL = originalEnv;
     }
   });
 
-  beforeEach(() => {
-    // Reset environment before each test
-    delete process.env.DB_ENGINE;
-  });
-
-  describe("Engine Detection", () => {
-    test("should default to SQLite when no DB_ENGINE is set", () => {
-      process.env.DB_ENGINE = undefined;
+  describe("getReadWriteDb", () => {
+    test("should always return a PostgreSQL drizzle instance", () => {
       const db = getReadWriteDb();
-      
-      // Should return SQLite drizzle instance
-      expect(db).toBeDefined();
-    });
 
-    test("should use PostgreSQL when DB_ENGINE=postgres", () => {
-      process.env.DB_ENGINE = "postgres";
-      
-      // This will fail if PostgreSQL is not available, which is expected in unit tests
-      expect(() => getReadWriteDb()).toThrow();
-    });
-
-    test("should handle invalid DB_ENGINE values gracefully", () => {
-      process.env.DB_ENGINE = "invalid-engine";
-      const db = getReadWriteDb();
-      
-      // Should fall back to SQLite
       expect(db).toBeDefined();
+      expect(typeof db.select).toBe("function");
+      expect(typeof db.insert).toBe("function");
+      expect(typeof db.update).toBe("function");
+      expect(typeof db.delete).toBe("function");
     });
   });
 
@@ -215,20 +191,26 @@ describe("Database Connection - Dual Engine", () => {
     });
   });
 
-  describe("Environment Configuration", () => {
-    test("should use environment variables for configuration", () => {
-      // Test that database URL can be configured via environment
-      const testUrl = "postgresql://test:test@localhost:5432/test";
-      process.env.TEST_DATABASE_URL = testUrl;
-      
-      // The test database manager should pick up the new URL
-      // This is tested implicitly through the test setup
-      expect(process.env.TEST_DATABASE_URL).toBe(testUrl);
+  describe("Environment Configuration - PostgreSQL Only", () => {
+    test("should use DATABASE_URL as the single source of truth", () => {
+      const testUrl = "postgresql://test:test@localhost:5432/test_db";
+      const original = process.env.DATABASE_URL;
+
+      process.env.DATABASE_URL = testUrl;
+
+      // vitest.setup.ts is responsible for consuming DATABASE_URL;
+      // this assertion only verifies configuration wiring expectations.
+      expect(process.env.DATABASE_URL).toBe(testUrl);
+
+      if (original !== undefined) {
+        process.env.DATABASE_URL = original;
+      }
     });
 
-    test("should have fallback values for required configuration", () => {
-      // Test that defaults exist for required configuration
-      expect(process.env.TEST_DATABASE_URL).toBeDefined();
+    test("should not rely on TEST_DATABASE_URL for runtime behavior", () => {
+      // TEST_DATABASE_URL may exist in some environments, but is not used
+      // as the primary source of truth. DATABASE_URL is canonical.
+      expect(process.env.DATABASE_URL).toBeDefined();
     });
   });
 });

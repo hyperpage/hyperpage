@@ -4,15 +4,20 @@
  */
 
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { getAppDatabase } from "../connection";
 import * as pgSchema from "../pg-schema";
 import { SchemaConverter, type TableMapping } from "./schema-converter";
+import logger from "@/lib/logger";
 
 /**
  * Migration configuration
  */
 interface MigrationConfig {
-  sourceSqlite: ReturnType<typeof getAppDatabase>["drizzle"];
+  /**
+   * Legacy/migration-only sqlite drizzle instance.
+   * Phase 1 runtime is PostgreSQL-only; callers must construct and inject
+   * their own sqlite drizzle client when running historical migrations.
+   */
+  sourceSqlite: unknown;
   targetPostgres: NodePgDatabase<typeof pgSchema>;
   tables: TableMapping[];
   batchSize: number;
@@ -118,8 +123,13 @@ export class MigrationOrchestrator {
       return result;
 
     } catch (error) {
-      console.error("❌ Migration failed:", error);
-      
+      logger.error(
+        "Migration execution failed",
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : { error },
+      );
+
       const totalTime = Date.now() - startTime;
       return {
         success: false,
@@ -180,37 +190,55 @@ export class MigrationOrchestrator {
 
       while (offset < sourceCount) {
         try {
-          const batch = await this.getSourceBatch(mapping, offset, batchSize);
-          
+          const batch = await this.getSourceBatch(mapping);
+
           if (batch.length === 0) {
             break;
           }
 
-          // Transform data
           const transformed = await this.transformData(batch, mapping);
-
-          // Insert into target
           await this.insertTargetBatch(transformed, mapping);
 
           recordsMigrated += batch.length;
           progress.processedRecords = recordsMigrated;
 
-          console.log(`   - Progress: ${recordsMigrated}/${sourceCount} (${Math.round(recordsMigrated / sourceCount * 100)}%)`);
+          console.log(
+            `   - Progress: ${recordsMigrated}/${sourceCount} (${Math.round(
+              (recordsMigrated / sourceCount) * 100,
+            )}%)`,
+          );
 
           offset += batchSize;
 
-          // Add small delay to prevent overwhelming the database
           if (this.config.parallel) {
             await this.sleep(10);
           }
-
         } catch (error) {
-          const errorMsg = `Batch migration failed at offset ${offset}: ${String(error)}`;
+          const message =
+            error instanceof Error
+              ? error.message
+              : typeof error === "string"
+              ? error
+              : JSON.stringify(error);
+
+          const errorMsg = `Batch migration failed at offset ${offset}: ${message}`;
+
           progress.errors.push(errorMsg);
           progress.failedRecords += batchSize;
           errors.push(errorMsg);
-          
-          console.error(`   - ${errorMsg}`);
+
+          logger.error(
+            "Batch migration failed",
+            {
+              table: tableName,
+              offset,
+              batchSize,
+              error:
+                error instanceof Error
+                  ? { message: error.message, stack: error.stack }
+                  : { error },
+            },
+          );
         }
       }
 
@@ -231,13 +259,30 @@ export class MigrationOrchestrator {
       };
 
     } catch (error) {
-      const errorMsg = `Table migration failed: ${String(error)}`;
-      progress.status = 'failed';
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+          ? error
+          : JSON.stringify(error);
+
+      const errorMsg = `Table migration failed: ${message}`;
+
+      progress.status = "failed";
       progress.endTime = Date.now();
       progress.errors.push(errorMsg);
-      
-      console.error(`❌ ${errorMsg}`);
-      
+
+      logger.error(
+        "Table migration failed",
+        {
+          table: tableName,
+          error:
+            error instanceof Error
+              ? { message: error.message, stack: error.stack }
+              : { error },
+        },
+      );
+
       return {
         table: tableName,
         recordsMigrated: 0,
@@ -259,7 +304,16 @@ export class MigrationOrchestrator {
       console.log(`Warning: getSourceRecordCount needs proper drizzle query implementation for table: ${tableName}`);
       return 0;
     } catch (error) {
-      console.error(`Error getting count for ${tableName}:`, error);
+      logger.error(
+        "Error getting source record count",
+        {
+          table: tableName,
+          error:
+            error instanceof Error
+              ? { message: error.message, stack: error.stack }
+              : { error },
+        },
+      );
       return 0;
     }
   }
@@ -269,8 +323,6 @@ export class MigrationOrchestrator {
    */
   private async getSourceBatch(
     mapping: TableMapping,
-    offset: number,
-    limit: number
   ): Promise<Record<string, unknown>[]> {
     const tableName = SchemaConverter.analyzeSQLiteTable(mapping.sqliteTable).name;
     
@@ -280,7 +332,16 @@ export class MigrationOrchestrator {
       console.log(`Warning: getSourceBatch needs proper drizzle query implementation for table: ${tableName}`);
       return [];
     } catch (error) {
-      console.error(`Error getting batch for ${tableName}:`, error);
+      logger.error(
+        "Failed to get source batch",
+        {
+          table: tableName,
+          error:
+            error instanceof Error
+              ? { message: error.message, stack: error.stack }
+              : { error },
+        },
+      );
       return [];
     }
   }
@@ -300,7 +361,7 @@ export class MigrationOrchestrator {
         if (column.pgType === 'jsonb' && column.sqliteType === 'text') {
           try {
             targetValue = sourceValue ? JSON.parse(sourceValue as string) : null;
-          } catch (error) {
+          } catch {
             // Keep as text if JSON parsing fails
             targetValue = sourceValue;
           }
@@ -360,11 +421,31 @@ export class MigrationOrchestrator {
       });
 
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+          ? error
+          : JSON.stringify(error);
+
+      const errorMsg = `Validation failed: ${message}`;
+
+      logger.error(
+        "Table validation failed",
+        {
+          table: tableName,
+          error:
+            error instanceof Error
+              ? { message: error.message, stack: error.stack }
+              : { error },
+        },
+      );
+
       results.push({
-        type: 'integrity',
+        type: "integrity",
         passed: false,
-        message: `Validation failed: ${String(error)}`,
-        details: { error: String(error), tableName },
+        message: errorMsg,
+        details: { tableName },
       });
     }
 

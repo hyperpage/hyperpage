@@ -36,7 +36,30 @@ interface MockToolRegistry {
   [key: string]: MockToolConfig;
 }
 
-describe("Rate Limiting Performance Tests", () => {
+/**
+ * Rate Limiting Performance Tests (Synthetic, Optional CI/Performance Suite)
+ *
+ * This suite:
+ * - Exercises rate-limit monitoring behavior under synthetic high-load scenarios
+ * - Uses mocked tool registry entries and fetch responses only (no real network calls)
+ * - Provides timing and stability signals for enterprise-grade deployments
+ *
+ * It MUST be:
+ * - Explicitly opt-in via PERFORMANCE_TESTS=1
+ * - Treated as optional CI/enterprise-only coverage, never a default local blocker
+ *
+ * Default behavior:
+ * - If PERFORMANCE_TESTS is not set to "1", the suite is fully skipped so standard
+ *   `vitest` runs focus on structural correctness and hermetic unit/integration tests.
+ */
+const shouldRunRateLimitPerformanceSuite =
+  process.env.PERFORMANCE_TESTS === "1";
+
+const describeRateLimitPerformance = shouldRunRateLimitPerformanceSuite
+  ? describe
+  : describe.skip;
+
+describeRateLimitPerformance("Rate Limiting Performance Tests", () => {
   // Create spy for global.fetch
   const mockFetch = vi.fn();
   global.fetch = mockFetch;

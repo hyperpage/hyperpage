@@ -1,24 +1,26 @@
-import { describe, test, expect, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
+import { describe, test, expect } from "vitest";
 import { getReadWriteDb } from "@/lib/database/connection";
 import * as pgSchema from "@/lib/database/pg-schema";
 
-describe("Dual Engine Integration Tests", () => {
+/**
+ * Phase 3: PostgreSQL-only baseline
+ *
+ * This suite verifies that:
+ * - getReadWriteDb returns a PostgreSQL-backed drizzle instance
+ * - pgSchema exposes the expected canonical tables and JSONB columns
+ *
+ * It is safe to run against the vitest.setup.ts Postgres harness.
+ */
+
+describe("PostgreSQL Engine Integration Tests", () => {
   describe("Engine Selection", () => {
-    test("should select correct engine based on environment", () => {
-      // Test SQLite selection
-      delete process.env.DB_ENGINE;
-      const sqliteDb = getReadWriteDb();
-      expect(sqliteDb).toBeDefined();
-
-      // Test PostgreSQL selection (will fail if not available)
-      process.env.DB_ENGINE = "postgres";
-      expect(() => getReadWriteDb()).toThrow();
-    });
-
-    test("should handle invalid engine gracefully", () => {
-      process.env.DB_ENGINE = "invalid-engine";
+    test("should always return a PostgreSQL drizzle instance", () => {
       const db = getReadWriteDb();
       expect(db).toBeDefined();
+      expect(typeof db.select).toBe("function");
+      expect(typeof db.insert).toBe("function");
+      expect(typeof db.update).toBe("function");
+      expect(typeof db.delete).toBe("function");
     });
   });
 
@@ -27,7 +29,7 @@ describe("Dual Engine Integration Tests", () => {
       const requiredTables = [
         "users",
         "oauthTokens",
-        "toolConfigs", 
+        "toolConfigs",
         "rateLimits",
         "jobs",
         "jobHistory",
@@ -35,7 +37,7 @@ describe("Dual Engine Integration Tests", () => {
         "userSessions",
       ];
 
-      requiredTables.forEach(tableName => {
+      requiredTables.forEach((tableName) => {
         expect(pgSchema).toHaveProperty(tableName);
       });
     });
@@ -50,10 +52,8 @@ describe("Dual Engine Integration Tests", () => {
 
   describe("Connection Management", () => {
     test("should provide consistent interface", () => {
-      // This test verifies the dual-engine abstraction works
-      delete process.env.DB_ENGINE;
       const db = getReadWriteDb();
-      
+
       expect(db).toBeDefined();
       expect(typeof db.select).toBe("function");
       expect(typeof db.insert).toBe("function");
@@ -63,18 +63,26 @@ describe("Dual Engine Integration Tests", () => {
   });
 });
 
-describe("Performance Benchmarks", () => {
-  test("should complete basic operations within reasonable time", async () => {
-    const startTime = Date.now();
-    
-    // Simulate basic operation timing
-    const db = getReadWriteDb();
-    expect(db).toBeDefined();
-    
-    const endTime = Date.now();
-    const duration = endTime - startTime;
-    
-    // Should complete basic setup within 1 second
-    expect(duration).toBeLessThan(1000);
+/**
+ * Optional timing sanity check
+ *
+ * This is NOT a hard performance/SLO test; it only asserts that basic
+ * getReadWriteDb usage does not hang. To avoid flakiness in constrained
+ * environments, this block is gated behind POSTGRES_PERF_TESTS=1.
+ */
+if (process.env.POSTGRES_PERF_TESTS === "1") {
+  describe("PostgreSQL Engine - Timing Sanity (Optional)", () => {
+    test("should complete basic operations within reasonable time", async () => {
+      const startTime = Date.now();
+
+      const db = getReadWriteDb();
+      expect(db).toBeDefined();
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      // Loose upper bound; signals hangs without being environment-fragile
+      expect(duration).toBeLessThan(2000);
+    });
   });
-});
+}

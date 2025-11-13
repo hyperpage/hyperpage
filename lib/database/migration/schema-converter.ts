@@ -1,6 +1,11 @@
 /**
  * Schema Conversion Utilities for SQLite to PostgreSQL Migration
  * Phase 6: Data Migration
+ *
+ * IMPORTANT:
+ * - This module is migration tooling only (ops/one-off scripts).
+ * - It is NOT imported by the main runtime.
+ * - It assumes SQLite as a legacy source and PostgreSQL as the target.
  */
 
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
@@ -117,9 +122,10 @@ function analyzeSQLiteTable(table: SQLiteTable): {
  */
 function getTableName(table: SQLiteTable): string {
   // Try to extract table name - this is a simplified approach
-  // In a real implementation, you'd use drizzle's internal APIs
-  const name = (table as any).name || 'unknown_table';
-  return name;
+  // In a real implementation, you'd use drizzle's internal APIs.
+  // Cast through unknown instead of using `any` to satisfy linting.
+  const tableWithName = table as unknown as { name?: string };
+  return tableWithName.name ?? "unknown_table";
 }
 
 /**
@@ -217,9 +223,10 @@ function getCommonColumnInfo(tableName: string): Array<{
  * Get PostgreSQL table name
  */
 function getPgTableName(table: PgTable): string {
-  // Try to extract table name - this is a simplified approach
-  const name = (table as any).name || 'unknown_table';
-  return name;
+  // Try to extract table name - this is a simplified approach.
+  // Cast through unknown instead of using `any` to satisfy linting.
+  const tableWithName = table as unknown as { name?: string };
+  return tableWithName.name ?? "unknown_table";
 }
 
 /**

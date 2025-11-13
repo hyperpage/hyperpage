@@ -1,6 +1,27 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Tool Integration E2E Tests", () => {
+/**
+ * Tool Integration E2E Tests (Playwright, Optional E2E Suite)
+ *
+ * This suite:
+ * - Validates end-to-end tool discovery and integration flows via Playwright
+ * - Assumes docker-compose.e2e + .env.e2e and any required external/tool wiring
+ *
+ * It MUST be:
+ * - Explicitly opt-in via E2E_TESTS=1
+ * - Treated as optional E2E/CI coverage, never a default local blocker
+ *
+ * Default behavior:
+ * - If E2E_TESTS is not set to "1", this suite is fully skipped so local/unit/integration
+ *   workflows remain fast and hermetic.
+ */
+const shouldRunToolIntegrationE2E = process.env.E2E_TESTS === "1";
+
+const describeToolIntegrationE2E = shouldRunToolIntegrationE2E
+  ? test.describe
+  : test.describe.skip;
+
+describeToolIntegrationE2E("Tool Integration E2E Tests", () => {
   test.describe("Tool Discovery and Management", () => {
     test("should display tools in sidebar when enabled", async ({ page }) => {
       await page.goto("/");

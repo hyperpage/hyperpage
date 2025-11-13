@@ -355,9 +355,9 @@ export async function saveRateLimitStatus(
 
     await rateLimitRepository.upsert(limitRecord);
 
-    // Also clean up old rate limit records (older than 7 days) for SQLite backend.
-    const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    await rateLimitRepository.cleanupOlderThan(cutoffTime);
+    // Also clean up old rate limit records (legacy behavior).
+    // Phase 1+: cleanup is a documented no-op for PostgreSQL, exposed for compatibility.
+    await rateLimitRepository.cleanupOlderThan();
   } catch (_error) {
     rateLimitLogger.event(
       "error",
