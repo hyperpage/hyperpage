@@ -1,6 +1,7 @@
+import logger, { rateLimitLogger } from "@/lib/logger";
+
 import * as pgSchema from "./pg-schema";
 import { getReadWriteDb } from "./connection";
-import logger, { rateLimitLogger } from "@/lib/logger";
 
 /**
  * Normalized rate limit record used by higher-level services.

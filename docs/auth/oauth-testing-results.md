@@ -143,7 +143,7 @@ The OAuth system is now ready to extend to Jira and GitLab following the establi
 ## 🔄 Environment Status
 
 - **OAuth App**: Ready (user needs to register at https://github.com/settings/applications/new)
-- **Environment Variables**: Configured in `.env.local`
+- **Environment Variables**: Configured in `.env.dev`
 - **Database**: Initialized and ready for token storage
 - **Redis Cache**: Available for session management
 - **API Endpoints**: Active and responding correctly

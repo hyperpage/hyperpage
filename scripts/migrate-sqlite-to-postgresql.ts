@@ -351,9 +351,7 @@ function displayResults(result: MigrationResultSummary, startTime: number) {
   logger.info("📊 MIGRATION RESULTS");
   logger.info("=".repeat(50));
 
-  logger.info(
-    `Overall Status: ${result.success ? "✅ SUCCESS" : "❌ FAILED"}`,
-  );
+  logger.info(`Overall Status: ${result.success ? "✅ SUCCESS" : "❌ FAILED"}`);
   logger.info(`Total Time: ${totalTime}ms`);
   logger.info(`Total Records: ${result.totalRecords}`);
   logger.info(`Total Errors: ${result.totalErrors}`);

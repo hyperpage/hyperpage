@@ -151,7 +151,7 @@ export async function checkDatabaseHealth(): Promise<boolean> {
 
 ### Step 3: Environment Variables Update
 
-#### Update .env.local.sample
+#### Update .env.sample
 
 ```env
 # Database Configuration
@@ -177,7 +177,7 @@ DB_CONNECTION_TIMEOUT=2000
 # data/*.db
 
 # Keep PostgreSQL environment variables safe
-.env.local
+.env.dev
 ```
 
 ### Step 4: TypeScript Type Updates
@@ -245,7 +245,7 @@ process.on("SIGTERM", () => {
 
 1. **`package.json`** - Update dependencies
 2. **`lib/database/connection.ts`** - Complete rewrite for PostgreSQL
-3. **`.env.local.sample`** - Add PostgreSQL environment variables
+3. **`.env.sample`** - Add PostgreSQL environment variables
 4. **`.gitignore`** - Remove SQLite database files
 
 ### Import Statements to Update
@@ -305,7 +305,7 @@ describe("Database Operations", () => {
 
 ### Environment Setup
 
-- [ ] .env.local.sample updated with PostgreSQL variables
+- [ ] .env.sample updated with PostgreSQL variables
 - [ ] .gitignore updated to exclude SQLite files
 - [ ] Database URL configuration working
 

@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { AlertCircle } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -9,8 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 import { useSetupWizard } from "@/app/components/hooks/useSetupWizard";
+
 import { ToolSetupCard } from "./ToolSetupCard";
 
 export function ToolConfiguration() {

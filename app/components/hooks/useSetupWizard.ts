@@ -1,5 +1,6 @@
 // hooks/useSetupWizard.ts
 import { useState, useEffect, useCallback } from "react";
+
 import logger from "@/lib/logger";
 
 interface SetupStep {
@@ -39,7 +40,7 @@ export function useSetupWizard(): UseSetupWizardReturn {
           title: "Configure environment variables",
           description: "Set ENABLE_GITHUB=true and add your token",
           status: "pending",
-          action: "Edit .env.local file",
+          action: "Edit .env.dev file",
         },
         {
           id: "get-token",
@@ -64,7 +65,7 @@ export function useSetupWizard(): UseSetupWizardReturn {
           title: "Configure environment variables",
           description: "Set ENABLE_GITLAB=true and add your token",
           status: "pending",
-          action: "Edit .env.local file",
+          action: "Edit .env.dev file",
         },
         {
           id: "get-token",
@@ -89,7 +90,7 @@ export function useSetupWizard(): UseSetupWizardReturn {
           title: "Configure environment variables",
           description: "Set ENABLE_JIRA=true and add your credentials",
           status: "pending",
-          action: "Edit .env.local file",
+          action: "Edit .env.dev file",
         },
         {
           id: "get-token",

@@ -14,6 +14,7 @@
  * - It assumes a better-sqlite3-style Database instance provided by the caller.
  */
 import type { Database as SqliteDatabase } from "better-sqlite3";
+
 import {
   MIGRATIONS_REGISTRY,
   getMigrationNames,

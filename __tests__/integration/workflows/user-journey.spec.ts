@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+
 import {
   IntegrationTestEnvironment,
   OAuthTestCredentials,

@@ -32,7 +32,7 @@ Contains template values for Docker secrets:
 - Shows required variables
 - Safe to commit to version control
 
-### `.env.local` (Private - Not Committed)
+### `.env.dev` (Private - Not Committed)
 
 Contains application-specific configuration:
 
@@ -41,7 +41,7 @@ Contains application-specific configuration:
 - Service-specific settings
 - **NEVER commit this file to version control**
 
-### `.env.local.sample` (Template - Committed)
+### `.env.sample` (Template - Committed)
 
 Contains template for application configuration:
 
@@ -70,8 +70,8 @@ Contains template for application configuration:
 3. **Setup application configuration**
 
    ```bash
-   cp .env.local.sample .env.local
-   # Edit .env.local with your API tokens
+   cp .env.sample .env.dev
+   # Edit .env.dev with your API tokens
    ```
 
 4. **Start services**
@@ -129,9 +129,9 @@ OAUTH_ENCRYPTION_KEY=your_oauth_encryption_key
 - Use different passwords for different environments
 - Generate strong secrets: `openssl rand -hex 32`
 
-### Application Configuration (.env.local)
+### Application Configuration (.env.dev)
 
-The `.env.local` file contains application-specific configuration:
+The `.env.dev` file contains application-specific configuration:
 
 ```bash
 # Tool Configuration
@@ -199,9 +199,9 @@ openssl rand -hex 32
 ```bash
 # Set restrictive permissions on secret files
 chmod 600 .env.docker
-chmod 600 .env.local
+chmod 600 .env.dev
 chmod 644 .env.docker.sample
-chmod 644 .env.local.sample
+chmod 644 .env.sample
 ```
 
 **Version Control:**

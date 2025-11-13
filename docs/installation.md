@@ -25,12 +25,12 @@ This guide covers the detailed installation process, system requirements, and co
 
 3. **Copy environment template:**
    ```bash
-   cp .env.local.sample .env.local
+   cp .env.sample .env.dev
    ```
 
 ## Configuration
 
-Edit `.env.local` to configure your tool integrations. The system uses environment variables to enable/disable tools and provide authentication.
+Edit `.env.dev` to configure your tool integrations. The system uses environment variables to enable/disable tools and provide authentication.
 
 ### Core Configuration
 
@@ -60,7 +60,7 @@ To create a GitHub Personal Access Token:
 2. Generate new token with these permissions:
    - `repo` (Full control of private repositories)
    - `read:org` (Read org and team membership, if using organization repos)
-3. Copy the token and add it to your `.env.local`
+3. Copy the token and add it to your `.env.dev`
 
 #### GitLab Integration
 
@@ -113,7 +113,7 @@ Only web URLs need to be configured in environment variables.
    Open [http://localhost:3000](http://localhost:3000) in your browser
 
 3. **Enable tools:**
-   - Edit `.env.local` to set `ENABLE_TOOL=true` for desired integrations
+   - Edit `.env.dev` to set `ENABLE_TOOL=true` for desired integrations
    - Restart the development server
    - Tool widgets will appear on the portal automatically
 
@@ -137,7 +137,7 @@ Only web URLs need to be configured in environment variables.
 
 **"Tool not appearing on portal"**
 
-- Verify `ENABLE_TOOL=true` in `.env.local`
+- Verify `ENABLE_TOOL=true` in `.env.dev`
 - Restart the development server after configuration changes
 - Check that all required environment variables are set
 

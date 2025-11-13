@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import { getRequiredScopes } from "@/lib/oauth-config";
 import NotConfiguredState from "@/app/components/NotConfiguredState";
 import StatusBadge from "@/app/components/StatusBadge";

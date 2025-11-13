@@ -125,7 +125,6 @@ All error logging MUST use the shared Pino logger from `lib/logger.ts`. Direct u
   - Library/service layers
   - Tool handlers and integrations
 
-
 ```javascript
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),

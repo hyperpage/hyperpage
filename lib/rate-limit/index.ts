@@ -11,6 +11,8 @@
  * - rate-limit-utils.ts (platform detection and utilities)
  */
 
+import type { NextRequest } from "next/server";
+
 import type {
   RateLimitUsage,
   PlatformRateLimits,
@@ -21,7 +23,6 @@ import { toolRegistry } from "@/tools/registry";
 import { Tool } from "@/tools/tool-types";
 import { rateLimitLogger } from "@/lib/logger";
 import { rateLimitRepository } from "@/lib/database/rate-limit-repository";
-import type { NextRequest } from "next/server";
 
 // Enhanced interfaces for unified service
 export interface UnifiedRateLimitServiceOptions {

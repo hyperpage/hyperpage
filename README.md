@@ -32,8 +32,8 @@ cd hyperpage
 npm install
 
 # Configure environment
-cp .env.local.sample .env.local
-# Edit .env.local to enable your tools (see docs/installation.md)
+cp .env.sample .env.dev
+# Edit .env.dev to enable your tools (see docs/installation.md)
 
 # Start development server
 npm run dev
@@ -45,7 +45,7 @@ Open [http://localhost:3000](http://localhost:3000) to view your portal.
 
 ### Environment Variables
 
-Hyperpage uses environment variables for configuration. Copy `.env.local.sample` to `.env.local` and configure the values you need.
+Hyperpage uses environment variables for configuration. Copy `.env.sample` to `.env.dev` and configure the values you need.
 
 #### Required Variables
 

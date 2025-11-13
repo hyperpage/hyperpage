@@ -1,5 +1,6 @@
 import React from "react";
 import { Gitlab } from "lucide-react";
+
 import { Tool, ToolConfig, TransformedIssue } from "@/tools/tool-types";
 import {
   GitLabMergeRequest,

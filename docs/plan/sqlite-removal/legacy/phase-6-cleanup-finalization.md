@@ -101,7 +101,7 @@ echo "Starting SQLite configuration cleanup..."
 
 # Remove SQLite paths from .env templates
 echo "Cleaning up environment variables..."
-sed -i '' '/DATABASE_PATH\|DB_ENGINE\|sqlite/d' .env.local.sample
+sed -i '' '/DATABASE_PATH\|DB_ENGINE\|sqlite/d' .env.sample
 
 # Remove SQLite volumes from Docker configs
 echo "Cleaning up Docker configurations..."

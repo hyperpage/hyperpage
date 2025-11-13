@@ -415,7 +415,7 @@ const {
 - **Feature-based Structure**: Components grouped by domain (portal)
 - **Shared Components**: Reusable UI primitives in `components/ui/`
 - **Custom Hooks**: Business logic encapsulated in `hooks/` directory
-- **Configuration Management**: Environment variables in `.env.local.sample`
+- **Configuration Management**: Environment variables in `.env.sample`
 
 ### Testing Strategy
 

@@ -26,7 +26,7 @@ The Hyperpage project now has a comprehensive secrets management system for loca
 
 ### 4. **Enhanced Application Configuration Documentation**
 
-- **Updated `.env.local.sample`**: Now references the new Docker secrets system
+- **Updated `.env.sample`**: Now references the new Docker secrets system
 - **Improved Setup Flow**: Clear instructions for both Docker and application configuration
 - **Better Developer Experience**: More intuitive setup process for new team members
 
@@ -59,8 +59,8 @@ cp .env.docker.sample .env.docker
 # Edit .env.docker with secure passwords
 
 # 3. Setup application configuration
-cp .env.local.sample .env.local
-# Edit .env.local with your API tokens
+cp .env.sample .env.dev
+# Edit .env.dev with your API tokens
 
 # 4. Start services
 docker-compose up -d
@@ -148,8 +148,8 @@ rm docker-compose.yml.backup
 .
 ├── .env.docker              # Private - Docker infrastructure secrets
 ├── .env.docker.sample       # Committed - Docker secrets template
-├── .env.local               # Private - Application configuration
-├── .env.local.sample        # Committed - Application config template
+├── .env.dev               # Private - Application configuration
+├── .env.sample        # Committed - Application config template
 ├── docker-compose.yml       # Updated to use env_file directives
 ├── .gitignore              # Updated to protect secret files
 └── docs/secrets/
@@ -161,7 +161,7 @@ rm docker-compose.yml.backup
 
 1. **Docker Compose** reads `.env.docker` via `env_file` directive
 2. **Infrastructure services** (PostgreSQL, Redis) use environment variables from `.env.docker`
-3. **Application service** (Hyperpage) reads both `.env.docker` and `.env.local`
+3. **Application service** (Hyperpage) reads both `.env.docker` and `.env.dev`
 4. **Template files** provide setup instructions and examples
 
 ## 📋 Next Steps

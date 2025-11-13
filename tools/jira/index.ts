@@ -1,5 +1,6 @@
 import React from "react";
 import { Kanban } from "lucide-react";
+
 import { Tool, ToolConfig } from "@/tools/tool-types";
 import { JiraApiIssue } from "@/tools/jira/types";
 import { registerTool } from "@/tools/registry";

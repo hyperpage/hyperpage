@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
+
 import { getOAuthConfig, buildAuthorizationUrl } from "@/lib/oauth-config";
 import {
   validateOAuthState,
@@ -11,7 +13,6 @@ import { getReadWriteDb } from "@/lib/database/connection";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import { users } from "@/lib/database/pg-schema";
 import { exchangeCodeForTokens } from "@/lib/oauth-config";
-import { eq } from "drizzle-orm";
 import { getToolByName } from "@/tools";
 import logger from "@/lib/logger";
 

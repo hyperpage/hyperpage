@@ -4,9 +4,12 @@
  */
 
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import * as pgSchema from "../pg-schema";
-import { SchemaConverter, type TableMapping } from "./schema-converter";
+
 import logger from "@/lib/logger";
+
+import * as pgSchema from "../pg-schema";
+
+import { SchemaConverter, type TableMapping } from "./schema-converter";
 
 /**
  * Migration configuration

@@ -1,8 +1,9 @@
+import type Redis from "ioredis";
+
 import { MemorySessionStore } from "@/lib/sessions/memory-session-store";
 import logger from "@/lib/logger";
 
 // Import Redis type from ioredis
-import type Redis from "ioredis";
 
 export interface SessionData {
   userId?: string;

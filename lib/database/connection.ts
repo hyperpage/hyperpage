@@ -18,9 +18,11 @@
 
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+
+import logger from "@/lib/logger";
+
 import * as pgSchema from "./pg-schema";
 import { getPgPool, assertPostgresConnection } from "./client";
-import logger from "@/lib/logger";
 
 type PostgresDrizzleInstance = NodePgDatabase<typeof pgSchema>;
 

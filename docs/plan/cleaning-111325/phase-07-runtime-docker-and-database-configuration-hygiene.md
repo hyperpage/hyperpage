@@ -95,7 +95,7 @@ Targets:
 
 - `.env.sample`
 - `.env.testing`
-- Any documented `.env.local.sample`
+- Any documented `.env.sample`
 - `docs/config-management.md`
 - `docs/installation.md`
 

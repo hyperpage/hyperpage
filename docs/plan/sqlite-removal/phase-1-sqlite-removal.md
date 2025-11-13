@@ -343,11 +343,11 @@ npm run db:validate
 
 **Estimated Time**: 1 hour
 
-#### 1.4.1 Update .env.local.sample
+#### 1.4.1 Update .env.sample
 
 **Action**: Clean up environment variables for PostgreSQL-only
 
-**Updated .env.local.sample**:
+**Updated .env.sample**:
 
 ```env
 # Database Configuration (PostgreSQL Only)
@@ -419,7 +419,7 @@ volumes:
 import type { Config } from "drizzle-kit";
 import * as dotenv from "dotenv";
 
-dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env.dev" });
 
 export default {
   schema: "./lib/database/pg-schema.ts",
@@ -561,7 +561,7 @@ npm run test:integration
 ### Configuration Updated
 
 - [ ] Database connection simplified for PostgreSQL-only
-- [ ] Environment variables cleaned up (.env.local.sample)
+- [ ] Environment variables cleaned up (.env.sample)
 - [ ] Docker configuration updated (docker-compose.yml)
 - [ ] Drizzle configuration updated for PostgreSQL
 - [ ] Test configurations updated
@@ -606,7 +606,7 @@ If issues arise during Phase 1:
    npm install better-sqlite3 @types/better-sqlite3
 
    # Restore environment variables
-   git checkout HEAD -- .env.local.sample
+   git checkout HEAD -- .env.sample
    ```
 
 2. **Validation**:

@@ -128,7 +128,7 @@ const db = getPostgresDrizzleDb();
 **Actions**:
 
 - [ ] Remove `DB_ENGINE` environment variable
-- [ ] Update `.env.local.sample` to remove SQLite paths
+- [ ] Update `.env.sample` to remove SQLite paths
 - [ ] Simplify Docker configuration for PostgreSQL
 - [ ] Update Kubernetes deployment configurations
 - [ ] Remove SQLite-specific environment variables
@@ -137,7 +137,7 @@ const db = getPostgresDrizzleDb();
 **Configuration Updates**:
 
 ```env
-# REMOVE from .env.local.sample:
+# REMOVE from .env.sample:
 # DATABASE_PATH=./data/hyperpage.db
 # DB_ENGINE=postgres
 

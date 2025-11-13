@@ -1,7 +1,8 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Link, AlertCircle } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 
 interface StatusBadgeProps {
   isAuthenticated: boolean;

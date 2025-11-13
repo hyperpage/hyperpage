@@ -1,9 +1,9 @@
 import React from "react";
 import { GitBranch } from "lucide-react";
+
 import { Tool } from "@/tools/tool-types";
 import { registerTool } from "@/tools/registry";
 import logger from "@/lib/logger";
-
 import { getEnabledTools } from "@/tools/index";
 
 export const codeReviewsTool: Tool = {

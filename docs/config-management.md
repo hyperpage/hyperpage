@@ -8,8 +8,8 @@ This document outlines the configuration management system for the Hyperpage pla
 
 The Hyperpage platform uses a tiered environment configuration system:
 
-- **`.env.local.sample`**: Template file committed to version control with placeholder values
-- **`.env.local`**: Local development file (ignored by git) with actual credentials
+- **`.env.sample`**: Template file committed to version control with placeholder values
+- **`.env.dev`**: Local development file (ignored by git) with actual credentials
 - **`.env`**: Production environment variables (server-side only)
 
 ### Database Configuration
@@ -96,7 +96,7 @@ The system automatically derives API URLs from web URLs using consistent pattern
 ### Adding New Tool Configuration
 
 1. **Environment Variable Definition**
-   - Add `ENABLE_TOOL_NAME=false` in `.env.local.sample`
+   - Add `ENABLE_TOOL_NAME=false` in `.env.sample`
    - Document all required configuration variables
    - Include example placeholders
 
@@ -158,7 +158,7 @@ const isTest = process.env.NODE_ENV === "test";
 ### Tool Addition Workflow
 
 1. Define configuration requirements in tool specification
-2. Update `.env.local.sample` with new variables
+2. Update `.env.sample` with new variables
 3. Implement validation logic in API routes
 4. Test configuration handling comprehensively
 5. Update documentation and team training
@@ -317,7 +317,7 @@ env:
 
 ### Configuration Files
 
-- **`.env.local.sample`** - Template for all environment variables
+- **`.env.sample`** - Template for all environment variables
 - **`tools/*/index.ts`** - Tool definitions with configuration
 - **`k8s/configmap.yaml`** - Kubernetes configuration management
 

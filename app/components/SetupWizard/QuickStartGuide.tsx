@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { AlertCircle } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -9,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 export function QuickStartGuide() {
   return (
@@ -46,11 +47,11 @@ export function QuickStartGuide() {
           <div className="flex-1">
             <h3 className="font-semibold mb-2">Configure environment</h3>
             <div className="bg-gray-900 text-gray-100 p-3 rounded-md font-mono text-sm">
-              <div>cp .env.local.sample .env.local</div>
+              <div>cp .env.sample .env.dev</div>
             </div>
             <p className="text-sm text-gray-600 mt-2">
-              Edit <code className="bg-gray-100 px-1 rounded">.env.local</code>{" "}
-              to enable your first tool (GitHub recommended)
+              Edit <code className="bg-gray-100 px-1 rounded">.env.dev</code> to
+              enable your first tool (GitHub recommended)
             </p>
           </div>
         </div>
@@ -89,7 +90,7 @@ export function QuickStartGuide() {
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Make sure to configure at least one tool in your{" "}
-                <code>.env.local</code> file first.
+                <code>.env.dev</code> file first.
               </AlertDescription>
             </Alert>
           </div>

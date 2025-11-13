@@ -23,10 +23,10 @@ docker-compose up -d --build
 
 ```bash
 # Copy development environment template
-cp .env.local.sample .env.local
+cp .env.sample .env.dev
 
-# Edit .env.local to configure your tool integrations (GitHub, GitLab, Jira, etc.)
-# See .env.local.development for examples
+# Edit .env.dev to configure your tool integrations (GitHub, GitLab, Jira, etc.)
+# See .env.dev.development for examples
 ```
 
 ### 3. Access Services
@@ -126,8 +126,8 @@ docker-compose up -d postgres redis
 docker-compose ps
 
 # Configure environment
-cp .env.local.development .env.local
-# Edit .env.local with your tool integrations
+cp .env.dev.development .env.dev
+# Edit .env.dev with your tool integrations
 ```
 
 ### 2. Database Operations

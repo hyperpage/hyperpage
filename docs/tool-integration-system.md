@@ -186,7 +186,7 @@ export const tools = [
 
 ### Step 4: Environment Configuration
 
-Add to `.env.local.sample`:
+Add to `.env.sample`:
 
 ```env
 # New Tool Configuration
@@ -307,7 +307,7 @@ config: {
 
 ### OAuth Environment Configuration
 
-`.env.local.sample`:
+`.env.sample`:
 
 ```env
 ENABLE_PROVIDER=false
@@ -326,7 +326,7 @@ OAuth configuration is resolved from the registry and consumed by the shared OAu
 ### Environment Variables
 
 - Use `ENABLE_TOOL_NAME=true/false` for tool enablement.
-- Declare all required variables in `.env.local.sample`.
+- Declare all required variables in `.env.sample`.
 - Do not commit real credentials.
 
 ### Type Safety

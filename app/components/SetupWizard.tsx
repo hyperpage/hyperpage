@@ -2,11 +2,13 @@
 "use client";
 
 import React from "react";
+import { CheckCircle } from "lucide-react";
+
 import { useSetupWizard } from "@/app/components/hooks/useSetupWizard";
+import { Button } from "@/components/ui/button";
+
 import { QuickStartGuide } from "./SetupWizard/QuickStartGuide";
 import { ToolConfiguration } from "./SetupWizard/ToolConfiguration";
-import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
 
 interface ConfigurationCompleteProps {
   checkConfigurationStatus: () => Promise<void>;

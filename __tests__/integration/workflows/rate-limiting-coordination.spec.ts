@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+
 import { IntegrationTestEnvironment } from "@/__tests__/shared/test-credentials";
 import { TestBrowser } from "@/__tests__/integration/workflows/utils/test-browser";
 import { UserJourneySimulator } from "@/__tests__/integration/workflows/utils/user-journey-simulator";

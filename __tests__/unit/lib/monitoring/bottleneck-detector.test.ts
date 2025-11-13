@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import type { MockedFunction } from "vitest";
+
 import { BottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
 import { BOTTLENECK_PATTERNS } from "@/lib/monitoring/bottleneck-patterns";
 import {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { checkPostgresConnectivity } from "@/lib/database/connection";
 import logger from "@/lib/logger";
 

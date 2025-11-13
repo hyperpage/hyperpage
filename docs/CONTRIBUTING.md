@@ -40,7 +40,7 @@ cd hyperpage
 npm install
 
 # Copy environment template
-cp .env.local.sample .env.local
+cp .env.sample .env.dev
 
 # Start development server
 npm run dev

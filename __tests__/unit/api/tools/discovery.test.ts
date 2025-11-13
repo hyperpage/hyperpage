@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import { GET as getToolDiscovery } from "@/app/api/tools/discovery/route";
 import * as toolsModule from "@/tools";
+import type { Tool } from "@/tools/tool-types";
 
 // Mock the tools module
 vi.mock("@/tools", () => ({
@@ -78,7 +78,7 @@ describe("GET /api/tools/discovery", () => {
         },
       };
 
-      mockGetAllTools.mockReturnValue(mockTools as any);
+      mockGetAllTools.mockReturnValue(mockTools as unknown as Tool[]);
       mockGetAvailableApis.mockReturnValue(mockApis);
 
       const response = await getToolDiscovery();
@@ -131,7 +131,7 @@ describe("GET /api/tools/discovery", () => {
         },
       ];
 
-      mockGetAllTools.mockReturnValue(mockTools as any);
+      mockGetAllTools.mockReturnValue(mockTools as unknown as Tool[]);
       mockGetAvailableApis.mockReturnValue({});
 
       const response = await getToolDiscovery();
@@ -150,7 +150,7 @@ describe("GET /api/tools/discovery", () => {
         },
       ];
 
-      mockGetAllTools.mockReturnValue(mockTools as any);
+      mockGetAllTools.mockReturnValue(mockTools as unknown as Tool[]);
       mockGetAvailableApis.mockReturnValue({});
 
       const response = await getToolDiscovery();
@@ -193,7 +193,7 @@ describe("GET /api/tools/discovery", () => {
         { invalidField: "InvalidTool" }, // Missing required fields
       ];
 
-      mockGetAllTools.mockReturnValue(mockTools as any);
+      mockGetAllTools.mockReturnValue(mockTools as unknown as Tool[]);
       mockGetAvailableApis.mockReturnValue({});
 
       const response = await getToolDiscovery();

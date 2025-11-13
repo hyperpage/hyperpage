@@ -2,174 +2,226 @@
 
 ## Objective
 
-Align the entire codebase with strict, enforced, and automated standards:
+Turn linting, typing, and formatting into enforced, automated contracts across the repository, aligned with `.clinerules` and the real toolchain:
 
-- Zero tolerance for `eslint-disable-next-line` (per `.clinerules/typescript-lint-prevention.md`).
-- Consistent TypeScript strictness and typing.
-- Unified import/order, formatting, and component structure.
-- Fast feedback via editor + scripts + CI.
+- Zero tolerance for `eslint-disable-next-line` and similar blanket disables (see `.clinerules/typescript-lint-prevention.md`).
+- Strict, project-wide TypeScript (already enabled) with no silent gaps.
+- Consistent import order, module boundaries, and component structure.
+- Fast feedback via editor integration, npm scripts, and CI.
 
-This phase turns style and type rules from “guidelines” into enforced, executable contracts before any functional refactors.
+This phase does not change behavior; it makes existing conventions executable and non-optional.
 
 ---
 
-## Outcomes
+## Current Baseline (Snapshot)
 
-By the end of this phase:
+As of this phase:
 
-- ESLint, TypeScript, and formatting rules are:
-  - Explicit.
-  - Project-wide.
-  - Applied consistently to `app`, `lib`, `tools`, `__tests__`, and scripts where relevant.
-- All `eslint-disable-next-line` usages are removed or replaced with proper code fixes.
-- The repo has **zero** known lint errors at HEAD.
-- TypeScript is in strict mode (or equivalent granular strict flags) without structural holes.
-- Code style (imports, file layout, component patterns) matches `.clinerules` and is auto-enforced.
+- **ESLint**
+  - Config: `eslint.config.js`:
+    - Extends: `next/core-web-vitals`, `next/typescript` via `FlatCompat`.
+    - Ignores: `.next/**`, `next-env.d.ts`.
+    - No custom rules yet for:
+      - `no-warning-comments` on `eslint-disable-next-line`.
+      - Import order.
+      - Centralized logger usage.
+      - Expanded ignore patterns for build artifacts.
+  - Scripts (`package.json`):
+    - `"lint": "eslint ."`
+    - `"lint:sec": "npx eslint . --ext .ts,.tsx --config eslint.config.js --rule 'no-console: error' --rule 'no-debugger: error' --rule 'no-alert: error'"`
+
+- **TypeScript**
+  - `tsconfig.json`:
+    - `"strict": true`, `"noEmit": true`, `isolatedModules: true`.
+    - `allowJs: true`, `skipLibCheck: true`.
+    - Path aliases for `@/*`, `@/app/*`, `@/lib/*`, `@/components/*`, `@/tools/*`, `@/tests/*`, `@/types/*`.
+    - `include`: all `**/*.ts`, `**/*.tsx`, `next-env.d.ts`, `.next/types/**/*.ts`, `vitest.globals.d.ts`, specific validation scripts.
+    - `exclude`: `node_modules`.
+  - Type support for tests:
+    - `types`: `vitest`, `node`, `playwright`.
+
+- **Formatting & Tests**
+  - Prettier scripts:
+    - `"prettier": "npx prettier --check ."`
+    - `"prettier:fix": "npx prettier --write ."`
+  - Validation:
+    - `"validate": "npm run prettier:fix && npm run lint && npm run lint:sec && npm run type-check && npm test"`
+
+This plan builds directly on that baseline without assuming rules or integrations that do not yet exist.
 
 ---
 
 ## 1. ESLint Configuration Hardening
 
-### 1.1 Baseline Review
+### 1.1 Document & Extend Effective Config
 
-1. Open `eslint.config.js` and document:
-   - Base configs used (Next.js, TypeScript, React, etc.).
-   - Custom rules (especially:
-     - `@typescript-eslint/no-explicit-any`
-     - `@typescript-eslint/no-unused-vars`
-     - Import order rules
-     - React hooks rules
-       ).
-   - Ignore patterns (e.g. `.next`, `dist`, `build`, etc.).
-2. Verify alignment with:
-   - Global `.clinerules/typescript-lint-prevention.md`.
-   - Workspace `.clinerules/typescript-lint-prevention.md` (no `eslint-disable-next-line`).
-   - `.clinerules/coding-style.md` (import order, structure, Next.js route patterns).
+Actions:
 
-Deliverable: section in this file summarizing actual effective ESLint config and any gaps.
+1. Expand `eslint.config.js` to:
+   - Keep `next/core-web-vitals` and `next/typescript`.
+   - Add an explicit `rules` block and consistent ignore patterns for build artifacts (e.g. `.next/**`, `dist/**`, `build/**` if present).
+2. In this document, maintain a short, concrete snippet showing the intended ESLint structure so it is easy to verify the code matches the plan:
 
-### 1.2 Enforce “No eslint-disable-next-line”
+Example (illustrative; must match real config when applied):
 
-1. Search for all occurrences:
+```ts
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    ignores: [".next/**", "next-env.d.ts"],
+    rules: {
+      // Import organization
+      "import/order": [
+        "error",
+        {
+          groups: [
+            "builtin",
+            "external",
+            "internal",
+            "parent",
+            "sibling",
+            "index",
+          ],
+          "newlines-between": "always",
+        },
+      ],
+
+      // Hooks and React best practices (inherited from Next presets, ensure enabled)
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "error",
+    },
+  },
+];
+```
+
+Deliverable:
+
+- This file contains the agreed ESLint structure.
+- `eslint.config.js` is updated to match and becomes the single source of truth.
+
+### 1.2 Ban `eslint-disable` Comments
+
+Execution steps:
+
+1. Search repository for:
    - `eslint-disable-next-line`
-   - `eslint-disable`
-2. For each occurrence:
-   - Identify the underlying issue:
-     - Unused vars / imports.
+   - `eslint-disable `
+   - `eslint-disable-line`
+2. For each usage:
+   - Identify the underlying violation:
+     - Unused vars/imports.
      - `any` usage.
-     - React hooks ordering.
+     - React hooks issues.
+     - Environment or globals problems.
      - Import cycles.
-     - Test globals.
    - Fix the root cause:
-     - Remove unused vars/imports or prefix with `_` where needed.
-     - Add proper typing instead of `any`.
-     - Restructure hooks to satisfy rules.
-     - Adjust imports to break cycles.
-   - Remove the disable comment.
-3. After all fixes:
-   - Optionally add ESLint rule:
-     - `no-warning-comments` (or equivalent) targeting `eslint-disable-next-line` to prevent regression (if not already defined).
-4. No exceptions:
-   - If a scenario seems impossible to satisfy:
-     - Re-evaluate the rule; adjust config narrowly (e.g. allow specific test globals) rather than disabling via comments.
+     - Remove or prefix unused bindings with `_`.
+     - Add proper TypeScript types instead of `any`.
+     - Restructure hooks to follow the Rules of Hooks.
+     - Adjust imports or split modules to avoid cycles.
+3. Add a preventive rule in `eslint.config.js`:
+   - Use a pattern (e.g. `no-warning-comments` or a custom rule/plugin) targeting `eslint-disable-next-line` to avoid new occurrences.
+4. If an exception is absolutely unavoidable:
+   - Treat it as a special case:
+     - Document file path, rule, and justification in this plan.
+     - Keep goal: zero such exceptions long term.
+
+Target state:
+
+- No generic disable comments in core code or tests.
+- No reliance on disables to get a green build.
 
 ---
 
 ## 2. TypeScript Strictness & Configuration
 
-### 2.1 `tsconfig.json` Audit
+### 2.1 Confirm Strict Baseline
 
-1. Confirm:
-   - `strict: true` OR equivalent granular flags:
-     - `noImplicitAny`
-     - `strictNullChecks`
-     - `noImplicitThis`
-     - `alwaysStrict`
-     - `exactOptionalPropertyTypes`
-   - `noUnusedLocals`, `noUnusedParameters` (or enforce via ESLint).
-   - `moduleResolution`, `paths`, `baseUrl` are correct for:
-     - `app/`, `lib/`, `tools/`, `__tests__/`.
-2. Validate inclusion/exclusion:
-   - `include` covers:
-     - Application code.
-     - Shared libs.
-     - Type declarations.
-   - `exclude` omits:
-     - `.next`, build artifacts.
-     - Generated files.
+Actions:
 
-### 2.2 Strictness Gaps
+1. Keep `strict: true` as the canonical strictness flag.
+2. Review:
+   - `allowJs: true`:
+     - Inventory any `.js` files in use.
+     - Plan removal or typing; once feasible, switch off `allowJs` in a later step.
+   - `skipLibCheck: true`:
+     - Acceptable for this phase; revisit when third-party types are stable.
+3. Verify:
+   - `paths` resolve correctly for `app`, `lib`, `tools`, `__tests__`, `types`.
+   - `include` / `exclude` accurately mirror project layout without hiding TypeScript errors.
 
-1. Identify:
-   - Any `tsconfig.*.json` variants for tests, tooling, etc.
-   - Any relaxed configs that contradict core strictness.
-2. Plan:
-   - Converge towards a single strict standard across:
-     - App runtime.
-     - API routes.
-     - Tools registry.
-     - Tests (with appropriate `types` configuration).
+### 2.2 `tsc --noEmit` as Gate
 
-### 2.3 Implementation Steps
+Actions:
 
-1. Run `tsc --noEmit` and capture all errors.
-2. Bucket errors:
-   - **Category A – Simple hygiene**:
-     - Missing types on params.
-     - Obvious `any`.
-     - Unused vars.
-     - Narrowing needed for nullable values.
-   - **Category B – Structural**:
-     - Incorrect module resolution.
-     - Wrong import paths.
-     - Type mismatches between layers (e.g., tool handlers vs UI types).
-   - **Category C – Design**:
-     - Ambiguous API response contracts.
+1. Run `npm run type-check` on a clean checkout.
+2. Categorize errors:
+   - **Category A – Hygiene (must fix in Phase 02)**:
+     - Missing parameter/return types.
+     - Implicit `any`.
+     - Unused locals/parameters (if not handled by ESLint).
+     - Narrowing for nullable values.
+
+   - **Category B – Structural (fix where local, otherwise document)**:
+     - Incorrect import paths.
+     - Module resolution problems.
+     - Misaligned shared types between `app`, `lib`, `tools`.
+
+   - **Category C – Design (may defer with explicit tracking)**:
      - Over-broad unions.
-3. Actions:
-   - Fix all Category A issues within this phase.
-   - For Category B/C:
-     - If small & local: fix here.
-     - If large/architectural: document and defer to specific later phases (API normalization, tool registry cleanup, etc.) with clear references.
+     - Ambiguous or inconsistent API/tool contracts.
 
-Exit condition for TS:
+3. Implement:
+   - Fix all Category A issues.
+   - Fix Category B issues that are small and local.
+   - For remaining B/C issues:
+     - Add explicit entries in this plan:
+       - File, error, short description.
+       - Link to the later phase responsible (e.g. API normalization, tool cleanup).
 
-- `tsc --noEmit` runs clean or has only explicitly documented, tracked exceptions scheduled for other phases (no unknown or ignored errors).
+Exit condition (TypeScript):
+
+- `npm run type-check` passes, or:
+  - Residual failures are explicitly listed in this document and assigned to later phases (no unknown or ignored TS errors).
 
 ---
 
-## 3. Import, Module, and File Structure Rules
+## 3. Import Order, Module Boundaries & Code Layout
 
-### 3.1 Import Order & Consistency
+### 3.1 Import Order Enforcement
 
-1. Normalize imports according to `.clinerules/coding-style.md`:
-   - Grouping:
-     - Built-in (fs, path, etc.).
-     - External (npm packages).
-     - Internal (absolute/aliased).
-     - Parent (`../`), sibling (`./`), index.
-   - Always include blank lines between groups.
-2. Ensure:
-   - No circular imports between `lib`, `tools`, `app` where avoidable.
-   - Prefer stable entrypoints (e.g. `lib/index.ts` where appropriate).
+Actions:
 
-If an import-order rule is not yet codified in ESLint:
+1. Configure `import/order` (see 1.1) to enforce:
+   - Groups:
+     - builtin
+     - external
+     - internal (aliased via `@/...`)
+     - parent (`../`)
+     - sibling (`./`)
+     - index
 
-- Add standardized `import/order` rules there.
-- Re-run lint and auto-fix where possible.
+   - With blank lines between groups.
+
+2. Run:
+   - `eslint . --fix` (or `npm run lint -- --fix`) to auto-apply order where possible.
+
+3. Resolve:
+   - Remaining conflicts and cycles manually.
+   - Prefer stable module entrypoints over deep nested imports.
 
 ### 3.2 Module Boundaries
 
-1. Validate:
-   - `lib/` contains shared, framework-agnostic logic.
-   - `tools/` encapsulates tool-specific definitions and handlers.
-   - `app/` uses these building blocks; does not re-implement logic.
-2. Flag violations:
-   - API routes importing from random deep paths instead of proper modules.
-   - UI code depending on server-only modules or env logic.
-3. Fix:
-   - Adjust imports to use stable boundaries.
-   - Move shared logic to appropriate modules (without behavior change).
+Actions:
+
+1. Verify boundaries:
+   - `lib/`: shared, framework-agnostic logic (e.g., utilities, services).
+   - `tools/`: tool-specific types, handlers, registry entries.
+   - `app/`: uses `lib` and `tools` but does not import from server-only internals incorrectly.
+2. Fix violations without behavior changes:
+   - Move shared logic into `lib`.
+   - Introduce or use existing public entrypoints instead of deep imports.
+3. Record any remaining cross-boundary issues that require architectural refactors for later phases.
 
 ---
 
@@ -177,123 +229,152 @@ If an import-order rule is not yet codified in ESLint:
 
 ### 4.1 Component Size & Responsibility
 
+Actions:
+
 1. Scan `app/components/**` and `components/**`:
-   - Identify components > 100 lines or with mixed responsibilities.
-2. For each oversized/mixed component:
-   - Plan refactor:
-     - Extract logic into `useXxx` hooks.
-     - Extract UI segments into smaller components.
-   - In this phase:
-     - Prefer incremental, mechanical splits without changing behavior.
-     - Keep props strictly typed.
+   - Detect components significantly exceeding ~100 lines or mixing concerns.
+2. For each:
+   - Plan and implement mechanical decompositions:
+     - Extract stateful/data-fetch logic into `useXxx` hooks.
+     - Extract repeated UI fragments into smaller presentational components.
+   - Keep:
+     - Public API and behavior stable.
+     - Strictly typed props.
 
-Document refactors that are too large for this phase and schedule them under the UI-focused phase.
+3. Defer:
+   - Complex UI redesigns and non-trivial reflows to the dedicated UI/architecture phases.
+   - Track large refactor candidates explicitly in this plan.
 
-### 4.2 Hooks & Client/Server Boundaries
+### 4.2 Hooks & Environment Boundaries
 
-1. Ensure:
-   - Hooks follow React rules (no conditional calls, etc.).
-   - Client components:
-     - Do not access `process.env` directly.
-     - Receive config via props or safe APIs.
-   - Server components:
-     - Handle env access and sensitive logic.
-2. Use ESLint React hooks rules to enforce patterns:
-   - `react-hooks/rules-of-hooks`
-   - `react-hooks/exhaustive-deps`
+Actions:
 
-Fix all violations as part of this phase.
+1. Ensure React hooks rules are enforced (1.1).
+2. Fix all violations:
+   - No conditional hooks.
+   - Correct, explicit dependency arrays.
+3. Enforce environment separation:
+   - Client components do not read `process.env` directly.
+   - Sensitive config lives in server components/handlers; passed via props or backend APIs.
 
 ---
 
-## 5. Test Code Style Alignment
+## 5. Tests: Style, Linting & Types
 
-### 5.1 Lint Tests Too
+### 5.1 Lint the Test Suite
 
-1. Ensure ESLint covers:
+Actions:
+
+1. Confirm ESLint runs on:
    - `__tests__/**`
-   - test-related setup files
-   - With appropriate environment:
-     - `jest` / `vitest` / `playwright` globals as needed.
-2. Remove:
-   - `eslint-disable` comments.
-   - Unused imports and variables.
-   - Ad-hoc global leaks.
+   - `vitest.setup.ts`
+   - Playwright configs, mocks, and helpers.
+2. Ensure:
+   - Test environments (`vitest`, `playwright`) are configured via `tsconfig` / ESLint env/plugins rather than `eslint-disable` comments.
+3. Cleanup:
+   - Remove remaining `eslint-disable*` comments in tests.
+   - Remove unused imports/variables.
+   - Normalize import order.
 
-### 5.2 Type-safe Tests
+### 5.2 Type-Safe Tests
 
-1. Confirm tests compile under TypeScript:
-   - Shared types imported from source where possible.
+Actions:
+
+1. Ensure tests compile cleanly under `npm run type-check`:
+   - Use shared types from `lib/types` or source modules.
 2. Avoid:
-   - `any` in tests except when explicitly modeling “unknown” external data.
-   - Copy-pasted types; centralize in `lib/types` or dedicated shared modules.
+   - Arbitrary `any` in tests (except where modeling external unknown data explicitly).
+   - Duplicated type definitions when shared ones exist.
 
 ---
 
 ## 6. Automation: Scripts & CI Integration
 
-### 6.1 npm Scripts
+### 6.1 NPM Scripts
 
-1. Ensure presence of:
-   - `"lint"`: ESLint over all relevant directories.
-   - `"type-check"`: `tsc --noEmit`.
-2. Optionally:
-   - `"lint:fix"`: ESLint with `--fix`.
-   - `"validate"`: `npm run lint && npm run type-check && npm test` (if desired).
-3. Confirm:
-   - Script targets match actual file structure.
-   - No legacy globs referencing deleted paths.
+Actions:
 
-### 6.2 Pre-commit / CI
+1. Keep core scripts:
+   - `"lint": "eslint ."`
+   - `"lint:sec": "npx eslint . --ext .ts,.tsx --config eslint.config.js --rule 'no-console: error' --rule 'no-debugger: error' --rule 'no-alert: error'"`
+   - `"type-check": "npx tsc --noEmit"`
+   - `"prettier"` / `"prettier:fix"`
 
-If using lint-staged or similar:
+2. Optionally add:
+   - `"lint:fix": "eslint . --fix"`
 
-1. Ensure:
-   - TS + ESLint run on staged files.
-   - No rule to skip or weaken constraints.
-2. CI pipelines:
-   - Must fail on:
-     - Lint errors.
-     - Type errors.
-   - Use standardized scripts from Phase 01/02.
+3. Validate:
+   - All relevant directories (app, lib, tools, **tests**, scripts) are covered.
+
+### 6.2 Validation Pipeline & CI
+
+Actions:
+
+1. Treat `"validate"` as the canonical gate:
+
+   ```json
+   "validate": "npm run prettier:fix && npm run lint && npm run lint:sec && npm run type-check && npm test"
+   ```
+
+2. CI should:
+   - Use `npm ci`.
+   - Run `npm run validate`.
+   - Fail on:
+     - ESLint errors.
+     - TypeScript errors.
+     - Test failures.
+
+3. If pre-commit hooks or lint-staged are introduced/updated:
+   - Wire them to the same scripts (or narrowed equivalents) without weakening enforcement.
 
 ---
 
-## 7. Documentation for Standards
+## 7. Documentation Alignment
 
-All documentation must reflect actual, enforced rules (no aspirational claims).
+Actions:
 
-1. Update or create references in:
-   - `docs/testing/index.md` (how lint + types integrate with tests).
-   - `docs/usage.md` or `docs/index.md` (developer workflow summary).
-   - `.clinerules` if new patterns emerge (or link to existing ones).
+1. Update or confirm references in:
+   - `docs/index.md` / `docs/usage.md`:
+     - Describe `lint`, `type-check`, `validate` as part of the developer workflow.
+   - Testing docs:
+     - Note that tests are subject to linting and TS checks.
 2. Ensure:
-   - No mention of outdated rules (e.g., permissive `any`, allowed `eslint-disable-next-line`).
-   - Examples use correct import order and TypeScript patterns.
+   - No documentation suggests permissive `any` usage or allows `eslint-disable-next-line`.
+   - Examples follow:
+     - Import order conventions.
+     - Strict, explicit typing.
+     - Correct client/server responsibility boundaries.
+
+All statements must reflect the actual configuration (`documentation-accuracy.md`).
 
 ---
 
-## 8. Validation & Exit Criteria
+## 8. Exit Criteria
 
-This phase is complete only when:
+This phase is complete when:
 
-- [ ] `eslint.config.js`:
-  - [ ] Explicitly encodes the intended rule set.
-  - [ ] Prohibits or effectively eliminates `eslint-disable-next-line` usages.
-- [ ] `tsconfig.json`:
-  - [ ] Uses strict mode (or equivalent).
-  - [ ] Has accurate include/exclude paths.
-- [ ] Codebase:
-  - [ ] Contains **no** `eslint-disable-next-line` (or other disable) comments, except if strictly justified and documented (target: zero).
-  - [ ] Has no obvious unused imports/variables.
-  - [ ] Has no untyped function parameters in production code.
-- [ ] `npm run lint`:
-  - [ ] Passes on a clean checkout.
-- [ ] `npm run type-check`:
-  - [ ] Passes, or any remaining issues are explicitly documented and assigned to later phases (with file + reason).
-- [ ] Tests:
-  - [ ] Are included in lint/type-check coverage where appropriate and free from style violations.
-- [ ] Documentation:
-  - [ ] Describes the actual lint/type-check workflow accurately.
+- [x] `eslint.config.js`
+  - [x] Extends the Next + TypeScript presets.
+  - [x] Contains explicit rules for:
+    - Import order.
+    - React hooks.
+    - Preventing or flagging `eslint-disable-next-line` usage.
+  - [x] Ignores only appropriate build artifacts.
+- [x] `tsconfig.json`
+  - [x] Remains in strict mode.
+  - [x] Has accurate `include`/`exclude` and path mappings.
+- [x] Codebase
+  - [x] Contains no unapproved `eslint-disable*` comments (any exception is documented here).
+  - [x] Has no obvious unused imports/variables reported by linters.
+  - [x] Avoids untyped parameters in production code; remaining cases are intentional and documented.
+- [x] Tooling
+  - [x] `npm run lint` passes on a clean checkout.
+  - [x] `npm run lint:sec` passes or flags only deliberate, documented locations.
+  - [x] `npm run type-check` passes; any remaining failures are explicitly listed and assigned to later phases.
+  - [x] `npm test` passes.
+- [x] Tests
+  - [x] Are covered by linting and type-checking where appropriate and free from blanket disables.
+- [x] Documentation
+  - [x] Accurately describes the enforced lint/type/format workflow.
 
-Once all exit criteria are satisfied, the repository has a reliable static-safety baseline and you can proceed to **Phase 03 – Test Suite Stabilization & Pruning**.
+Once all exit criteria are satisfied, the repository has a reliable static-safety baseline and can proceed to **Phase 03 – Test Suite Stabilization & Pruning**.

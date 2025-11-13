@@ -12,10 +12,11 @@
  * - oauth-token-store.ts (secure storage)
  */
 
+import type { NextRequest } from "next/server";
+
 import { toolRegistry } from "@/tools/registry";
 import type { ToolOAuthConfig } from "@/tools/tool-types";
 import logger from "@/lib/logger";
-import type { NextRequest } from "next/server";
 
 // Enhanced interfaces for unified service
 export interface OAuthServiceOptions {

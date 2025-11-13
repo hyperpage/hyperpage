@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
+
 import { OAuthError } from "@/lib/oauth-errors";
+
 import { CompactActions } from "./OAuthErrorActions/CompactActions";
 import { FullActions } from "./OAuthErrorActions/FullActions";
 

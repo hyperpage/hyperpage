@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
+import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import { GET as getEnabledTools } from "@/app/api/tools/enabled/route";
 import * as toolsModule from "@/tools";
 import { Tool, ToolData } from "@/tools/tool-types";
@@ -36,7 +36,7 @@ interface MockWidget {
 
 interface MockToolUI {
   color: string;
-  icon: any; // Allow any for vitest mock
+  icon: ReactNode | null;
 }
 
 interface MockTool extends Omit<Tool, "ui" | "widgets" | "apis"> {
@@ -209,19 +209,19 @@ describe("GET /api/tools/enabled", () => {
           name: "GitLab",
           slug: "gitlab",
           enabled: true,
-          ui: { color: "bg-orange-500", icon: null as any } as any,
+          ui: { color: "bg-orange-500", icon: null },
           widgets: [
             {
               title: "Dashboard",
-              type: "card" as const,
+              type: "metric",
               data: [],
               dynamic: true,
-            } as any,
+            },
           ],
-          apis: undefined as any,
-          handlers: {},
-        } as any,
-      ];
+          apis: undefined,
+          handlers: {} as Tool["handlers"],
+        },
+      ] as unknown as Tool[];
 
       mockGetEnabledTools.mockReturnValue(mockTools);
 
@@ -238,18 +238,18 @@ describe("GET /api/tools/enabled", () => {
           name: "TestTool",
           slug: "test",
           enabled: true,
-          ui: { color: "bg-blue-500", icon: null as any } as any,
-          widgets: null as any,
+          ui: { color: "bg-blue-500", icon: null },
+          widgets: null as unknown as Tool["widgets"],
           apis: {
             test: {
-              method: "GET" as const,
+              method: "GET",
               description: "Test endpoint",
-              parameters: [],
+              parameters: {},
             },
           },
-          handlers: {},
-        } as any,
-      ];
+          handlers: {} as Tool["handlers"],
+        },
+      ] as unknown as Tool[];
 
       mockGetEnabledTools.mockReturnValue(mockTools);
 
@@ -266,33 +266,33 @@ describe("GET /api/tools/enabled", () => {
           name: "TestTool",
           slug: "test",
           enabled: true,
-          ui: { color: "bg-blue-500", icon: null as any } as any,
+          ui: { color: "bg-blue-500", icon: null },
           widgets: [
             {
               title: "Widget1",
-              type: "table" as const,
+              type: "table",
               data: [],
               headers: ["A", "B"],
               dynamic: true,
-            } as any,
+            },
             {
               title: "Widget2",
-              type: "card" as const,
+              type: "metric",
               data: [],
               dynamic: true,
-            } as any, // headers undefined
+            }, // headers undefined
             {
               title: "Widget3",
-              type: "table" as const,
+              type: "table",
               data: [],
               headers: [],
               dynamic: false,
-            } as any, // empty headers
+            }, // empty headers
           ],
           apis: {},
-          handlers: {},
-        } as any,
-      ];
+          handlers: {} as Tool["handlers"],
+        },
+      ] as unknown as Tool[];
 
       mockGetEnabledTools.mockReturnValue(mockTools);
 
@@ -322,17 +322,17 @@ describe("GET /api/tools/enabled", () => {
 
     it("handles unexpected tool structure gracefully", async () => {
       const mockTools = [
-        { name: "MalformedTool" } as any, // Missing required fields
+        { name: "MalformedTool" },
         {
           name: "ValidTool",
           slug: "valid",
           enabled: true,
-          ui: { color: "bg-blue-500", icon: null as any } as any,
+          ui: { color: "bg-blue-500", icon: null },
           widgets: [],
           apis: {},
-          handlers: {},
-        } as any,
-      ];
+          handlers: {} as Tool["handlers"],
+        },
+      ] as unknown as Tool[];
 
       mockGetEnabledTools.mockReturnValue(mockTools);
 

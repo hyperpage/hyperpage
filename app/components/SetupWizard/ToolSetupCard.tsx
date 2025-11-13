@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
-import { Badge } from "@/components/ui/badge";
 import { CheckCircle } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+
 import { ConfigurationExample } from "./ConfigurationExample";
 import { SetupStep } from "./SetupStep";
 

@@ -187,11 +187,11 @@ export function closeAllConnections(): void {
 **Actions**:
 
 - [ ] Remove SQLite-specific environment variables
-- [ ] Clean up `.env.local.sample`
+- [ ] Clean up `.env.sample`
 - [ ] Update Docker configurations
 - [ ] Remove dual-engine configuration logic
 
-**Updated .env.local.sample**:
+**Updated .env.sample**:
 
 ```env
 # Database Configuration (PostgreSQL Only)
@@ -306,7 +306,7 @@ volumes:
 import type { Config } from "drizzle-kit";
 import * as dotenv from "dotenv";
 
-dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env.dev" });
 
 export default {
   schema: "./lib/database/pg-schema.ts",

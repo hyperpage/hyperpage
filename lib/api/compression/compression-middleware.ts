@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
 import zlib from "zlib";
+
+import { NextRequest, NextResponse } from "next/server";
 
 export interface CompressionOptions {
   /** Minimum response size to compress (bytes) */

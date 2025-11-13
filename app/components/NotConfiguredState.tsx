@@ -1,8 +1,9 @@
 "use client";
 
+import { AlertCircle } from "lucide-react";
+
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
 
 interface NotConfiguredStateProps {
   toolName: string;

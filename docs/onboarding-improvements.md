@@ -10,7 +10,7 @@ The improved onboarding experience addresses the critical issue of user adoption
 
 ### 1. Enhanced Environment Configuration Template
 
-**File**: `.env.local.sample`
+**File**: `.env.sample`
 
 **Before**: All tools disabled, complex OAuth setup required
 **After**:
@@ -131,7 +131,7 @@ JIRA_API_TOKEN=your_jira_api_token
 
 ## Security Best Practices
 
-1. **Environment Isolation**: `.env.local` automatically ignored by git
+1. **Environment Isolation**: `.env.dev` automatically ignored by git
 2. **Token Security**: API tokens have limited scope, safer than OAuth for basic use
 3. **Graceful Degradation**: Memory-only caching when Redis unavailable
 4. **No Credential Exposure**: Client-side receives only safe tool status

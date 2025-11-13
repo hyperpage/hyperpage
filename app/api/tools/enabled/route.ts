@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
+
 import { getReadWriteDb } from "@/lib/database/connection";
 import * as pgSchema from "@/lib/database/pg-schema";
 import { toolRegistry } from "@/tools/registry";
 import type { Tool, ToolWidget, ToolApi } from "@/tools/tool-types";
 import logger from "@/lib/logger";
-import { and, eq } from "drizzle-orm";
 
 /**
  * Enabled tools API endpoint (Phase 2 - PostgreSQL-backed)

@@ -1,6 +1,8 @@
 // Rate limit data transformation utilities
 // Pure functions for transforming platform-specific rate limit data to universal format
 
+import { toolRegistry } from "@/tools/registry";
+
 import type {
   RateLimitCache,
   RateLimitUsage,
@@ -8,7 +10,6 @@ import type {
   GitHubRateLimitResponse,
   RateLimitStatus,
 } from "./types/rate-limit";
-import { toolRegistry } from "@/tools/registry";
 
 // In-memory cache with TTL support
 let rateLimitCache: RateLimitCache = {};

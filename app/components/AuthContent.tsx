@@ -1,6 +1,7 @@
 "use client";
 
 import { Shield, CheckCircle } from "lucide-react";
+
 import { CardContent } from "@/components/ui/card";
 import AuthButton from "@/app/components/AuthButton";
 import { getToolIcon } from "@/tools";

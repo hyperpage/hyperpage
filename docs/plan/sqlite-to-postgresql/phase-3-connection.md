@@ -293,7 +293,7 @@ export class DatabaseRecovery {
 
 ## Environment Configuration
 
-### Updated .env.local.sample
+### Updated .env.sample
 
 ```env
 # Database Connection Configuration

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+
 import {
   BOTTLENECK_PATTERNS,
   getAllBottleneckPatterns,
