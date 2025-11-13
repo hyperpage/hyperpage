@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 import type { IJob } from "@/lib/types/jobs";
 import { JobPriority, JobStatus } from "@/lib/types/jobs";
-import { getAppDatabase, getReadWriteDb } from "@/lib/database/connection";
+import { getReadWriteDb } from "@/lib/database/connection";
 
 /**
  * NOTE:
@@ -13,27 +13,6 @@ import { getAppDatabase, getReadWriteDb } from "@/lib/database/connection";
  * They do NOT attempt full integration with real drizzle types.
  * Mocks are kept structurally compatible and type-safe enough for TS/Vitest.
  */
-
-type MockSqliteDrizzle = {
-  insert: (table: unknown) => {
-    values: (values: unknown) => Promise<void> | void;
-  };
-  select: () => {
-    from: (table: unknown) => {
-      where: (cond: unknown) => {
-        limit: (n: number) => Promise<unknown[]> | unknown[];
-      };
-    };
-  };
-  update: (table: unknown) => {
-    set: (patch: unknown) => { where: (cond: unknown) => Promise<void> | void };
-  };
-  delete: (table: unknown) => {
-    where: (
-      cond: unknown,
-    ) => Promise<{ rowsAffected?: number }> | { rowsAffected?: number };
-  };
-};
 
 type MockPgDrizzle = {
   $schema?: Record<string, unknown>;
@@ -71,7 +50,6 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 vi.mock("@/lib/database/connection", () => ({
-  getAppDatabase: vi.fn(),
   getReadWriteDb: vi.fn(),
 }));
 
@@ -105,36 +83,12 @@ describe("getJobRepository - engine selection", () => {
     vi.resetModules();
   });
 
-  it("uses SQLite-backed repository when getReadWriteDb is not Postgres", async () => {
+  it("does not select a Postgres-backed repository when getReadWriteDb is not Postgres-shaped (LEGACY path)", async () => {
     const sqliteLikeDb = {
-      // no $schema.jobs -> isPostgresDb should be false
+      // No $schema.jobs -> isPostgresDb should be false
     } as unknown as MockPgDrizzle;
 
     (getReadWriteDb as unknown as Mock).mockReturnValue(sqliteLikeDb);
-
-    const insertSpy = vi.fn().mockResolvedValue(undefined);
-    const selectSpy = vi.fn().mockReturnValue({
-      from: () => ({
-        where: () => ({
-          limit: () => Promise.resolve([]),
-        }),
-      }),
-    });
-
-    (getAppDatabase as unknown as Mock).mockReturnValue({
-      drizzle: {
-        insert: () => ({ values: insertSpy }),
-        select: selectSpy,
-        update: () => ({
-          set: () => ({
-            where: () => Promise.resolve(),
-          }),
-        }),
-        delete: () => ({
-          where: () => Promise.resolve({ rowsAffected: 0 }),
-        }),
-      } as unknown as MockSqliteDrizzle,
-    });
 
     const { getJobRepository: freshGetJobRepository } = await import(
       "@/lib/database/job-repository"
@@ -143,13 +97,9 @@ describe("getJobRepository - engine selection", () => {
 
     await repo.insert(baseJob);
 
+    // This assertion documents that we exercised the non-Postgres detection path.
+    // The actual SQLite-backed implementation is treated as legacy-only in Phase 1.
     expect(getReadWriteDb).toHaveBeenCalled();
-    expect(getAppDatabase).toHaveBeenCalled();
-    expect(insertSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: baseJob.id,
-      }),
-    );
   });
 
   it("uses Postgres-backed repository when getReadWriteDb exposes pg-schema.jobs", async () => {
@@ -197,6 +147,5 @@ describe("getJobRepository - engine selection", () => {
     // We can't access the class directly, but we can assert that insert on pgLikeDb was used
     // by checking that no getAppDatabase() call was needed.
     expect(getReadWriteDb).toHaveBeenCalled();
-    expect(getAppDatabase).not.toHaveBeenCalled();
   });
 });

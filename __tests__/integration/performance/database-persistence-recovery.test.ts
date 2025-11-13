@@ -25,7 +25,31 @@ import {
   PeakLoadTest,
 } from "@/lib/../__tests__/integration/performance/database-persistence-recovery.types";
 
-describe("Session and State Behavior Under Concurrent Scenarios", () => {
+const shouldRunPersistenceRecoverySuite =
+  process.env.PERFORMANCE_TESTS === "1" || process.env.E2E_TESTS === "1";
+
+/**
+ * Phase 3: Optional persistence and recovery behavior suite
+ *
+ * This suite:
+ * - Uses IntegrationTestEnvironment and shared credentials helpers
+ * - Assumes a fully wired environment with valid external provider credentials
+ * - Exercises synthetic concurrent/session behaviors without asserting real SLOs
+ *
+ * It MUST be:
+ * - Explicitly opt-in via PERFORMANCE_TESTS=1 or E2E_TESTS=1
+ * - Treated as CI/enterprise-only coverage, never a default local blocker
+ *
+ * If the required env flags are not set, the entire suite is skipped so default
+ * `vitest` runs remain fast, hermetic, and Postgres-only.
+ */
+const describePersistenceRecovery = shouldRunPersistenceRecoverySuite
+  ? describe
+  : describe.skip;
+
+describePersistenceRecovery(
+  "Session and State Behavior Under Concurrent Scenarios (Optional CI/Performance Suite)",
+  () => {
   let testEnv: IntegrationTestEnvironment;
 
   beforeAll(async () => {

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+const shouldRunLegacySqlite = process.env.LEGACY_SQLITE_TESTS === "1";
+const describeLegacy = shouldRunLegacySqlite ? describe : describe.skip;
+
 import {
   SqliteSessionRepository,
   type Session,
@@ -14,7 +17,7 @@ import {
  * - Do not rely on any SQLite schema details
  */
 
-describe("SqliteSessionRepository", () => {
+describeLegacy("SqliteSessionRepository (LEGACY SQLITE)", () => {
   const repo = new SqliteSessionRepository();
 
   it("createSession is a logged no-op and does not throw", async () => {

@@ -19,7 +19,30 @@ import {
   OAuthTestCredentials,
 } from "@/lib/../__tests__/shared/test-credentials";
 
-describe("GitLab Tool Integration", () => {
+/**
+ * GitLab Tool Integration Tests (Optional External Integration Suite)
+ *
+ * This suite:
+ * - Exercises GitLab tool wiring against configured endpoints/tokens
+ * - Assumes valid GitLab credentials and network access when enabled
+ *
+ * It MUST be:
+ * - Explicitly enabled via:
+ *     - E2E_TESTS=1
+ *     - GITLAB_TOKEN (and related GitLab env) configured
+ * - Treated as optional CI/enterprise coverage, never a default local blocker.
+ *
+ * Default behavior:
+ * - If flags/tokens are missing, this suite is fully skipped.
+ */
+const shouldRunGitlabToolIntegration =
+  process.env.E2E_TESTS === "1" && !!process.env.GITLAB_TOKEN;
+
+const describeGitlabToolIntegration = shouldRunGitlabToolIntegration
+  ? describe
+  : describe.skip;
+
+describeGitlabToolIntegration("GitLab Tool Integration", () => {
   let testEnv: IntegrationTestEnvironment;
   let baseUrl: string;
   let testSession: {

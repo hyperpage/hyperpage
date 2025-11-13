@@ -1,7 +1,28 @@
 import { test, expect } from "@playwright/test";
 import { MockRateLimitServer } from "@/__tests__/mocks/rate-limit-server";
 
-test.describe("Rate Limit UI Handling E2E Tests", () => {
+/**
+ * Rate Limit UI Handling E2E Tests (Playwright, Optional E2E Suite)
+ *
+ * This suite:
+ * - Exercises real browser interactions for rate-limit behavior using a local mock server
+ * - Assumes docker-compose.e2e + .env.e2e wiring when run in CI environments
+ *
+ * It MUST be:
+ * - Explicitly opt-in via E2E_TESTS=1
+ * - Treated as optional E2E/CI coverage, never a default local blocker
+ *
+ * Default behavior:
+ * - If E2E_TESTS is not set to "1", this suite is fully skipped so local and unit/integration
+ *   workflows remain fast and hermetic.
+ */
+const shouldRunRateLimitE2E = process.env.E2E_TESTS === "1";
+
+const describeRateLimitE2E = shouldRunRateLimitE2E
+  ? test.describe
+  : test.describe.skip;
+
+describeRateLimitE2E("Rate Limit UI Handling E2E Tests", () => {
   let mockServer: MockRateLimitServer;
 
   test.beforeAll(async () => {

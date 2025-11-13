@@ -12,6 +12,14 @@ The Hyperpage platform uses a tiered environment configuration system:
 - **`.env.local`**: Local development file (ignored by git) with actual credentials
 - **`.env`**: Production environment variables (server-side only)
 
+### Database Configuration
+
+Hyperpage is PostgreSQL-only for runtime and tests.
+
+- `DATABASE_URL` is the single source of truth for all environments.
+- Test harnesses (e.g. `vitest.setup.ts`) consume `DATABASE_URL` directly.
+- `TEST_DATABASE_URL` may exist in some setups but is not authoritative and MUST NOT be treated as the primary runtime/test database configuration.
+
 ### Tool Enablement Variables
 
 Each tool in the platform is controlled by environment variables:
@@ -216,15 +224,34 @@ Configuration is also validated during runtime operations:
 
 ### Docker Configuration
 
-Docker deployments use environment files:
+Docker deployments rely on environment variables, not bundled `.env` files:
+
+- Provide `DATABASE_URL` and tool flags (e.g. `ENABLE_GITHUB`) via:
+  - Docker `-e` flags, or
+  - An environment file mounted at runtime (not baked into the image).
+
+Example pattern:
 
 ```dockerfile
 # Dockerfile
 FROM node:18-alpine
-COPY .env.production .env
+
+WORKDIR /app
 COPY package*.json ./
-# ... rest of Dockerfile
+RUN npm ci --only=production
+
+COPY . .
+
+# Environment is injected at runtime; do NOT bake secrets into the image.
+# DATABASE_URL and ENABLE_* flags must be provided via container environment.
+CMD ["npm", "start"]
 ```
+
+For testing with Docker:
+
+- `docker-compose.testing.yml` is the canonical Postgres-backed test stack.
+- It should define a Postgres service and an app service wired via `DATABASE_URL`.
+- Local test runs use the same `DATABASE_URL` contract as production.
 
 ### Kubernetes Configuration
 

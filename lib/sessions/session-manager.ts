@@ -1,5 +1,3 @@
-import { CacheFactory } from "@/lib/cache/cache-factory";
-import { CacheBackend } from "@/lib/cache/cache-interface";
 import { MemorySessionStore } from "@/lib/sessions/memory-session-store";
 import logger from "@/lib/logger";
 

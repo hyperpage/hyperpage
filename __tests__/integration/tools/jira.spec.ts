@@ -25,7 +25,30 @@ import logger from "@/lib/logger";
 const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
 const serverAvailable = await isServerAvailable("jira");
 
-describe("Jira Tool Integration", () => {
+/**
+ * Jira Tool Integration Tests (Optional External Integration Suite)
+ *
+ * This suite:
+ * - Exercises Jira tool wiring against configured endpoints/tokens
+ * - Assumes valid Jira credentials and network access when enabled
+ *
+ * It MUST be:
+ * - Explicitly enabled via:
+ *     - E2E_TESTS=1
+ *     - JIRA_API_TOKEN (and related Jira env) configured
+ * - Treated as optional CI/enterprise coverage, never a default local blocker.
+ *
+ * Default behavior:
+ * - If flags/tokens are missing, this suite is fully skipped.
+ */
+const shouldRunJiraToolIntegration =
+  process.env.E2E_TESTS === "1" && !!process.env.JIRA_API_TOKEN;
+
+const describeJiraToolIntegration = shouldRunJiraToolIntegration
+  ? describe
+  : describe.skip;
+
+describeJiraToolIntegration("Jira Tool Integration", () => {
   let testEnv: IntegrationTestEnvironment;
   let testSession: {
     userId: string;

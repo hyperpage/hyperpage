@@ -13,7 +13,28 @@ import {
 import { TestBrowser } from "@/__tests__/integration/workflows/utils/test-browser";
 import { UserJourneySimulator } from "@/__tests__/integration/workflows/utils/user-journey-simulator";
 
-describe("End-to-End User Journey Tests", () => {
+/**
+ * End-to-End User Journey Tests (Synthetic Workflow Suite)
+ *
+ * This suite:
+ * - Uses TestBrowser + UserJourneySimulator abstractions
+ * - May rely on multiple tool providers and complex flows
+ *
+ * It MUST be:
+ * - Treated as optional E2E/CI-style coverage due to breadth and dependencies
+ * - Not a default local blocker for fast Postgres-only/unit workflows
+ *
+ * Default behavior:
+ * - If E2E_TESTS is not set to "1", this suite is skipped.
+ * - When E2E_TESTS=1, it runs as part of richer end-to-end validation.
+ */
+const shouldRunUserJourneySuite = process.env.E2E_TESTS === "1";
+
+const describeUserJourney = shouldRunUserJourneySuite
+  ? describe
+  : describe.skip;
+
+describeUserJourney("End-to-End User Journey Tests", () => {
   let testEnv: IntegrationTestEnvironment;
   let baseUrl: string;
   let browser: TestBrowser;

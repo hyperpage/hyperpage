@@ -19,10 +19,8 @@ import type {
 } from "@/lib/types/rate-limit";
 import { toolRegistry } from "@/tools/registry";
 import { Tool } from "@/tools/tool-types";
-import { db } from "@/lib/database";
-import { rateLimits } from "@/lib/database/schema";
-import { sql } from "drizzle-orm";
 import { rateLimitLogger } from "@/lib/logger";
+import { rateLimitRepository } from "@/lib/database/rate-limit-repository";
 import type { NextRequest } from "next/server";
 
 // Enhanced interfaces for unified service
@@ -602,140 +600,69 @@ export class UnifiedRateLimitService {
   }
 
   /**
-   * Refresh rate limit data for a platform
+   * Refresh rate limit data for a platform and persist via repository.
    */
   async refreshPlatformLimits(platform: string): Promise<void> {
     const status = await this.getRateLimitStatus(platform);
-    if (status) {
-      // Also persist to database
-      await this.saveRateLimitStatus(status);
-    }
-  }
+    if (!status) return;
 
-  /**
-   * Save rate limit status to database for persistence
-   */
-  private async saveRateLimitStatus(
-    rateLimitStatus: RateLimitStatus,
-  ): Promise<void> {
-    try {
-      const platform = rateLimitStatus.platform;
-
-      let platformLimits: {
-        remaining?: number | null;
-        limit?: number | null;
-        resetTime?: number | null;
-      };
-
-      if (platform === "github" && rateLimitStatus.limits.github) {
-        platformLimits = rateLimitStatus.limits.github.core || {};
-      } else if (platform === "gitlab" && rateLimitStatus.limits.gitlab) {
-        platformLimits = rateLimitStatus.limits.gitlab.global || {};
-      } else if (platform === "jira" && rateLimitStatus.limits.jira) {
-        platformLimits = rateLimitStatus.limits.jira.global || {};
-      } else {
-        rateLimitLogger.event(
-          "warn",
-          platform,
-          "No rate limit data found for platform, skipping persistence",
-        );
-        return;
-      }
-
-      const limitRecord = {
-        id: `${platform}:global`,
-        platform,
-        limitRemaining: platformLimits.remaining ?? null,
-        limitTotal: platformLimits.limit ?? null,
-        resetTime: platformLimits.resetTime ?? null,
-        lastUpdated: rateLimitStatus.lastUpdated,
-      };
-
-      await db
-        .insert(rateLimits)
-        .values(limitRecord)
-        .onConflictDoUpdate({
-          target: rateLimits.id,
-          set: {
-            limitRemaining: limitRecord.limitRemaining,
-            limitTotal: limitRecord.limitTotal,
-            resetTime: limitRecord.resetTime,
-            lastUpdated: limitRecord.lastUpdated,
-          },
-        });
-
-      // Clean up old rate limit records
-      const cutoffTime = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      await db
-        .delete(rateLimits)
-        .where(sql`${rateLimits.lastUpdated} < ${cutoffTime}`);
-    } catch (error) {
+    const normalized = this.toNormalizedRecord(status);
+    if (!normalized) {
       rateLimitLogger.event(
-        "error",
-        rateLimitStatus.platform,
-        "Failed to save rate limit status",
-        { error },
+        "warn",
+        platform,
+        "Unable to normalize rate limit status for persistence",
       );
+      return;
     }
+
+    await rateLimitRepository.upsert(normalized);
   }
 
   /**
-   * Load persisted rate limit data from database at application startup
+   * Load persisted rate limit data from repository at application startup.
    */
   async loadPersistedRateLimits(): Promise<number> {
     try {
       rateLimitLogger.event(
         "info",
         "system",
-        "Loading persisted rate limits from database",
+        "Loading persisted rate limits from repository",
       );
-      const persistedLimits = await db.select().from(rateLimits);
 
-      let loadedCount = 0;
+      const records = await rateLimitRepository.loadAll();
       const now = Date.now();
+      let loadedCount = 0;
 
-      for (const limit of persistedLimits) {
-        try {
-          const lastUpdatedMs = Number(limit.lastUpdated);
-          if (now - lastUpdatedMs > 24 * 60 * 60 * 1000) {
-            continue; // Skip stale data
-          }
-
-          const platform = limit.platform;
-          const existing = this.cache.get(platform);
-          if (existing && existing.lastUpdated > lastUpdatedMs) {
-            continue; // Skip if we have fresher data
-          }
-
-          const rateLimitStatus = this.reconstructRateLimitStatus(
-            limit,
-            lastUpdatedMs,
-          );
-          this.cache.set(platform, rateLimitStatus);
-          loadedCount++;
-        } catch (error) {
-          rateLimitLogger.event(
-            "error",
-            limit.platform,
-            "Failed to load persisted rate limit",
-            { error },
-          );
-          continue;
+      for (const record of records) {
+        if (now - record.lastUpdated > 24 * 60 * 60 * 1000) {
+          continue; // skip stale >24h
         }
+
+        const status = this.fromNormalizedRecord(record);
+        const existing = this.cache.get(status.platform);
+
+        if (existing && existing.lastUpdated > status.lastUpdated) {
+          continue; // keep fresher cache
+        }
+
+        this.cache.set(status.platform, status);
+        loadedCount++;
       }
 
       rateLimitLogger.event(
         "info",
         "system",
-        `Successfully loaded ${loadedCount} persisted rate limit records`,
+        `Loaded ${loadedCount} persisted rate limit records from repository`,
         { loadedCount },
       );
+
       return loadedCount;
     } catch (error) {
       rateLimitLogger.event(
         "error",
         "system",
-        "Failed to load persisted rate limits",
+        "Failed to load persisted rate limits from repository",
         { error },
       );
       return 0;
@@ -743,25 +670,89 @@ export class UnifiedRateLimitService {
   }
 
   /**
-   * Reconstruct rate limit status from persisted database data
+   * Convert in-memory RateLimitStatus into NormalizedRateLimitRecord
+   * used by the Postgres repository.
    */
-  private reconstructRateLimitStatus(
-    limit: {
-      platform: string;
-      limitTotal?: number | null;
-      limitRemaining?: number | null;
-      resetTime?: number | null;
-    },
-    lastUpdatedMs: number,
-  ): RateLimitStatus {
-    const platform = limit.platform;
-    const limitTotal = limit.limitTotal ? Number(limit.limitTotal) : null;
-    const limitRemaining = limit.limitRemaining
-      ? Number(limit.limitRemaining)
-      : null;
-    const resetTime: number | null = limit.resetTime
-      ? Number(limit.resetTime)
-      : null;
+  private toNormalizedRecord(
+    status: RateLimitStatus,
+  ):
+    | {
+        id: string;
+        platform: string;
+        limitRemaining: number | null;
+        limitTotal: number | null;
+        resetTime: number | null;
+        lastUpdated: number;
+      }
+    | null {
+    const platform = status.platform;
+    const id = `${platform}:global`;
+
+    let limitRemaining: number | null = null;
+    let limitTotal: number | null = null;
+    let resetTime: number | null = null;
+
+    if (status.limits.github?.core && platform === "github") {
+      const core = status.limits.github.core;
+      limitRemaining = core.remaining ?? null;
+      limitTotal = core.limit ?? null;
+      resetTime = core.resetTime ?? null;
+    } else if (status.limits.gitlab?.global && platform === "gitlab") {
+      const gl = status.limits.gitlab.global;
+      limitRemaining = gl.remaining ?? null;
+      limitTotal = gl.limit ?? null;
+      resetTime = gl.resetTime ?? null;
+    } else if (status.limits.jira?.global && platform === "jira") {
+      const jr = status.limits.jira.global;
+      limitRemaining = jr.remaining ?? null;
+      limitTotal = jr.limit ?? null;
+      resetTime = jr.resetTime ?? null;
+    }
+
+    return {
+      id,
+      platform,
+      limitRemaining,
+      limitTotal,
+      resetTime,
+      lastUpdated: status.lastUpdated,
+    };
+  }
+
+  /**
+   * Convert a normalized repository record back into RateLimitStatus
+   * for warming the in-memory cache.
+   */
+  private fromNormalizedRecord(record: {
+    id: string;
+    platform: string;
+    limitRemaining: number | null;
+    limitTotal: number | null;
+    resetTime: number | null;
+    lastUpdated: number;
+  }): RateLimitStatus {
+    const { platform, limitRemaining, limitTotal, resetTime, lastUpdated } =
+      record;
+
+    const limits: PlatformRateLimits = {};
+
+    if (platform === "github") {
+      const core = this.createLimitEntry(limitTotal, limitRemaining, resetTime);
+      limits.github = {
+        core,
+        // For reconstructed state, mirror core values to required keys to satisfy type
+        search: this.createLimitEntry(core.limit, core.remaining, core.resetTime),
+        graphql: this.createLimitEntry(core.limit, core.remaining, core.resetTime),
+      };
+    } else if (platform === "gitlab") {
+      limits.gitlab = {
+        global: this.createLimitEntry(limitTotal, limitRemaining, resetTime),
+      };
+    } else if (platform === "jira") {
+      limits.jira = {
+        global: this.createLimitEntry(limitTotal, limitRemaining, resetTime),
+      };
+    }
 
     let status: "normal" | "warning" | "critical" | "unknown" = "unknown";
     if (limitRemaining !== null && limitTotal !== null) {
@@ -774,31 +765,12 @@ export class UnifiedRateLimitService {
             : "normal";
     }
 
-    const limitsObject: PlatformRateLimits = {};
-
-    // Reconstruct based on platform
-    if (platform === "github") {
-      limitsObject.github = {
-        core: this.createLimitEntry(limitTotal, limitRemaining, resetTime),
-        search: this.createLimitEntry(limitTotal, limitRemaining, resetTime),
-        graphql: this.createLimitEntry(limitTotal, limitRemaining, resetTime),
-      };
-    } else if (platform === "gitlab") {
-      limitsObject.gitlab = {
-        global: this.createLimitEntry(limitTotal, limitRemaining, resetTime),
-      };
-    } else if (platform === "jira") {
-      limitsObject.jira = {
-        global: this.createLimitEntry(limitTotal, limitRemaining, resetTime),
-      };
-    }
-
     return {
       platform,
-      lastUpdated: lastUpdatedMs,
+      lastUpdated,
       dataFresh: false,
       status,
-      limits: limitsObject,
+      limits,
     };
   }
 

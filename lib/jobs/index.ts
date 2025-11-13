@@ -7,7 +7,12 @@
 // Core types
 export * from "../types/jobs";
 
-// Core implementations
+/**
+ * Core implementations
+ *
+ * - MemoryJobQueue and MemoryJobScheduler remain in-memory execution utilities.
+ * - PostgresJobQueue is the canonical durable persistence layer for jobs.
+ */
 export {
   MemoryJobQueue,
   defaultMemoryQueue,
@@ -18,6 +23,7 @@ export {
   defaultMemoryScheduler,
 } from "./memory-job-scheduler";
 export { JobFactory, defaultJobFactory } from "./job-factory";
+export { PostgresJobQueue, getPostgresJobQueue } from "./postgres-job-queue";
 
 // Re-export interfaces
 export type {

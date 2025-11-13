@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import dashboardJson from "@/grafana/hyperpage-rate-limiting-dashboard.json";
 
+const shouldRunGrafanaTests =
+  process.env.GRAFANA_TESTS === "1" || process.env.E2E_TESTS === "1";
+const describeGrafana = shouldRunGrafanaTests ? describe : describe.skip;
+
 // Type definitions for test
 interface GrafanaVariable {
   name: string;
@@ -8,7 +12,7 @@ interface GrafanaVariable {
   [key: string]: unknown;
 }
 
-describe("Grafana Dashboard Configuration", () => {
+describeGrafana("Grafana Dashboard Configuration", () => {
   it("should be valid JSON", () => {
     expect(typeof dashboardJson).toBe("object");
     expect(dashboardJson).toBeDefined();

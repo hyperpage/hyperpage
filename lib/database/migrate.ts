@@ -5,7 +5,15 @@
  * Supports up/down migrations with transaction safety and rollback capabilities.
  */
 
-import { internalDb } from "@/lib/database/connection";
+/**
+ * LEGACY SQLITE MIGRATION HELPER
+ *
+ * Phase 1 PostgreSQL-only runtime:
+ * - This module is retained solely for historical SQLite migration scripts.
+ * - It MUST NOT be imported by runtime code or active tests.
+ * - It assumes a better-sqlite3-style Database instance provided by the caller.
+ */
+import type { Database as SqliteDatabase } from "better-sqlite3";
 import {
   MIGRATIONS_REGISTRY,
   getMigrationNames,
@@ -13,7 +21,7 @@ import {
 import logger from "@/lib/logger";
 
 // Create migration tracking table if it doesn't exist
-function ensureMigrationTable() {
+function ensureMigrationTable(internalDb: SqliteDatabase) {
   try {
     const createTableSql = `
       CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -63,7 +71,10 @@ function loadMigrationFromRegistry(migrationName: string): {
 }
 
 // Check if migration has been executed
-async function isMigrationExecuted(migrationName: string): Promise<boolean> {
+async function isMigrationExecuted(
+  internalDb: SqliteDatabase,
+  migrationName: string,
+): Promise<boolean> {
   try {
     const result = await internalDb
       .prepare("SELECT id FROM schema_migrations WHERE migration_name = ?")
@@ -80,7 +91,10 @@ async function isMigrationExecuted(migrationName: string): Promise<boolean> {
 }
 
 // Record migration execution
-async function recordMigrationExecuted(migrationName: string): Promise<void> {
+async function recordMigrationExecuted(
+  internalDb: SqliteDatabase,
+  migrationName: string,
+): Promise<void> {
   try {
     await internalDb
       .prepare("INSERT INTO schema_migrations (migration_name) VALUES (?)")
@@ -97,7 +111,10 @@ async function recordMigrationExecuted(migrationName: string): Promise<void> {
 }
 
 // Remove migration record
-async function removeMigrationRecord(migrationName: string): Promise<void> {
+async function removeMigrationRecord(
+  internalDb: SqliteDatabase,
+  migrationName: string,
+): Promise<void> {
   try {
     await internalDb
       .prepare("DELETE FROM schema_migrations WHERE migration_name = ?")
@@ -113,6 +130,7 @@ async function removeMigrationRecord(migrationName: string): Promise<void> {
 
 // Execute migration up
 async function runMigrationUp(
+  internalDb: SqliteDatabase,
   migrationName: string,
   sqlQuery: unknown,
   isDryRun = false,
@@ -131,12 +149,12 @@ async function runMigrationUp(
           internalDb.exec(sqlQuery);
         } else if (typeof sqlQuery === "function") {
           // Handle function-based migrations
-          (sqlQuery as (db: typeof internalDb) => void)(internalDb);
+          (sqlQuery as (db: SqliteDatabase) => void)(internalDb);
         } else {
           throw new Error(`Unsupported migration format in ${migrationName}`);
         }
 
-        recordMigrationExecuted(migrationName);
+        void recordMigrationExecuted(internalDb, migrationName);
       })();
 
       logger.info(`✓ Migration ${migrationName} completed successfully`, {
@@ -158,6 +176,7 @@ async function runMigrationUp(
 
 // Execute migration down
 async function runMigrationDown(
+  internalDb: SqliteDatabase,
   migrationName: string,
   sqlQuery: unknown,
   isDryRun = false,
@@ -175,12 +194,12 @@ async function runMigrationDown(
         if (typeof sqlQuery === "string") {
           internalDb.exec(sqlQuery);
         } else if (typeof sqlQuery === "function") {
-          (sqlQuery as (db: typeof internalDb) => void)(internalDb);
+          (sqlQuery as (db: SqliteDatabase) => void)(internalDb);
         } else {
           throw new Error(`Unsupported migration format in ${migrationName}`);
         }
 
-        removeMigrationRecord(migrationName);
+        void removeMigrationRecord(internalDb, migrationName);
       })();
 
       logger.info(
@@ -206,12 +225,15 @@ async function runMigrationDown(
  * Run all pending migrations
  * @param isDryRun If true, only log what would be done without making changes
  */
-export async function runMigrations(isDryRun = false): Promise<void> {
+export async function runMigrations(
+  internalDb: SqliteDatabase,
+  isDryRun = false,
+): Promise<void> {
   logger.info("Starting database migration process", { isDryRun });
 
   try {
     // Ensure migration table exists
-    ensureMigrationTable();
+    ensureMigrationTable(internalDb);
 
     const migrationNames = getMigrationNamesFromRegistry();
     if (migrationNames.length === 0) {
@@ -226,7 +248,7 @@ export async function runMigrations(isDryRun = false): Promise<void> {
 
     for (const migrationName of migrationNames) {
       // Check if already executed
-      const executed = await isMigrationExecuted(migrationName);
+      const executed = await isMigrationExecuted(internalDb, migrationName);
       if (executed) {
         if (process.env.NODE_ENV === "development") {
           logger.debug(
@@ -239,7 +261,7 @@ export async function runMigrations(isDryRun = false): Promise<void> {
 
       // Load and execute migration
       const { up } = loadMigrationFromRegistry(migrationName);
-      await runMigrationUp(migrationName, up, isDryRun);
+      await runMigrationUp(internalDb, migrationName, up, isDryRun);
     }
 
     logger.info("Database migration process completed successfully", {
@@ -260,13 +282,14 @@ export async function runMigrations(isDryRun = false): Promise<void> {
  * @param isDryRun If true, only log what would be done
  */
 export async function rollbackMigrations(
+  internalDb: SqliteDatabase,
   count = 1,
   isDryRun = false,
 ): Promise<void> {
   logger.info(`Rolling back ${count} migration(s)`, { count, isDryRun });
 
   try {
-    ensureMigrationTable();
+    ensureMigrationTable(internalDb);
 
     // Get executed migrations in reverse order
     const executedMigrations = (await internalDb
@@ -285,7 +308,7 @@ export async function rollbackMigrations(
 
       try {
         const { down } = loadMigrationFromRegistry(migrationName);
-        await runMigrationDown(migrationName, down, isDryRun);
+        await runMigrationDown(internalDb, migrationName, down, isDryRun);
       } catch (error) {
         logger.error("Failed to rollback migration", {
           error: error instanceof Error ? error.message : String(error),
@@ -309,9 +332,11 @@ export async function rollbackMigrations(
 /**
  * Show migration status
  */
-export async function showMigrationStatus(): Promise<void> {
+export async function showMigrationStatus(
+  internalDb: SqliteDatabase,
+): Promise<void> {
   try {
-    ensureMigrationTable();
+    ensureMigrationTable(internalDb);
 
     logger.info("Database migration status:");
 
@@ -322,7 +347,7 @@ export async function showMigrationStatus(): Promise<void> {
     }
 
     for (const migrationName of migrationNames) {
-      const executed = await isMigrationExecuted(migrationName);
+      const executed = await isMigrationExecuted(internalDb, migrationName);
       const status = executed ? "✅ Executed" : "⏳ Pending";
       logger.info(`${status} - ${migrationName}`);
     }

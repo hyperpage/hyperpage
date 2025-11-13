@@ -25,7 +25,30 @@ import logger from "@/lib/logger";
 const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
 const serverAvailable = await isServerAvailable("github");
 
-describe("GitHub Tool Integration", () => {
+/**
+ * GitHub Tool Integration Tests (Optional External Integration Suite)
+ *
+ * This suite:
+ * - Exercises GitHub tool wiring against configured endpoints/tokens
+ * - Assumes valid GitHub credentials and network access when enabled
+ *
+ * It MUST be:
+ * - Explicitly enabled via:
+ *     - E2E_TESTS=1
+ *     - GITHUB_TOKEN (and related GitHub env) configured
+ * - Treated as optional CI/enterprise coverage, never a default local blocker.
+ *
+ * Default behavior:
+ * - If flags/tokens are missing, this suite is fully skipped.
+ */
+const shouldRunGithubToolIntegration =
+  process.env.E2E_TESTS === "1" && !!process.env.GITHUB_TOKEN;
+
+const describeGithubToolIntegration = shouldRunGithubToolIntegration
+  ? describe
+  : describe.skip;
+
+describeGithubToolIntegration("GitHub Tool Integration", () => {
   let testEnv: IntegrationTestEnvironment;
   let testSession: {
     userId: string;

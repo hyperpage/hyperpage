@@ -34,8 +34,22 @@ interface TestUser extends Record<string, unknown> {
  * These tests model cache invalidation semantics in a deterministic way using
  * fake timers, without making performance guarantees or exercising the full
  * cache stack. They are intentionally synthetic and scoped to TTL behavior.
+ *
+ * Phase 3: This suite is treated as optional CI/enterprise coverage:
+ * - Requires a fully wired IntegrationTestEnvironment
+ * - MUST be explicitly enabled via PERFORMANCE_TESTS=1 or E2E_TESTS=1
+ * - MUST NOT block default local `vitest` runs if environment is not configured
  */
-describe("Cache Invalidation Accuracy and Timing (synthetic TTL behavior)", () => {
+const shouldRunCacheInvalidationSuite =
+  process.env.PERFORMANCE_TESTS === "1" || process.env.E2E_TESTS === "1";
+
+const describeCacheInvalidation = shouldRunCacheInvalidationSuite
+  ? describe
+  : describe.skip;
+
+describeCacheInvalidation(
+  "Cache Invalidation Accuracy and Timing (synthetic TTL behavior, Optional CI/Performance Suite)",
+  () => {
   let testEnv: IntegrationTestEnvironment;
 
   beforeAll(async () => {

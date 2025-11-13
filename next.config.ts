@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   // External packages for Node.js compatibility
-  serverExternalPackages: ["better-sqlite3", "ioredis"],
+  serverExternalPackages: ["ioredis"],
 
   // Disable ESLint during builds for containerization
   eslint: {
@@ -44,7 +44,6 @@ const nextConfig: NextConfig = {
     // Mark external packages (server-side only)
     config.externals = config.externals || [];
     config.externals.push({
-      "better-sqlite3": "commonjs better-sqlite3",
       ioredis: "commonjs ioredis",
     });
 

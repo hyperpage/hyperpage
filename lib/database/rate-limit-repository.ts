@@ -1,5 +1,3 @@
-import { sql } from "drizzle-orm";
-import * as sqliteSchema from "./schema";
 import * as pgSchema from "./pg-schema";
 import { getReadWriteDb } from "./connection";
 import logger, { rateLimitLogger } from "@/lib/logger";
@@ -24,24 +22,18 @@ export interface NormalizedRateLimitRecord {
 }
 
 /**
- * Dual-engine rate limit repository.
+ * PostgreSQL rate limit repository.
  *
- * - SQLite backend:
- *   Uses sqliteSchema.rateLimits as aligned with legacy behavior.
- *
- * - Postgres backend:
- *   Uses pgSchema.rateLimits:
- *     - key: "${platform}:global"
- *     - remaining: maps to limitRemaining
- *     - resetAt: maps to resetTime
- *     - metadata (jsonb) stores:
- *         {
- *           platform: string;
- *           limitTotal: number | null;
- *           lastUpdated: number;
- *         }
- *
- * Selection is driven by getReadWriteDb() (DB_ENGINE).
+ * Uses pgSchema.rateLimits:
+ *   - key: "${platform}:global"
+ *   - remaining: maps to limitRemaining
+ *   - resetAt: maps to resetTime
+ *   - metadata (jsonb):
+ *       {
+ *         platform: string;
+ *         limitTotal: number | null;
+ *         lastUpdated: number;
+ *       }
  */
 export class RateLimitRepository {
   /**
@@ -51,19 +43,13 @@ export class RateLimitRepository {
   async loadAll(): Promise<NormalizedRateLimitRecord[]> {
     const db = getReadWriteDb();
 
-    if (this.isPostgresDb(db)) {
-      const rows = await db.select().from(pgSchema.rateLimits);
+    const rows = await db.select().from(pgSchema.rateLimits);
 
-      return rows
-        .map((row) => this.fromPostgresRow(row))
-        .filter(
-          (record): record is NormalizedRateLimitRecord => record !== null,
-        );
-    }
-
-    const rows = await db.select().from(sqliteSchema.rateLimits);
-
-    return rows.map((row) => this.fromSQLiteRow(row));
+    return rows
+      .map((row) => this.fromPostgresRow(row))
+      .filter(
+        (record): record is NormalizedRateLimitRecord => record !== null,
+      );
   }
 
   /**
@@ -72,103 +58,45 @@ export class RateLimitRepository {
   async upsert(record: NormalizedRateLimitRecord): Promise<void> {
     const db = getReadWriteDb();
 
-    if (this.isPostgresDb(db)) {
-      const key = record.id;
-      const metadata = this.toPostgresMetadata(record);
+    const key = record.id;
+    const metadata = this.toPostgresMetadata(record);
+    const resetAt =
+      record.resetTime !== null ? new Date(record.resetTime) : null;
 
-      const resetAt =
-        record.resetTime !== null ? new Date(record.resetTime) : null;
-
-      await db
-        .insert(pgSchema.rateLimits)
-        .values({
-          key,
+    await db
+      .insert(pgSchema.rateLimits)
+      .values({
+        key,
+        remaining: record.limitRemaining ?? undefined,
+        resetAt: resetAt ?? undefined,
+        metadata,
+      } as typeof pgSchema.rateLimits.$inferInsert)
+      .onConflictDoUpdate({
+        target: pgSchema.rateLimits.key,
+        set: {
           remaining: record.limitRemaining ?? undefined,
           resetAt: resetAt ?? undefined,
           metadata,
-        } as typeof pgSchema.rateLimits.$inferInsert)
-        .onConflictDoUpdate({
-          target: pgSchema.rateLimits.key,
-          set: {
-            remaining: record.limitRemaining ?? undefined,
-            resetAt: resetAt ?? undefined,
-            metadata,
-          },
-        });
-
-      return;
-    }
-
-    await db
-      .insert(sqliteSchema.rateLimits)
-      .values({
-        id: record.id,
-        platform: record.platform,
-        limitRemaining: record.limitRemaining,
-        limitTotal: record.limitTotal,
-        resetTime: record.resetTime,
-        lastUpdated: record.lastUpdated,
-      })
-      .onConflictDoUpdate({
-        target: sqliteSchema.rateLimits.id,
-        set: {
-          limitRemaining: record.limitRemaining,
-          limitTotal: record.limitTotal,
-          resetTime: record.resetTime,
-          lastUpdated: record.lastUpdated,
         },
       });
   }
 
   /**
    * Delete records older than the given cutoff time (epoch ms).
-   * Used to keep the table small.
+   * Retained for interface compatibility; Postgres cleanup is handled via ops/TTL.
    */
-  async cleanupOlderThan(cutoffTime: number): Promise<void> {
-    const db = getReadWriteDb();
-
-    if (this.isPostgresDb(db)) {
-      // For Postgres, we store lastUpdated in metadata.
-      // We cannot filter metadata easily with types; use a SQL expression.
-      // Conservative approach: keep records; log that cleanup is skipped.
-      rateLimitLogger.event(
-        "info",
-        "system",
-        "Skipping Postgres rate_limits cleanup; handled by TTL/ops if needed",
-      );
-      return;
-    }
-
-    await db
-      .delete(sqliteSchema.rateLimits)
-      .where(sql`${sqliteSchema.rateLimits.lastUpdated} < ${cutoffTime}`);
+  async cleanupOlderThan(): Promise<void> {
+    // For Postgres, cleanup is expected to be handled by TTL/ops if needed.
+    rateLimitLogger.event(
+      "info",
+      "system",
+      "Skipping Postgres rate_limits cleanup; handled by TTL/ops if needed",
+    );
   }
 
   // ---------------------------------------------------------------------------
   // Mapping helpers
   // ---------------------------------------------------------------------------
-
-  private fromSQLiteRow(
-    row: typeof sqliteSchema.rateLimits.$inferSelect,
-  ): NormalizedRateLimitRecord {
-    return {
-      id: String(row.id),
-      platform: row.platform,
-      limitRemaining:
-        row.limitRemaining !== null && row.limitRemaining !== undefined
-          ? Number(row.limitRemaining)
-          : null,
-      limitTotal:
-        row.limitTotal !== null && row.limitTotal !== undefined
-          ? Number(row.limitTotal)
-          : null,
-      resetTime:
-        row.resetTime !== null && row.resetTime !== undefined
-          ? Number(row.resetTime)
-          : null,
-      lastUpdated: Number(row.lastUpdated),
-    };
-  }
 
   private fromPostgresRow(
     row: typeof pgSchema.rateLimits.$inferSelect,
@@ -231,25 +159,6 @@ export class RateLimitRepository {
     return platform || null;
   }
 
-  /**
-   * Narrowing helper for Postgres vs SQLite drizzle.
-   */
-  private isPostgresDb(
-    db:
-      | ReturnType<typeof import("./connection").getPrimaryDrizzleDb>
-      | ReturnType<typeof getReadWriteDb>,
-  ): db is import("drizzle-orm/node-postgres").NodePgDatabase<typeof pgSchema> {
-    try {
-      // @ts-expect-error accessing internal drizzle meta
-      const schema = db.$schema as Record<string, unknown> | undefined;
-      return Boolean(schema && schema.rateLimits === pgSchema.rateLimits);
-    } catch (error) {
-      logger.debug("Failed to inspect drizzle schema for engine detection", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return false;
-    }
-  }
 }
 
 /**

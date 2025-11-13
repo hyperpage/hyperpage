@@ -3,9 +3,8 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import logger from "@/lib/logger";
 import { IJob, JobStatus, JobPriority } from "@/lib/types/jobs";
-import * as sqliteSchema from "@/lib/database/schema";
 import * as pgSchema from "@/lib/database/pg-schema";
-import { getAppDatabase, getReadWriteDb } from "@/lib/database/connection";
+import { getReadWriteDb } from "@/lib/database/connection";
 
 /**
  * Normalized view of a job as used by the queue and services.
@@ -39,186 +38,15 @@ export interface JobRepository {
 }
 
 /**
- * SQLite-backed JobRepository implementation.
+ * PostgreSQL-backed JobRepository implementation.
  *
- * Uses legacy sqliteSchema.jobs table and getAppDatabase() semantics.
- * This preserves existing behavior for DB_ENGINE=sqlite (default).
+ * Uses pgSchema.jobs and pgSchema.jobHistory.
+ * This is intentionally minimal and focused on parity with legacy semantics
+ * for the JobRepository interface.
+ *
+ * Query shapes are constructed exclusively via QueryAdapter, so tests may
+ * inject a fake adapter + FakePgDb without depending on drizzle internals.
  */
-class SqliteJobRepository implements JobRepository {
-  async insert(job: NormalizedJob): Promise<void> {
-    const { drizzle: db } = getAppDatabase();
-
-    const existing = await db
-      .select()
-      .from(sqliteSchema.jobs)
-      .where(eq(sqliteSchema.jobs.id, job.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      throw new Error(`Job with ID ${job.id} already exists in database`);
-    }
-
-    await db.insert(sqliteSchema.jobs).values({
-      id: job.id,
-      type: job.type,
-      name: job.name,
-      priority: job.priority,
-      status: job.status,
-      tool: job.tool ? JSON.stringify(job.tool) : undefined,
-      endpoint: job.endpoint,
-      payload: JSON.stringify(job.payload ?? {}),
-      result: job.result ? JSON.stringify(job.result) : undefined,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
-      startedAt: job.startedAt,
-      completedAt: job.completedAt,
-      retryCount: job.retryCount,
-      persistedAt: Date.now(),
-      recoveryAttempts: 0,
-    });
-  }
-
-  async exists(jobId: string): Promise<boolean> {
-    const { drizzle: db } = getAppDatabase();
-
-    const rows = await db
-      .select()
-      .from(sqliteSchema.jobs)
-      .where(eq(sqliteSchema.jobs.id, jobId))
-      .limit(1);
-
-    return rows.length > 0;
-  }
-
-  async loadActiveJobs(): Promise<NormalizedJob[]> {
-    const { drizzle: db } = getAppDatabase();
-
-    const rows = await db
-      .select()
-      .from(sqliteSchema.jobs)
-      .where(
-        inArray(sqliteSchema.jobs.status, [
-          JobStatus.PENDING,
-          JobStatus.RUNNING,
-          JobStatus.FAILED,
-        ]),
-      );
-
-    const normalized: NormalizedJob[] = [];
-
-    for (const row of rows) {
-      try {
-        if (!row.id || !row.name) {
-          logger.warn("Skipping job with missing required fields", {
-            jobId: row.id,
-            jobName: row.name,
-            requiredFields: ["id", "name"],
-          });
-          continue;
-        }
-
-        const payload =
-          row.payload && row.payload !== ""
-            ? (JSON.parse(row.payload) as Record<string, unknown>)
-            : {};
-
-        const resultValue =
-          row.result && row.result !== ""
-            ? (JSON.parse(row.result) as IJob["result"])
-            : undefined;
-
-        normalized.push({
-          id: row.id,
-          type: row.type as NormalizedJob["type"],
-          name: row.name,
-          priority: row.priority,
-          status: row.status as JobStatus,
-          createdAt: Number(row.createdAt),
-          updatedAt: Number(row.updatedAt),
-          tool: row.tool ? JSON.parse(row.tool) : undefined,
-          endpoint: row.endpoint ?? undefined,
-          payload,
-          result: resultValue,
-          startedAt: row.startedAt ? Number(row.startedAt) : undefined,
-          completedAt: row.completedAt ? Number(row.completedAt) : undefined,
-          retryCount: row.retryCount,
-          executionHistory: [],
-        });
-      } catch (error) {
-        logger.error("Failed to process job row during recovery", {
-          jobId: row.id,
-          jobName: row.name,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    return normalized;
-  }
-
-  async updateStatus(
-    jobId: string,
-    update: {
-      status: JobStatus;
-      updatedAt: number;
-      startedAt?: number;
-      completedAt?: number;
-      result?: IJob["result"];
-    },
-  ): Promise<void> {
-    const patch: Partial<typeof sqliteSchema.jobs.$inferInsert> = {
-      status: update.status,
-      updatedAt: update.updatedAt,
-    };
-
-    if (update.startedAt !== undefined) {
-      patch.startedAt = update.startedAt;
-    }
-
-    if (update.completedAt !== undefined) {
-      patch.completedAt = update.completedAt;
-    }
-
-    if (
-      update.result &&
-      (update.status === JobStatus.COMPLETED ||
-        update.status === JobStatus.FAILED)
-    ) {
-      patch.result = JSON.stringify(update.result);
-    }
-
-    const { drizzle: db } = getAppDatabase();
-
-    await db
-      .update(sqliteSchema.jobs)
-      .set(patch)
-      .where(eq(sqliteSchema.jobs.id, jobId));
-  }
-
-  async cleanupCompletedBefore(cutoffTime: number): Promise<number> {
-    try {
-      const { drizzle: db } = getAppDatabase();
-
-      const deleted = await db
-        .delete(sqliteSchema.jobs)
-        .where(
-          and(
-            eq(sqliteSchema.jobs.status, JobStatus.COMPLETED),
-            lt(sqliteSchema.jobs.completedAt, cutoffTime),
-          ),
-        );
-
-      const maybe = deleted as { rowsAffected?: number } | undefined;
-      return typeof maybe?.rowsAffected === "number" ? maybe.rowsAffected : 0;
-    } catch (error) {
-      logger.error("Failed to cleanup old jobs from database", {
-        cutoffTime,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return 0;
-    }
-  }
-}
 
 /**
  * Tagged query helpers used by PostgresJobRepository.
@@ -280,16 +108,6 @@ const defaultQueryAdapter: QueryAdapter = {
   },
 };
 
-/**
- * Postgres-backed JobRepository implementation.
- *
- * Uses pgSchema.jobs and pgSchema.jobHistory.
- * This is intentionally minimal and focused on parity with SQLite semantics
- * for the JobRepository interface.
- *
- * Query shapes are constructed exclusively via QueryAdapter, so tests may
- * inject a fake adapter + FakePgDb without depending on drizzle internals.
- */
 class PostgresJobRepository implements JobRepository {
   constructor(
     private readonly db: NodePgDatabase<typeof pgSchema>,
@@ -541,45 +359,18 @@ class PostgresJobRepository implements JobRepository {
   }
 }
 
-/**
- * Narrowing helper to detect Postgres drizzle based on schema metadata.
- */
-function isPostgresDb(
-  db: ReturnType<typeof getReadWriteDb>,
-): db is NodePgDatabase<typeof pgSchema> {
-  try {
-    // Access $schema via an unsafe cast to avoid relying on drizzle internals in the public type.
-    const schema = (db as unknown as { $schema?: Record<string, unknown> })
-      .$schema;
-    return Boolean(schema && schema.jobs === pgSchema.jobs);
-  } catch (error) {
-    logger.debug("Failed to inspect drizzle schema for engine detection", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
-  }
-}
-
 let _jobRepository: JobRepository | null = null;
 
 /**
- * Returns a singleton JobRepository appropriate for the configured engine.
- *
- * - Default / DB_ENGINE not set: SQLite-backed repository
- * - DB_ENGINE=postgres: Postgres-backed repository
+ * Returns a singleton PostgreSQL-backed JobRepository.
  */
 export function getJobRepository(): JobRepository {
   if (_jobRepository) {
     return _jobRepository;
   }
 
-  const db = getReadWriteDb();
-
-  if (isPostgresDb(db)) {
-    _jobRepository = new PostgresJobRepository(db);
-  } else {
-    _jobRepository = new SqliteJobRepository();
-  }
+  const db = getReadWriteDb() as NodePgDatabase<typeof pgSchema>;
+  _jobRepository = new PostgresJobRepository(db);
 
   return _jobRepository;
 }

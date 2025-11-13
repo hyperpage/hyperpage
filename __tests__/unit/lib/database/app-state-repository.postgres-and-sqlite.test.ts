@@ -4,6 +4,27 @@ import * as pgSchema from "@/lib/database/pg-schema";
 import { PostgresAppStateRepository } from "@/lib/database/app-state-repository";
 
 /**
+ * LEGACY TEST SUITE - Historical cross-engine semantics
+ *
+ * Phase 1 PostgreSQL-only runtime:
+ * - This suite captures historical behavior where getAppStateRepository could select
+ *   a SQLite-backed implementation based on engine detection.
+ * - The active runtime is Postgres-only; SQLite paths are considered legacy/migration-only.
+ *
+ * IMPORTANT:
+ * - This file is retained ONLY for migration/forensics reference.
+ * - It MUST NOT run by default in local or CI workflows.
+ * - Use LEGACY_SQLITE_TESTS=1 to exercise this suite explicitly when needed.
+ *
+ * Behavior:
+ * - When LEGACY_SQLITE_TESTS=1, describeLegacy runs the historical expectations.
+ * - Otherwise, the suite is fully skipped via describe.skip.
+ */
+
+const shouldRunLegacySqlite = process.env.LEGACY_SQLITE_TESTS === "1";
+const describeLegacy = shouldRunLegacySqlite ? describe : describe.skip;
+
+/**
  * Cross-engine + singleton behavior tests for getAppStateRepository.
  *
  * Mirrors the SessionRepository tests:
@@ -18,7 +39,7 @@ interface FakePgDbForDetection {
   };
 }
 
-describe("getAppStateRepository - engine selection and singleton", () => {
+describeLegacy("getAppStateRepository - engine selection and singleton (LEGACY)", () => {
   let setFakeReadWriteDb: (db: unknown) => void;
 
   beforeEach(async () => {

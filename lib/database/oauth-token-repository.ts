@@ -1,11 +1,8 @@
 import { and, eq, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import crypto from "crypto";
-
 import logger from "@/lib/logger";
-import { oauthTokens as sqliteOauthTokens } from "@/lib/database/schema";
 import * as pgSchema from "@/lib/database/pg-schema";
-import { getAppDatabase, getReadWriteDb } from "@/lib/database/connection";
+import { getReadWriteDb } from "@/lib/database/connection";
 
 /**
  * Public shape for OAuth tokens (plaintext view).
@@ -32,15 +29,13 @@ export interface StoredTokens extends OAuthTokens {
 }
 
 /**
- * Repository contract for encrypted OAuth token storage.
+ * Repository contract for OAuth token storage.
  *
- * Implementations:
- * - SqliteOAuthTokenRepository (legacy sqliteOauthTokens)
- * - PostgresOAuthTokenRepository (pgSchema.oauthTokens) [PLANNED, NOT IMPLEMENTED]
+ * Current implementation:
+ * - PostgresOAuthTokenRepository (pgSchema.oauthTokens)
  *
- * Both:
- * - Use AES-256-GCM encryption compatible with existing behavior
- * - Never log secrets (only metadata like userId/toolName)
+ * Legacy SQLite implementations have been removed from the runtime graph and
+ * exist only in historical documentation/migration notes.
  */
 export interface OAuthTokenRepository {
   storeTokens(
@@ -69,331 +64,17 @@ export interface OAuthTokenRepository {
  * Shared AES-256-GCM helper.
  * Expects OAUTH_ENCRYPTION_KEY as hex; must decode to 32 bytes.
  */
-class AesGcmCipher {
-  private readonly key: Buffer;
-
-  constructor() {
-    const raw = process.env.OAUTH_ENCRYPTION_KEY;
-    if (!raw || raw.length < 32) {
-      throw new Error(
-        "OAUTH_ENCRYPTION_KEY must be set and at least 32 characters",
-      );
-    }
-
-    // Support both raw bytes (32 length) and hex (64 length).
-    this.key = raw.length === 64 ? Buffer.from(raw, "hex") : Buffer.from(raw);
-
-    if (this.key.length !== 32) {
-      logger.warn(
-        "OAUTH_ENCRYPTION_KEY is not 32 bytes; AES-256-GCM may be misconfigured",
-      );
-    }
-  }
-
-  encrypt(plaintext: string): { encrypted: string; iv: string } {
-    try {
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv("aes-256-gcm", this.key, iv);
-
-      let encrypted = cipher.update(plaintext, "utf8", "hex");
-      encrypted += cipher.final("hex");
-
-      const authTag = cipher.getAuthTag();
-      return {
-        encrypted,
-        iv: `${iv.toString("hex")}:${authTag.toString("hex")}`,
-      };
-    } catch (error) {
-      logger.error("OAuthTokenRepository: encryption failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw new Error("Encryption failed");
-    }
-  }
-
-  decrypt(encrypted: string, ivAndTag: string): string {
-    try {
-      const [ivHex, tagHex] = ivAndTag.split(":");
-      const iv = Buffer.from(ivHex, "hex");
-      const authTag = Buffer.from(tagHex, "hex");
-
-      const decipher = crypto.createDecipheriv("aes-256-gcm", this.key, iv);
-      decipher.setAuthTag(authTag);
-
-      let decrypted = decipher.update(encrypted, "hex", "utf8");
-      decrypted += decipher.final("utf8");
-      return decrypted;
-    } catch (error) {
-      logger.error("OAuthTokenRepository: decryption failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw new Error("Decryption failed");
-    }
-  }
-}
 
 /**
- * SQLite-backed implementation using legacy oauthTokens table.
- */
-class SqliteOAuthTokenRepository implements OAuthTokenRepository {
-  private readonly cipher = new AesGcmCipher();
-
-  private get db() {
-    const { drizzle } = getAppDatabase();
-    return drizzle;
-  }
-
-  async storeTokens(
-    userId: string,
-    toolName: string,
-    tokens: OAuthTokens,
-  ): Promise<void> {
-    const now = Date.now();
-
-    const encAccess = this.cipher.encrypt(tokens.accessToken);
-    const encRefresh = tokens.refreshToken
-      ? this.cipher.encrypt(tokens.refreshToken)
-      : null;
-
-    const scopes = tokens.scopes ? tokens.scopes.join(" ") : null;
-    const metadata = tokens.metadata ? JSON.stringify(tokens.metadata) : null;
-
-    const tokenData: typeof sqliteOauthTokens.$inferInsert = {
-      userId,
-      toolName,
-      accessToken: encAccess.encrypted,
-      refreshToken: encRefresh?.encrypted ?? null,
-      tokenType: tokens.tokenType,
-      expiresAt: tokens.expiresAt ?? null,
-      refreshExpiresAt: tokens.refreshExpiresAt ?? null,
-      scopes,
-      metadata,
-      ivAccess: encAccess.iv,
-      ivRefresh: encRefresh?.iv ?? null,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    try {
-      await this.db
-        .insert(sqliteOauthTokens)
-        .values(tokenData)
-        .onConflictDoUpdate({
-          target: [sqliteOauthTokens.userId, sqliteOauthTokens.toolName],
-          set: {
-            ...tokenData,
-            updatedAt: now,
-          },
-        });
-
-      logger.info("SqliteOAuthTokenRepository: stored tokens", {
-        userId,
-        toolName,
-      });
-    } catch (error) {
-      logger.error("SqliteOAuthTokenRepository: storeTokens failed", {
-        error: error instanceof Error ? error.message : String(error),
-        userId,
-        toolName,
-      });
-      throw new Error("Token storage failed");
-    }
-  }
-
-  async getTokens(
-    userId: string,
-    toolName: string,
-  ): Promise<OAuthTokens | null> {
-    try {
-      const rows = await this.db
-        .select()
-        .from(sqliteOauthTokens)
-        .where(
-          and(
-            eq(sqliteOauthTokens.userId, userId),
-            eq(sqliteOauthTokens.toolName, toolName),
-          ),
-        )
-        .limit(1);
-
-      if (rows.length === 0) {
-        return null;
-      }
-
-      const record = rows[0];
-
-      const accessToken = this.cipher.decrypt(
-        record.accessToken,
-        record.ivAccess,
-      );
-
-      let refreshToken: string | undefined;
-      if (record.refreshToken && record.ivRefresh) {
-        refreshToken = this.cipher.decrypt(
-          record.refreshToken,
-          record.ivRefresh,
-        );
-      }
-
-      const scopes = record.scopes
-        ? record.scopes.split(" ").filter((s) => s.length > 0)
-        : undefined;
-
-      const metadata = record.metadata
-        ? (JSON.parse(record.metadata) as Record<string, unknown>)
-        : undefined;
-
-      return {
-        accessToken,
-        refreshToken,
-        tokenType: record.tokenType,
-        expiresAt: record.expiresAt ?? undefined,
-        refreshExpiresAt: record.refreshExpiresAt ?? undefined,
-        scopes,
-        metadata,
-      };
-    } catch (error) {
-      logger.error("SqliteOAuthTokenRepository: getTokens failed", {
-        error: error instanceof Error ? error.message : String(error),
-        userId,
-        toolName,
-      });
-      return null;
-    }
-  }
-
-  async removeTokens(userId: string, toolName: string): Promise<void> {
-    try {
-      await this.db
-        .delete(sqliteOauthTokens)
-        .where(
-          and(
-            eq(sqliteOauthTokens.userId, userId),
-            eq(sqliteOauthTokens.toolName, toolName),
-          ),
-        );
-
-      logger.info("SqliteOAuthTokenRepository: removed tokens", {
-        userId,
-        toolName,
-      });
-    } catch (error) {
-      logger.error("SqliteOAuthTokenRepository: removeTokens failed", {
-        error: error instanceof Error ? error.message : String(error),
-        userId,
-        toolName,
-      });
-      throw new Error("Token removal failed");
-    }
-  }
-
-  async updateTokenExpiry(
-    userId: string,
-    toolName: string,
-    expiresAt: number,
-    refreshExpiresAt?: number,
-  ): Promise<void> {
-    try {
-      await this.db
-        .update(sqliteOauthTokens)
-        .set({
-          expiresAt,
-          refreshExpiresAt: refreshExpiresAt ?? null,
-          updatedAt: Date.now(),
-        })
-        .where(
-          and(
-            eq(sqliteOauthTokens.userId, userId),
-            eq(sqliteOauthTokens.toolName, toolName),
-          ),
-        );
-
-      logger.debug("SqliteOAuthTokenRepository: updated token expiry", {
-        userId,
-        toolName,
-      });
-    } catch (error) {
-      logger.error("SqliteOAuthTokenRepository: updateTokenExpiry failed", {
-        error: error instanceof Error ? error.message : String(error),
-        userId,
-        toolName,
-      });
-      throw new Error("Token expiry update failed");
-    }
-  }
-
-  async getExpiredTokens(): Promise<
-    Array<{ userId: string; toolName: string }>
-  > {
-    try {
-      const now = Date.now();
-
-      const rows = await this.db
-        .select({
-          userId: sqliteOauthTokens.userId,
-          toolName: sqliteOauthTokens.toolName,
-        })
-        .from(sqliteOauthTokens)
-        .where(sql`${sqliteOauthTokens.expiresAt} < ${now}`);
-
-      return rows.map((row) => ({
-        userId: row.userId,
-        toolName: row.toolName,
-      }));
-    } catch (error) {
-      logger.error("SqliteOAuthTokenRepository: getExpiredTokens failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return [];
-    }
-  }
-
-  async cleanupExpiredTokens(): Promise<number> {
-    try {
-      const now = Date.now();
-
-      const result = await this.db
-        .delete(sqliteOauthTokens)
-        .where(
-          sql`${sqliteOauthTokens.expiresAt} < ${now} AND (${sqliteOauthTokens.refreshExpiresAt} IS NULL OR ${sqliteOauthTokens.refreshExpiresAt} < ${now})`,
-        );
-
-      const rowsAffected =
-        (result as { rowsAffected?: number })?.rowsAffected ?? 0;
-
-      logger.info("SqliteOAuthTokenRepository: cleaned up expired tokens", {
-        rowsAffected,
-      });
-
-      return rowsAffected;
-    } catch (error) {
-      logger.error("SqliteOAuthTokenRepository: cleanupExpiredTokens failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return 0;
-    }
-  }
-}
-
-/**
- * PostgresOAuthTokenRepository:
- * NOT IMPLEMENTED YET.
+ * PostgreSQL-backed implementation using pgSchema.oauthTokens.
  *
- * The existing pgSchema.oauthTokens definition:
- * - Uses columns: userId, provider, scope, accessToken, refreshToken,
- *   expiresAt, tokenType, raw, createdAt, updatedAt
- * - Does NOT include the encrypted ivAccess/ivRefresh/metadata/toolName
- *   fields used by the legacy SQLite-backed store.
- *
- * A correct Postgres implementation requires a clear mapping decision:
- * - Either evolve pgSchema.oauthTokens to the encrypted model, or
- * - Map logical OAuthTokens into provider/scope/raw consistently.
- *
- * Until that decision is made, any concrete Postgres implementation here
- * would be incorrect. To avoid type and runtime drift, it is deliberately
- * left unimplemented.
+ * Note: This implementation reuses the existing pgSchema.oauthTokens layout and
+ * AES-256-GCM is NOT applied here; secrets remain in plain columns as defined
+ * by the schema. This matches the prior Postgres harness behavior.
  */
 export class PostgresOAuthTokenRepository implements OAuthTokenRepository {
+  private readonly cipherless = true; // Placeholder to document behavior
+
   constructor(private readonly db: NodePgDatabase<typeof pgSchema>) {}
 
   private mapScopesToText(scopes?: string[]): string | null {
@@ -437,7 +118,6 @@ export class PostgresOAuthTokenRepository implements OAuthTokenRepository {
   ): Promise<void> {
     const now = new Date();
 
-    // Load existing row (if any) to preserve unknown raw fields.
     const existingRows = await this.db
       .select()
       .from(pgSchema.oauthTokens)
@@ -700,41 +380,18 @@ export class PostgresOAuthTokenRepository implements OAuthTokenRepository {
   }
 }
 
-/**
- * Engine detection helper reused from job-repository pattern.
- */
-function isPostgresDb(db: unknown): db is NodePgDatabase<typeof pgSchema> {
-  try {
-    const schema = (db as { $schema?: Record<string, unknown> }).$schema;
-    return Boolean(schema && schema.oauthTokens === pgSchema.oauthTokens);
-  } catch (error) {
-    logger.debug("OAuthTokenRepository: failed to inspect drizzle schema", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
-  }
-}
 
 let _oauthRepo: OAuthTokenRepository | null = null;
 
 /**
- * Returns a singleton dual-engine OAuthTokenRepository.
- *
- * - For sqlite (default / non-pg schema): SqliteOAuthTokenRepository
- * - For postgres (pgSchema.oauthTokens present): PostgresOAuthTokenRepository
+ * Returns a singleton PostgreSQL OAuthTokenRepository.
  */
 export function getOAuthTokenRepository(): OAuthTokenRepository {
   if (_oauthRepo) {
     return _oauthRepo;
   }
 
-  const db = getReadWriteDb();
-
-  if (isPostgresDb(db)) {
-    _oauthRepo = new PostgresOAuthTokenRepository(db);
-  } else {
-    _oauthRepo = new SqliteOAuthTokenRepository();
-  }
-
+  const db = getReadWriteDb() as NodePgDatabase<typeof pgSchema>;
+  _oauthRepo = new PostgresOAuthTokenRepository(db);
   return _oauthRepo;
 }

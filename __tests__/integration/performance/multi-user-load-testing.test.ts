@@ -14,7 +14,29 @@ import {
 } from "@/lib/../__tests__/shared/test-credentials";
 import logger from "@/lib/logger";
 
-describe("Multi-User Load Testing", () => {
+const shouldRunMultiUserLoadSuite =
+  process.env.PERFORMANCE_TESTS === "1" || process.env.E2E_TESTS === "1";
+
+/**
+ * Phase 3: Optional performance-style / multi-user load simulation suite
+ *
+ * This suite:
+ * - Exercises IntegrationTestEnvironment and shared test credentials helpers
+ * - Assumes a fully wired environment with valid external provider credentials
+ * - Uses synthetic timing/behavior assertions (no real SLO guarantees)
+ *
+ * It MUST be:
+ * - Explicitly opt-in via PERFORMANCE_TESTS=1 or E2E_TESTS=1
+ * - Treated as CI/enterprise-only coverage, never a default local blocker
+ *
+ * If the required env flags are not set, the entire suite is skipped with a clear
+ * message so that default `vitest` runs remain fast, hermetic, and Postgres-only.
+ */
+const describeMultiUserLoad = shouldRunMultiUserLoadSuite
+  ? describe
+  : describe.skip;
+
+describeMultiUserLoad("Multi-User Load Testing (Optional CI/Performance Suite)", () => {
   let testEnv: IntegrationTestEnvironment;
 
   beforeAll(async () => {

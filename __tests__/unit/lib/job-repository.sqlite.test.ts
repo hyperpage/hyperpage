@@ -1,8 +1,25 @@
+/**
+ * LEGACY TEST SUITE - SQLite Job Repository behavior
+ *
+ * Phase 1 PostgreSQL-only runtime:
+ * - This suite exercises historical SQLite-specific behavior via getJobRepository.
+ * - It relies on SQLite-era helpers that are no longer part of the active runtime.
+ *
+ * IMPORTANT:
+ * - This file is retained ONLY for migration/forensics reference.
+ * - It is excluded from Phase 1 by using describe.skip and by NOT importing
+ *   non-existent exports from the current connection module.
+ */
+
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+
+const shouldRunLegacySqlite = process.env.LEGACY_SQLITE_TESTS === "1";
+const describeLegacy = shouldRunLegacySqlite ? describe : describe.skip;
 
 import type { IJob } from "@/lib/types/jobs";
 import { JobPriority, JobStatus } from "@/lib/types/jobs";
-import { getAppDatabase, getReadWriteDb } from "@/lib/database/connection";
+// Note: We do NOT import getAppDatabase from the current connection facade.
+// Any attempt to run this suite against the Phase 1 codebase is unsupported.
 import * as sqliteSchema from "@/lib/database/schema";
 
 /**
@@ -10,11 +27,11 @@ import * as sqliteSchema from "@/lib/database/schema";
  *
  * These tests:
  * - Force SQLite engine selection by returning a non-Postgres-like drizzle instance
- * - Mock getAppDatabase() to expose a minimal sqlite drizzle API
+ * - Mock a legacy getAppDatabase() to expose a minimal sqlite drizzle API
  * - Assert that repository methods issue correct queries/shapes
  *
  * We deliberately avoid real drizzle/sqlite and keep mocks structurally aligned
- * with lib/database/job-repository.ts implementation.
+ * with the historical lib/database/job-repository.ts implementation.
  */
 
 type SqliteInsertValues = typeof sqliteSchema.jobs.$inferInsert;
@@ -52,6 +69,7 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
+// Legacy-style connection mocks: provide getAppDatabase/getReadWriteDb only within this suite.
 vi.mock("@/lib/database/connection", () => ({
   getAppDatabase: vi.fn(),
   getReadWriteDb: vi.fn(),
@@ -65,7 +83,7 @@ vi.mock("@/lib/database/schema", async () => {
   };
 });
 
-describe("SqliteJobRepository via getJobRepository", () => {
+describeLegacy("SqliteJobRepository via getJobRepository (LEGACY - skipped in Phase 1)", () => {
   const baseJob: IJob = {
     id: "sqlite-job-1",
     type: "tool-execution" as IJob["type"],
@@ -127,12 +145,17 @@ describe("SqliteJobRepository via getJobRepository", () => {
       }),
     };
 
-    // Force SQLite path: getReadWriteDb returns object without $schema.jobs === pgSchema.jobs
-    (getReadWriteDb as unknown as Mock).mockReturnValue({
-      // no $schema pointing to pgSchema.jobs
-    });
+    const { getAppDatabase, getReadWriteDb } = (await import(
+      "@/lib/database/connection"
+    )) as unknown as {
+      getAppDatabase: Mock;
+      getReadWriteDb: Mock;
+    };
 
-    (getAppDatabase as unknown as Mock).mockReturnValue({
+    // Force SQLite path: getReadWriteDb returns object without pg-schema markers
+    getReadWriteDb.mockReturnValue({});
+
+    getAppDatabase.mockReturnValue({
       drizzle: mockDrizzle,
     });
 
@@ -185,8 +208,15 @@ describe("SqliteJobRepository via getJobRepository", () => {
       }),
     };
 
-    (getReadWriteDb as unknown as Mock).mockReturnValue({});
-    (getAppDatabase as unknown as Mock).mockReturnValue({
+    const { getAppDatabase, getReadWriteDb } = (await import(
+      "@/lib/database/connection"
+    )) as unknown as {
+      getAppDatabase: Mock;
+      getReadWriteDb: Mock;
+    };
+
+    getReadWriteDb.mockReturnValue({});
+    getAppDatabase.mockReturnValue({
       drizzle: mockDrizzle,
     });
 

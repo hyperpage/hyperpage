@@ -4,6 +4,8 @@ import {
   isBatchRequest,
 } from "@/lib/api/batching/batching-middleware";
 import logger from "@/lib/logger";
+import { getPostgresJobQueue } from "@/lib/jobs/postgres-job-queue";
+import { JobPriority, JobStatus, JobType } from "@/lib/types/jobs";
 
 /**
  * POST /api/batch - Handle bulk API operations
@@ -51,8 +53,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process the batch request
-    return await defaultBatchingMiddleware.processBatch(body.requests, request);
+    const startedAt = Date.now();
+
+    // Process the batch request synchronously (preserve existing behavior)
+    const response = await defaultBatchingMiddleware.processBatch(
+      body.requests,
+      request,
+    );
+
+    // Best-effort persistence of batch execution metadata to Postgres.
+    // This does not affect HTTP response semantics.
+    try {
+      const queue = getPostgresJobQueue();
+      const jobId = `batch:${startedAt}:${Math.random().toString(36).slice(2, 10)}`;
+
+      await queue.enqueue({
+        id: jobId,
+        type: JobType.MAINTENANCE,
+        name: "HTTP Batch Execution",
+        priority: JobPriority.LOW,
+        status: JobStatus.COMPLETED,
+        createdAt: startedAt,
+        updatedAt: Date.now(),
+        endpoint: "/api/batch",
+        payload: {
+          tags: ["batch", "sync"],
+          data: {
+            requestCount: Array.isArray(body.requests)
+              ? body.requests.length
+              : 0,
+          },
+        },
+        result: {
+          success: true,
+        },
+        retryCount: 0,
+        executionHistory: [],
+      });
+    } catch (persistError) {
+      logger.error("Failed to persist batch execution job", {
+        error:
+          persistError instanceof Error
+            ? persistError.message
+            : String(persistError),
+      });
+    }
+
+    return response;
   } catch (error) {
     logger.error("Failed to process batch request", {
       error: error instanceof Error ? error.message : String(error),
