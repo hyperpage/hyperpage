@@ -1,344 +1,293 @@
-# Persistence Architecture Guide
+# Persistence and Schema Guide
 
 ## Overview
 
-Hyperpage now uses a repository-first, dual-engine persistence architecture:
+This document describes how Hyperpage persists data in the **PostgreSQL-only** model, how the schema is defined, and how automated tests verify schema consistency.
 
-- All application code interacts with persistence exclusively through well-defined repository interfaces and facades.
-- Dual-engine support (SQLite and PostgreSQL) is implemented behind those repositories.
-- Engine selection is centralized via `getReadWriteDb()` and `$schema` identity checks against `pgSchema`.
-- No application/business code should access `lib/database/schema` or `lib/database/pg-schema` directly; only repository modules and low-level DB wiring may use them.
+Key points:
 
-This document describes:
-
-- The repository interfaces and their dual-engine behavior.
-- The valid boundaries for persistence usage.
-- How this integrates with tools, jobs, and testing.
-
-For migration details and implementation notes, see:
-- `docs/sqlite-to-postgresql/dual-engine-repositories.md`
+- PostgreSQL is the canonical and only supported database backend.
+- SQLite migrations and helpers are **legacy** and only used in explicitly gated suites.
+- The authoritative schema is defined and exercised via:
+  - `lib/database/pg-schema.ts`
+  - `lib/database/migrations/000_init_pg_schema.ts`
+  - The Postgres test harness in `vitest.setup.ts`.
 
 ---
 
-## Core Rules
+## Canonical PostgreSQL Schema
 
-1. Engine detection:
-   - MUST be driven by:
-     - `getReadWriteDb()` from `lib/database/connection.ts`
-     - `$schema` identity checks against `pgSchema` for specific tables
-   - MUST NOT be based on scattered `DB_ENGINE` flags or ad-hoc environment checks in business logic.
+The PostgreSQL schema is defined by:
 
-2. Repository-first:
-   - Consumers MUST use the exported factories/facades:
-     - `getSessionRepository()` from `lib/database/session-repository.ts`
-     - `getAppStateRepository()` from `lib/database/app-state-repository.ts`
-     - `getOAuthTokenRepository()` and `SecureTokenStorage` from `lib/database/oauth-token-repository.ts` / `lib/oauth-token-store.ts`
-     - `getJobRepository()` from `lib/database/job-repository.ts`
-     - `MemoryJobQueue` from `lib/jobs/memory-job-queue.ts` (which itself uses `JobRepository`)
-     - `rateLimitRepository` from `lib/database/rate-limit-repository.ts`
-     - `toolConfigRepository` from `lib/database/tool-config-repository.ts`
-   - Direct reads/writes using drizzle schema objects in application code are prohibited.
+1. **Runtime types and table definitions**
 
-3. Testability:
-   - Repositories define clear contracts that can be faked in tests.
-   - Engine-specific behavior is verified in repository-level tests.
-   - Callers are tested hermetically via repository-shaped fakes (no real DB or schema coupling required).
+   - `lib/database/pg-schema.ts`:
+     - Exposes typed drizzle table definitions for:
+       - `users`
+       - `oauth_tokens`
+       - `tool_configs`
+       - `rate_limits`
+       - `jobs`
+       - `job_history`
+       - `app_state`
+       - `user_sessions`
+     - These types are consumed across repositories and services as the single source of truth for runtime code.
 
----
+2. **Drizzle migration**
 
-## Database Engines and Schemas
+   - `lib/database/migrations/000_init_pg_schema.ts`:
+     - Drizzle-style, PostgreSQL-only migration.
+     - Creates tables that match `pg-schema.ts`:
+       - `users`: core user records
+       - `oauth_tokens`: OAuth tokens per user/provider
+       - `tool_configs`: tool configuration per owner
+       - `rate_limits`: persisted rate limit state
+       - `jobs`: background job queue
+       - `job_history`: job execution audit log
+       - `app_state`: global key/value state
+       - `user_sessions`: session tokens bound to users
+     - Includes appropriate primary keys, indexes, and timestamps.
+   - This file is the **authoritative migration** for the Postgres schema.
 
-### SQLite
+3. **Migration registry**
 
-- Schema defined in `lib/database/schema.ts`.
-- Used by legacy/local deployments.
-- Repositories provide compatible behavior against this schema.
+   - `lib/database/migrations/index.ts`:
+     - Exposes:
 
-### PostgreSQL
+       ```ts
+       export const MIGRATIONS_REGISTRY = {
+         "000_init_pg_schema": { up, down },
+       };
 
-- Schema defined in `lib/database/pg-schema.ts`.
-- Engine-specific implementations (e.g. `Postgres*Repository`) map repository contracts to PostgreSQL tables.
-- Selection is performed by comparing the `$schema` object from `getReadWriteDb()` with `pgSchema` tables.
+       export function getMigrationNames(): string[] {
+         return Object.keys(MIGRATIONS_REGISTRY).sort();
+       }
+       ```
 
-Repositories encapsulate the choice of engine; callers only see a unified interface.
-
----
-
-## Repository Interfaces and Factories
-
-### SessionRepository
-
-File: `lib/database/session-repository.ts`
-
-Interface (conceptual):
-
-- `createSession(session)`
-- `getSession(sessionToken)`
-- `deleteSession(sessionToken)`
-- `cleanupExpiredSessions(now?: Date | number)`
-
-Factory:
-
-- `getSessionRepository(): SessionRepository`
-  - Uses `getReadWriteDb()` to obtain the current DB instance.
-  - Detects engine by checking `$schema.userSessions === pgSchema.userSessions`.
-  - Returns a singleton implementation:
-    - SQLite path: explicit `SqliteSessionRepository` placeholder (non-Postgres) with clear logging, no guessing.
-    - Postgres path: concrete `PostgresSessionRepository` using `pgSchema.userSessions`.
-
-Callers:
-
-- MUST obtain a repository via `getSessionRepository()`.
-- MUST NOT import/inspect drizzle schema directly.
+     - Provides a stable, programmatic API for applying known migrations.
+     - Used by the Postgres test harness as a fallback when drizzle's file-based migrator cannot load `.ts` migrations directly.
 
 ---
 
-### AppStateRepository
+## Legacy SQLite Migrations (Explicitly Isolated)
 
-File: `lib/database/app-state-repository.ts`
+Legacy artifacts:
 
-Interface (conceptual):
+- `lib/database/migrations/001_initial_schema.ts`
+- `lib/database/migrations/002_oauth_auth_tables.ts`
+- `lib/database/migrate.ts` (uses `better-sqlite3`)
 
-- `getState(key: string): Promise<string | null>`
-- `setState(key: string, value: string): Promise<void>`
-- `deleteState(key: string): Promise<void>`
+Characteristics:
 
-Factory:
+- Schema definitions use:
+  - `TEXT` / `INTEGER` columns
+  - `unixepoch()`-style timestamps
+  - A `schema_migrations` table inside SQLite
+- Designed for the original SQLite-based implementation and migration flow.
 
-- `getAppStateRepository(): AppStateRepository`
-  - Uses `getReadWriteDb()`.
-  - Engine detection via `$schema.appState === pgSchema.appState`.
-  - Returns singleton:
-    - `SqliteAppStateRepository`:
-      - Uses legacy SQLite `app_state` table with JSON-serialized values.
-      - Acts as authoritative semantics for legacy deployments.
-    - `PostgresAppStateRepository`:
-      - Uses `pgSchema.appState`.
-      - Implements upsert semantics and logging/error handling.
+Current status:
 
-Callers:
+- These files are **retained for historical and migration-only purposes**.
+- They are **not used** by:
+  - The Postgres runtime.
+  - The Postgres test harness.
+- They **must not** be added to the Postgres `MIGRATIONS_REGISTRY` or invoked by new tests.
+- Any modern code and tests should treat them as legacy, gated behind `LEGACY_SQLITE_TESTS` where needed.
 
-- Use `getAppStateRepository()`; no direct `appState` table imports.
-
----
-
-### OAuthTokenRepository and SecureTokenStorage
-
-Files:
-- `lib/database/oauth-token-repository.ts`
-- `lib/oauth-token-store.ts`
-
-Repository interface (conceptual):
-
-- `storeTokens(...)`
-- `getTokens(...)`
-- `removeTokens(...)`
-- `updateTokenExpiry(...)`
-- `getExpiredTokens(...)`
-- `cleanupExpiredTokens(...)`
-
-Factory:
-
-- `getOAuthTokenRepository(): OAuthTokenRepository`
-  - Uses `getReadWriteDb()` and `$schema.oauthTokens === pgSchema.oauthTokens`.
-  - Returns singleton:
-    - `SqliteOAuthTokenRepository`:
-      - Uses legacy SQLite `oauthTokens` table.
-      - Encrypts sensitive fields with AES-256-GCM via `AesGcmCipher`.
-    - `PostgresOAuthTokenRepository`:
-      - Uses `pgSchema.oauthTokens`.
-      - Maps:
-        - `provider` (tool name)
-        - `scope` field as `scopes`
-        - `raw` JSON for metadata and `refreshExpiresAt`
-      - Handles expiry and cleanup semantics at the DB level.
-
-SecureTokenStorage:
-
-- File: `lib/oauth-token-store.ts`
-- Responsibilities:
-  - Provide a higher-level API for token consumers.
-  - Implement helper logic such as:
-    - `shouldRefresh`
-    - `areExpired`
-    - derived expiration decisions.
-- Persistence:
-  - Delegates all storage operations to `getOAuthTokenRepository()`.
-  - Contains no encryption or engine-selection logic.
-
-Callers:
-
-- Use `SecureTokenStorage` (preferred) or `getOAuthTokenRepository()` directly for low-level cases.
-- MUST NOT store tokens via raw schema access.
+This separation ensures the Postgres schema remains clean and unambiguous.
 
 ---
 
-### JobRepository and MemoryJobQueue
+## Test Harness as Schema Guardian
 
-Files:
-- `lib/database/job-repository.ts`
-- `lib/jobs/memory-job-queue.ts`
+The Postgres test harness (`vitest.setup.ts`) enforces schema consistency automatically.
 
-JobRepository interface (conceptual):
+### Single source of truth
 
-- `insert(job)`
-- `exists(jobId: string)`
-- `loadActiveJobs()`
-- `updateStatus(jobId: string, update)`
-- `cleanupCompletedBefore(cutoffTime: Date | number)`
+- `DATABASE_URL`:
+  - Controls which Postgres instance and database are used.
+  - Is required at module load.
+  - Drives:
+    - The test database name (`dbName`).
+    - The admin URL (same host/port, database `postgres`).
 
-Factory:
+### Lifecycle
 
-- `getJobRepository(): JobRepository`
-  - Uses `getReadWriteDb()` and `$schema.jobs === pgSchema.jobs`.
-  - Returns singleton:
-    - `SqliteJobRepository`:
-      - Uses SQLite `jobs` table via `getAppDatabase().drizzle`.
-    - `PostgresJobRepository`:
-      - Uses `NodePgDatabase<typeof pgSchema>`.
-      - Writes to `pgSchema.jobs`.
-      - Writes mapping entries to `pgSchema.jobHistory`:
-        - externalId
-        - name
-        - priority
-        - tool
-        - endpoint
+For Postgres-backed suites:
 
-MemoryJobQueue:
+1. **Setup (once per worker process)**
 
-- File: `lib/jobs/memory-job-queue.ts`
-- Behavior:
-  - In-memory queue API for scheduling and tracking jobs.
-  - Persists job state exclusively through `JobRepository`:
-    - `enqueue` → `exists`/`insert`
-    - status updates → `updateStatus`
-    - recovery/load → `loadActiveJobs`
-    - cleanup → `cleanupCompletedBefore`
-- Guarantees:
-  - No direct access to `jobs` or `jobHistory` schemas.
-  - Hermetically testable via a `JobRepository`-shaped fake.
+   - Drop test database via admin URL (best-effort, with connection termination).
+   - Create test database.
+   - Initialize:
+     - `pg.Pool` for `DATABASE_URL`
+     - drizzle `NodePgDatabase` with `pg-schema`.
+   - Run migrations and verification:
+     - See below.
 
-Callers:
+2. **Per-test isolation**
 
-- Use `MemoryJobQueue` for job orchestration.
-- Rely on repository-level persistence, independent of underlying engine.
+   - Before each test:
+     - Clears known tables that exist.
+     - Reseeds deterministic fixtures derived from `pg-schema`.
+   - Ensures reproducible state for all tests.
 
----
+3. **Teardown**
 
-## Additional Persistence Components
+   - Closes the pool.
+   - Drops the test database via admin URL (best-effort).
 
-The following modules implement or consume repository-first persistence:
+### Migrations: primary + fallback
 
-- `lib/database/tool-config-repository.ts`
-  - `ToolConfigRepository` / `toolConfigRepository`:
-    - Dual-engine repository using `getReadWriteDb()` and `$schema.toolConfigs === pgSchema.toolConfigs`.
-    - Normalizes configuration to `NormalizedToolConfig` for all callers.
-- `lib/database/rate-limit-repository.ts`
-  - `RateLimitRepository` / `rateLimitRepository`:
-    - Dual-engine repository using `getReadWriteDb()` and `$schema.rateLimits === pgSchema.rateLimits`.
-    - Defines documented SQLite vs Postgres semantics (including Postgres `cleanupOlderThan` no-op).
-- `lib/tool-config-manager.ts`
-  - Consumes `toolConfigRepository` as its persistence boundary.
-- `lib/rate-limit-service.ts`
-  - Consumes `rateLimitRepository` as its persistence boundary.
+The harness applies migrations in two stages:
 
-When evolving these modules:
+1. **Primary: drizzle migrator**
 
-- Preserve repository-first boundaries.
-- Continue to implement dual-engine support via `getReadWriteDb()` + `$schema` checks only.
-- Keep all schema usage inside repository implementations.
+   ```ts
+   await migrate(db, { migrationsFolder: "./lib/database/migrations" });
+   ```
 
----
+   - This is the preferred path when the environment can load compiled migrations.
 
-## Valid Persistence Boundaries
+2. **Guardrail: MIGRATIONS_REGISTRY fallback**
 
-The only valid entry points for application/business code to interact with persistence are:
+   - After `migrate()` completes, the harness checks for a required table:
 
-- `getSessionRepository()`
-- `getAppStateRepository()`
-- `getOAuthTokenRepository()` (usually via `SecureTokenStorage`)
-- `getJobRepository()` (usually via `MemoryJobQueue`)
-- Future repository factories that follow the same pattern.
+     ```sql
+     SELECT tablename
+     FROM pg_tables
+     WHERE schemaname = 'public'
+       AND tablename = 'app_state';
+     ```
 
-Code outside repository and low-level DB wiring:
+   - If `app_state` is missing:
+     - Logs a targeted warning.
+     - Dynamically imports `{ MIGRATIONS_REGISTRY, getMigrationNames }`.
+     - Executes `migration.up` for each name (currently `000_init_pg_schema`) against the same `db`.
+     - Re-checks `app_state`.
+     - Throws a clear error if the table is still missing.
 
-- MUST NOT import `lib/database/schema` or `lib/database/pg-schema`.
-- MUST NOT branch on engine types.
-- MUST depend on repository interfaces and documented facades.
+This design guarantees:
+
+- In environments where drizzle migrator loads migrations correctly:
+  - Registry fallback is effectively a no-op.
+- In TS/Vitest environments where `.ts` discovery fails:
+  - Registry fallback ensures the schema is applied deterministically.
+- Any misconfiguration or broken migration surfaces as an explicit, early error.
 
 ---
 
-## Testing Strategy
+## How Tests Verify Persistence Correctness
 
-### Repository-Level Tests
+Several test suites validate persistence behavior against the canonical Postgres schema:
 
-- Engine-specific tests live under `__tests__/unit/lib/database/`.
-- Responsibilities:
-  - Verify dual-engine selection based on `getReadWriteDb()` and `$schema`.
-  - Validate that each repository:
-    - Maps to the correct tables/columns for SQLite and Postgres.
-    - Implements documented semantics (e.g., token cleanup, job history writes).
+- Unit / integration suites that exercise:
+  - Repositories backed by `pg-schema` tables.
+  - Job queue persistence and recovery (`jobs`, `job_history`).
+  - Rate limit storage (`rate_limits`).
+  - Tool configuration management (`tool_configs`).
+  - Application state (`app_state`).
+  - Sessions and OAuth tokens (`user_sessions`, `oauth_tokens`).
 
-### Hermetic Integration-Style Tests
+The harness ensures that for these suites:
 
-- Consumers use minimal, shape-accurate fakes for repositories.
+1. Schema is ensured via migrations + required table checks.
+2. Only tables defined in `pg-schema.ts` are used and seeded.
+3. Cleanup logic is schema aware:
+   - Only deletes from tables that actually exist.
+   - Produces actionable logs on real errors instead of noisy false positives.
 
-Example: `MemoryJobQueue` hermetic integration test
-
-- File: `__tests__/unit/lib/memory-job-queue.integration.test.ts`
-- Uses:
-  - `vi.mock('lib/database/job-repository')` to:
-    - Preserve actual exports.
-    - Replace `getJobRepository` with an injectable fake.
-- Ensures:
-  - `enqueue` uses `exists` and `insert`.
-  - `updateJobStatus` delegates to `updateStatus`.
-  - `loadPersistedJobs` uses `loadActiveJobs`.
-  - `cleanupOldJobs` uses `cleanupCompletedBefore`.
-- No real DB or drizzle schemas are touched.
-
-### Principles
-
-- Prefer hermetic tests:
-  - No network or real database dependencies.
-- Test against repository interfaces:
-  - Use fakes/mocks that match the contract.
-- Keep ESLint/TypeScript strict:
-  - No `eslint-disable-next-line`.
-  - Type-safe shapes for all fakes and repositories.
-
-For broader testing guidance, see:
-- `docs/testing/testing.md`
+This couples the automated tests directly to the same schema definitions used at runtime.
 
 ---
 
-## Migration and Dual-Engine Behavior
+## Running With the Canonical Postgres Schema
 
-Key dual-engine behaviors (high-level):
+### Docker-based testing stack
 
-- All engine decisions are localized in repository factories.
-- Migrations from SQLite to PostgreSQL:
-  - Application code remains unchanged as long as it uses repositories.
-  - Repositories ensure data is read/written correctly in the active engine.
-- For detailed migration flows and field-level mappings, refer to:
-  - `docs/sqlite-to-postgresql/dual-engine-repositories.md`
+Recommended:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres
+DATABASE_URL=postgresql://postgres:password@postgres:5432/hyperpage-testing npx vitest
+```
+
+Or configure `.env.testing` with the same `DATABASE_URL` and run:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres
+npx vitest
+```
+
+Notes:
+
+- Host `postgres` is correct inside the docker-compose network.
+- The harness will:
+  - Connect via `postgres` host.
+  - Drop/create `hyperpage-testing`.
+  - Apply `000_init_pg_schema` (via drizzle migrator and/or registry).
+  - Seed fixtures.
+
+### Local Postgres (no docker-compose)
+
+If using a local Postgres instance:
+
+1. Start local Postgres.
+2. Set:
+
+   ```env
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-testing
+   ```
+
+3. Run:
+
+   ```bash
+   npx vitest
+   ```
+
+Requirements:
+
+- The user in `DATABASE_URL` must be allowed to create/drop `hyperpage-testing`.
+- The harness behavior (drop/create/migrate/seed) is the same.
 
 ---
 
-## Security and Compliance
+## Concurrency Considerations
 
-- Sensitive data:
-  - Stored via dedicated repositories (e.g., `OAuthTokenRepository`) with proper encryption (SQLite) or structured columns (Postgres).
-  - Never written directly via application code and raw schemas.
-- Configuration:
-  - Engine selection and credentials managed via environment variables and `getReadWriteDb()`.
-- Observability:
-  - Repositories are the natural hook points for logging and metrics around persistence.
+Within a single Vitest worker process:
+
+- `vitest.setup.ts` uses:
+  - A shared `TestDatabaseManager` instance.
+  - An internal `setupPromise` and `isSetupComplete` flag.
+- This ensures:
+  - Only one setup sequence (drop/create/migrate/seed).
+  - All hooks await the same initialization.
+
+Across multiple workers:
+
+- Each worker process has its own `TestDatabaseManager`.
+- To avoid concurrent DROP/CREATE of the same test database across workers:
+  - Postgres-backed suites should be run in a configuration that effectively uses a single worker for those tests (e.g., project-level `maxWorkers: 1` or dedicated config).
+- This is a Vitest configuration concern; the harness is deterministic given a single controlling process.
 
 ---
 
-By following these guidelines:
+## Summary
 
-- The persistence layer remains consistent across SQLite and PostgreSQL.
-- Call sites stay engine-agnostic and testable.
-- Documentation accurately reflects the current dual-engine, repository-first design.
+- **Source of Truth**:
+  - Schema: `pg-schema.ts` + `000_init_pg_schema.ts`.
+  - Migration API: `MIGRATIONS_REGISTRY` (Postgres-only entries).
+  - Test wiring: `vitest.setup.ts` using `DATABASE_URL`.
+
+- **Legacy Separation**:
+  - SQLite migrations and migrator are strictly legacy.
+  - Only executed under explicit legacy flags/suites.
+
+- **Safety Guarantees**:
+  - Drizzle migrator used first.
+  - Registry fallback ensures no-op migrations are detected and corrected.
+  - Required-table checks (e.g., `app_state`) prevent silent drift.
+  - Seed preflight enforces schema presence before inserting data.
+  - Cleanup is schema-aware and quiet when tables are absent.
+
+With these pieces combined, the Postgres-only model maintains a single, consistent schema across runtime and tests, and actively detects configuration or migration issues rather than allowing silent divergence.
