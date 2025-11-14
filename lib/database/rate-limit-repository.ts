@@ -6,7 +6,7 @@ import { getReadWriteDb } from "./connection";
 /**
  * Normalized rate limit record used by higher-level services.
  *
- * This mirrors the semantics of the legacy SQLite-based implementation:
+ * This mirrors the semantics of the prior implementation:
  * - id: stable key, e.g. "github:global"
  * - platform: "github" | "gitlab" | "jira" | other identifiers
  * - limitRemaining / limitTotal: nullable numeric values

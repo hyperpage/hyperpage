@@ -1,156 +1,33 @@
 import { test, expect } from "@playwright/test";
 
-/**
- * Hyperpage Portal E2E Tests (Playwright, Optional E2E Suite)
- *
- * This suite:
- * - Exercises the full Hyperpage portal UI and navigation via Playwright
- * - Assumes docker-compose.e2e + .env.e2e wiring and external services where applicable
- *
- * It MUST be:
- * - Explicitly opt-in via E2E_TESTS=1
- * - Treated as an optional E2E/CI suite, never a default local blocker
- *
- * Default behavior:
- * - If E2E_TESTS is not set to "1", this suite is fully skipped to keep `vitest` and
- *   unit/integration workflows fast and hermetic by default.
- */
 const shouldRunE2ESuite = process.env.E2E_TESTS === "1";
-
 const describeE2E = shouldRunE2ESuite ? test.describe : test.describe.skip;
 
-describeE2E("Hyperpage Portal E2E Tests", () => {
-  test("should load portal and display initial state", async ({ page }) => {
+describeE2E("Hyperpage Portal Empty State E2E", () => {
+  test.beforeEach(async ({ page }) => {
     await page.goto("/");
-
-    // Check that the page loaded successfully
     await expect(page).toHaveTitle(/Hyperpage/);
+  });
 
-    // Check main elements are present
-    await expect(page.getByRole("heading")).toHaveText("Hyperpage");
-    await expect(page.locator(".bg-gradient-to-br")).toBeVisible();
-
-    // Check tabs are present
-    await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Discovery" })).toBeVisible();
-
-    // Verify no tools state is shown initially
+  test("shows the No Tools Enabled message by default", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: "No Tools Enabled" })).toBeVisible();
     await expect(
-      page.getByText("No tools are currently enabled"),
+      page.getByText(
+        /Enable tools in your environment configuration to see portal widgets/i,
+      ),
     ).toBeVisible();
   });
 
-  test("should navigate between tabs correctly", async ({ page }) => {
-    await page.goto("/");
-
-    // Check Overview tab is active by default
-    await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-
-    // Navigate to Discovery tab
-    await page.getByRole("tab", { name: "Discovery" }).click();
-    await expect(page.getByRole("tab", { name: "Discovery" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute(
-      "aria-selected",
-      "false",
-    );
-
-    // Return to Overview
-    await page.getByRole("tab", { name: "Overview" }).click();
-    await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-  });
-
-  test("should display themed content correctly", async ({ page }) => {
-    await page.goto("/");
-
-    // Check body has theme-specific classes (should be light mode initially)
-    await expect(page.locator("body")).toHaveClass(/bg-white/);
-
-    // Toggle dark mode if toggle exists
-    const themeToggle = page.getByRole("button", { name: /dark|light/i });
-    if (await themeToggle.isVisible()) {
-      await themeToggle.click();
-      // Should now be dark mode
-      await expect(page.locator("body")).toHaveClass(
-        /bg-gray-900|bg-slate-900/,
-      );
-    }
-  });
-
-  test("should handle search functionality", async ({ page }) => {
-    await page.goto("/");
-
-    // Navigate to discovery tab
-    await page.getByRole("tab", { name: "Discovery" }).click();
-
-    // Check search input exists
-    const searchInput = page
-      .getByPlaceholder(/search.*tools/i)
-      .or(page.getByRole("textbox", { name: "search" }));
-    await expect(searchInput).toBeVisible();
-
-    // Enter search term
-    await searchInput.fill("github");
-    await searchInput.press("Enter");
-
-    // Check that search results appear or "no results" message
+  test("instructs users to configure integrations via the settings dropdown", async ({
+    page,
+  }) => {
     await expect(
-      page.locator(".bg-card").or(page.getByText("No tools found")),
+      page.getByText(/Configure integrations using the settings dropdown/i),
     ).toBeVisible();
   });
 
-  test("should show loading states appropriately", async ({ page }) => {
-    await page.goto("/");
-
-    // Check for loading element on Overview tab (should show loading animation)
-    await page.getByRole("tab", { name: "Overview" }).click();
-
-    // Loading states might vary - check for skeleton animations or loading text
-    const loadingContent = page
-      .locator('[class*="animate-shimmer"]')
-      .or(page.getByText(/loading|fetching/i));
-    if (await loadingContent.isVisible({ timeout: 3000 })) {
-      await expect(loadingContent).toBeVisible();
-    }
-  });
-
-  test("should handle responsive design", async ({ page }) => {
-    await page.setViewportSize({ width: 1200, height: 800 }); // Desktop
-    await page.goto("/");
-
-    // Check desktop layout
-    await expect(page.locator(".bg-card").first()).toBeVisible();
-
-    // Test mobile viewport
-    await page.setViewportSize({ width: 375, height: 667 }); // iPhone size
-
-    // Mobile layout should still work (tabs, sidebar collapses, etc.)
-    await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible();
-
-    // Check that content adapts
-    const mobileContent = page.locator(".p-4").or(page.locator(".px-4"));
-    await expect(mobileContent.first()).toBeVisible();
-  });
-
-  test("should handle network errors gracefully", async ({ page }) => {
-    await page.route("**/api/tools/**", (route) => route.abort());
-    await page.goto("/");
-
-    // Should show error states instead of crashing
-    await page.getByRole("tab", { name: "Overview" }).click();
-
-    // Check for error message or fallback content
-    const errorContent = page.getByText(/error|failed|no data/i);
-    if (await errorContent.isVisible({ timeout: 5000 })) {
-      await expect(errorContent).toBeVisible();
-    }
+  test("remains stable across reloads", async ({ page }) => {
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "No Tools Enabled" })).toBeVisible();
   });
 });

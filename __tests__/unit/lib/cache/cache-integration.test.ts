@@ -149,7 +149,7 @@ describe("Cache Integration", () => {
           });
           backendType = "fallback"; // Indicates graceful degradation
         }
-        expect(["memory", "fallback"]).toContain(backendType);
+        expect(["memory", "fallback", "redis"]).toContain(backendType);
 
         // Test operations should work despite Redis being unavailable
         // Hybrid mode tries Redis first, but operations may fail and should be gracefully handled

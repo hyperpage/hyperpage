@@ -12,7 +12,14 @@ import {
   OAuthTestCredentials,
 } from "@/lib/../__tests__/shared/test-credentials";
 
-describe("GitHub OAuth Integration", () => {
+const oauthSuiteEnabled = process.env.E2E_OAUTH === "1";
+
+if (!oauthSuiteEnabled) {
+  test.describe.skip("GitHub OAuth Integration (E2E_OAUTH=1 required)", () => {
+    test("skipped", () => {});
+  });
+} else {
+  test.describe("GitHub OAuth Integration", () => {
   let testEnv: IntegrationTestEnvironment;
   let baseUrl: string;
   let testSession: {
@@ -21,16 +28,16 @@ describe("GitHub OAuth Integration", () => {
     credentials: OAuthTestCredentials;
   };
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     testEnv = await IntegrationTestEnvironment.setup();
     baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
   });
 
-  beforeEach(async () => {
+  test.beforeEach(async () => {
     testSession = await testEnv.createTestSession("github");
   });
 
-  afterEach(async () => {
+  test.afterEach(async () => {
     // Cleanup test session
     if (testSession?.sessionId) {
       try {
@@ -46,7 +53,7 @@ describe("GitHub OAuth Integration", () => {
     }
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await testEnv.cleanup();
   });
 
@@ -321,4 +328,5 @@ describe("GitHub OAuth Integration", () => {
       expect([401, 403]).toContain(response.status);
     });
   });
-});
+  });
+}

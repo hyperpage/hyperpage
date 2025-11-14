@@ -12,6 +12,8 @@ services:
       - ENABLE_JIRA=true
       - ENABLE_GITLAB=true
       - NEXT_PUBLIC_NODE_ENV=test
+      - E2E_TEST=1
+      - E2E_TESTS=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 10s
@@ -33,7 +35,8 @@ services:
       - ./test-results:/app/test-results
     environment:
       - BASE_URL=http://hyperpage-e2e:3000
-      - E2E_TEST=true
+      - E2E_TEST=1
+      - E2E_TESTS=1
     command: npx playwright test --config=./__tests__/e2e/playwright.config.ts
     profiles:
       - e2e

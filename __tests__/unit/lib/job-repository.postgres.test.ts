@@ -221,7 +221,10 @@ function createFakePgDb(): {
         values(values: InsertValues): InsertReturningChain {
           if (table === pgSchema.jobs) {
             const v = values as typeof pgSchema.jobs.$inferInsert;
-            const id = jobIdSeq++;
+            let id = jobIdSeq++;
+            while (jobs.has(id)) {
+              id = jobIdSeq++;
+            }
 
             const row: JobRow = {
               id,
@@ -251,7 +254,10 @@ function createFakePgDb(): {
 
           if (table === pgSchema.jobHistory) {
             const v = values as typeof pgSchema.jobHistory.$inferInsert;
-            const id = historyIdSeq++;
+            let id = historyIdSeq++;
+            while (jobHistory.has(id)) {
+              id = historyIdSeq++;
+            }
 
             const row: JobHistoryRow = {
               id,

@@ -24,11 +24,10 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 
 # Copy test files and configuration
-COPY --from=builder app/__tests__/ ./__tests__/
-COPY --from=builder app/__tests__/e2e/playwright.config.ts playwright.config.ts
+COPY --from=builder /app/__tests__/ ./__tests__/
 
-# Install only production dependencies (needed for start script)
-RUN npm ci --only=production
+# Install dependencies for both the Next.js server and Playwright tests
+RUN npm ci
 
 # Expose port for Next.js
 EXPOSE 3000

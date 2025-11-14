@@ -51,7 +51,7 @@ let _pgDrizzleDb: PostgresDrizzleInstance | null = null;
  * - pg Pool from lib/database/client.ts
  * - Postgres schema from lib/database/pg-schema.ts
  *
- * Existing callers remain on SQLite; new code paths can opt into this.
+ * All callers now use PostgreSQL via this shared Drizzle client.
  */
 export function getPostgresDrizzleDb(): PostgresDrizzleInstance {
   if (_pgDrizzleDb) {

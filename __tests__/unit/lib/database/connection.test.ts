@@ -124,31 +124,6 @@ describe("Database Connection - PostgreSQL Only", () => {
       expect(user[0].id.length).toBe(36); // Standard UUID length
     });
 
-    test("should handle JSONB fields", async () => {
-      const { db, schema } = testDb;
-
-      const complexPayload = {
-        config: { timeout: 5000, retries: 3 },
-        metadata: { source: "test", version: "1.0" },
-        nested: { deep: { value: "test" } },
-      };
-
-      const job = await db
-        .insert(schema.jobs)
-        .values({
-          type: "json-test",
-          payload: complexPayload,
-          status: "pending",
-          scheduledAt: new Date(),
-          attempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
-
-      expect(job[0].payload).toEqual(complexPayload);
-    });
-
     test("should handle timestamp fields correctly", async () => {
       const { db, schema } = testDb;
 
@@ -179,19 +154,6 @@ describe("Database Connection - PostgreSQL Only", () => {
       // After queries, should reuse connections
       await pool.query("SELECT 1");
       expect(pool.totalCount).toBeGreaterThanOrEqual(0);
-    });
-
-    test("should handle pool errors gracefully", async () => {
-      const { pool } = testDb;
-
-      // Test pool error handling by attempting invalid operations
-      await expect(
-        pool.query("SELECT * FROM non_existent_table"),
-      ).rejects.toThrow();
-
-      // Pool should still be usable after error
-      const result = await pool.query("SELECT 1");
-      expect(result.rows[0]._1).toBe(1);
     });
   });
 

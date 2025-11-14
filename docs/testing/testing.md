@@ -66,29 +66,25 @@ npm run test:ui
 ### Integration Test Commands (If configured)
 
 ```bash
-npm run test:integration
-npm run test:integration:coverage
-npm run test:integration:watch
+npm run test:integration                        # one-shot run for __tests__/integration/**
+npm run test:integration:tools                  # provider-backed HTTP suites (requires dev server + tokens)
+npm run test:watch -- __tests__/integration     # watch mode (no dedicated script)
+npm run test:coverage -- --include __tests__/integration/**
 ```
+
+`npm run test:integration:tools` assumes a Next.js server is running (local dev or docker) and that `HYPERPAGE_TEST_BASE_URL` plus provider tokens are set. Override the URL if your server listens elsewhere.
 
 ### End-to-End Testing
 
 E2E tests are isolated and require appropriate setup.
 
 ```bash
-# Install Playwright browsers
-npm run test:e2e:install
-
-# Run E2E tests
-npm run test:e2e
-
-# Debug/interactive
-npm run test:e2e:debug
-npm run test:e2e:ui
-
-# Recommended: Docker-based isolated E2E
-npm run test:e2e:docker
+npm run test:e2e            # Local Playwright run (spawns dev server, sets E2E_TESTS=1)
+npm run test:e2e:headed     # Same as above but headed browsers
+npm run test:e2e:docker     # Dockerized Next.js + Playwright stack with automatic teardown
 ```
+
+> ℹ️ OAuth Playwright specs (`__tests__/e2e/oauth/**`) remain quarantined unless you also set `E2E_OAUTH=1` and provide valid provider credentials in `.env.testing`. Without the flag, they are skipped automatically.
 
 ## Repository-First and Hermetic Testing Patterns
 

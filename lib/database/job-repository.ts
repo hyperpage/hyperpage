@@ -15,10 +15,6 @@ export type NormalizedJob = IJob;
 /**
  * Repository contract for job persistence.
  * Mirrors existing MemoryJobQueue semantics.
- *
- * NOTE:
- * - Implementations are engine-specific (SQLite/Postgres).
- * - Callers should depend only on this interface + getJobRepository().
  */
 export interface JobRepository {
   insert(job: NormalizedJob): Promise<void>;

@@ -69,8 +69,8 @@ describe("PostgresJobQueue", () => {
     const [normalized] = insertMock.mock.calls[0];
 
     expect(normalized.id).toBeDefined();
-    expect(normalized.type).toBe("TEST");
-    expect(normalized.name).toBe("TEST");
+    expect(normalized.type).toBe(job.type);
+    expect(normalized.name).toBe(job.name);
     expect(normalized.priority).toBe(JobPriority.MEDIUM);
     expect(normalized.status).toBe(JobStatus.PENDING);
     expect(normalized.payload).toEqual({});

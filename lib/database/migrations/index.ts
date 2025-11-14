@@ -3,13 +3,8 @@
  *
  * The original project used a custom MIGRATIONS_REGISTRY with raw SQL strings.
  * Tests now use drizzle-orm/node-postgres migrator with TypeScript migrations
- * (e.g. 000_init_pg_schema.ts), but application code (lib/database/migrate.ts)
- * still imports MIGRATIONS_REGISTRY and getMigrationNames.
- *
- * To maintain compatibility:
- * - Expose MIGRATIONS_REGISTRY and getMigrationNames backed by the new
- *   drizzle-style migration(s). This keeps the runtime API stable while
- *   enabling the Postgres test harness.
+ * (e.g. 000_init_pg_schema.ts). MIGRATIONS_REGISTRY is retained only as a
+ * fallback API for tools/tests that expect the legacy registry shape.
  */
 
 import * as initPgSchema from "./000_init_pg_schema";

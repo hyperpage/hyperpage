@@ -68,11 +68,10 @@ The PostgreSQL schema is defined by:
 
 ## Legacy SQLite Migrations (Explicitly Isolated)
 
-Legacy artifacts:
+Legacy artifacts (kept only for historical reference):
 
 - `lib/database/migrations/001_initial_schema.ts`
 - `lib/database/migrations/002_oauth_auth_tables.ts`
-- `lib/database/migrate.ts` (uses `better-sqlite3`)
 
 Characteristics:
 
@@ -89,7 +88,7 @@ Current status:
   - The Postgres runtime.
   - The Postgres test harness.
 - They **must not** be added to the Postgres `MIGRATIONS_REGISTRY` or invoked by new tests.
-- Any modern code and tests should treat them as legacy, gated behind `LEGACY_SQLITE_TESTS` where needed.
+- All active code and tests should rely exclusively on the Postgres schema.
 
 This separation ensures the Postgres schema remains clean and unambiguous.
 

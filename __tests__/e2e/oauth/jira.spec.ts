@@ -22,6 +22,8 @@ import {
   isServerAvailable,
 } from "@/__tests__/shared/test-credentials";
 
+const oauthSuiteEnabled = process.env.E2E_OAUTH === "1";
+
 const baseUrl = process.env.HYPERPAGE_TEST_BASE_URL || "http://localhost:3000";
 
 let testEnv: IntegrationTestEnvironment;
@@ -55,7 +57,12 @@ const skipIfNoServer = async () => {
   }
 };
 
-test.describe("Jira OAuth Integration", () => {
+if (!oauthSuiteEnabled) {
+  test.describe.skip("Jira OAuth Integration (E2E_OAUTH=1 required)", () => {
+    test("skipped", () => {});
+  });
+} else {
+  test.describe("Jira OAuth Integration", () => {
   test.beforeAll(async () => {
     await skipIfNoServer();
   });
@@ -242,4 +249,5 @@ test.describe("Jira OAuth Integration", () => {
       }
     });
   });
-});
+  });
+}

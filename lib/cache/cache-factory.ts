@@ -2,6 +2,7 @@ import type {
   ICache,
   CacheFactoryConfig,
   CacheMetrics,
+  CacheOptions,
 } from "@/lib/cache/cache-interface";
 import { MemoryCache } from "@/lib/cache/memory-cache";
 import { RedisCache } from "@/lib/cache/redis-cache";
@@ -56,7 +57,7 @@ export class CacheFactory {
 
     try {
       // Merge cache options with defaults
-      const defaultCacheOptions = {
+      const defaultCacheOptions: CacheOptions = {
         maxSize: 1000,
         enableLru: false,
         defaultTtl: 600000, // 10 minutes
@@ -78,24 +79,26 @@ export class CacheFactory {
             );
           }
 
-          try {
-            cache = new RedisCache<T>(config.redisUrl, cacheOptions);
-          } catch (error) {
-            if (config.enableFallback) {
-              logger.warn(
-                "Redis connection failed, falling back to memory cache",
-                {
-                  cacheKey,
-                  backend: config.backend,
-                  error: error instanceof Error ? error.message : String(error),
-                  redisUrl: config.redisUrl || "not_provided",
-                },
-              );
-              cache = new MemoryCache<T>(cacheOptions);
-            } else {
-              throw error;
-            }
+          if (!config.redisUrl && config.enableFallback) {
+            logger.warn(
+              "Redis backend requested without redisUrl, falling back to memory cache",
+              {
+                cacheKey,
+                backend: config.backend,
+              },
+            );
+            cache = new MemoryCache<T>(cacheOptions);
+            break;
           }
+
+          cache = await this.createRedisOrFallback<T>(
+            cacheKey,
+            config.redisUrl!,
+            cacheOptions,
+            config.backend,
+            config.enableFallback === true,
+            "redis",
+          );
           break;
 
         case CacheBackend.HYBRID:
@@ -109,29 +112,14 @@ export class CacheFactory {
             );
           }
 
-          try {
-            // Try Redis first
-            cache = new RedisCache<T>(config.redisUrl, cacheOptions);
-            logger.info(
-              "Hybrid cache: Redis primary cache created successfully",
-              {
-                cacheKey,
-                backend: config.backend,
-                redisUrl: config.redisUrl,
-              },
-            );
-          } catch (error) {
-            logger.warn(
-              "Hybrid cache: Redis failed, falling back to memory cache",
-              {
-                cacheKey,
-                backend: config.backend,
-                error: error instanceof Error ? error.message : String(error),
-                redisUrl: config.redisUrl,
-              },
-            );
-            cache = new MemoryCache<T>(cacheOptions);
-          }
+          cache = await this.createRedisOrFallback<T>(
+            cacheKey,
+            config.redisUrl,
+            cacheOptions,
+            config.backend,
+            true,
+            "hybrid",
+          );
           break;
 
         default:
@@ -276,6 +264,53 @@ export class CacheFactory {
     ];
 
     return keyParts.join("|");
+  }
+
+  private static async createRedisOrFallback<T>(
+    cacheKey: string,
+    redisUrl: string,
+    cacheOptions: CacheOptions,
+    backend: CacheBackend,
+    allowFallback: boolean,
+    context: "redis" | "hybrid",
+  ): Promise<ICache<T>> {
+    try {
+      const redisCache = new RedisCache<T>(redisUrl, cacheOptions);
+      await redisCache.getStats(); // Force initial connectivity check
+
+      const successMessage =
+        context === "hybrid"
+          ? "Hybrid cache: Redis primary cache created successfully"
+          : "Redis cache connected successfully";
+
+      logger.info(successMessage, {
+        cacheKey,
+        backend,
+        redisUrl,
+      });
+
+      return redisCache;
+    } catch (error) {
+      if (!allowFallback) {
+        throw error;
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const warnMessage =
+        context === "hybrid"
+          ? "Hybrid cache: Redis failed, falling back to memory cache"
+          : "Redis connection failed, falling back to memory cache";
+
+      logger.warn(warnMessage, {
+        cacheKey,
+        backend,
+        error: errorMessage,
+        redisUrl,
+      });
+
+      return new MemoryCache<T>(cacheOptions);
+    }
   }
 
   /**

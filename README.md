@@ -148,39 +148,55 @@ For production deployments, use the provided Dockerfile and Docker Compose confi
 
 Hyperpage includes comprehensive automated testing to ensure stability across OAuth integrations, tool integrations, and cross-tool coordination.
 
-**Available Test Commands:**
+**Quick start**
+
+1. Copy `.env.testing.example` to `.env.testing` and adjust any secrets/tokens.
+2. Boot the canonical Postgres/Redis stack once per session:
+
+   ```bash
+   npm run db:test:up
+   ```
+
+3. Export `DATABASE_URL` (or rely on `.env.testing`) so Vitest can drop/recreate the test database.
+   - Vitest now loads `.env.testing` automatically via `vitest.global-setup.ts`, so keeping that file up to date is usually enough. Override variables in your shell only when you need a different Postgres instance.
+
+**Available commands**
 
 ```bash
-# All Tests
-npm test                    # Run unit tests
-npm run test:coverage      # With coverage report
-npm run test:watch         # Watch mode development
+# Fast feedback
+npm run test:unit          # JSdom unit/API/component tests (no external services)
+npm run test:integration   # Postgres-backed integration suites (requires DATABASE_URL)
+npm run test:integration:tools   # Provider-backed HTTP integration suites (requires Next dev server + tokens)
 
-# Integration Tests
-npm test -- --run integration              # All integration tests
-npm test -- --run integration/oauth        # OAuth integration tests
-npm test -- --run integration/tools        # Tool integration tests
+# Broader coverage
+npm test                   # Full Vitest run (unit + integration + optional suites)
+npm run test:perf          # PERFORMANCE_TESTS=1 timed suites (__tests__/performance/**)
+npm run test:coverage      # Vitest with coverage output
+npm run test:watch         # Interactive watch mode
 
-# Individual Tool Tests
-npm test -- --run integration/tools/github           # GitHub integration
-npm test -- --run integration/tools/gitlab           # GitLab integration
-npm test -- --run integration/tools/jira             # Jira integration
-npm test -- --run integration/tools/cross-tool       # Cross-tool aggregation
+# End-to-end
+npm run test:e2e           # Playwright against local dev server (E2E_TESTS=1, requires running dev server or BASE_URL override)
+npm run test:e2e:headed    # Same as above but headed browser sessions
+npm run test:e2e:docker    # Dockerized Next.js + Playwright profile with automatic teardown
 
-# E2E Tests
-npm run test:e2e           # Playwright E2E tests
-npm run test:e2e:docker    # E2E tests in Docker containers
-npm run test:e2e:ui        # Interactive E2E mode
+# Database helpers
+npm run db:test:up         # Start Postgres + Redis (docker-compose.testing.yml)
+npm run db:test:down       # Stop stack and remove volumes (fresh state)
+npm run db:test:reset      # Hard reset: down -v, volume prune, up
 ```
 
-**Testing Setup:**
+**Testing Setup Notes:**
 
-- **Unit Tests**: Vitest + React Testing Library for component isolation
-- **OAuth Integration Tests**: Comprehensive testing for GitHub, GitLab, and Jira OAuth flows
-- **Tool Integration Tests**: API endpoint validation, rate limiting, data transformation
-- **Cross-Tool Aggregation Tests**: Multi-tool coordination and unified data format validation
-- **E2E Tests**: Playwright framework for complete user journey validation
-- **CI/CD Ready**: All tests run in automated pipelines with parallel execution
+- **Vitest harness**: `vitest.setup.ts` requires `DATABASE_URL` and will drop/create the referenced database, run drizzle migrations, and seed data before the first test runs.
+- **Unit vs Integration**: Both `npm run test:unit` and `npm run test:integration` rely on the Postgres harness today because the API tests talk to repositories. Make sure the dockerized DB is running even for “unit” runs.
+- **Runtime environments**: Vitest currently runs under the JSDOM environment to satisfy the API/component suites; backend tests still rely on the Postgres harness for data access.
+- **Integration suites**: Tests under `__tests__/integration/**` and `__tests__/unit/lib/**` talk to the Postgres harness. Ensure `npm run db:test:up` (or equivalent) is active.
+- **Tool integrations**: `npm run test:integration:tools` expects a running app server (e.g., `npm run dev -- --hostname 127.0.0.1`) reachable at `HYPERPAGE_TEST_BASE_URL` plus provider tokens (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `JIRA_API_TOKEN`). Without both, the suites remain skipped.
+- **Optional suites**: Performance and Grafana (plus any tool-integration suites) are opt-in behind explicit env flags (`PERFORMANCE_TESTS`, `GRAFANA_TESTS`, `E2E_TESTS`). They will report as skipped unless the flags are set.
+- **OAuth E2E gating**: Provider-specific Playwright specs stay quarantined unless `E2E_OAUTH=1` is set. They require valid OAuth client IDs/secrets plus provider tokens set in `.env.testing`.
+- **E2E & OAuth**: `npm run test:e2e*` executes Playwright with `E2E_TESTS=1`. Supply provider tokens (GitHub/GitLab/Jira) via `.env.testing` when exercising the OAuth-heavy specs.
+- **E2E dev server**: `npm run test:e2e` expects a running dev or prod server that matches `BASE_URL`. When running locally, start `npm run dev -- --hostname 127.0.0.1` (or `npm run build && npm run start`) and set `BASE_URL=http://127.0.0.1:3000` before launching Playwright.
+- **CI/CD**: `.github/workflows/ci-cd.yml` consumes the same npm scripts so local developers and CI run identical commands once the stack is configured.
 
 ## Usage Examples
 

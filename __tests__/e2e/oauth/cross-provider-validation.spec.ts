@@ -12,7 +12,17 @@ import {
   OAuthTestCredentials,
 } from "@/__tests__/shared/test-credentials";
 
-test.describe("Cross-Provider OAuth Validation", () => {
+const oauthSuiteEnabled = process.env.E2E_OAUTH === "1";
+
+if (!oauthSuiteEnabled) {
+  test.describe.skip(
+    "Cross-Provider OAuth Validation (E2E_OAUTH=1 required)",
+    () => {
+      test("skipped", () => {});
+    },
+  );
+} else {
+  test.describe("Cross-Provider OAuth Validation", () => {
   let testEnv: IntegrationTestEnvironment;
   let baseUrl: string;
   let githubSession: {
@@ -360,4 +370,5 @@ test.describe("Cross-Provider OAuth Validation", () => {
       });
     });
   });
-});
+  });
+}

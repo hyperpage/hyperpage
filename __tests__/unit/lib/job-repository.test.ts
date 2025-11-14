@@ -53,11 +53,6 @@ vi.mock("@/lib/database/connection", () => ({
   getReadWriteDb: vi.fn(),
 }));
 
-// We only need pg-schema/sqlite-schema shapes to exist; real logic is in job-repository.
-vi.mock("@/lib/database/schema", () => ({
-  jobs: {},
-}));
-
 vi.mock("@/lib/database/pg-schema", () => ({
   jobs: {},
   jobHistory: {},
@@ -83,26 +78,7 @@ describe("getJobRepository - engine selection", () => {
     vi.resetModules();
   });
 
-  it("does not select a Postgres-backed repository when getReadWriteDb is not Postgres-shaped (LEGACY path)", async () => {
-    const sqliteLikeDb = {
-      // No $schema.jobs -> isPostgresDb should be false
-    } as unknown as MockPgDrizzle;
-
-    (getReadWriteDb as unknown as Mock).mockReturnValue(sqliteLikeDb);
-
-    const { getJobRepository: freshGetJobRepository } = await import(
-      "@/lib/database/job-repository"
-    );
-    const repo = freshGetJobRepository();
-
-    await repo.insert(baseJob);
-
-    // This assertion documents that we exercised the non-Postgres detection path.
-    // The actual SQLite-backed implementation is treated as legacy-only in Phase 1.
-    expect(getReadWriteDb).toHaveBeenCalled();
-  });
-
-  it("uses Postgres-backed repository when getReadWriteDb exposes pg-schema.jobs", async () => {
+  it("uses the Postgres-backed repository when getReadWriteDb exposes pg-schema.jobs", async () => {
     const pgModule = await import("@/lib/database/pg-schema");
 
     const pgLikeDb: MockPgDrizzle = {
@@ -144,8 +120,46 @@ describe("getJobRepository - engine selection", () => {
     // Should delegate to Postgres implementation and call into pgLikeDb.insert(...)
     await repo.insert(baseJob);
 
-    // We can't access the class directly, but we can assert that insert on pgLikeDb was used
-    // by checking that no getAppDatabase() call was needed.
     expect(getReadWriteDb).toHaveBeenCalled();
+  });
+
+  it("returns a singleton instance", async () => {
+    (getReadWriteDb as unknown as Mock).mockReturnValue({
+      $schema: {
+        jobs: {},
+        jobHistory: {},
+      },
+      insert: () => ({
+        values: () => ({
+          returning: async () => [{ id: BigInt(1) }],
+        }),
+      }),
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [],
+          }),
+          leftJoin: () => ({
+            where: async () => [],
+          }),
+        }),
+      }),
+      update: () => ({
+        set: () => ({
+          where: async () => {},
+        }),
+      }),
+      delete: () => ({
+        where: async () => ({ rowsAffected: 0 }),
+      }),
+    } as MockPgDrizzle);
+
+    const { getJobRepository: freshGetJobRepository } = await import(
+      "@/lib/database/job-repository"
+    );
+    const repoA = freshGetJobRepository();
+    const repoB = freshGetJobRepository();
+
+    expect(repoA).toBe(repoB);
   });
 });

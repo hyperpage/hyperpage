@@ -21,7 +21,7 @@ export interface NormalizedToolConfig {
  * Owner scoping for Postgres tool_configs.
  *
  * For now we use a fixed global owner scope to keep behavior identical to
- * the legacy SQLite implementation (which is effectively global).
+ * the previous implementation (which was effectively global).
  *
  * This can be extended in future to support per-user / per-tenant ownership.
  */
