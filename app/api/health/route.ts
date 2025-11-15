@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { defaultCache } from "@/lib/cache/cache-factory";
 import { getActivePlatforms } from "@/lib/rate-limit-utils";
@@ -9,7 +9,7 @@ import { checkPostgresConnectivity } from "@/lib/database/connection";
 import logger from "@/lib/logger";
 import { createErrorResponse } from "@/lib/api/responses";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const cacheStats = await defaultCache.getStats();
 

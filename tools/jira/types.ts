@@ -32,6 +32,7 @@ export interface JiraApiIssue {
     summary: string;
     status: { name: string };
     assignee: { displayName: string } | null;
+    created?: string;
     updated: string;
     issuetype?: { name: string };
     labels?: string[];

@@ -64,33 +64,7 @@ The PostgreSQL schema is defined by:
      - Provides a stable, programmatic API for applying known migrations.
      - Used by the Postgres test harness as a fallback when drizzle's file-based migrator cannot load `.ts` migrations directly.
 
----
-
-## Legacy SQLite Migrations (Explicitly Isolated)
-
-Legacy artifacts (kept only for historical reference):
-
-- `lib/database/migrations/001_initial_schema.ts`
-- `lib/database/migrations/002_oauth_auth_tables.ts`
-
-Characteristics:
-
-- Schema definitions use:
-  - `TEXT` / `INTEGER` columns
-  - `unixepoch()`-style timestamps
-  - A `schema_migrations` table inside SQLite
-- Designed for the original SQLite-based implementation and migration flow.
-
-Current status:
-
-- These files are **retained for historical and migration-only purposes**.
-- They are **not used** by:
-  - The Postgres runtime.
-  - The Postgres test harness.
-- They **must not** be added to the Postgres `MIGRATIONS_REGISTRY` or invoked by new tests.
-- All active code and tests should rely exclusively on the Postgres schema.
-
-This separation ensures the Postgres schema remains clean and unambiguous.
+All other migration files have been removed. The Postgres schema above is the only supported runtime schema.
 
 ---
 

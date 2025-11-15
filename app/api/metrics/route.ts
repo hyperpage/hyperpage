@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import promClient from "prom-client";
 
 import { defaultCache } from "@/lib/cache/memory-cache";
@@ -11,10 +11,8 @@ import { DashboardMetrics } from "@/lib/monitoring/performance-dashboard";
 import { Tool } from "@/tools/tool-types";
 import logger from "@/lib/logger";
 import { createErrorResponse } from "@/lib/api/responses";
-const register = new promClient.Registry();
-
-// Add default metrics (process, heap, etc.)
-promClient.collectDefaultMetrics({ register });
+import { getWidgetErrorAggregates } from "@/lib/monitoring/widget-error-telemetry";
+import register from "@/app/api/metrics/registry";
 
 // Custom metrics for rate limiting
 const rateLimitUsageGauge = new promClient.Gauge({
@@ -157,6 +155,20 @@ const connectionPoolHealthStatusGauge = new promClient.Gauge({
   registers: [register],
 });
 
+const widgetErrorCountGauge = new promClient.Gauge({
+  name: "widget_errors_count",
+  help: "Total number of widget error events recorded per tool/endpoint",
+  labelNames: ["tool", "endpoint"],
+  registers: [register],
+});
+
+const widgetErrorLastTimestampGauge = new promClient.Gauge({
+  name: "widget_error_last_timestamp_ms",
+  help: "Timestamp (ms) of the most recent widget error per tool/endpoint",
+  labelNames: ["tool", "endpoint"],
+  registers: [register],
+});
+
 // Update metrics from current state
 async function updateMetrics() {
   try {
@@ -290,6 +302,15 @@ async function updateMetrics() {
       }
     }
 
+    // Update widget error telemetry metrics
+    widgetErrorCountGauge.reset();
+    widgetErrorLastTimestampGauge.reset();
+    const widgetAggregates = getWidgetErrorAggregates();
+    widgetAggregates.forEach(({ tool, endpoint, count, lastTimestamp }) => {
+      widgetErrorCountGauge.set({ tool, endpoint }, count);
+      widgetErrorLastTimestampGauge.set({ tool, endpoint }, lastTimestamp);
+    });
+
     // Update connection pool metrics
     try {
       const poolMetrics = defaultHttpClient.getMetrics();
@@ -351,7 +372,7 @@ async function updateMetrics() {
 /**
  * GET /api/metrics - Expose Prometheus metrics
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // Update metrics before serving them
     await updateMetrics();

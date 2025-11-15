@@ -2,6 +2,7 @@ import React from "react";
 import { useState, useEffect } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -13,12 +14,18 @@ import RefreshButton from "@/app/components/RefreshButton";
 import TableRowComponent from "@/app/components/TableRow";
 import PaginationControls from "@/app/components/PaginationControls";
 
+interface WidgetErrorInfo {
+  message: string;
+  timestamp: number;
+}
+
 interface DataTableProps {
   title: string;
   headers: string[];
   data: ToolData[];
   tool: string;
   isLoading?: boolean;
+  errorInfo?: WidgetErrorInfo | null;
   onRefresh?: () => void;
 }
 
@@ -28,6 +35,7 @@ export default function DataTable({
   data,
   tool,
   isLoading = false,
+  errorInfo = null,
   onRefresh,
 }: DataTableProps) {
   // tool parameter is reserved for future use (debugging, analytics, etc.)
@@ -60,6 +68,17 @@ export default function DataTable({
         </div>
       </CardHeader>
       <CardContent>
+        {errorInfo && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Unable to load data</AlertTitle>
+            <AlertDescription>
+              {errorInfo.message} –{" "}
+              <span className="font-mono text-xs">
+                {new Date(errorInfo.timestamp).toLocaleTimeString()}
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
         <Table>
           <TableHeader>
             <tr>

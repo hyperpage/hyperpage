@@ -488,6 +488,8 @@ Status displayed through visual indicators:
 - **Badges**: Percentage usage (5%, 95%) with color-coded backgrounds
 - **Icons**: Warning symbols for rates approaching limits
 - **Tooltips**: Detailed platform-specific information on hover
+- **Adaptive polling**: `useToolQueries` reads `meta.usagePercent` and `meta.finalInterval` for each widget so the UI slows down when platform usage is high
+- **Tool status row**: Rate limit badge sits next to widget telemetry warnings, so operators can correlate API health with data freshness
 
 #### Caching Strategy
 

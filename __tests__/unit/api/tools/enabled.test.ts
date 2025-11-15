@@ -203,6 +203,41 @@ describe("GET /api/tools/enabled", () => {
       expect(data.apis).toEqual([]);
     });
 
+    it("includes apiEndpoint metadata for widget definitions", async () => {
+      mockGetEnabledTools.mockReturnValue([
+        {
+          name: "Ticketing",
+          slug: "ticketing",
+          enabled: true,
+          ui: { color: "bg-blue-500", icon: null },
+          widgets: [
+            {
+              title: "Tickets",
+              type: "table",
+              data: [],
+              headers: ["ID"],
+              dynamic: true,
+              apiEndpoint: "issues",
+            },
+          ],
+          apis: {
+            issues: {
+              method: "GET",
+              description: "Get issues",
+            },
+          },
+          handlers: {},
+          capabilities: ["issues"],
+        },
+      ] as unknown as Tool[]);
+
+      const response = await getEnabledTools();
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.enabledTools[0].widgets[0].apiEndpoint).toBe("issues");
+    });
+
     it("handles tools without APIs", async () => {
       const mockTools = [
         {
@@ -317,7 +352,13 @@ describe("GET /api/tools/enabled", () => {
       const data = await response.json();
 
       expect(response.status).toBe(500);
-      expect(data.error).toBe("Failed to get enabled tools");
+      expect(data).toMatchObject({
+        success: false,
+        error: {
+          code: "ENABLED_TOOLS_ERROR",
+          message: "Failed to get enabled tools",
+        },
+      });
     });
 
     it("handles unexpected tool structure gracefully", async () => {

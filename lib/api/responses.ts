@@ -8,8 +8,7 @@ export type ApiErrorResponseOptions = {
   headers?: Record<string, string>;
 };
 
-const DEFAULT_ERROR_MESSAGE =
-  "An error occurred while processing the request";
+const DEFAULT_ERROR_MESSAGE = "An error occurred while processing the request";
 const DEFAULT_ERROR_CODE = "INTERNAL_SERVER_ERROR";
 
 export function createErrorResponse(
@@ -41,7 +40,9 @@ export function createErrorResponse(
   });
 }
 
-export function methodNotAllowedResponse(allowedMethods: string[]): NextResponse {
+export function methodNotAllowedResponse(
+  allowedMethods: string[],
+): NextResponse {
   return createErrorResponse({
     status: 405,
     code: "METHOD_NOT_ALLOWED",

@@ -1,10 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 
 import { getReadWriteDb } from "@/lib/database/connection";
 import * as pgSchema from "@/lib/database/pg-schema";
 import { getEnabledTools as getRegistryEnabledTools } from "@/tools";
-import type { Tool, ToolWidget, ToolApi } from "@/tools/tool-types";
+import type {
+  Tool,
+  ToolWidget,
+  ToolApi,
+  ClientSafeTool,
+  ClientToolWidget,
+  ClientToolApi,
+  ToolData,
+} from "@/tools/tool-types";
 import logger from "@/lib/logger";
 import { createErrorResponse } from "@/lib/api/responses";
 
@@ -22,21 +30,8 @@ type ToolConfigOverride = {
   config?: Record<string, unknown>;
 };
 
-type PublicWidget = {
-  title: string;
-  type: "table" | "chart" | "feed" | "card";
-  headers?: string[];
-  dynamic?: boolean;
-  refreshInterval?: number;
-};
-
-type PublicApi = {
-  endpoint: string;
-  method: ToolApi["method"];
-  description: string;
-  parameters?: ToolApi["parameters"];
-  url: string;
-};
+type PublicWidget = ClientToolWidget;
+type PublicApi = ClientToolApi;
 
 /**
  * Enabled tools API endpoint (Phase 2 - PostgreSQL-backed)
@@ -44,7 +39,7 @@ type PublicApi = {
  * Source of truth for enablement is the tool_configs table.
  * Registry provides static metadata (widgets/apis); DB controls enabled state.
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const configByKey = await loadToolConfigOverrides();
     const registryTools = getRegistryEnabledTools();
@@ -80,9 +75,9 @@ async function loadToolConfigOverrides(): Promise<
   Map<string, ToolConfigOverride>
 > {
   const configByKey = new Map<string, ToolConfigOverride>();
+  const db = getReadWriteDb();
 
   try {
-    const db = getReadWriteDb();
     const rows = await db
       .select()
       .from(pgSchema.toolConfigs)
@@ -111,11 +106,13 @@ async function loadToolConfigOverrides(): Promise<
       });
     }
   } catch (error) {
-    logger.warn(
-      "Failed to load tool config overrides, falling back to registry",
-      {
-        error: error instanceof Error ? error.message : String(error),
-      },
+    throw new Error(
+      [
+        "Failed to load tool config overrides from PostgreSQL.",
+        "Ensure migrations have been applied and the tool_configs table exists with owner scoping.",
+        `Underlying error: ${error instanceof Error ? error.message : String(error)}`,
+      ].join(" "),
+      { cause: error },
     );
   }
 
@@ -125,14 +122,7 @@ async function loadToolConfigOverrides(): Promise<
 function transformTool(
   tool: Tool,
   override?: ToolConfigOverride,
-): {
-  name: string;
-  slug: string;
-  enabled: boolean;
-  capabilities: string[];
-  widgets: PublicWidget[];
-  apis: PublicApi[];
-} | null {
+): ClientSafeTool | null {
   if (!tool) {
     return null;
   }
@@ -206,6 +196,19 @@ function transformWidget(
     transformed.headers = headers;
   }
 
+  if (widget.apiEndpoint) {
+    transformed.apiEndpoint = widget.apiEndpoint;
+  }
+
+  if (widget.displayName) {
+    transformed.displayName = widget.displayName;
+  }
+
+  const sanitizedData = sanitizeWidgetData(widget.data);
+  if (sanitizedData) {
+    transformed.data = sanitizedData;
+  }
+
   return transformed;
 }
 
@@ -217,4 +220,33 @@ function transformApi(endpoint: string, api: ToolApi, slug: string): PublicApi {
     parameters: api.parameters || {},
     url: slug ? `/api/tools/${slug}/${endpoint}` : `/api/tools/${endpoint}`,
   };
+}
+
+function sanitizeWidgetData(data?: ToolWidget["data"]): ToolData[] | undefined {
+  if (!Array.isArray(data) || data.length === 0) {
+    return undefined;
+  }
+
+  return data
+    .map((row) => {
+      if (!row) {
+        return undefined;
+      }
+
+      const safeRow: ToolData = {};
+
+      Object.entries(row).forEach(([key, value]) => {
+        if (
+          value === null ||
+          value === undefined ||
+          typeof value === "string" ||
+          typeof value === "number"
+        ) {
+          safeRow[key] = value;
+        }
+      });
+
+      return safeRow;
+    })
+    .filter((row): row is ToolData => row !== undefined);
 }

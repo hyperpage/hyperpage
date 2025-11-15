@@ -23,11 +23,9 @@ export async function POST(
   const allowedProviders = new Set(["github", "gitlab", "jira"]);
 
   if (!normalizedProvider || !allowedProviders.has(normalizedProvider)) {
-    return validationErrorResponse(
-      "Unsupported provider",
-      "INVALID_PROVIDER",
-      { provider },
-    );
+    return validationErrorResponse("Unsupported provider", "INVALID_PROVIDER", {
+      provider,
+    });
   }
 
   try {

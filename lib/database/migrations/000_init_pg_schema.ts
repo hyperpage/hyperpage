@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+
 import logger from "@/lib/logger";
 
 // Match drizzle's runtime DB shape so migrate() can call our migration directly.

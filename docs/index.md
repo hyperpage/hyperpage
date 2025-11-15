@@ -31,7 +31,6 @@ This project follows rigorous documentation accuracy standards to ensure all cla
 ### ⚙️ **Operations & Deployment**
 
 - **[Deployment Guide](operations/deployment.md)** - Production deployment strategies
-- **[Kubernetes Setup](operations/kubernetes.md)** - Container orchestration setup
 - **[Performance Optimization](operations/scaling.md)** - Scaling and performance guidance
 - **[CI/CD Pipeline Documentation](../.github/workflows/)** - GitHub Actions workflows
 
@@ -86,7 +85,7 @@ This project follows rigorous documentation accuracy standards to ensure all cla
 
 - **Backup Systems**: Data backup and restore functionality
 - **Configuration Management**: Environment-based configuration support
-- **Container Support**: Docker containerization and Kubernetes manifests
+- **Container Support**: Docker containerization
 - **Security Implementation**: Secure authentication and token management
 - **Deployment Automation**: CI/CD workflows for automated deployments
 
@@ -103,7 +102,7 @@ This project follows rigorous documentation accuracy standards to ensure all cla
 | **Monitoring Systems**        | ✅ Available | Performance monitoring, error tracking                      |
 | **Testing Framework**         | ✅ Available | Multiple test suites, automated testing workflows           |
 | **CI/CD Integration**         | ✅ Available | GitHub Actions workflows, automated deployment              |
-| **Deployment Support**        | ✅ Available | Container manifests, Kubernetes deployment files            |
+| **Deployment Support**        | ✅ Available | Container manifests (Docker), deployment automation         |
 
 ---
 

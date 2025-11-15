@@ -39,6 +39,7 @@ The monitoring system provides performance tracking, bottleneck detection, and a
 - **Alert lifecycle management** (creation, throttling, resolution)
 - **Rule-based conditions** for automated threshold evaluation
 - **External integrations** ready for Slack webhooks and other services
+- **Widget health coverage** via `AlertType.WIDGET_DATA_FAILURE`
 
 ### ✅ Comprehensive Metrics Collection
 
@@ -63,6 +64,7 @@ The monitoring system provides performance tracking, bottleneck detection, and a
 - **Multi-channel notifications** with reliable delivery
 - **Alert deduplication** and throttling to prevent noise
 - **Contextual alert information** for incident response
+- **Widget failure alerts** include tool, endpoint, and last error message with a 5‑minute cooldown per widget
 
 ### Performance Middleware
 
@@ -129,6 +131,41 @@ const thresholds = {
 | `compression_ratio_average`  | Average compression effectiveness | %     |
 | `compression_savings_bytes`  | Total bandwidth saved             | bytes |
 | `brotli_usage_percent`       | Brotli adoption rate              | %     |
+
+### Widget Error Telemetry
+
+| Metric                                          | Description                                            | Unit  |
+| ----------------------------------------------- | ------------------------------------------------------ | ----- |
+| `widget_errors_count{tool,endpoint}`            | Total widget error events per tool/endpoint            | count |
+| `widget_error_last_timestamp_ms{tool,endpoint}` | Timestamp of the most recent widget failure (ms epoch) | ms    |
+
+Every widget error also triggers the internal alert pipeline (via `AlertType.WIDGET_DATA_FAILURE`) with a 5‑minute cooldown per tool/endpoint, so Slack/webhook integrations tied to the alert service automatically receive notifications when widgets flap. Sample Slack payload:
+
+```json
+{
+  "text": "[Warning] Widget GitHub/issues failed: timeout",
+  "attachments": [
+    {
+      "fields": [
+        { "title": "Tool", "value": "GitHub", "short": true },
+        { "title": "Endpoint", "value": "issues", "short": true },
+        { "title": "Last failure", "value": "timeout" },
+        { "title": "Timestamp", "value": "2025-11-15T12:52:10Z" }
+      ]
+    }
+  ]
+}
+```
+
+Sample Prometheus queries:
+
+```promql
+# Top noisy widgets over the last 30 minutes
+topk(5, rate(widget_errors_count[30m]))
+
+# Tools with stale data (no recovery since last alert)
+time() - widget_error_last_timestamp_ms > 300000
+```
 
 ## Usage Examples
 
@@ -197,6 +234,7 @@ registerSlackChannel("production-alerts", "https://hooks.slack.com/...");
 4. **Compression Analytics** - Bandwidth savings and algorithm effectiveness
 5. **Throughput Visualization** - Request volume and processing capacity
 6. **Alert Timeline** - Active alerts with severity and resolution tracking
+7. **Widget Health & Rate Limits** - Combine `rate(widget_errors_count)` and `widget_error_last_timestamp_ms` with rate-limit gauges (`rate_limit_usage_percent`, `rate_limit_remaining`) so operators can see which widgets are failing and whether the cause is upstream throttling
 
 ## Integration Examples
 
@@ -232,6 +270,40 @@ scrape_configs:
   }
 }
 ```
+
+### Verifying Widget Metrics
+
+```bash
+# After triggering a widget failure (or waiting for a natural one), inspect the metrics:
+curl http://localhost:3000/api/metrics | grep widget_error
+
+# Example output:
+# widget_errors_count{tool="GitHub",endpoint="issues"} 3
+# widget_error_last_timestamp_ms{tool="GitHub",endpoint="issues"} 1.763210e+12
+```
+
+### Rate Limit Usage Example
+
+```bash
+# Pull manual rate limit data
+curl http://localhost:3000/api/rate-limit/github | jq
+
+# Example dashboard snippets
+curl http://localhost:3000/api/metrics | grep rate_limit_usage_percent
+curl http://localhost:3000/api/metrics | grep rate_limit_remaining
+
+# Correlate with widget health:
+rate(widget_errors_count[30m]) > 0 and rate_limit_usage_percent{platform="github"} > 75
+
+# ToolStatusRow usage: hover tooltips show GitHub core/search usage from the rate-limit endpoint
+# useToolQueries metadata (meta.usagePercent) can be inspected in devtools for each query
+```
+
+These metrics drive:
+
+- Tool status tooltips (showing GitHub core/search/GraphQL usage)
+- `useToolQueries` adaptive polling (slowing down when `usagePercent` is high)
+- Prometheus alerts when `rate_limit_status` reaches warning/critical
 
 ## Operations & Maintenance
 

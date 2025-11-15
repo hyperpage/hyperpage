@@ -60,11 +60,9 @@ export async function GET(
   const { provider } = await params;
   const normalizedProvider = provider?.toLowerCase();
   if (!normalizedProvider || !allowedProviders.has(normalizedProvider)) {
-    return validationErrorResponse(
-      "Unsupported provider",
-      "INVALID_PROVIDER",
-      { provider },
-    );
+    return validationErrorResponse("Unsupported provider", "INVALID_PROVIDER", {
+      provider,
+    });
   }
   const { searchParams } = new URL(request.url);
   const webUrl = searchParams.get("web_url"); // For Jira instances
@@ -157,11 +155,9 @@ export async function POST(
   const { provider } = await params;
   const normalizedProvider = provider?.toLowerCase();
   if (!normalizedProvider || !allowedProviders.has(normalizedProvider)) {
-    return validationErrorResponse(
-      "Unsupported provider",
-      "INVALID_PROVIDER",
-      { provider },
-    );
+    return validationErrorResponse("Unsupported provider", "INVALID_PROVIDER", {
+      provider,
+    });
   }
 
   try {

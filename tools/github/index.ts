@@ -18,7 +18,35 @@ export const githubTool: Tool = {
     color: "bg-purple-500/10 border-purple-400/30 text-purple-400",
     icon: React.createElement(Github, { className: "w-5 h-5" }),
   },
-  widgets: [],
+  widgets: [
+    {
+      title: "GitHub Pull Requests",
+      type: "table",
+      headers: ["ID", "Title", "Repository", "Status", "Created"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 5 * 60 * 1000,
+      apiEndpoint: "pull-requests",
+    },
+    {
+      title: "GitHub Workflows",
+      type: "table",
+      headers: ["Name", "Repository", "Head Branch", "Status", "Conclusion"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 5 * 60 * 1000,
+      apiEndpoint: "workflows",
+    },
+    {
+      title: "GitHub Issues",
+      type: "table",
+      headers: ["Ticket", "Title", "Status", "Assignee", "Created"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 5 * 60 * 1000,
+      apiEndpoint: "issues",
+    },
+  ],
   capabilities: ["pull-requests", "workflows", "issues", "rate-limit"], // Declares what this tool can provide
   validation: {
     required: ["GITHUB_TOKEN"],

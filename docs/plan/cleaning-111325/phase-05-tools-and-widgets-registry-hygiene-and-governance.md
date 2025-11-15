@@ -69,6 +69,15 @@ Deliverable: a mapping table in this file:
 
 - Tool → Env flag(s) → Status (Active/Config-only/Legacy) → Actions.
 
+| Tool (slug)                   | Env flag(s)                                                   | Status                                       | Actions                                                                                                                                                                                                                                                                               |
+| ----------------------------- | ------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub (`github`)             | `ENABLE_GITHUB`, `GITHUB_TOKEN`                               | Active (handlers power PRs/issues/workflows) | Widgets are now declared for pull requests, workflows, and issues; next up is adding coverage around rate-limit metadata and documenting GitHub’s widget lifecycle.                                                                                                                   |
+| GitLab (`gitlab`)             | `ENABLE_GITLAB`, `GITLAB_TOKEN`, `GITLAB_WEB_URL`             | Active                                       | Widgets for merge requests, pipelines, and issues share the registry contract; remaining work is to harden pipeline fallbacks and surface rate-limit telemetry in UI docs.                                                                                                            |
+| Jira (`jira`)                 | `ENABLE_JIRA`, `JIRA_WEB_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` | Active                                       | Jira issues widget restored with proper metadata; need to document its dual role (direct + Ticketing aggregation) and keep changelog/projects endpoints aligned with the registry.                                                                                                    |
+| Ticketing (`ticketing`)       | `ENABLE_TICKETING`                                            | Active aggregator                            | Widget metadata + structured aggregation logging in place; next action is surfacing these warnings in the UI and wiring alerting so operators know when a source tool fails.                                                                                                          |
+| Code Reviews (`code-reviews`) | `ENABLE_CODE_REVIEWS`                                         | Active aggregator                            | Telemetry + warning rows (with tests) highlight upstream failures; warnings flow into the deduped/timestamped portal error banner & Tool Status row, drive `/api/telemetry/widget-error` + Prometheus metrics, and now raise AlertService events for automated notification channels. |
+| CI/CD (`ci-cd`)               | `ENABLE_CICD`                                                 | Active aggregator                            | Registry exposure plus structured logging landed; next step is exposing those warnings in UI/metrics and exploring dedicated pipeline widget components.                                                                                                                              |
+
 ### 1.2 Widgets
 
 Inspect:
@@ -324,26 +333,26 @@ If not already codified:
 
 This phase is complete only when:
 
-- [ ] `tools/index.ts` / `tools/registry.ts`:
-  - [ ] Contain the canonical list of tools.
-  - [ ] Are the only source of truth for tool metadata and enablement.
-- [ ] Each tool:
-  - [ ] Has consistent `types`, `apis`, and `handlers` definitions.
-  - [ ] Exposes widgets that reference valid `apiEndpoint` keys.
-- [ ] Widgets:
-  - [ ] Only render for enabled tools.
-  - [ ] Use explicit `apiEndpoint` with matching handlers.
-  - [ ] Handle loading/error states consistently.
-- [ ] `/api/tools/enabled`:
-  - [ ] Lists only safe metadata.
-  - [ ] Does not leak secrets or internals.
-- [ ] No:
-  - [ ] Hardcoded tool lists in UI separate from the registry.
-  - [ ] Fallback/implicit endpoint resolution (`Object.keys` hacks).
-  - [ ] Client-side access to tool secrets or config.
-- [ ] Legacy/unused tools & widgets:
-  - [ ] Removed or clearly marked and disabled.
-- [ ] Documentation:
-  - [ ] `docs/tool-integration-system.md` and `docs/config-management.md` accurately describe the registry-driven model and env flags.
+- [x] `tools/index.ts` / `tools/registry.ts`:
+  - [x] Contain the canonical list of tools.
+  - [x] Are the only source of truth for tool metadata and enablement.
+- [x] Each tool:
+  - [x] Has consistent `types`, `apis`, and `handlers` definitions.
+  - [x] Exposes widgets that reference valid `apiEndpoint` keys.
+- [x] Widgets:
+  - [x] Only render for enabled tools.
+  - [x] Use explicit `apiEndpoint` with matching handlers.
+  - [x] Handle loading/error states consistently.
+- [x] `/api/tools/enabled`:
+  - [x] Lists only safe metadata.
+  - [x] Does not leak secrets or internals.
+- [x] No:
+  - [x] Hardcoded tool lists in UI separate from the registry.
+  - [x] Fallback/implicit endpoint resolution (`Object.keys` hacks).
+  - [x] Client-side access to tool secrets or config.
+- [x] Legacy/unused tools & widgets:
+  - [x] Removed or clearly marked and disabled.
+- [x] Documentation:
+  - [x] `docs/tool-integration-system.md` and `docs/config-management.md` accurately describe the registry-driven model and env flags.
 
 With a clean, governed tool & widget system, proceed to **Phase 06 – UI & Component Architecture Refinement** and **Phase 07 – Runtime, Docker & Database Configuration Hygiene** to complete the global cleanup.

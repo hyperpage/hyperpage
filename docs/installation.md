@@ -24,8 +24,14 @@ This guide covers the detailed installation process, system requirements, and co
    ```
 
 3. **Copy environment template:**
+
    ```bash
    cp .env.sample .env.dev
+   ```
+
+4. **Run database migrations:**
+   ```bash
+   npm run db:migrate
    ```
 
 ## Configuration
@@ -103,7 +109,7 @@ Only web URLs need to be configured in environment variables.
 
 ## Development Setup
 
-1. **Start the development server:**
+1. **Start the development server (loads `.env.dev` automatically):**
 
    ```bash
    npm run dev
@@ -114,7 +120,7 @@ Only web URLs need to be configured in environment variables.
 
 3. **Enable tools:**
    - Edit `.env.dev` to set `ENABLE_TOOL=true` for desired integrations
-   - Restart the development server
+   - Restart the development server so the newly loaded `.env.dev` values are picked up
    - Tool widgets will appear on the portal automatically
 
 ## Production Build

@@ -32,9 +32,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const timeWindow = url.searchParams.get("timeWindow");
     const format = (url.searchParams.get("format") || "json").toLowerCase();
-    const timeWindowMs = timeWindow
-      ? Number(timeWindow)
-      : DEFAULT_TIME_WINDOW;
+    const timeWindowMs = timeWindow ? Number(timeWindow) : DEFAULT_TIME_WINDOW;
 
     if (
       Number.isNaN(timeWindowMs) ||

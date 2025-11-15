@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { isOAuthConfigured } from "@/lib/oauth-config";
 import logger from "@/lib/logger";
@@ -37,7 +37,7 @@ function loadEnvFile() {
  * Get OAuth configuration status for tools
  * Returns which tools are properly configured for OAuth
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // Load environment variables from .env.dev
     loadEnvFile();

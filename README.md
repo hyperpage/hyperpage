@@ -35,11 +35,14 @@ npm install
 cp .env.sample .env.dev
 # Edit .env.dev to enable your tools (see docs/installation.md)
 
-# Start development server
+# Apply PostgreSQL migrations
+npm run db:migrate
+
+# Start development server (loads .env.dev automatically)
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view your portal.
+Open [http://localhost:3000](http://localhost:3000) to view your portal. The dev script now sources `.env.dev`, so any changes to that file take effect after restarting the server. Run `npm run db:migrate` whenever migrations change to keep your local Postgres schema current.
 
 ## Configuration
 

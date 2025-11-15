@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 
 import Portal from "@/app/components/Portal";
-import { Tool } from "@/tools/tool-types";
+import { ClientSafeTool } from "@/tools/tool-types";
 import { PortalEmptyState } from "@/app/components/PortalEmptyState";
 import SetupWizard from "@/app/components/SetupWizard";
 import logger from "@/lib/logger";
 
 export default function Home() {
-  const [enabledTools, setEnabledTools] = useState<Tool[]>([]);
+  const [enabledTools, setEnabledTools] = useState<ClientSafeTool[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -17,7 +17,9 @@ export default function Home() {
       try {
         const response = await fetch("/api/tools/enabled");
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as {
+            enabledTools?: ClientSafeTool[];
+          };
           setEnabledTools(data.enabledTools || []);
         }
       } catch (error) {

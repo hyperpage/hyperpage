@@ -20,7 +20,35 @@ export const gitlabTool: Tool = {
     color: "bg-orange-500/10 border-orange-400/30 text-orange-400",
     icon: React.createElement(Gitlab, { className: "w-5 h-5" }),
   },
-  widgets: [],
+  widgets: [
+    {
+      title: "GitLab Merge Requests",
+      type: "table",
+      headers: ["ID", "Title", "Project", "Status", "Created"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 5 * 60 * 1000,
+      apiEndpoint: "merge-requests",
+    },
+    {
+      title: "GitLab Pipelines",
+      type: "table",
+      headers: ["Project", "Branch", "Status", "Duration", "Finished At"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 5 * 60 * 1000,
+      apiEndpoint: "pipelines",
+    },
+    {
+      title: "GitLab Issues",
+      type: "table",
+      headers: ["Ticket", "Title", "Status", "Assignee", "Created"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 5 * 60 * 1000,
+      apiEndpoint: "issues",
+    },
+  ],
   capabilities: ["merge-requests", "pipelines", "issues", "rate-limit"], // Declares what this tool can provide
   validation: {
     required: ["GITLAB_WEB_URL", "GITLAB_TOKEN"],

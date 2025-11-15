@@ -165,10 +165,7 @@ Given `DATABASE_URL=postgresql://USER:PASS@HOST:PORT/DB_NAME`:
 
      and `getMigrationNames()`; this is used by the fallback.
 
-   - Legacy SQLite migrations (`001_initial_schema.ts`, `002_oauth_auth_tables.ts`):
-     - Are **explicitly legacy**.
-     - Are **not** used by the Postgres harness.
-     - Remain available only for historical SQLite tooling; they must not be added to the Postgres `MIGRATIONS_REGISTRY`.
+   - Legacy SQLite migrations have been removed; the Postgres schema above is the single source of truth for all runtimes and tests.
 
 4. **Seeding and table validation**
 

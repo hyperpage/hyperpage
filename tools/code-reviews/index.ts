@@ -43,6 +43,7 @@ export const codeReviewsTool: Tool = {
       request: Request,
     ): Promise<{ pullRequests: unknown[] }> => {
       const results: unknown[] = [];
+      const telemetry: { tool: string; endpoint: string; error: string }[] = [];
 
       // Get all enabled tools that provide pull-requests capability (GitHub)
       const pullRequestTools = getEnabledTools().filter(
@@ -72,9 +73,16 @@ export const codeReviewsTool: Tool = {
               results.push(...result.pullRequests);
             }
           } catch (error) {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            telemetry.push({
+              tool: tool.name,
+              endpoint: "pull-requests",
+              error: message,
+            });
             logger.warn("Failed to fetch pull requests", {
               tool: tool.name,
-              error: error instanceof Error ? error.message : String(error),
+              error: message,
               type: "code_reviews_fetch_error",
             });
           }
@@ -109,13 +117,37 @@ export const codeReviewsTool: Tool = {
               results.push(...transformedMRs);
             }
           } catch (error) {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            telemetry.push({
+              tool: tool.name,
+              endpoint: "merge-requests",
+              error: message,
+            });
             logger.warn("Failed to fetch merge requests", {
               tool: tool.name,
-              error: error instanceof Error ? error.message : String(error),
+              error: message,
               type: "code_reviews_fetch_error",
             });
           }
         }
+      }
+
+      if (telemetry.length > 0) {
+        const now = new Date();
+        telemetry.forEach(({ tool, error }) => {
+          results.push({
+            id: `warning-${tool}`,
+            title: "Upstream unavailable",
+            repository: tool,
+            status: "warning",
+            tool,
+            created: now.toISOString(),
+            created_display: now.toLocaleDateString(),
+            error_message: error,
+            type: "warning",
+          });
+        });
       }
 
       // Sort combined results by timestamp (most recent first)

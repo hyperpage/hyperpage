@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 import logger from "@/lib/logger";
+import type { ClientSafeTool } from "@/tools/tool-types";
 
 interface SetupStep {
   id: string;
@@ -111,23 +112,39 @@ export function useSetupWizard(): UseSetupWizardReturn {
   const checkConfigurationStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/tools/enabled");
-      const data = await response.json();
+      const data = (await response.json()) as {
+        enabledTools?: ClientSafeTool[];
+      };
+      const enabledTools = data.enabledTools ?? [];
+      const enabledSlugs = new Set(
+        enabledTools.map((tool) => tool.slug.toLowerCase()),
+      );
+      const enabledNames = new Set(
+        enabledTools.map((tool) => tool.name.toLowerCase()),
+      );
 
       // Update tools based on current configuration
       setTools((prevTools) =>
-        prevTools.map((tool) => ({
-          ...tool,
-          enabled:
-            data.enabledTools?.includes(tool.name.toLowerCase()) || false,
-          setupSteps: tool.setupSteps.map((step) => ({
-            ...step,
-            status: tool.enabled ? "success" : "pending",
-          })),
-        })),
+        prevTools.map((tool) => {
+          const normalizedName = tool.name.toLowerCase();
+          const normalizedSlug = normalizedName.replace(/\s+/g, "-");
+          const isEnabled =
+            enabledSlugs.has(normalizedName) ||
+            enabledSlugs.has(normalizedSlug) ||
+            enabledNames.has(normalizedName);
+
+          return {
+            ...tool,
+            enabled: isEnabled,
+            setupSteps: tool.setupSteps.map((step) => ({
+              ...step,
+              status: isEnabled ? "success" : "pending",
+            })),
+          };
+        }),
       );
 
-      const hasEnabledTools = data.enabledTools && data.enabledTools.length > 0;
-      setIsConfigured(hasEnabledTools);
+      setIsConfigured(enabledTools.length > 0);
     } catch (error) {
       logger.error("Failed to check configuration status", { error });
     }

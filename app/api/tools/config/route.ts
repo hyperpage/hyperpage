@@ -18,7 +18,6 @@ import { toolRegistry } from "@/tools/registry";
 import logger from "@/lib/logger";
 import {
   createErrorResponse,
-  methodNotAllowedResponse,
   validationErrorResponse,
 } from "@/lib/api/responses";
 
@@ -136,7 +135,10 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     const action = url.searchParams.get("action");
 
     if (!toolName || typeof toolName !== "string") {
-      return validationErrorResponse("tool parameter is required", "INVALID_TOOL_PARAM");
+      return validationErrorResponse(
+        "tool parameter is required",
+        "INVALID_TOOL_PARAM",
+      );
     }
 
     // Validate that tool exists
@@ -196,7 +198,10 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     const toolName = url.searchParams.get("tool");
 
     if (!toolName || typeof toolName !== "string") {
-      return validationErrorResponse("tool parameter is required", "INVALID_TOOL_PARAM");
+      return validationErrorResponse(
+        "tool parameter is required",
+        "INVALID_TOOL_PARAM",
+      );
     }
 
     // Validate that tool exists

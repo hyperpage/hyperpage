@@ -36,6 +36,14 @@ ENABLE_GITHUB=false
 ENABLE_GITLAB=false
 ```
 
+### Registry-Driven Enablement Flow
+
+- Every tool reads its `ENABLE_*` flag at import time and registers with the global registry.
+- `/api/tools/enabled` merges that registry data with persisted overrides from `tool_configs` (e.g., user-tuned refresh intervals or enablement toggles).
+- The endpoint returns sanitized `ClientSafeTool` objects (name, slug, capabilities, widgets, APIs) so client components never touch handlers, configs, or secrets.
+- Portal, setup wizard, sidebar, and any discovery surface MUST rely on this endpoint; no other tool lists should be maintained.
+- If a tool is disabled via environment variables or a persisted override, it disappears from the API, the portal, and the sidebar automatically.
+
 ### Tool-Specific Configuration
 
 #### JIRA Configuration

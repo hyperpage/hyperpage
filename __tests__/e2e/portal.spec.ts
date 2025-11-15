@@ -10,7 +10,9 @@ describeE2E("Hyperpage Portal Empty State E2E", () => {
   });
 
   test("shows the No Tools Enabled message by default", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: "No Tools Enabled" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "No Tools Enabled" }),
+    ).toBeVisible();
     await expect(
       page.getByText(
         /Enable tools in your environment configuration to see portal widgets/i,
@@ -28,6 +30,8 @@ describeE2E("Hyperpage Portal Empty State E2E", () => {
 
   test("remains stable across reloads", async ({ page }) => {
     await page.reload();
-    await expect(page.getByRole("heading", { name: "No Tools Enabled" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "No Tools Enabled" }),
+    ).toBeVisible();
   });
 });

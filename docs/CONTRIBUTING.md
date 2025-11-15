@@ -42,7 +42,10 @@ npm install
 # Copy environment template
 cp .env.sample .env.dev
 
-# Start development server
+# Apply PostgreSQL migrations
+npm run db:migrate
+
+# Start development server (loads .env.dev automatically)
 npm run dev
 ```
 

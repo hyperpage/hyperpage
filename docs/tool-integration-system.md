@@ -27,6 +27,16 @@ All tool interactions are completely registry-driven. Each tool is defined as a 
 
 There is no ad-hoc branching on tool names scattered across the codebase. The registry is the single source of truth for tool capabilities.
 
+### Client-Safe Registry Access
+
+- Each tool self-registers server-side and exposes a `Tool` definition, but UI layers **never** touch handler/config objects directly.
+- `/api/tools/enabled` materializes a sanitized `ClientSafeTool` object per registry entry. Fields include:
+  - `name`, `slug`, `enabled`, and `capabilities`
+  - `widgets[]` with `title`, `type`, `headers`, `refreshInterval`, and the required `apiEndpoint`
+  - `apis[]` with endpoint metadata (method, description, parameters, url)
+- Handlers/config are stripped so no secrets or functions cross the boundary. Any per-request overrides (e.g., DB-driven refresh intervals) are applied during this projection.
+- The portal, setup wizard, sidebar, etc. **must** read from this contract instead of maintaining bespoke tool lists.
+
 ### Tool Ownership Model
 
 Each tool owns its complete integration:
@@ -227,6 +237,7 @@ Constraints:
 
 - `apiEndpoint` MUST match an entry in the tool's `apis` and `handlers`.
 - No fallback guessing of endpoints; configuration must be explicit.
+- The `/api/tools/enabled` projection now includes `apiEndpoint`, so if a widget omits it the portal simply never creates a query for that widget.
 
 ### Auto-Refresh Configuration
 
@@ -235,6 +246,35 @@ Widgets support `refreshInterval` in milliseconds. Examples:
 - GitHub/Jira: 300000 (5 minutes)
 - Performance monitoring: 60000 (1 minute)
 - System metrics: 30000 (30 seconds)
+
+### Widget Telemetry & Metrics
+
+- When a widget fetch fails client-side, the portal emits an event to `/api/telemetry/widget-error` with the tool, endpoint, message, and timestamp.
+- Recent events are persisted in-memory and accessible via `GET /api/telemetry/widget-error` for debugging dashboards or alerting.
+- `/api/metrics` exports Prometheus gauges (`widget_errors_count`, `widget_error_last_timestamp_ms`) built from the same telemetry so SRE/observability stacks can track noisy integrations historically.
+- The portal’s error banner and Tool Status row read from the same deduplicated/timestamped feed, keeping runtime UX and backend telemetry aligned.
+- A “Recent Widget Failures” panel in the portal overview consumes `/api/telemetry/widget-error` so on-call engineers can review the latest failing widgets without leaving the product UI.
+- Rate-limit telemetry is reported via `/api/rate-limit/[platform]`, and Prometheus metrics (`rate_limit_usage_percent`, `rate_limit_status`, `rate_limit_remaining`, `rate_limit_max`) are updated by `/api/metrics`. Widgets automatically adapt to rate-limit data via `useToolQueries`.
+
+### Rate Limit Hooks Usage
+
+Portal UI consumes rate limits via:
+
+1. `useToolStatus` → `useMultipleRateLimits` to populate ToolStatusRow badges/tooltips
+2. `useToolQueries` to compute `meta.usagePercent` and `finalInterval`, slowing down widgets when usage is high
+
+Example snippet (`useToolQueries`):
+
+```typescript
+const { statuses } = useMultipleRateLimits(activePlatforms);
+const queryConfigs = createQueryConfigs(
+  enabledTools,
+  statuses,
+  isTabVisible,
+  isUserActive,
+);
+// Each config.meta contains { usagePercent, finalInterval } for analytics/telemetry
+```
 
 ---
 
@@ -369,6 +409,7 @@ Only enabled tools appear in:
 - Portal widgets
 - Sidebar navigation
 - Discovery endpoints
+- `/api/tools/enabled` provides the single list of enabled tools for UI consumers. It returns `ClientSafeTool` metadata, so anything that needs widgets/apis must consume that endpoint instead of duplicating registry slices.
 
 ---
 

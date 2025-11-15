@@ -11,8 +11,6 @@ services:
       timeout: 30s
       retries: 5
       start_period: 30s
-    networks:
-      - hyperpage
 
   redis:
     container_name: hyperpage-testing-redis
@@ -20,8 +18,6 @@ services:
       - .env.testing
     volumes:
       - redis-testing_data:/data
-    networks:
-      - hyperpage
 
   hyperpage:
     container_name: hyperpage-testing-app

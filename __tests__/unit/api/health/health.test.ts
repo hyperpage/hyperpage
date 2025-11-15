@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { NextRequest } from "next/server";
 
 import { GET } from "@/app/api/health/route";
 import { toolRegistry } from "@/tools/registry";
@@ -102,13 +101,8 @@ describe("GET /api/health", () => {
     delete (toolRegistry as Record<string, MockTool>).gitlab;
   });
 
-  const createRequest = () =>
-    new NextRequest("http://localhost/api/health", {
-      method: "GET",
-    });
-
   it("should return enhanced health status with Postgres and rate limiting metrics when DB is healthy", async () => {
-    const response = await GET(createRequest());
+    const response = await GET();
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -139,7 +133,7 @@ describe("GET /api/health", () => {
     // Mock platform failures
     mockRateLimitHandler.mockRejectedValue(new Error("API Error"));
 
-    const response = await GET(createRequest());
+    const response = await GET();
     const data = await response.json();
 
     // DB is still mocked as healthy
@@ -160,7 +154,7 @@ describe("GET /api/health", () => {
       },
     } as never);
 
-    const response = await GET(createRequest());
+    const response = await GET();
     const data = await response.json();
 
     expect(response.status).toBe(503);

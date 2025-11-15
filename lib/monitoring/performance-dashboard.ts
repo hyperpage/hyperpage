@@ -1,5 +1,7 @@
 import { EventEmitter } from "events";
 
+import { alertService } from "@/lib/alerting/alert-service";
+
 export interface BottleneckRecommendation {
   id: string;
   title: string;
@@ -118,6 +120,7 @@ export enum AlertType {
   BATCH_HIGH_LATENCY = "BATCH_HIGH_LATENCY",
   RESOURCE_EXHAUSTION = "RESOURCE_EXHAUSTION",
   CIRCUIT_BREAKER_OPEN = "CIRCUIT_BREAKER_OPEN",
+  WIDGET_DATA_FAILURE = "WIDGET_DATA_FAILURE",
 }
 
 export interface PerformanceThresholds {
@@ -419,9 +422,12 @@ export class PerformanceDashboard extends EventEmitter {
         Math.abs(Date.now() - a.timestamp) < 300000, // 5 minutes
     );
 
+    let alertToProcess: AlertEvent;
+
     if (existingAlert) {
       // Update existing alert timestamp
       existingAlert.timestamp = Date.now();
+      alertToProcess = existingAlert;
     } else {
       // Create new alert
       const alert: AlertEvent = {
@@ -436,12 +442,24 @@ export class PerformanceDashboard extends EventEmitter {
       };
 
       this.alerts.push(alert);
+      alertToProcess = alert;
 
       // Maintain alert history limit
       if (this.alerts.length > this.maxAlerts) {
         this.alerts.shift();
       }
     }
+
+    alertService.processAlert({
+      id: alertToProcess.id,
+      type,
+      severity,
+      message,
+      timestamp: Date.now(),
+      value,
+      threshold,
+      endpoint,
+    });
   }
 
   /**
@@ -472,6 +490,10 @@ export class PerformanceDashboard extends EventEmitter {
       batchHighLatency: this.hasActiveAlert(AlertType.BATCH_HIGH_LATENCY),
       resourceExhaustion: this.hasActiveAlert(AlertType.RESOURCE_EXHAUSTION),
       circuitBreakerOpen: this.hasActiveAlert(AlertType.CIRCUIT_BREAKER_OPEN),
+      widgetDataFailures: this.hasActiveAlert(
+        AlertType.WIDGET_DATA_FAILURE,
+        "warning",
+      ),
     };
   }
 

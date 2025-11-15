@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { checkPostgresConnectivity } from "@/lib/database/connection";
 import logger from "@/lib/logger";
 import { createErrorResponse } from "@/lib/api/responses";
 
-export async function GET(_request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   try {
     const startTime = Date.now();
 

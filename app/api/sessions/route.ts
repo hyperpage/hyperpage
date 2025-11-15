@@ -45,12 +45,12 @@ function validateSessionIdParam(
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const {
-      value: sessionId,
-      error: sessionIdError,
-    } = validateSessionIdParam(searchParams.get("sessionId"), {
-      optional: true,
-    });
+    const { value: sessionId, error: sessionIdError } = validateSessionIdParam(
+      searchParams.get("sessionId"),
+      {
+        optional: true,
+      },
+    );
     if (sessionIdError) {
       return sessionIdError;
     }
@@ -126,9 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate session exists before updating
-    const existingSession = await sessionManager.getSession(
-      validatedSessionId,
-    );
+    const existingSession = await sessionManager.getSession(validatedSessionId);
     if (!existingSession && !sessionData) {
       return createErrorResponse({
         status: 401,
@@ -172,10 +170,9 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const {
-      value: sessionId,
-      error: sessionIdError,
-    } = validateSessionIdParam(searchParams.get("sessionId"));
+    const { value: sessionId, error: sessionIdError } = validateSessionIdParam(
+      searchParams.get("sessionId"),
+    );
     if (sessionIdError || !sessionId) {
       return sessionIdError!;
     }
@@ -216,10 +213,9 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const {
-      value: sessionId,
-      error: sessionIdError,
-    } = validateSessionIdParam(searchParams.get("sessionId"));
+    const { value: sessionId, error: sessionIdError } = validateSessionIdParam(
+      searchParams.get("sessionId"),
+    );
     if (sessionIdError || !sessionId) {
       return sessionIdError!;
     }

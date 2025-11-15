@@ -11,8 +11,6 @@ services:
       timeout: 30s
       retries: 5
       start_period: 30s
-    networks:
-      - hyperpage-dev
 
   redis:
     container_name: hyperpage-dev-redis
@@ -20,10 +18,14 @@ services:
       - .env.dev
     volumes:
       - redis-dev_data:/data
-    networks:
-      - hyperpage-dev
 
   hyperpage:
     container_name: hyperpage-dev-app
     env_file:
       - .env.dev
+
+volumes:
+  postgres-dev_data:
+    driver: local
+  redis-dev_data:
+    driver: local

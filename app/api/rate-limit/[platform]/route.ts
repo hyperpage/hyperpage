@@ -23,7 +23,10 @@ export async function GET(
   const platform = (await params).platform;
 
   if (!PLATFORM_REGEX.test(platform)) {
-    return validationErrorResponse("Invalid platform parameter", "INVALID_PLATFORM");
+    return validationErrorResponse(
+      "Invalid platform parameter",
+      "INVALID_PLATFORM",
+    );
   }
 
   try {

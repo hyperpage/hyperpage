@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, AlertTriangle } from "lucide-react";
 
 import { TableCell, TableRow } from "@/components/ui/table";
 import { ToolData } from "@/tools/tool-types";
@@ -40,23 +40,35 @@ export default function TableRowComponent({
             header.toLowerCase().includes("key")) &&
           urlField &&
           urlField !== "#";
+        const errorKey = "error_message";
+        const errorMessage =
+          typeof row[errorKey] === "string" ? (row[errorKey] as string) : null;
         const displayValue = cellValue;
 
         return (
           <TableCell key={colIndex}>
-            {isLinkableIdentifier ? (
-              <a
-                href={String(urlField)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:text-primary/80 underline"
-              >
-                {displayValue}
-                <ExternalLink className="w-3 h-3 inline ml-1" />
-              </a>
-            ) : (
-              displayValue
-            )}
+            <div className="flex items-center gap-2">
+              {isLinkableIdentifier ? (
+                <a
+                  href={String(urlField)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:text-primary/80 underline"
+                >
+                  {displayValue}
+                  <ExternalLink className="w-3 h-3 inline ml-1" />
+                </a>
+              ) : (
+                displayValue
+              )}
+
+              {colIndex === headers.length - 1 && errorMessage && (
+                <span className="inline-flex items-center text-amber-500 text-xs font-semibold">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  {errorMessage}
+                </span>
+              )}
+            </div>
           </TableCell>
         );
       })}

@@ -1,12 +1,24 @@
 "use client";
 
 import React from "react";
+import { AlertTriangle } from "lucide-react";
 
 import ToolStatusIndicator from "@/app/components/ToolStatusIndicator";
 import { useToolStatus } from "@/app/components/hooks/useToolStatus";
 import { RateLimitStatus } from "@/lib/types/rate-limit";
 
-export default function ToolStatusRow() {
+interface ToolStatusRowProps {
+  errorSummaries?: {
+    toolName: string;
+    endpoints: string[];
+    message: string;
+    timestamp: number;
+  }[];
+}
+
+export default function ToolStatusRow({
+  errorSummaries = [],
+}: ToolStatusRowProps) {
   const {
     toolIntegrations,
     rateLimitStatuses,
@@ -56,6 +68,20 @@ export default function ToolStatusRow() {
     return null;
   }
 
+  const normalizeSlug = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const toolIssueMap = new Map<
+    string,
+    { message: string; timestamp: number }
+  >();
+  errorSummaries.forEach(({ toolName, message, timestamp }) => {
+    const slug = normalizeSlug(toolName);
+    const existing = toolIssueMap.get(slug);
+    if (!existing || timestamp > existing.timestamp) {
+      toolIssueMap.set(slug, { message, timestamp });
+    }
+  });
+
   return (
     <div className="flex justify-center items-center py-6 border-t border-border mt-8">
       <div className="flex flex-col items-center space-y-4">
@@ -64,6 +90,7 @@ export default function ToolStatusRow() {
             const rateLimitStatus = rateLimitStatuses.get(tool.slug) as
               | RateLimitStatus
               | undefined;
+            const dataIssue = toolIssueMap.get(tool.slug);
 
             return (
               <ToolStatusIndicator
@@ -71,10 +98,29 @@ export default function ToolStatusRow() {
                 tool={tool}
                 authStatus={authData}
                 rateLimitStatus={rateLimitStatus}
+                dataIssue={dataIssue ?? null}
               />
             );
           })}
         </div>
+        {errorSummaries.length > 0 && (
+          <div className="flex flex-col items-center text-amber-600 text-xs">
+            <div className="flex items-center gap-2 font-semibold">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Data issues detected</span>
+            </div>
+            <ul className="mt-1 space-y-1 text-center">
+              {errorSummaries.map(
+                ({ toolName, endpoints, message, timestamp }) => (
+                  <li key={`${toolName}-${message}`}>
+                    {toolName} ({endpoints.join(", ")}): {message} ·{" "}
+                    {new Date(timestamp).toLocaleTimeString()}
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

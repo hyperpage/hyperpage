@@ -138,6 +138,35 @@ export interface Tool {
   validation?: ToolValidation; // Tool-owned validation requirements
 }
 
+// Client-safe projections used by /api/tools/enabled and portal UI
+export interface ClientToolWidget {
+  title: string;
+  type: ToolWidget["type"];
+  headers?: string[];
+  dynamic?: boolean;
+  refreshInterval?: number;
+  apiEndpoint?: string;
+  displayName?: string;
+  data?: ToolData[];
+}
+
+export interface ClientToolApi {
+  endpoint: string;
+  method: ToolApi["method"];
+  description: string;
+  parameters?: ToolApi["parameters"];
+  url: string;
+}
+
+export interface ClientSafeTool {
+  name: string;
+  slug: string;
+  enabled: boolean;
+  capabilities: string[];
+  widgets: ClientToolWidget[];
+  apis: ClientToolApi[];
+}
+
 export interface ToolRegistry {
   [key: string]: Tool | undefined;
 }

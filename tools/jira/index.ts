@@ -72,7 +72,17 @@ export const jiraTool: Tool = {
     icon: React.createElement(Kanban, { className: "w-5 h-5" }),
   },
   capabilities: ["issues", "rate-limit"], // Declares what this tool can provide for unified views
-  widgets: [], // Removed individual widget - now unified in ticketing tool
+  widgets: [
+    {
+      title: "Jira Issues",
+      type: "table",
+      headers: ["Ticket", "Title", "Status", "Assignee", "Created"],
+      data: [],
+      dynamic: true,
+      refreshInterval: 5 * 60 * 1000,
+      apiEndpoint: "issues",
+    },
+  ],
   validation: {
     required: ["JIRA_WEB_URL", "JIRA_EMAIL", "JIRA_API_TOKEN"],
     optional: [],
@@ -187,7 +197,7 @@ export const jiraTool: Tool = {
         body: JSON.stringify({
           jql: "updated > -30d ORDER BY updated DESC",
           maxResults: 50,
-          fields: ["key", "summary", "status", "assignee"],
+          fields: ["key", "summary", "status", "assignee", "created"],
         }),
       });
 
@@ -206,6 +216,10 @@ export const jiraTool: Tool = {
           title: issue.fields.summary,
           status: issue.fields.status.name,
           assignee: issue.fields.assignee?.displayName || "Unassigned",
+          created: issue.fields.created,
+          created_display: issue.fields.created
+            ? new Date(issue.fields.created).toLocaleDateString()
+            : undefined,
         }),
       );
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 
 import { GET as getToolDiscovery } from "@/app/api/tools/discovery/route";
 import * as toolsModule from "@/tools";
@@ -14,6 +15,9 @@ const mockGetAllTools = vi.mocked(toolsModule.getAllTools);
 const mockGetAvailableApis = vi.mocked(toolsModule.getAvailableApis);
 
 describe("GET /api/tools/discovery", () => {
+  const createRequest = (url = "http://localhost/api/tools/discovery") =>
+    new NextRequest(url);
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -81,7 +85,7 @@ describe("GET /api/tools/discovery", () => {
       mockGetAllTools.mockReturnValue(mockTools as unknown as Tool[]);
       mockGetAvailableApis.mockReturnValue(mockApis);
 
-      const response = await getToolDiscovery();
+      const response = await getToolDiscovery(createRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -134,7 +138,7 @@ describe("GET /api/tools/discovery", () => {
       mockGetAllTools.mockReturnValue(mockTools as unknown as Tool[]);
       mockGetAvailableApis.mockReturnValue({});
 
-      const response = await getToolDiscovery();
+      const response = await getToolDiscovery(createRequest());
       const data = await response.json();
 
       expect(data.tools[0].apis).toEqual([]);
@@ -153,7 +157,7 @@ describe("GET /api/tools/discovery", () => {
       mockGetAllTools.mockReturnValue(mockTools as unknown as Tool[]);
       mockGetAvailableApis.mockReturnValue({});
 
-      const response = await getToolDiscovery();
+      const response = await getToolDiscovery(createRequest());
       const data = await response.json();
 
       expect(data.tools[0].widgets).toEqual([]);
@@ -163,7 +167,7 @@ describe("GET /api/tools/discovery", () => {
       mockGetAllTools.mockReturnValue([]);
       mockGetAvailableApis.mockReturnValue({});
 
-      const response = await getToolDiscovery();
+      const response = await getToolDiscovery(createRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -180,7 +184,7 @@ describe("GET /api/tools/discovery", () => {
         throw new Error("Database connection failed");
       });
 
-      const response = await getToolDiscovery();
+      const response = await getToolDiscovery(createRequest());
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -196,7 +200,7 @@ describe("GET /api/tools/discovery", () => {
       mockGetAllTools.mockReturnValue(mockTools as unknown as Tool[]);
       mockGetAvailableApis.mockReturnValue({});
 
-      const response = await getToolDiscovery();
+      const response = await getToolDiscovery(createRequest());
       const data = await response.json();
 
       expect(response.status).toBe(200);
