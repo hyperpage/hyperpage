@@ -23,7 +23,7 @@ export {
 export {
   getOAuthStateCookieOptions,
   createOAuthStateCookie,
-  getOAuthStateCookie,
+  getOAuthStatePayload,
   validateOAuthState,
 } from "./oauth-state-cookies";
 export {

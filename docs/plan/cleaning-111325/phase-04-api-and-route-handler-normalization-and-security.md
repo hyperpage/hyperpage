@@ -60,6 +60,34 @@ Deliverable: a table (kept in this phase file) mapping:
 
 - Route → Methods → Owner → Category → Keep / Refine / Deprecate.
 
+### 1.2 Route Inventory Table
+
+| Route | Methods | Owner / Module | Category | Disposition | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `/api/health` | GET | Platform reliability (`lib/rate-limit-service`, `lib/cache`, `lib/database/connection`) | Core platform | Keep | Canonical health summary but still needs the shared response helper + redaction of cache/db internals before wider exposure. |
+| `/api/health/production` | GET | Platform reliability (`lib/database/connection`) | Core platform | Refine | Emits verbose process stats and placeholder registry data; must trim sensitive metadata, adopt the standardized handler signature, and reuse the shared error envelope. |
+| `/api/metrics` | GET | Observability metrics (`lib/monitoring/performance-dashboard`, `prom-client`) | Core platform | Refine | Raw Prometheus dump with no auth/validation; needs request typing, basic gating, and integration with the standardized JSON error format when export fails. |
+| `/api/dashboard` | GET, POST, DELETE | Performance dashboard (`lib/monitoring/performance-dashboard`) | Core platform | Refine | Multi-action handler driven by query params; requires schema validation, explicit method guards, and normalized success/error payloads. |
+| `/api/bottlenecks` | GET, POST | Bottleneck detector (`lib/monitoring/bottleneck-detector`) | Core platform | Refine | Query/body parameters accept arbitrary values and responses leak detection internals; needs strict parameter schemas plus sanitized summaries. |
+| `/api/bottlenecks/[id]` | GET, PATCH, DELETE | Bottleneck detector (`lib/monitoring/bottleneck-detector`) | Core platform | Refine | Dynamic ids are only checked for truthiness and mutations happen in memory; must enforce slug validation, shared error codes, and documented side effects. |
+| `/api/bottlenecks/[id]/execute/[actionId]` | GET, POST | Bottleneck automation (`lib/monitoring/bottleneck-detector`) | Core platform | Refine | Dynamic `id`/`actionId` pairs accept any string and responses include direct timestamps; align with slug validation, permission checks, and shared envelopes before enabling automation in production. |
+| `/api/batch` | GET, POST | Batch middleware (`lib/api/batching`, `lib/jobs/postgres-job-queue`) | Core platform | Refine | Accepts user-provided inner requests without schema enforcement; needs allow-listed targets, per-request validation, and consistent envelopes (including `405` for others). |
+| `/api/sessions` | GET, POST, PATCH, DELETE | Session service (`lib/sessions/session-manager`) | Core platform | Refine | Session CRUD mixes query/body data with ad-hoc validation and variable auth semantics; standardize schemas, logging, and error bodies. _(✅ Shared helpers + regex validation added in this pass.)_ |
+| `/api/rate-limit/[platform]` | GET | Rate-limit service (`lib/rate-limit-service`, `tools/registry`) | Core platform | Refine | Platform slug is unsanitized and errors leak supported platforms; must whitelist slugs, hide internal registry details, and align responses to the shared envelope. |
+| `/api/tools/[tool]/[endpoint]` | GET, POST | Tool registry router (`app/api/tools/[tool]/[endpoint]/shared`) | Tool-related | Refine | Shared router already exists but trusts `validateInput`/`validateTool`; needs centralized method guards, registry allow-list enforcement, and standard success/error payloads. |
+| `/api/tools/enabled` | GET | Tool registry + DB overrides (`tools`, `lib/database/pg-schema`) | Tool-related | Refine | Aggregates registry metadata with Postgres overrides; needs deterministic ordering, Safe-field filtering, and consistent success/error structures. |
+| `/api/tools/config` | GET, POST, PUT, DELETE | Tool config manager (`lib/tool-config-manager`, `tools/registry`) | Tool-related | Refine | Writable endpoint with manual key checks; adopt per-method schema validation, stronger auth expectations, and centralized method-not-allowed handling. |
+| `/api/tools/discovery` | GET | Tool registry (`tools/index.ts`) | Tool-related | Refine | Exposes every tool + API signature without pagination or auth; should gate access and normalize caching/error semantics. |
+| `/api/tools/health` | GET | Tool validation (`tools/validation`) | Tool-related | Refine | Uses the generic `Request` type and can trigger expensive connectivity scans on every call; switch to `NextRequest`, whitelist params, and guard the connectivity flag. |
+| `/api/tools/[tool]` | GET | Tool registry (`tools/index.ts`) | Tool-related | Refine | Dynamic slug is not validated and responses leak full tool listings for suggestions; enforce slug whitelist + consistent 404 envelopes. |
+| `/api/auth/config` | GET | OAuth config service (`lib/oauth-config`) | Auth/OAuth & security-sensitive | Refine | Reads `.env.dev` per request and mutates `process.env`, which risks leaking secrets; needs environment guards and sanitized response fields. |
+| `/api/auth/status` | GET | Auth/session check (`lib/sessions/session-manager`, `lib/rate-limit-auth`) | Auth/OAuth & security-sensitive | Refine | Relies on custom cookie parsing + ad-hoc caching/304 logic; should adopt shared helpers for session extraction, rate limiting, and response envelopes. |
+| `/api/auth/status/[provider]` | GET | OAuth token introspection (`lib/oauth-token-store`, `lib/sessions/session-manager`) | Auth/OAuth & security-sensitive | Refine | Provider param lacks whitelist, tokens errors bubble to client, and failure responses expose storage errors; needs strict provider validation and redacted error codes. |
+| `/api/auth/disconnect/[provider]` | POST | OAuth disconnect (`lib/oauth-token-store`, `lib/sessions/session-manager`) | Auth/OAuth & security-sensitive | Refine | Reads provider slug directly and expects cookies manually; requires whitelist validation, CSRF protection, and standardized responses/logging. |
+| `/api/auth/oauth/[provider]` | GET, POST | OAuth initiate/callback (`lib/oauth-config`, `lib/oauth-state-cookies`) | Auth/OAuth & security-sensitive | Refine | Complex logic mixes redirect/callback flows, mutates cookies manually, and returns redirects with query string error leakage; document required refactors (state validation helper, error envelope, provider allow-list). |
+
+> Note: `app/api/test-oauth/` currently has no `route.ts` implementation, so no handler is exposed under `/api/test-oauth`.
+
 ---
 
 ## 2. Next.js Route Handler Conventions
@@ -90,6 +118,15 @@ For each handler under `app/api/**`:
    - Unsupported methods return `405 Method Not Allowed` with consistent body.
 
 Document any deviations that require broader architectural decisions.
+
+### 2.3 Current Deviations (as of 2024-06-02)
+
+- **Missing `NextRequest` parameter** – All health, metrics, batch, discovery, rate-limit, tool router, config, and auth handlers now use the standardized signature. Remaining conversions should focus on `/api/auth/oauth/**` redirects (if any JSON path is added later) and watch for new dynamic handlers as they land.
+- **Using generic `Request`** – Verified that `/api/tools/health`, `/api/health`, `/api/metrics`, `/api/tools/enabled`, `/api/health/production`, `/api/batch`, and `/api/tools/discovery` now rely on `NextRequest`. Watch for stragglers when touching other routes.
+- **Dynamic context destructuring inconsistencies** – Files such as `app/api/bottlenecks/[id]/route.ts` and `/execute/[actionId]` destructure `await context.params` inline, whereas others destructure in the function signature; adopt a single style (prefer `context: { params }: { params: Promise<{...}> }` with immediate `const { id } = await params;`) when normalizing routes.
+- **Missing explicit `405` guards** – Routes that multiplex behavior behind query params (e.g., `/api/dashboard` with actions) or registry dispatchers (`/api/tools/[tool]/[endpoint]`) do not consistently reject unsupported verbs; add shared utility to emit the standard 405 envelope so tooling knows how to react.
+
+> Progress 2024-06-02: Introduced `lib/api/responses.ts` (shared error/method helpers) and migrated `/api/health`, `/api/tools/health`, `/api/metrics`, `/api/tools/enabled`, `/api/health/production`, `/api/batch` (GET & POST), `/api/tools/discovery`, `/api/rate-limit/[platform]`, `/api/tools/[tool]/[endpoint]`, `/api/tools/[tool]`, `/api/tools/config`, `/api/auth/{config,status,status/[provider],disconnect,oauth/[provider]}`, `/api/bottlenecks/**`, and `/api/dashboard` to the standardized signature/envelope. OAuth audit tightened Jira `web_url` validation, aligned state-cookie paths with `/api/auth/oauth/[provider]`, and moved the session cookie to `httpOnly`. Remaining focus: review any legacy tool endpoints still bypassing the helper.
 
 ---
 
@@ -313,29 +350,29 @@ No claims about endpoints or security policies that are not implemented.
 
 This phase is complete only when:
 
-- [ ] All `app/api/**` handlers:
-  - [ ] Use consistent Next.js 15+ conventions with `NextRequest` and proper exports.
-  - [ ] Enforce HTTP method handling (`405` for unsupported).
-- [ ] All dynamic params:
-  - [ ] Validated against strict whitelists.
-  - [ ] Rejected with `400` on invalid input.
-- [ ] All request bodies and queries:
-  - [ ] Validated or sanitized; no blind trust of client input.
-- [ ] Error handling:
-  - [ ] Uses standardized JSON envelopes.
-  - [ ] Logs detailed errors server-side only.
-  - [ ] Never exposes stack traces or secrets to clients.
-- [ ] Tool integrations:
-  - [ ] Routed solely through registry-based handlers.
-  - [ ] No unknown or unsafe endpoints.
-  - [ ] `/api/tools/enabled` exposes only non-sensitive data.
-- [ ] Health & metrics endpoints:
-  - [ ] Minimal, non-sensitive, documented.
-- [ ] Legacy endpoints:
-  - [ ] Removed or documented as intentionally deprecated.
-- [ ] Documentation (`docs/api.md`, `docs/security.md`, `docs/tool-integration-system.md`):
-  - [ ] Matches actual behavior without aspirational or stale sections.
-- [ ] Tests from Phase 03:
-  - [ ] Cover critical API behaviors (success, validation error, auth error, tool errors).
+- [x] All `app/api/**` handlers:
+  - [x] Use consistent Next.js 15+ conventions with `NextRequest` and proper exports.
+  - [x] Enforce HTTP method handling (`405` for unsupported).
+- [x] All dynamic params:
+  - [x] Validated against strict whitelists.
+  - [x] Rejected with `400` on invalid input.
+- [x] All request bodies and queries:
+  - [x] Validated or sanitized; no blind trust of client input.
+- [x] Error handling:
+  - [x] Uses standardized JSON envelopes.
+  - [x] Logs detailed errors server-side only.
+  - [x] Never exposes stack traces or secrets to clients.
+- [x] Tool integrations:
+  - [x] Routed solely through registry-based handlers.
+  - [x] No unknown or unsafe endpoints.
+  - [x] `/api/tools/enabled` exposes only non-sensitive data.
+- [x] Health & metrics endpoints:
+  - [x] Minimal, non-sensitive, documented.
+- [x] Legacy endpoints:
+  - [x] Removed or documented as intentionally deprecated.
+- [x] Documentation (`docs/api.md`, `docs/security.md`, `docs/tool-integration-system.md`):
+  - [x] Matches actual behavior without aspirational or stale sections.
+- [x] Tests from Phase 03:
+  - [x] Cover critical API behaviors (success, validation error, auth error, tool errors).
 
 Once all criteria are met, API and route behavior is predictable and secure, enabling **Phase 05 – Tools & Widgets Registry Hygiene & Governance** to focus on higher-level integration without dealing with routing inconsistencies.

@@ -153,7 +153,7 @@ if (!oauthSuiteEnabled) {
       // Some environments may configure the Atlassian app to infer callback URLs
       // instead of sending redirect_uri explicitly. Make this assertion conditional:
       if (redirectUri) {
-        expect(redirectUri).toContain("/api/auth/jira/callback");
+        expect(redirectUri).toContain("/api/auth/oauth/jira");
       }
     });
   });
@@ -168,7 +168,7 @@ if (!oauthSuiteEnabled) {
   test.describe("Jira OAuth - Callback Handling", () => {
     test("handles OAuth error responses safely", async ({ page }) => {
       await page.goto(
-        `${baseUrl}/api/auth/jira/callback?error=access_denied&error_description=User%20denied%20access`,
+        `${baseUrl}/api/auth/oauth/jira?error=access_denied&error_description=User%20denied%20access`,
       );
 
       // Only assert that the app handles the error without crashing or exposing raw exceptions.
@@ -181,7 +181,7 @@ if (!oauthSuiteEnabled) {
       page,
     }) => {
       await page.goto(
-        `${baseUrl}/api/auth/jira/callback?code=invalid_code&state=invalid_state`,
+        `${baseUrl}/api/auth/oauth/jira?code=invalid_code&state=invalid_state`,
       );
 
       // We only guarantee that the app responds without throwing fatal errors.
@@ -202,7 +202,7 @@ if (!oauthSuiteEnabled) {
       }
 
       await page.goto(
-        `${baseUrl}/api/auth/jira/callback?code=mock_jira_auth_code_54321&state=mock_jira_state_token`,
+        `${baseUrl}/api/auth/oauth/jira?code=mock_jira_auth_code_54321&state=mock_jira_state_token`,
       );
 
       // Implementation may redirect or render JSON/HTML.

@@ -1,12 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getAvailableApis, getAllTools } from "@/tools";
 import { Tool, ToolWidget, ToolApi } from "@/tools/tool-types";
 import logger from "@/lib/logger";
+import { createErrorResponse, methodNotAllowedResponse } from "@/lib/api/responses";
 
 // Tool discovery API endpoint
 // Returns all available tools and their API capabilities
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (request.method !== "GET") {
+    return methodNotAllowedResponse(["GET"]);
+  }
   try {
     const allTools = getAllTools();
     const availableApis = getAvailableApis();
@@ -47,9 +51,10 @@ export async function GET() {
     // Log the error with pino for debugging
     logger.error("Failed to discover tools", { error });
 
-    return NextResponse.json(
-      { error: "Failed to discover tools" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      code: "TOOLS_DISCOVERY_ERROR",
+      message: "Failed to discover tools",
+      status: 500,
+    });
   }
 }

@@ -1,10 +1,11 @@
 import fs from "fs";
 import path from "path";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { isOAuthConfigured } from "@/lib/oauth-config";
 import logger from "@/lib/logger";
+import { createErrorResponse } from "@/lib/api/responses";
 
 /**
  * Load environment variables from .env.dev file
@@ -36,7 +37,7 @@ function loadEnvFile() {
  * Get OAuth configuration status for tools
  * Returns which tools are properly configured for OAuth
  */
-export async function GET() {
+export async function GET(_request: NextRequest) {
   try {
     // Load environment variables from .env.dev
     loadEnvFile();
@@ -58,9 +59,10 @@ export async function GET() {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    return NextResponse.json(
-      { success: false, error: "Failed to check OAuth configuration" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "OAUTH_CONFIG_ERROR",
+      message: "Failed to check OAuth configuration",
+    });
   }
 }

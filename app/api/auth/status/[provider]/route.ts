@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
 
 /**
  * Unified OAuth Status Handler
@@ -15,6 +19,16 @@ export async function GET(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
+  const normalizedProvider = provider?.toLowerCase();
+  const allowedProviders = new Set(["github", "gitlab", "jira"]);
+
+  if (!normalizedProvider || !allowedProviders.has(normalizedProvider)) {
+    return validationErrorResponse(
+      "Unsupported provider",
+      "INVALID_PROVIDER",
+      { provider },
+    );
+  }
 
   try {
     // Get session ID from cookies
@@ -45,7 +59,7 @@ export async function GET(
     try {
       // Check if tokens exist for this user and tool
       const tokenStorage = new SecureTokenStorage();
-      const tokens = await tokenStorage.getTokens(userId, provider);
+      const tokens = await tokenStorage.getTokens(userId, normalizedProvider);
 
       if (!tokens) {
         return NextResponse.json({
@@ -102,15 +116,10 @@ export async function GET(
       provider,
     });
 
-    // Always return valid JSON in case of error
-    return NextResponse.json(
-      {
-        authenticated: false,
-        lastConnectedAt: null,
-        expiresAt: null,
-        error: "Failed to get authentication status",
-      },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "AUTH_PROVIDER_STATUS_ERROR",
+      message: "Failed to get authentication status",
+    });
   }
 }

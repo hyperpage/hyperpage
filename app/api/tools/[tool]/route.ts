@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToolByName, getAllTools } from "@/tools";
 import { Tool, ToolWidget, ToolApi } from "@/tools/tool-types";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
+
+const TOOL_SLUG_REGEX = /^[a-zA-Z0-9._-]+$/;
 
 // Get details about a specific tool
 export async function GET(
@@ -10,6 +16,10 @@ export async function GET(
   context: { params: Promise<{ tool: string }> },
 ) {
   const { tool: toolName } = await context.params;
+
+  if (!toolName || !TOOL_SLUG_REGEX.test(toolName)) {
+    return validationErrorResponse("Invalid tool parameter", "INVALID_TOOL");
+  }
 
   try {
     const tool = getToolByName(toolName);
@@ -23,14 +33,15 @@ export async function GET(
         )
         .map((t: Tool) => t.name);
 
-      return NextResponse.json(
-        {
-          error: `Tool '${toolName}' not found`,
+      return createErrorResponse({
+        status: 404,
+        code: "TOOL_NOT_FOUND",
+        message: `Tool '${toolName}' not found`,
+        details: {
           suggestions,
           availableTools: allTools.map((t: Tool) => t.name),
         },
-        { status: 404 },
-      );
+      });
     }
 
     // Transform tool to API format
@@ -73,9 +84,10 @@ export async function GET(
   } catch (error) {
     logger.error("Error getting tool details", { error, tool: toolName });
 
-    return NextResponse.json(
-      { error: "Failed to get tool details" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "TOOL_DETAIL_ERROR",
+      message: "Failed to get tool details",
+    });
   }
 }

@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { checkPostgresConnectivity } from "@/lib/database/connection";
 import logger from "@/lib/logger";
+import { createErrorResponse } from "@/lib/api/responses";
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(_request: NextRequest): Promise<NextResponse> {
   try {
     const startTime = Date.now();
 
@@ -201,7 +202,7 @@ export async function GET(): Promise<NextResponse> {
       },
     };
 
-    // Determine HTTP status code
+    // Determine HTTP status code (degraded still returns 200 to avoid cascading failures)
     const statusCode =
       systemHealth.status === "healthy"
         ? 200
@@ -226,27 +227,21 @@ export async function GET(): Promise<NextResponse> {
         : { err: { value: error } },
     );
 
-    return NextResponse.json(
-      {
-        status: "unhealthy",
+    return createErrorResponse({
+      code: "PRODUCTION_HEALTH_FAILURE",
+      message: "Production health check failed",
+      status: 503,
+      details: {
         timestamp: new Date().toISOString(),
-        error: "Health check system failure",
         version: process.env.npm_package_version || "0.1.0",
         environment: process.env.NODE_ENV || "development",
-        details: {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        },
       },
-      {
-        status: 503,
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-          "X-Health-Check": "production",
-        },
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+        "X-Health-Check": "production",
       },
-    );
+    });
   }
 }

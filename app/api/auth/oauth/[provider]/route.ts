@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 
 import { getOAuthConfig, buildAuthorizationUrl } from "@/lib/oauth-config";
 import {
-  validateOAuthState,
   createOAuthStateCookie,
   getOAuthStateClearCookieOptions,
+  getOAuthStatePayload,
 } from "@/lib/oauth-state-cookies";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { getReadWriteDb } from "@/lib/database/connection";
@@ -15,6 +14,38 @@ import { users } from "@/lib/database/pg-schema";
 import { exchangeCodeForTokens } from "@/lib/oauth-config";
 import { getToolByName } from "@/tools";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
+
+const allowedProviders = new Set(["github", "gitlab", "jira"]);
+const SESSION_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
+
+function sanitizeJiraBaseUrl(value?: string | null): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:") {
+      return undefined;
+    }
+    if (!parsed.hostname.toLowerCase().endsWith(".atlassian.net")) {
+      return undefined;
+    }
+    return parsed.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function sanitizeSessionId(value?: string | null): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  return SESSION_ID_REGEX.test(value) ? value : undefined;
+}
 
 /**
  * Unified OAuth Handler - Registry-Driven
@@ -27,17 +58,34 @@ export async function GET(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
+  const normalizedProvider = provider?.toLowerCase();
+  if (!normalizedProvider || !allowedProviders.has(normalizedProvider)) {
+    return validationErrorResponse(
+      "Unsupported provider",
+      "INVALID_PROVIDER",
+      { provider },
+    );
+  }
   const { searchParams } = new URL(request.url);
   const webUrl = searchParams.get("web_url"); // For Jira instances
+  const sanitizedWebUrl =
+    normalizedProvider === "jira" ? sanitizeJiraBaseUrl(webUrl) : undefined;
+  if (normalizedProvider === "jira" && webUrl && !sanitizedWebUrl) {
+    return validationErrorResponse(
+      "Invalid Jira base URL",
+      "INVALID_JIRA_BASE_URL",
+    );
+  }
 
   try {
     // Get OAuth configuration
-    const oauthConfig = getOAuthConfig(provider, webUrl || undefined);
+    const oauthConfig = getOAuthConfig(normalizedProvider, sanitizedWebUrl);
     if (!oauthConfig) {
-      return NextResponse.json(
-        { error: `${provider} OAuth not configured` },
-        { status: 500 },
-      );
+      return createErrorResponse({
+        status: 500,
+        code: "OAUTH_NOT_CONFIGURED",
+        message: `${normalizedProvider} OAuth not configured`,
+      });
     }
 
     // Generate state parameter for CSRF protection
@@ -52,33 +100,36 @@ export async function GET(
     // Set OAuth state cookie for CSRF protection
     // For Jira, include web_url in state JSON
     const cookieStateValue =
-      provider === "jira"
+      normalizedProvider === "jira"
         ? JSON.stringify({
             state,
-            webUrl: webUrl || undefined,
+            webUrl: sanitizedWebUrl,
             created: Date.now(),
           })
         : state;
 
     const cookieOptions =
-      provider === "jira"
+      normalizedProvider === "jira"
         ? {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax" as const,
-            path: `/api/auth/${provider}/callback`,
+            path: `/api/auth/oauth/${normalizedProvider}`,
             maxAge: 600,
           }
-        : createOAuthStateCookie(provider, state).options;
+        : createOAuthStateCookie(normalizedProvider, state).options;
 
-    if (provider === "jira") {
+    if (normalizedProvider === "jira") {
       response.cookies.set(
-        `_oauth_state_${provider}`,
+        `_oauth_state_${normalizedProvider}`,
         cookieStateValue,
         cookieOptions,
       );
     } else {
-      const { name, value, options } = createOAuthStateCookie(provider, state);
+      const { name, value, options } = createOAuthStateCookie(
+        normalizedProvider,
+        state,
+      );
       response.cookies.set(name, value, options);
     }
 
@@ -90,10 +141,11 @@ export async function GET(
       provider,
     });
 
-    return NextResponse.json(
-      { error: "Failed to initiate OAuth flow" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "OAUTH_INIT_ERROR",
+      message: "Failed to initiate OAuth flow",
+    });
   }
 }
 
@@ -103,6 +155,14 @@ export async function POST(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
+  const normalizedProvider = provider?.toLowerCase();
+  if (!normalizedProvider || !allowedProviders.has(normalizedProvider)) {
+    return validationErrorResponse(
+      "Unsupported provider",
+      "INVALID_PROVIDER",
+      { provider },
+    );
+  }
 
   try {
     const { searchParams } = new URL(request.url);
@@ -137,8 +197,29 @@ export async function POST(
       );
     }
 
+    // Validate state parameter for CSRF protection using cookie
+    const statePayload = await getOAuthStatePayload(normalizedProvider);
+    if (!state || !statePayload || statePayload.state !== state) {
+      logger.warn(`${provider} OAuth state validation failed`, {
+        provider,
+        hasState: !!state,
+      });
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${provider}_oauth_invalid_state`,
+      );
+    }
+
+    const jiraBaseUrl =
+      normalizedProvider === "jira"
+        ? sanitizeJiraBaseUrl(
+            typeof statePayload.webUrl === "string"
+              ? statePayload.webUrl
+              : undefined,
+          )
+        : undefined;
+
     // Get OAuth configuration
-    const oauthConfig = getOAuthConfig(provider);
+    const oauthConfig = getOAuthConfig(normalizedProvider, jiraBaseUrl);
     if (!oauthConfig) {
       logger.error(`${provider} OAuth not configured`, {
         provider,
@@ -149,22 +230,20 @@ export async function POST(
       );
     }
 
-    // Validate state parameter for CSRF protection using cookie
-    const isValidState = await validateOAuthState(provider, state);
-    if (!isValidState) {
-      logger.warn(`${provider} OAuth state validation failed`, {
-        provider,
-        hasState: !!state,
-        isValidState,
-      });
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}?error=${provider}_oauth_invalid_state`,
-      );
-    }
-
     // Get session ID for storing user authentication state
-    const headersList = await headers();
-    const sessionId = headersList.get("session-id") || crypto.randomUUID();
+    const existingSessionCookie = sanitizeSessionId(
+      request.cookies.get("hyperpage-session")?.value,
+    );
+    let sessionId = existingSessionCookie;
+    let currentSession = sessionId
+      ? await sessionManager.getSession(sessionId)
+      : null;
+
+    if (!sessionId || !currentSession) {
+      sessionId = sessionManager.generateSessionId();
+      currentSession = sessionManager.createSession();
+      await sessionManager.setSession(sessionId, currentSession);
+    }
 
     // Exchange authorization code for tokens
     const tokenResponse = await exchangeCodeForTokens(oauthConfig, code);
@@ -181,7 +260,7 @@ export async function POST(
 
     try {
       // Get user info from provider API using registry-driven approach
-      const tool = getToolByName(provider);
+      const tool = getToolByName(normalizedProvider);
       if (!tool?.config?.oauthConfig) {
         throw new Error(`OAuth not configured for ${provider}`);
       }
@@ -189,8 +268,10 @@ export async function POST(
       const { oauthConfig: toolOAuthConfig } = tool.config;
 
       // Build the full user API URL (handle relative paths for GitLab)
+      const authBase =
+        oauthConfig.authorizationUrl.replace(/\/authorize.*/, "") || "";
       const userApiUrl = toolOAuthConfig.userApiUrl.startsWith("/")
-        ? `${getOAuthConfig(provider)?.authorizationUrl?.replace(/\/authorize.*/, "") || ""}${toolOAuthConfig.userApiUrl}`
+        ? `${authBase}${toolOAuthConfig.userApiUrl}`
         : toolOAuthConfig.userApiUrl;
 
       const userResponse = await fetch(userApiUrl, {
@@ -214,7 +295,7 @@ export async function POST(
       const userProfile = await userResponse.json();
 
       // Generate unique user ID (format: provider:provider_id)
-      const userId = `${provider}:${userProfile.id}`;
+      const userId = `${normalizedProvider}:${userProfile.id}`;
 
       // Connect to PostgreSQL database
       const db = getReadWriteDb();
@@ -255,7 +336,7 @@ export async function POST(
 
       const userData = {
         id: userId,
-        provider,
+        provider: normalizedProvider,
         providerUserId: getStringValue(userProfile, userMapping.id) || "",
         email: getStringValue(userProfile, userMapping.email) || "",
         username: getStringValue(userProfile, userMapping.username),
@@ -283,7 +364,7 @@ export async function POST(
       const tokenStorage = new SecureTokenStorage();
       const nowMs = Date.now();
 
-      await tokenStorage.storeTokens(userId, provider, {
+      await tokenStorage.storeTokens(userId, normalizedProvider, {
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token || undefined,
         tokenType: tokenResponse.token_type || "Bearer",
@@ -300,15 +381,14 @@ export async function POST(
         },
       });
 
-      // Get current session and merge authenticated tools
-      const currentSession = await sessionManager.getSession(sessionId);
-
-      // Update session with authentication status
+      // Refresh current session snapshot and update authentication status
+      currentSession =
+        (await sessionManager.getSession(sessionId)) || currentSession;
       await sessionManager.updateSession(sessionId, {
         userId: userId,
         user: {
           id: userId,
-          provider: provider,
+          provider: normalizedProvider,
           email: userData.email || undefined,
           username: userData.username || undefined,
           displayName: userData.displayName || undefined,
@@ -316,7 +396,7 @@ export async function POST(
         },
         authenticatedTools: {
           ...currentSession?.authenticatedTools,
-          [provider]: {
+          [normalizedProvider]: {
             connected: true,
             connectedAt: new Date(),
             lastUsed: new Date(),
@@ -325,7 +405,7 @@ export async function POST(
       });
 
       logger.info(`${provider} OAuth successfully connected`, {
-        provider,
+        provider: normalizedProvider,
         userId,
         username: userData.username,
         sessionId,
@@ -333,7 +413,7 @@ export async function POST(
       });
     } catch (storageError) {
       logger.error(`Failed to store ${provider} OAuth tokens and user data`, {
-        provider,
+        provider: normalizedProvider,
         sessionId,
         error:
           storageError instanceof Error
@@ -353,7 +433,7 @@ export async function POST(
 
     // Set client session cookie so UI can identify its session
     successResponse.cookies.set("hyperpage-session", sessionId, {
-      httpOnly: false,
+      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
@@ -361,7 +441,8 @@ export async function POST(
     });
 
     // Clear OAuth state cookie after successful validation
-    const { name, value, options } = getOAuthStateClearCookieOptions(provider);
+    const { name, value, options } =
+      getOAuthStateClearCookieOptions(normalizedProvider);
     successResponse.cookies.set(name, value, options);
 
     return successResponse;

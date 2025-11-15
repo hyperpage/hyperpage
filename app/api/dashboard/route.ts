@@ -5,6 +5,10 @@ import {
   PerformanceThresholds,
 } from "@/lib/monitoring/performance-dashboard";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
 
 /**
  * GET /api/dashboard - Get real-time performance dashboard metrics
@@ -20,13 +24,28 @@ import logger from "@/lib/logger";
  * - JSON: Full dashboard metrics object
  * - Prometheus: Exposable metrics in Prometheus text format
  */
+const DEFAULT_TIME_WINDOW = 300000;
+const MAX_TIME_WINDOW = 24 * 60 * 60 * 1000;
+
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const timeWindowMs = parseInt(
-      url.searchParams.get("timeWindow") || "300000",
-    );
-    const format = url.searchParams.get("format") || "json";
+    const timeWindow = url.searchParams.get("timeWindow");
+    const format = (url.searchParams.get("format") || "json").toLowerCase();
+    const timeWindowMs = timeWindow
+      ? Number(timeWindow)
+      : DEFAULT_TIME_WINDOW;
+
+    if (
+      Number.isNaN(timeWindowMs) ||
+      timeWindowMs <= 0 ||
+      timeWindowMs > MAX_TIME_WINDOW
+    ) {
+      return validationErrorResponse(
+        "timeWindow must be a positive number up to 24h in milliseconds",
+        "INVALID_TIME_WINDOW",
+      );
+    }
 
     if (format === "prometheus") {
       const prometheusMetrics = performanceDashboard.exportMetrics(
@@ -63,15 +82,11 @@ export async function GET(request: NextRequest) {
       method: "GET",
     });
 
-    return NextResponse.json(
-      {
-        error: "Failed to generate dashboard metrics",
-        code: "DASHBOARD_ERROR",
-      },
-      {
-        status: 500,
-      },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "DASHBOARD_ERROR",
+      message: "Failed to generate dashboard metrics",
+    });
   }
 }
 
@@ -149,13 +164,10 @@ export async function POST(request: NextRequest) {
     } else if (action === "resolve-alert") {
       const { alertId } = await request.json();
 
-      if (!alertId) {
-        return NextResponse.json(
-          {
-            error: "alertId is required",
-            code: "MISSING_ALERT_ID",
-          },
-          { status: 400 },
+      if (!alertId || typeof alertId !== "string") {
+        return validationErrorResponse(
+          "alertId is required",
+          "MISSING_ALERT_ID",
         );
       }
 
@@ -169,12 +181,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(
-      {
-        error: "Invalid action. Supported actions: thresholds, resolve-alert",
-        code: "INVALID_ACTION",
-      },
-      { status: 400 },
+    return validationErrorResponse(
+      "Invalid action. Supported actions: thresholds, resolve-alert",
+      "INVALID_ACTION",
     );
   } catch (error) {
     logger.error("Failed to update dashboard settings", {
@@ -184,13 +193,11 @@ export async function POST(request: NextRequest) {
       action: "thresholds",
     });
 
-    return NextResponse.json(
-      {
-        error: "Failed to update dashboard settings",
-        code: "DASHBOARD_UPDATE_ERROR",
-      },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "DASHBOARD_UPDATE_ERROR",
+      message: "Failed to update dashboard settings",
+    });
   }
 }
 
@@ -206,12 +213,9 @@ export async function DELETE(request: NextRequest) {
     const action = url.searchParams.get("action");
 
     if (action !== "reset") {
-      return NextResponse.json(
-        {
-          error: "Invalid action. Use action=reset to reset dashboard metrics",
-          code: "INVALID_RESET_ACTION",
-        },
-        { status: 400 },
+      return validationErrorResponse(
+        "Invalid action. Use action=reset to reset dashboard metrics",
+        "INVALID_RESET_ACTION",
       );
     }
 
@@ -230,12 +234,10 @@ export async function DELETE(request: NextRequest) {
       action: "reset",
     });
 
-    return NextResponse.json(
-      {
-        error: "Failed to reset dashboard metrics",
-        code: "DASHBOARD_RESET_ERROR",
-      },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "DASHBOARD_RESET_ERROR",
+      message: "Failed to reset dashboard metrics",
+    });
   }
 }

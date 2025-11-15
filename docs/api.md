@@ -77,7 +77,7 @@ Initiates the OAuth flow for the specified tool (GitHub, GitLab, Jira).
 
 - Redirects to provider authorization URL (HTTP 302)
 
-#### `GET /api/auth/[tool]/callback`
+#### `GET /api/auth/oauth/[tool]`
 
 Handles the OAuth callback from the provider and exchanges the authorization code for tokens.
 

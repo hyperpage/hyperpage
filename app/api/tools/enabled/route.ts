@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 
 import { getReadWriteDb } from "@/lib/database/connection";
@@ -6,6 +6,7 @@ import * as pgSchema from "@/lib/database/pg-schema";
 import { getEnabledTools as getRegistryEnabledTools } from "@/tools";
 import type { Tool, ToolWidget, ToolApi } from "@/tools/tool-types";
 import logger from "@/lib/logger";
+import { createErrorResponse } from "@/lib/api/responses";
 
 type ToolConfigPayload = {
   enabled?: boolean;
@@ -43,7 +44,7 @@ type PublicApi = {
  * Source of truth for enablement is the tool_configs table.
  * Registry provides static metadata (widgets/apis); DB controls enabled state.
  */
-export async function GET() {
+export async function GET(_request: NextRequest) {
   try {
     const configByKey = await loadToolConfigOverrides();
     const registryTools = getRegistryEnabledTools();
@@ -67,10 +68,11 @@ export async function GET() {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    return NextResponse.json(
-      { error: "Failed to get enabled tools" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      code: "ENABLED_TOOLS_ERROR",
+      message: "Failed to get enabled tools",
+      status: 500,
+    });
   }
 }
 

@@ -11,7 +11,7 @@ This document summarizes the successful implementation and testing of the OAuth 
 - **GitHub OAuth App Setup**: Template provided for user configuration
 - **Environment Configuration**: GITHUB_OAUTH_CLIENT_ID and GITHUB_OAUTH_CLIENT_SECRET properly configured
 - **OAuth Initiate Route**: `/api/auth/github/initiate` - Redirects to GitHub OAuth authorization
-- **OAuth Callback Route**: `/api/auth/github/callback` - Handles token exchange and user authentication
+- **OAuth Callback Route**: `/api/auth/oauth/github` - Handles token exchange and user authentication
 - **Database Integration**: Secure token storage with AES-256-GCM encryption
 - **User Management**: Automatic user profile creation/updates
 - **Session Management**: Authentication state tracking in Redis
@@ -44,7 +44,7 @@ curl -I http://localhost:3000/api/auth/github/initiate
 #### 2. Callback Error Handling Test
 
 ```bash
-curl -I "http://localhost:3000/api/auth/github/callback?code=test_code&state=invalid_state"
+curl -I "http://localhost:3000/api/auth/oauth/github?code=test_code&state=invalid_state"
 # Response: 307 Temporary Redirect
 # Location: ?error=github_oauth_invalid_state
 ```

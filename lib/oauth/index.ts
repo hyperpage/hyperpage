@@ -182,7 +182,7 @@ class OAuthConfigManager {
       tokenUrl,
       scopes: oauthConfig.scopes,
       provider: toolName.toLowerCase(),
-      redirectUri: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/${toolName}/callback`,
+      redirectUri: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/oauth/${toolName}`,
     };
   }
 

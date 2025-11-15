@@ -91,7 +91,7 @@ export function getOAuthConfig(
     tokenUrl,
     scopes: oauthConfig.scopes,
     provider: toolName.toLowerCase(),
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/${toolName}/callback`,
+    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/oauth/${toolName}`,
   };
 }
 ```
@@ -283,7 +283,7 @@ export class SecureTokenStorage {
 
 ```
 /api/auth/[tool]/initiate  - Start OAuth flow (redirect to provider)
-/api/auth/[tool]/callback  - Handle provider callback (exchange code for tokens)
+/api/auth/oauth/[tool]  - Handle provider callback (exchange code for tokens)
 /api/auth/[tool]/status    - Check authentication status
 /api/auth/logout          - Clear authentication
 ```

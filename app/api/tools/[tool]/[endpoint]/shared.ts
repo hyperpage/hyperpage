@@ -12,6 +12,10 @@ import { generateCacheKey } from "@/lib/cache/memory-cache";
 import { defaultCompressionMiddleware } from "@/lib/api/compression/compression-middleware";
 import { sessionManager } from "@/lib/sessions/session-manager";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
 
 // Session validation helper with consistent cookie handling
 async function validateSession(
@@ -45,20 +49,22 @@ async function validateSession(
     cookies.get("session-id")?.value;
 
   if (!sessionId) {
-    return NextResponse.json(
-      { error: "Authentication required - no session found" },
-      { status: 401 },
-    );
+    return createErrorResponse({
+      status: 401,
+      code: "AUTHENTICATION_REQUIRED",
+      message: "Authentication required",
+    });
   }
 
   // Check if session actually exists in session manager
   const session = await sessionManager.getSession(sessionId);
 
   if (!session) {
-    return NextResponse.json(
-      { error: "Invalid or expired session" },
-      { status: 401 },
-    );
+    return createErrorResponse({
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Invalid or expired session",
+    });
   }
 
   return null; // Session exists and is valid
@@ -108,17 +114,19 @@ export function validateInput(
   toolName: string,
   endpoint: string,
 ): NextResponse | null {
-  // Allow alphanumeric, underscores, hyphens, spaces, and URL-encoded characters (%)
-  const validInputRegex = /^[a-zA-Z0-9_%\-\s]+$/;
+  const validInputRegex = /^[a-zA-Z0-9._-]+$/;
 
   if (!validInputRegex.test(toolName)) {
-    return NextResponse.json({ error: "Invalid tool name" }, { status: 400 });
+    return validationErrorResponse("Invalid tool parameter", "INVALID_TOOL", {
+      parameter: "tool",
+    });
   }
 
   if (!validInputRegex.test(endpoint)) {
-    return NextResponse.json(
-      { error: "Invalid endpoint name" },
-      { status: 400 },
+    return validationErrorResponse(
+      "Invalid endpoint parameter",
+      "INVALID_ENDPOINT",
+      { parameter: "endpoint" },
     );
   }
 
@@ -134,25 +142,28 @@ export function validateTool(
   const tool = getToolByName(toolName);
 
   if (!tool) {
-    return NextResponse.json(
-      { error: `Tool '${toolName}' not found` },
-      { status: 404 },
-    );
+    return createErrorResponse({
+      status: 404,
+      code: "TOOL_NOT_FOUND",
+      message: `Tool '${toolName}' not found`,
+    });
   }
 
   if (!tool.enabled) {
-    return NextResponse.json(
-      { error: `Tool '${toolName}' is not enabled` },
-      { status: 403 },
-    );
+    return createErrorResponse({
+      status: 403,
+      code: "TOOL_DISABLED",
+      message: `Tool '${toolName}' is not enabled`,
+    });
   }
 
   // Check if tool supports this endpoint
   if (!tool.apis || !tool.apis[endpoint]) {
-    return NextResponse.json(
-      { error: `Tool '${toolName}' does not support endpoint '${endpoint}'` },
-      { status: 404 },
-    );
+    return createErrorResponse({
+      status: 404,
+      code: "ENDPOINT_NOT_FOUND",
+      message: `Tool '${toolName}' does not support endpoint '${endpoint}'`,
+    });
   }
 
   return { tool, apiConfig: tool.apis[endpoint] };
@@ -221,10 +232,12 @@ export async function executeHandler(
       toolName: tool.name,
       endpoint,
     });
-    return NextResponse.json(
-      { error: "Service temporarily unavailable", circuitBreaker: "open" },
-      { status: 503 },
-    );
+    return createErrorResponse({
+      status: 503,
+      code: "CIRCUIT_BREAKER_OPEN",
+      message: "Service temporarily unavailable",
+      details: { circuitBreaker: "open", tool: tool.slug, endpoint },
+    });
   }
 
   // Validate session exists and is valid
@@ -279,12 +292,11 @@ export async function executeHandler(
   const handler = tool.handlers[endpoint];
   if (!handler) {
     recordRequestFailure(tool.slug); // Record handler missing as a failure
-    return NextResponse.json(
-      {
-        error: `Tool '${tool.name}' does not implement endpoint '${endpoint}'`,
-      },
-      { status: 501 },
-    );
+    return createErrorResponse({
+      status: 501,
+      code: "ENDPOINT_NOT_IMPLEMENTED",
+      message: `Tool '${tool.name}' does not implement endpoint '${endpoint}'`,
+    });
   }
 
   try {
@@ -372,16 +384,15 @@ export async function executeHandler(
 
     // Don't cache error responses - let them go through fresh
     // This ensures rate limit errors can be retried later
-    return NextResponse.json(
-      { error: errorMessage },
-      {
-        status: statusCode,
-        headers: {
-          "Cache-Control": "no-store", // Never cache errors
-          "X-Cache-Status": "ERROR",
-          "X-Cache-Key": cacheKey,
-        },
+    return createErrorResponse({
+      status: statusCode,
+      code: "TOOL_HANDLER_ERROR",
+      message: errorMessage,
+      headers: {
+        "Cache-Control": "no-store",
+        "X-Cache-Status": "ERROR",
+        "X-Cache-Key": cacheKey,
       },
-    );
+    });
   }
 }

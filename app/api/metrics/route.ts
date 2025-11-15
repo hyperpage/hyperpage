@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import promClient from "prom-client";
 
 import { defaultCache } from "@/lib/cache/memory-cache";
@@ -10,6 +10,7 @@ import { defaultHttpClient } from "@/lib/connection-pool";
 import { DashboardMetrics } from "@/lib/monitoring/performance-dashboard";
 import { Tool } from "@/tools/tool-types";
 import logger from "@/lib/logger";
+import { createErrorResponse } from "@/lib/api/responses";
 const register = new promClient.Registry();
 
 // Add default metrics (process, heap, etc.)
@@ -350,7 +351,7 @@ async function updateMetrics() {
 /**
  * GET /api/metrics - Expose Prometheus metrics
  */
-export async function GET() {
+export async function GET(_request: NextRequest) {
   try {
     // Update metrics before serving them
     await updateMetrics();
@@ -370,10 +371,11 @@ export async function GET() {
       method: "GET",
     });
 
-    return NextResponse.json(
-      { error: "Failed to generate metrics" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      code: "METRICS_GENERATION_FAILED",
+      message: "Failed to generate metrics",
+      status: 500,
+    });
   }
 }
 

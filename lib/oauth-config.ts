@@ -90,7 +90,7 @@ export function getOAuthConfig(
     tokenUrl,
     scopes: oauthConfig.scopes,
     provider: toolName.toLowerCase(),
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/${toolName}/callback`,
+    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/oauth/${toolName}`,
   };
 }
 

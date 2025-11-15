@@ -95,7 +95,7 @@ if (!oauthSuiteEnabled) {
       if (process.env.SKIP_REAL_OAUTH === "true") {
         // Test with mock callback
         await page.goto(
-          `${baseUrl}/api/auth/github/callback?code=mock_auth_code_12345&state=mock_state_token`,
+        `${baseUrl}/api/auth/oauth/github?code=mock_auth_code_12345&state=mock_state_token`,
         );
 
         // Should handle mock OAuth gracefully
@@ -108,7 +108,7 @@ if (!oauthSuiteEnabled) {
 
     test("should handle OAuth errors gracefully", async ({ page }) => {
       await page.goto(
-        `${baseUrl}/api/auth/github/callback?error=access_denied&error_description=User denied access`,
+        `${baseUrl}/api/auth/oauth/github?error=access_denied&error_description=User denied access`,
       );
 
       // Should show appropriate error message

@@ -16,6 +16,11 @@ import {
 } from "@/lib/tool-config-manager";
 import { toolRegistry } from "@/tools/registry";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  methodNotAllowedResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
 
 /**
  * GET /api/tools/config - Get all tool configurations or specific tool config
@@ -29,10 +34,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // Get configuration for a specific tool
       const config = await getToolConfiguration(toolName);
       if (!config) {
-        return NextResponse.json(
-          { error: `No configuration found for tool '${toolName}'` },
-          { status: 404 },
-        );
+        return createErrorResponse({
+          status: 404,
+          code: "TOOL_CONFIG_NOT_FOUND",
+          message: `No configuration found for tool '${toolName}'`,
+        });
       }
 
       return NextResponse.json({ [toolName]: config });
@@ -61,18 +67,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { toolName, ...config } = body;
 
     if (!toolName || typeof toolName !== "string") {
-      return NextResponse.json(
-        { error: "toolName is required and must be a string" },
-        { status: 400 },
+      return validationErrorResponse(
+        "toolName is required and must be a string",
+        "INVALID_TOOL_NAME",
       );
     }
 
     // Validate that tool exists
     if (!toolRegistry[toolName]) {
-      return NextResponse.json(
-        { error: `Tool '${toolName}' not found` },
-        { status: 404 },
-      );
+      return createErrorResponse({
+        status: 404,
+        code: "TOOL_NOT_FOUND",
+        message: `Tool '${toolName}' not found`,
+      });
     }
 
     // Validate configuration options
@@ -82,11 +89,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
 
     if (invalidKeys.length > 0) {
-      return NextResponse.json(
-        {
-          error: `Invalid configuration keys: ${invalidKeys.join(", ")}. Valid keys: ${validKeys.join(", ")}`,
-        },
-        { status: 400 },
+      return validationErrorResponse(
+        `Invalid configuration keys: ${invalidKeys.join(", ")}. Valid keys: ${validKeys.join(", ")}`,
+        "INVALID_CONFIGURATION_KEYS",
       );
     }
 
@@ -95,12 +100,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const interval = Number(config.refreshInterval);
       if (isNaN(interval) || interval < 1000 || interval > 3600000) {
         // 1 second to 1 hour
-        return NextResponse.json(
-          {
-            error:
-              "refreshInterval must be a number between 1000 (1 second) and 3600000 (1 hour)",
-          },
-          { status: 400 },
+        return validationErrorResponse(
+          "refreshInterval must be a number between 1000 (1 second) and 3600000 (1 hour)",
+          "INVALID_REFRESH_INTERVAL",
         );
       }
       config.refreshInterval = interval;
@@ -134,18 +136,16 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     const action = url.searchParams.get("action");
 
     if (!toolName || typeof toolName !== "string") {
-      return NextResponse.json(
-        { error: "tool parameter is required" },
-        { status: 400 },
-      );
+      return validationErrorResponse("tool parameter is required", "INVALID_TOOL_PARAM");
     }
 
     // Validate that tool exists
     if (!toolRegistry[toolName]) {
-      return NextResponse.json(
-        { error: `Tool '${toolName}' not found` },
-        { status: 404 },
-      );
+      return createErrorResponse({
+        status: 404,
+        code: "TOOL_NOT_FOUND",
+        message: `Tool '${toolName}' not found`,
+      });
     }
 
     if (action === "toggle") {
@@ -171,11 +171,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         message: `Tool '${toolName}' disabled`,
       });
     } else {
-      return NextResponse.json(
-        {
-          error: "action parameter must be one of: toggle, enable, disable",
-        },
-        { status: 400 },
+      return validationErrorResponse(
+        "action parameter must be one of: toggle, enable, disable",
+        "INVALID_ACTION",
       );
     }
   } catch (error) {
@@ -198,18 +196,16 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     const toolName = url.searchParams.get("tool");
 
     if (!toolName || typeof toolName !== "string") {
-      return NextResponse.json(
-        { error: "tool parameter is required" },
-        { status: 400 },
-      );
+      return validationErrorResponse("tool parameter is required", "INVALID_TOOL_PARAM");
     }
 
     // Validate that tool exists
     if (!toolRegistry[toolName]) {
-      return NextResponse.json(
-        { error: `Tool '${toolName}' not found` },
-        { status: 404 },
-      );
+      return createErrorResponse({
+        status: 404,
+        code: "TOOL_NOT_FOUND",
+        message: `Tool '${toolName}' not found`,
+      });
     }
 
     const deleted = await deleteToolConfiguration(toolName);

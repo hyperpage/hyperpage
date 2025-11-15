@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { defaultCache } from "@/lib/cache/cache-factory";
 import { getActivePlatforms } from "@/lib/rate-limit-utils";
@@ -6,35 +6,92 @@ import { getServerRateLimitStatus } from "@/lib/rate-limit-service";
 import { toolRegistry } from "@/tools/registry";
 import { Tool } from "@/tools/tool-types";
 import { checkPostgresConnectivity } from "@/lib/database/connection";
+import logger from "@/lib/logger";
+import { createErrorResponse } from "@/lib/api/responses";
 
-export async function GET() {
-  const cacheStats = await defaultCache.getStats();
+export async function GET(_request: NextRequest) {
+  try {
+    const cacheStats = await defaultCache.getStats();
 
-  // Get rate limit status for all enabled platforms
-  const enabledTools: Tool[] = Object.values(toolRegistry).filter(
-    (tool): tool is Tool =>
-      Boolean(
-        tool &&
-          tool.enabled === true &&
-          Array.isArray(tool.capabilities) &&
-          tool.capabilities.includes("rate-limit"),
-      ),
-  );
+    // Get rate limit status for all enabled platforms
+    const enabledTools: Tool[] = Object.values(toolRegistry).filter(
+      (tool): tool is Tool =>
+        Boolean(
+          tool &&
+            tool.enabled === true &&
+            Array.isArray(tool.capabilities) &&
+            tool.capabilities.includes("rate-limit"),
+        ),
+    );
 
-  const activePlatforms = getActivePlatforms(
-    enabledTools.map((tool) => ({
-      slug: tool.slug,
-      capabilities: tool.capabilities ?? [],
-    })),
-  );
-  const rateLimitStatuses = await Promise.allSettled(
-    activePlatforms.map((platform) => getServerRateLimitStatus(platform)),
-  );
+    const activePlatforms = getActivePlatforms(
+      enabledTools.map((tool) => ({
+        slug: tool.slug,
+        capabilities: tool.capabilities ?? [],
+      })),
+    );
+    const rateLimitStatuses = await Promise.allSettled(
+      activePlatforms.map((platform) => getServerRateLimitStatus(platform)),
+    );
 
-  // Aggregate rate limit metrics
-  const platformMetrics = rateLimitStatuses.reduce(
-    (
-      acc: Record<
+    // Aggregate rate limit metrics
+    const platformMetrics = rateLimitStatuses.reduce(
+      (
+        acc: Record<
+          string,
+          {
+            usagePercent: number | null;
+            status: string;
+            dataFresh: boolean;
+            lastUpdated: number | null;
+            resetTime: number | null;
+          }
+        >,
+        result,
+        index,
+      ) => {
+        const platform = activePlatforms[index];
+        if (result.status === "fulfilled" && result.value) {
+          const status = result.value;
+          const maxUsage = Math.max(
+            ...Object.values(status.limits).flatMap((platformLimits) =>
+              Object.values(platformLimits || {}).map((usage) =>
+                typeof (usage as { usagePercent?: number }).usagePercent ===
+                "number"
+                  ? (usage as { usagePercent?: number }).usagePercent!
+                  : 0,
+              ),
+            ),
+          );
+
+          acc[platform] = {
+            usagePercent: Math.round(maxUsage),
+            status: status.status,
+            dataFresh: status.dataFresh,
+            lastUpdated: status.lastUpdated,
+            resetTime: Math.max(
+              ...Object.values(status.limits).flatMap((platformLimits) =>
+                Object.values(platformLimits || {}).map((usage) =>
+                  typeof (usage as { resetTime?: number }).resetTime ===
+                  "number"
+                    ? (usage as { resetTime?: number }).resetTime!
+                    : 0,
+                ),
+              ),
+            ),
+          };
+        } else {
+          acc[platform] = {
+            usagePercent: null,
+            status: "unknown",
+            dataFresh: false,
+            lastUpdated: null,
+            resetTime: null,
+          };
+        }
+        return acc;
+      },
+      {} as Record<
         string,
         {
           usagePercent: number | null;
@@ -44,114 +101,73 @@ export async function GET() {
           resetTime: number | null;
         }
       >,
-      result,
-      index,
-    ) => {
-      const platform = activePlatforms[index];
-      if (result.status === "fulfilled" && result.value) {
-        const status = result.value;
-        const maxUsage = Math.max(
-          ...Object.values(status.limits).flatMap((platformLimits) =>
-            Object.values(platformLimits || {}).map((usage) =>
-              typeof (usage as { usagePercent?: number }).usagePercent ===
-              "number"
-                ? (usage as { usagePercent?: number }).usagePercent!
-                : 0,
-            ),
-          ),
-        );
+    );
 
-        acc[platform] = {
-          usagePercent: Math.round(maxUsage),
-          status: status.status,
-          dataFresh: status.dataFresh,
-          lastUpdated: status.lastUpdated,
-          resetTime: Math.max(
-            ...Object.values(status.limits).flatMap((platformLimits) =>
-              Object.values(platformLimits || {}).map((usage) =>
-                typeof (usage as { resetTime?: number }).resetTime === "number"
-                  ? (usage as { resetTime?: number }).resetTime!
-                  : 0,
-              ),
-            ),
-          ),
-        };
-      } else {
-        acc[platform] = {
-          usagePercent: null,
-          status: "unknown",
-          dataFresh: false,
-          lastUpdated: null,
-          resetTime: null,
-        };
+    // Calculate overall system rate limit health
+    const overallHealth = Object.values(platformMetrics).reduce<
+      "normal" | "warning" | "critical"
+    >((acc, platform) => {
+      if (acc === "critical" || platform.status === "critical") {
+        return "critical";
       }
-      return acc;
-    },
-    {} as Record<
-      string,
+      if (acc === "warning" || platform.status === "warning") {
+        return "warning";
+      }
+      return "normal";
+    }, "normal");
+
+    // Calculate aggregate metrics
+    const validRates = Object.values(platformMetrics)
+      .filter((platform) => platform.usagePercent !== null)
+      .map((platform) => platform.usagePercent as number);
+
+    const avgRateUsage =
+      validRates.length > 0
+        ? Math.round(
+            validRates.reduce((sum, val) => sum + val, 0) / validRates.length,
+          )
+        : null;
+
+    const dbHealth = await checkPostgresConnectivity();
+    const isDbHealthy = dbHealth.status === "healthy";
+
+    const status = isDbHealthy ? "healthy" : "unhealthy";
+    const httpStatus = isDbHealthy ? 200 : 503;
+
+    return NextResponse.json(
       {
-        usagePercent: number | null;
-        status: string;
-        dataFresh: boolean;
-        lastUpdated: number | null;
-        resetTime: number | null;
-      }
-    >,
-  );
-
-  // Calculate overall system rate limit health
-  const overallHealth = Object.values(platformMetrics).reduce<
-    "normal" | "warning" | "critical"
-  >((acc, platform) => {
-    if (acc === "critical" || platform.status === "critical") {
-      return "critical";
-    }
-    if (acc === "warning" || platform.status === "warning") {
-      return "warning";
-    }
-    return "normal";
-  }, "normal");
-
-  // Calculate aggregate metrics
-  const validRates = Object.values(platformMetrics)
-    .filter((platform) => platform.usagePercent !== null)
-    .map((platform) => platform.usagePercent as number);
-
-  const avgRateUsage =
-    validRates.length > 0
-      ? Math.round(
-          validRates.reduce((sum, val) => sum + val, 0) / validRates.length,
-        )
-      : null;
-
-  const dbHealth = await checkPostgresConnectivity();
-  const isDbHealthy = dbHealth.status === "healthy";
-
-  const status = isDbHealthy ? "healthy" : "unhealthy";
-  const httpStatus = isDbHealthy ? 200 : 503;
-
-  return NextResponse.json(
-    {
-      status,
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      database: dbHealth,
-      cache: {
-        ...cacheStats,
-        hitRate:
-          cacheStats.hits + cacheStats.misses > 0
-            ? Math.round(
-                (cacheStats.hits / (cacheStats.hits + cacheStats.misses)) * 100,
-              )
-            : 0,
+        status,
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        database: dbHealth,
+        cache: {
+          ...cacheStats,
+          hitRate:
+            cacheStats.hits + cacheStats.misses > 0
+              ? Math.round(
+                  (cacheStats.hits / (cacheStats.hits + cacheStats.misses)) *
+                    100,
+                )
+              : 0,
+        },
+        rateLimits: {
+          overallHealth,
+          enabledPlatforms: activePlatforms.length,
+          averageUsagePercent: avgRateUsage,
+          platforms: platformMetrics,
+        },
       },
-      rateLimits: {
-        overallHealth,
-        enabledPlatforms: activePlatforms.length,
-        averageUsagePercent: avgRateUsage,
-        platforms: platformMetrics,
-      },
-    },
-    { status: httpStatus },
-  );
+      { status: httpStatus },
+    );
+  } catch (error) {
+    logger.error("Health endpoint failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return createErrorResponse({
+      code: "HEALTH_CHECK_FAILED",
+      message: "Failed to retrieve system health status",
+      status: 500,
+    });
+  }
 }

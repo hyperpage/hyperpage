@@ -94,7 +94,7 @@ if (!oauthSuiteEnabled) {
       const url = new URL(page.url());
       const redirectUri = url.searchParams.get("redirect_uri");
       expect(redirectUri).toBeDefined();
-      expect(redirectUri).toContain("/api/auth/gitlab/callback");
+      expect(redirectUri).toContain("/api/auth/oauth/gitlab");
     });
   });
 
@@ -104,7 +104,7 @@ if (!oauthSuiteEnabled) {
       if (process.env.SKIP_REAL_OAUTH === "true") {
         // Test with mock callback
         await page.goto(
-          `${baseUrl}/api/auth/gitlab/callback?code=mock_gitlab_auth_code_67890&state=mock_gitlab_state_token`,
+          `${baseUrl}/api/auth/oauth/gitlab?code=mock_gitlab_auth_code_67890&state=mock_gitlab_state_token`,
         );
 
         // Should handle mock OAuth gracefully
@@ -117,7 +117,7 @@ if (!oauthSuiteEnabled) {
 
     test("should handle GitLab OAuth errors", async ({ page }) => {
       await page.goto(
-        `${baseUrl}/api/auth/gitlab/callback?error=access_denied&error_description=User denied access`,
+        `${baseUrl}/api/auth/oauth/gitlab?error=access_denied&error_description=User denied access`,
       );
 
       // Should show appropriate error message
@@ -126,7 +126,7 @@ if (!oauthSuiteEnabled) {
 
     test("should handle invalid authorization code", async ({ page }) => {
       await page.goto(
-        `${baseUrl}/api/auth/gitlab/callback?code=invalid_code&state=mock_gitlab_state_token`,
+        `${baseUrl}/api/auth/oauth/gitlab?code=invalid_code&state=mock_gitlab_state_token`,
       );
 
       // Should handle invalid code gracefully
