@@ -1,5 +1,4 @@
 import React from "react";
-import { useState, useEffect } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +12,11 @@ import { ToolData } from "@/tools/tool-types";
 import RefreshButton from "@/app/components/RefreshButton";
 import TableRowComponent from "@/app/components/TableRow";
 import PaginationControls from "@/app/components/PaginationControls";
+import { usePaginatedRows } from "@/app/components/hooks/usePaginatedRows";
+import {
+  TableLoadingState,
+  TableEmptyState,
+} from "@/app/components/TablePlaceholders";
 
 interface WidgetErrorInfo {
   message: string;
@@ -40,22 +44,15 @@ export default function DataTable({
 }: DataTableProps) {
   // tool parameter is reserved for future use (debugging, analytics, etc.)
   void tool;
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  const totalItems = data.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const displayItems = data.slice(startIndex, endIndex);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [data.length]);
+  const {
+    pageItems,
+    currentPage,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    setPage,
+  } = usePaginatedRows({ data, itemsPerPage: 10 });
 
   return (
     <Card>
@@ -88,14 +85,20 @@ export default function DataTable({
             </tr>
           </TableHeader>
           <TableBody>
-            {displayItems.map((row, rowIndex) => (
-              <TableRowComponent
-                key={rowIndex}
-                row={row}
-                headers={headers}
-                rowIndex={rowIndex}
-              />
-            ))}
+            {isLoading ? (
+              <TableLoadingState columns={headers.length} />
+            ) : pageItems.length === 0 ? (
+              <TableEmptyState columns={headers.length} />
+            ) : (
+              pageItems.map((row, rowIndex) => (
+                <TableRowComponent
+                  key={rowIndex}
+                  row={row}
+                  headers={headers}
+                  rowIndex={rowIndex}
+                />
+              ))
+            )}
           </TableBody>
         </Table>
 
@@ -105,7 +108,7 @@ export default function DataTable({
           totalItems={totalItems}
           startIndex={startIndex}
           endIndex={endIndex}
-          onPageChange={handlePageChange}
+          onPageChange={setPage}
         />
       </CardContent>
     </Card>

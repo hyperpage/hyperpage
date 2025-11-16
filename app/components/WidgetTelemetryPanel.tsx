@@ -1,16 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-type TelemetryEvent = {
-  tool: string;
-  endpoint: string;
-  message: string;
-  timestamp: number;
-};
+import { useWidgetTelemetry } from "@/app/components/hooks/useWidgetTelemetry";
 
 interface WidgetTelemetryPanelProps {
   refreshKey: number;
@@ -21,33 +13,10 @@ export default function WidgetTelemetryPanel({
   refreshKey,
   limit = 5,
 }: WidgetTelemetryPanelProps) {
-  const [events, setEvents] = useState<TelemetryEvent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadTelemetry = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `/api/telemetry/widget-error?limit=${limit}`,
-      );
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-      const data = await response.json();
-      setEvents(Array.isArray(data.events) ? data.events : []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load telemetry");
-    } finally {
-      setLoading(false);
-    }
-  }, [limit]);
-
-  useEffect(() => {
-    void loadTelemetry();
-  }, [loadTelemetry, refreshKey]);
+  const { events, loading, error, refresh } = useWidgetTelemetry({
+    limit,
+    refreshKey,
+  });
 
   return (
     <Card className="mb-6" id="widget-telemetry-panel">
@@ -63,7 +32,7 @@ export default function WidgetTelemetryPanel({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => loadTelemetry()}
+          onClick={() => refresh()}
           disabled={loading}
         >
           Refresh

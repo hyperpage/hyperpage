@@ -5,9 +5,8 @@ import ToolWidgetGrid from "@/app/components/ToolWidgetGrid";
 import NoToolsState from "@/app/components/NoToolsState";
 import ToolStatusRow from "@/app/components/ToolStatusRow";
 import { ClientSafeTool, ToolData } from "@/tools/tool-types";
-import { processPortalData } from "@/lib/portal-utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import WidgetTelemetryPanel from "@/app/components/WidgetTelemetryPanel";
+import PortalErrorSummary from "@/app/components/PortalErrorSummary";
+import { usePortalOverviewData } from "@/app/components/hooks/usePortalOverviewData";
 
 interface PortalOverviewProps {
   enabledTools: ClientSafeTool[];
@@ -26,86 +25,24 @@ export default function PortalOverview({
   errorStates,
   refreshToolData,
 }: PortalOverviewProps) {
-  // Process data using utility function
-  const { toolWidgets, totalSearchResults } = processPortalData(
+  const {
+    toolWidgets,
+    totalSearchResults,
+    aggregatedErrors,
+    telemetryRefreshKey,
+  } = usePortalOverviewData({
     enabledTools,
     searchQuery,
     dynamicData,
-  );
-
-  const aggregatedErrors = Object.entries(errorStates)
-    .filter(([, info]) => info)
-    .map(([key, info]) => {
-      const [toolName, ...endpointParts] = key.split("-");
-      const endpoint = endpointParts.join("-");
-      return {
-        toolName,
-        endpoint,
-        message: info!.message,
-        timestamp: info!.timestamp,
-      };
-    })
-    .reduce<
-      Record<
-        string,
-        {
-          toolName: string;
-          endpoints: string[];
-          message: string;
-          timestamp: number;
-        }
-      >
-    >((acc, { toolName, endpoint, message, timestamp }) => {
-      const normalizedMessage = message || "Unknown error";
-      const aggregateKey = `${toolName}-${normalizedMessage}`;
-      const current = acc[aggregateKey];
-      if (!current) {
-        acc[aggregateKey] = {
-          toolName,
-          endpoints: [endpoint],
-          message: normalizedMessage,
-          timestamp,
-        };
-      } else {
-        if (!current.endpoints.includes(endpoint)) {
-          current.endpoints.push(endpoint);
-        }
-        if (timestamp > current.timestamp) {
-          current.timestamp = timestamp;
-        }
-      }
-      return acc;
-    }, {});
-  const aggregatedErrorList = Object.values(aggregatedErrors);
-  const telemetryRefreshKey = aggregatedErrorList.reduce(
-    (acc, item) => acc + item.timestamp,
-    aggregatedErrorList.length,
-  );
+    errorStates,
+  });
 
   return (
-    <div className="p-8">
-      {aggregatedErrorList.length > 0 && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTitle>Some tool data failed to load</AlertTitle>
-          <AlertDescription>
-            {aggregatedErrorList.map(
-              ({ toolName, endpoints, message, timestamp }) => (
-                <p key={`${toolName}-${message}`}>
-                  <span className="font-semibold">{toolName}</span> (
-                  {endpoints.join(", ")}): {message} –{" "}
-                  <span className="italic text-xs">
-                    {new Date(timestamp).toLocaleTimeString()}
-                  </span>
-                </p>
-              ),
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {aggregatedErrorList.length > 0 && (
-        <WidgetTelemetryPanel refreshKey={telemetryRefreshKey} limit={5} />
-      )}
+    <div className="p-8 space-y-6">
+      <PortalErrorSummary
+        aggregatedErrors={aggregatedErrors}
+        telemetryRefreshKey={telemetryRefreshKey}
+      />
 
       {/* Search Results Summary */}
       {searchQuery && (
@@ -129,7 +66,7 @@ export default function PortalOverview({
       )}
 
       {/* Tool Status Row */}
-      <ToolStatusRow errorSummaries={aggregatedErrorList} />
+      <ToolStatusRow errorSummaries={aggregatedErrors} />
     </div>
   );
 }

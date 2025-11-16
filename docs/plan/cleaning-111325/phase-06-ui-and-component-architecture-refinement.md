@@ -61,6 +61,32 @@ For each component:
 
 Deliverable: a mapping in this phase plan listing “complex” or “violating” components.
 
+#### 1.2 Current Component Hotspots (initial pass)
+
+| Component | Path | ~Lines | Classification | Observations / Required action |
+| --- | --- | --- | --- | --- |
+| PortalOverview | `app/components/PortalOverview.tsx` | 135 | Widget / Data View | Aggregates widget data, builds error summaries, renders alerts, telemetry, search summaries, and the grid in one file; needs a `usePortalOverviewData` hook + dedicated `AggregatedErrorPanel`/`PortalOverviewLayout` children. |
+| ToolStatusRow | `app/components/ToolStatusRow.tsx` | 127 | Widget / Stateful Logic | Fetches tool integrations via `useToolStatus`, handles loading/error UI, maps summaries, and renders layout; should become a container hook plus a pure `<ToolStatusRowView>` receiving prepared props. |
+| ToolStatusIndicator | `app/components/ToolStatusIndicator.tsx` | 123 | Primitive / Indicator | Mixes tooltip string building, telemetry interactions, badge color logic, and UI; split calculator + tooltip builder into helpers and keep component ≤70 lines. |
+| DataTable | `app/components/DataTable.tsx` | 113 | Shared Table Primitive | Owns pagination state, error alert, refresh CTA, and table layout; extract pagination logic into `usePaginatedRows` and reuse shared loading/empty components to drop repeated markup. |
+| WidgetTelemetryPanel | `app/components/WidgetTelemetryPanel.tsx` | 111 | Widget / Data Fetcher | Handles fetch + UI together and exposes DOM side effects (scroll target). Needs a `useWidgetTelemetry` hook and presentational card component that consumes typed telemetry props. |
+| QuickStartGuide | `app/components/QuickStartGuide.tsx` | 101 | Layout / Guide | Static copy mixed with inline emoji + colors; break the numbered steps into a data array consumed by `<QuickStartStep>` to enforce size limits and reuse in docs. |
+| TopBar | `app/components/TopBar.tsx` | 99 | Layout / Shell | Sits at the 100-line threshold while mixing search, notifications, refresh, auth dropdown, and theme switcher; split search input into `<GlobalSearchInput>` so other tabs/pages can reuse it. |
+
+#### 1.3 Recent refactors & progress
+
+- ✅ `PortalOverview` now consumes `usePortalOverviewData`, rendering `PortalErrorSummary`, `ToolWidgetGrid`, and `ToolStatusRow` as presentation-only children.
+- ✅ `ToolStatusRow` follows the container/presenter split with the new `useToolStatusRow` hook and `<ToolStatusRowView>`, keeping data hydration and UI concerns isolated.
+- ✅ `WidgetTelemetryPanel` reads from the shared `useWidgetTelemetry` hook so network concerns stay outside presentation logic (tying directly into the aggregated error surface area).
+- ✅ `DataTable` delegates pagination state to `usePaginatedRows`, ensuring the table primitive stays focused on rendering headers/rows while PaginationControls handle navigation.
+- ✅ `ToolStatusIndicator` now uses `useTelemetryPanelFocus` + `getToolStatusIndicatorTooltip`, so telemetry scrolling and tooltip copy are centralized utilities instead of inline logic.
+- ✅ `QuickStartGuide` renders from structured metadata and a reusable `<QuickStartStep>` child, so onboarding copy can evolve without duplicating layout markup.
+- ✅ `TopBar` delegates search UX to the reusable `GlobalSearchInput` primitive, shrinking the shell and making search accessible to future pages/tabs.
+- ✅ `SetupWizard` is now a thin container selecting between `ConfigurationComplete` and `<SetupWizardLayout>` children, with layout/header/footer isolated from hook logic.
+- ✅ `DataTable` now exposes consistent loading and empty states (shimmer rows + muted message) so widget tables no longer implement bespoke placeholders.
+- ✅ `ToolStatusIndicator` reuses `ToolStatusIndicatorIcon` + telemetry helpers so the container focuses on tooltip/interaction logic.
+- ✅ `TopBar` now composes `GlobalSearchInput` + `TopBarActions`, making the header a true layout shell.
+
 ---
 
 ## 2. Component Size & Responsibility
@@ -300,24 +326,24 @@ Ensure all statements are factual and match the current code.
 
 This phase is complete only when:
 
-- [ ] All major components:
-  - [ ] Are under ~100 lines or split into logical children/hooks.
-  - [ ] Have a single, clear responsibility.
-- [ ] Complex behaviors:
-  - [ ] Encapsulated in named hooks or service modules.
-- [ ] Portal & widget UIs:
-  - [ ] Consume registry and `/api/tools/**` outputs only.
-  - [ ] Do not hardcode tool lists or endpoints.
-- [ ] Loading & error states:
-  - [ ] Use shared primitives consistently.
-- [ ] Theming & layout:
-  - [ ] Respect dark mode and spacing conventions.
-- [ ] Client/server boundaries:
-  - [ ] No client-side secret or env access.
-  - [ ] No server-only modules imported into client components.
-- [ ] Dead/duplicate components:
-  - [ ] Removed or clearly deprecated with a migration note.
-- [ ] `docs/ui.md` (and related docs):
-  - [ ] Reflect actual component patterns and usage.
+- [x] All major components:
+  - [x] Are under ~100 lines or split into logical children/hooks.
+  - [x] Have a single, clear responsibility.
+- [x] Complex behaviors:
+  - [x] Encapsulated in named hooks or service modules.
+- [x] Portal & widget UIs:
+  - [x] Consume registry and `/api/tools/**` outputs only.
+  - [x] Do not hardcode tool lists or endpoints.
+- [x] Loading & error states:
+  - [x] Use shared primitives consistently.
+- [x] Theming & layout:
+  - [x] Respect dark mode and spacing conventions.
+- [x] Client/server boundaries:
+  - [x] No client-side secret or env access.
+  - [x] No server-only modules imported into client components.
+- [x] Dead/duplicate components:
+  - [x] Removed or clearly deprecated with a migration note.
+- [x] `docs/ui.md` (and related docs):
+  - [x] Reflect actual component patterns and usage.
 
 With the UI and component layer normalized, proceed to **Phase 07 – Runtime, Docker & Database Configuration Hygiene** and **Phase 08 – Documentation & Script Pruning** to finalize the comprehensive cleanup.
