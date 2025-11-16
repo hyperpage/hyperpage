@@ -15,8 +15,7 @@ import "./ci-cd";
 import "./ticketing";
 
 if (typeof window === "undefined") {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  require("@/lib/config/load-env");
+  await import("@/lib/config/load-env");
 }
 
 function toEnvFlagName(tool: Tool, registryKey: string): string {

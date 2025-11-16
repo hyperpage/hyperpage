@@ -29,4 +29,3 @@ export function getToolStatusIndicatorTooltip({
 
   return `${baseTooltip}\nData issue: ${dataIssue.message} (since ${new Date(dataIssue.timestamp).toLocaleTimeString()})\nClick to view widget telemetry.`;
 }
-

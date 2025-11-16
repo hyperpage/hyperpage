@@ -25,9 +25,7 @@ export type ToolStatusAuthData = UseToolStatusReturn["authData"];
 const normalizeSlug = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-export function useToolStatusRow({
-  errorSummaries,
-}: UseToolStatusRowArgs) {
+export function useToolStatusRow({ errorSummaries }: UseToolStatusRowArgs) {
   const {
     toolIntegrations,
     rateLimitStatuses,

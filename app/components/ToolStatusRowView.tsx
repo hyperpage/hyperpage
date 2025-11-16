@@ -45,15 +45,17 @@ export default function ToolStatusRowView({
     <div className="flex justify-center items-center py-6 border-t border-border mt-8">
       <div className="flex flex-col items-center space-y-4">
         <div className="flex items-center space-x-6">
-          {toolStatusItems.map(({ tool, rateLimitStatus, dataIssue }, index) => (
-            <ToolStatusIndicator
-              key={`${tool.slug}-${index}`}
-              tool={tool}
-              authStatus={authStatus}
-              rateLimitStatus={rateLimitStatus}
-              dataIssue={dataIssue}
-            />
-          ))}
+          {toolStatusItems.map(
+            ({ tool, rateLimitStatus, dataIssue }, index) => (
+              <ToolStatusIndicator
+                key={`${tool.slug}-${index}`}
+                tool={tool}
+                authStatus={authStatus}
+                rateLimitStatus={rateLimitStatus}
+                dataIssue={dataIssue}
+              />
+            ),
+          )}
         </div>
         <DataIssueSummary errorSummaries={errorSummaries} />
       </div>

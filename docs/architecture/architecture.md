@@ -252,43 +252,28 @@ config: {
 
 ### OAuth Authentication System
 
-Hyperpage implements comprehensive OAuth authentication for secure tool access:
+Hyperpage uses a registry-driven OAuth handler to keep provider-specific logic consolidated. The current implementation focuses on server-side safety and explicitly calls out remaining gaps.
 
-#### Authentication Flow
+#### Authentication Flow (Current State)
 
-- **PKCE Support**: Proof Key for Code Exchange prevents authorization code interception
-- **AES-256-GCM Encryption**: All stored tokens encrypted with unique initialization vectors
-- **Automatic Token Refresh**: Access tokens refreshed before expiration without user intervention
-- **CSRF Protection**: State parameter validation in all OAuth flows
-- **Secure Storage**: SQLite database with server-side only access to sensitive data
+- **Authorization Code Flow**: `/api/auth/oauth/[provider]` handles initiation + callback for GitHub, GitLab, and Jira.
+- **CSRF Protection**: Providers receive a per-request `state` value persisted via secure cookies and validated on callback.
+- **Token Exchange**: `exchangeCodeForTokens` uses the tool registry's `oauthConfig` to look up URLs and scopes dynamically.
+- **Storage**: Tokens are stored server-side in PostgreSQL. They are not encrypted at rest yet, so restrict DB access accordingly.
+
+#### Future Enhancements
+
+- **PKCE**: Not implemented today. Adding `code_challenge`/`code_verifier` support is tracked in the roadmap.
+- **Token Encryption**: AES-256-GCM encryption for stored tokens is planned but not shipped yet.
+- **Automatic Refresh**: Token refresh helpers exist, but cross-provider automation still needs hardening.
 
 #### Database Schema
 
-```sql
--- User authentication data
-CREATE TABLE users (
-  id TEXT PRIMARY KEY,
-  provider TEXT NOT NULL,
-  providerUserId TEXT NOT NULL,
-  email TEXT,
-  username TEXT,
-  displayName TEXT,
-  avatarUrl TEXT,
-  UNIQUE(provider, providerUserId)
-);
+The authoritative schema lives in `lib/database/pg-schema.ts` and is applied via Drizzle migrations. Relevant tables:
 
--- Encrypted OAuth tokens
-CREATE TABLE oauth_tokens (
-  id INTEGER PRIMARY KEY,
-  userId TEXT NOT NULL,
-  toolName TEXT NOT NULL,
-  accessToken TEXT NOT NULL,
-  refreshToken TEXT,
-  expiresAt INTEGER,
-  scopes TEXT,
-  UNIQUE(userId, toolName)
-);
-```
+- `users` – provider metadata for authenticated users (ID, username, avatar, etc.).
+- `oauth_tokens` – stores access/refresh tokens, scope text, expiry timestamps, and raw metadata blobs.
+  - Tokens are stored as plain text for now (see the future work note above).
 
 #### Authentication Middleware
 

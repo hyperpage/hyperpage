@@ -27,21 +27,22 @@ export function usePaginatedRows<TData>({
     setCurrentPage(1);
   }, [data.length]);
 
-  const { totalItems, totalPages, startIndex, endIndex, pageItems } = useMemo(() => {
-    const totalItems = data.length;
-    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-    const pageItems = data.slice(startIndex, endIndex);
+  const { totalItems, totalPages, startIndex, endIndex, pageItems } =
+    useMemo(() => {
+      const totalItems = data.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+      const pageItems = data.slice(startIndex, endIndex);
 
-    return {
-      totalItems,
-      totalPages,
-      startIndex,
-      endIndex,
-      pageItems,
-    };
-  }, [data, currentPage, itemsPerPage]);
+      return {
+        totalItems,
+        totalPages,
+        startIndex,
+        endIndex,
+        pageItems,
+      };
+    }, [data, currentPage, itemsPerPage]);
 
   const setPage = (page: number) => {
     const normalized = Math.min(Math.max(page, 1), totalPages);
@@ -58,4 +59,3 @@ export function usePaginatedRows<TData>({
     setPage,
   };
 }
-

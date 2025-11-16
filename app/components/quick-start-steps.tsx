@@ -28,8 +28,8 @@ export const QUICK_START_STEPS: QuickStartStepConfig[] = [
     description: (
       <p className="text-sm text-gray-600 mt-2">
         Edit{" "}
-        <code className="bg-gray-100 px-1 rounded">{envConfigFileName}</code>{" "}
-        to enable your first tool (GitHub recommended)
+        <code className="bg-gray-100 px-1 rounded">{envConfigFileName}</code> to
+        enable your first tool (GitHub recommended)
       </p>
     ),
   },
@@ -42,7 +42,10 @@ export const QUICK_START_STEPS: QuickStartStepConfig[] = [
     description: (
       <p className="text-sm text-gray-600 mb-2">
         Visit{" "}
-        <a href="http://localhost:3000" className="text-blue-600 hover:underline">
+        <a
+          href="http://localhost:3000"
+          className="text-blue-600 hover:underline"
+        >
           http://localhost:3000
         </a>{" "}
         to see your data!

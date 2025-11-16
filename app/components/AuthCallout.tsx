@@ -11,7 +11,8 @@ interface AuthCalloutProps {
 
 const CALLOUT_STYLES = {
   info: {
-    container: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800",
+    container:
+      "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800",
     title: "text-blue-900 dark:text-blue-100",
     body: "text-blue-700 dark:text-blue-300",
   },
@@ -43,4 +44,3 @@ export default function AuthCallout({
     </div>
   );
 }
-

@@ -15,9 +15,7 @@ interface TopBarActionsProps {
   onGlobalRefresh?: () => void;
 }
 
-export default function TopBarActions({
-  onGlobalRefresh,
-}: TopBarActionsProps) {
+export default function TopBarActions({ onGlobalRefresh }: TopBarActionsProps) {
   return (
     <div className="flex items-center space-x-4">
       <Button variant="ghost" size="icon" title="Notifications">
@@ -57,4 +55,3 @@ export default function TopBarActions({
     </div>
   );
 }
-

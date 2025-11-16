@@ -7,7 +7,7 @@ This document describes how tools integrate with the Hyperpage platform and prov
 The Hyperpage tool integration system is built on two core pillars:
 
 - A **registry-driven architecture** for tools, widgets, and APIs.
-- A **repository-first, dual-engine persistence layer** that all tools and platform features rely on.
+- A **repository-first PostgreSQL persistence layer** that all tools and platform features rely on.
 
 All tool interactions are driven by registry configurations with zero hardcoded per-tool logic in application flows, and all persistence is routed through well-defined repository interfaces.
 
@@ -41,9 +41,9 @@ There is no ad-hoc branching on tool names scattered across the codebase. The re
 
 Each tool owns its complete integration:
 
-- **Widgets**: UI components that display tool data
+- **Widgets**: UI metadata describing how data should render in the portal
 - **APIs and Handlers**: Endpoint specifications and implementations
-- **Types**: Data contracts for its responses
+- **Types**: Data contracts for server-to-client payloads
 - **Configuration**: Environment setup, credentials, OAuth configuration
 
 The platform core reads these definitions from the registry to:
@@ -69,20 +69,11 @@ When a tool or its handlers need persistence, they MUST depend on:
 
 Key rules:
 
-- No direct imports of `lib/database/schema` or `lib/database/pg-schema` in tool handlers or widgets.
-- No engine-specific branching (`if DB_ENGINE === ...`) in tool code.
-- All dual-engine behavior is encapsulated inside repository factories via `getReadWriteDb()` + `$schema` identity checks.
+- No direct imports of `lib/database/pg-schema` in tool handlers or widgets.
+- No database-specific branching. The only supported runtime is PostgreSQL; repository factories already encapsulate the Drizzle wiring.
+- Tests for tools can rely on repository-shaped fakes to validate behaviour without touching the real database.
 
-This ensures:
-
-- Tools remain engine-agnostic.
-- Dual-engine migrations (SQLite → PostgreSQL) do not require changes in tool integrations.
-- Tests for tools can rely on repository-shaped fakes.
-
-For details, see:
-
-- `docs/persistence.md`
-- `docs/sqlite-to-postgresql/dual-engine-repositories.md`
+For details, see `docs/persistence.md`.
 
 ---
 

@@ -4,9 +4,11 @@ This guide covers the detailed installation process, system requirements, and co
 
 ## Prerequisites
 
-- **Node.js 18+** installed (recommended: 20+ for best performance)
-- **npm 9+** package manager
-- Access to your development tool accounts (GitHub, GitLab, Jira, etc.)
+- **Node.js 22.x** (matching [`.nvmrc`](../.nvmrc))
+- **npm 10+**
+- Local or containerised PostgreSQL 15+ (the app is PostgreSQL-only)
+- Optional Redis if you want persistent sessions across multiple processes
+- Access tokens or OAuth credentials for the tools you enable
 
 ## Installation
 
@@ -138,11 +140,6 @@ Only web URLs need to be configured in environment variables.
    ```bash
    npm run build
    npm start
-   ```
-
-2. **Or use the production script:**
-   ```bash
-   npm run build:start
    ```
 
 ## Troubleshooting

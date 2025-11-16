@@ -1,4 +1,4 @@
-- [x] Create .env.docker template with secure defaults *(deprecated Jan 2025 – superseded by `.env.dev` workflow)*
+- [x] Create .env.docker template with secure defaults _(deprecated Jan 2025 – superseded by `.env.dev` workflow)_
 - [x] Create .env.docker.sample as committed template
 - [x] Update docker-compose.yml to use external secrets
 - [x] Add Docker secrets support for enhanced security
@@ -8,4 +8,4 @@
 - [x] Test new setup with clean environment
 - [x] Validate backward compatibility
 - [x] Document migration path for existing setups
-- *Historical note:* Items below describe the legacy `.env.docker` rollout. Modern env management relies on `.env.sample` → `.env.dev` (see `docs/config-management.md`). This checklist remains for archival context only.
+- _Historical note:_ Items below describe the legacy `.env.docker` rollout. Modern env management relies on `.env.sample` → `.env.dev` (see `docs/config-management.md`). This checklist remains for archival context only.

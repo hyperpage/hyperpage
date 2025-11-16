@@ -29,7 +29,9 @@ function OAuthErrorCompact({
         : "bg-blue-500/10 border-blue-500/20";
 
   return (
-    <div className={`flex items-center space-x-2 p-2 rounded-md border ${severityClass}`}>
+    <div
+      className={`flex items-center space-x-2 p-2 rounded-md border ${severityClass}`}
+    >
       {getSeverityIcon(errorDetails.severity)}
       <div className="flex-1">
         <p className="text-sm font-medium">{errorDetails.title}</p>

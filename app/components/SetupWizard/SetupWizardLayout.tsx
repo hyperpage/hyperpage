@@ -45,4 +45,3 @@ export function SetupWizardLayout({ children }: SetupWizardLayoutProps) {
     </div>
   );
 }
-

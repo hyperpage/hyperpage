@@ -382,32 +382,6 @@ services:
       - REDIS_CACHE_TTL=7200
 ```
 
-### Kubernetes Configuration
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: cache-config
-data:
-  REDIS_URL: "redis://redis-cluster:6379"
-  CACHE_TTL: "3600"
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: hyperpage
-spec:
-  template:
-    spec:
-      containers:
-        - name: hyperpage
-          envFrom:
-            - configMapRef:
-                name: cache-config
-```
-
 ### Performance Tuning
 
 ```typescript

@@ -1,99 +1,52 @@
 # Roadmap
 
-This document outlines the planned enhancements and future development directions for Hyperpage.
+This roadmap tracks the practical work remaining after the multi-phase cleaning effort. It keeps the focus on verifiable improvements rather than aspirational marketing copy.
 
-## Current Status - Q3 2025
+## Current Status – Q1 2025
 
-Hyperpage has reached a mature, production-ready state with comprehensive enterprise capabilities. The project now includes authentication systems, performance testing, CI/CD automation, and robust infrastructure.
+Hyperpage is a self-hosted aggregation portal backed by Next.js 15, PostgreSQL, and optional Redis. Registry-driven tools (GitHub, GitLab, Jira, CI/CD, Ticketing) and the portal UX are stable, but several areas still need polish (OAuth hardening, documentation accuracy, and runtime ergonomics).
 
-## Completed Features ✅
+## Recently Completed
 
-### Core Infrastructure
+- **PostgreSQL-only persistence** – drizzle migrations, repositories, and the Vitest harness were consolidated on Postgres.
+- **Registry governance** – tool definitions expose sanitized metadata for client consumption and server APIs share a consistent envelope.
+- **Session management & coordination** – `/api/sessions` plus the Redis-based `PodCoordinator` allow multi-pod deployments without external state.
+- **Testing clarity** – docs and scripts now document the Postgres-only test stack and docker-compose overlays.
 
-- **Authentication System**: OAuth integration with secure token management
-- **Rate Limiting**: Intelligent API quota management and abuse protection
-- **Caching Layer**: Redis-based data caching for high-performance scalability
-- **Background Processing**: Queued job execution for heavy operations
+## Near-Term Initiatives
 
-### DevOps & Infrastructure
+1. **Documentation Accuracy (Phase 08)**
+   - Ensure README + core docs match the real architecture and scripts.
+   - Cross-link installation, testing, and configuration guides from the README.
+   - Call out future-state content explicitly so it is not mistaken for implemented behaviour.
 
-- **Kubernetes Deployment**: Enterprise-grade container orchestration
-- **CI/CD Automation**: Complete GitHub Actions workflows with security scanning
-- **Performance Testing**: 110 comprehensive performance and reliability tests
-- **Container Registry**: Multi-arch builds and image management
+2. **OAuth Hardening**
+   - Implement PKCE for public clients.
+   - Encrypt stored tokens (AES-256-GCM) before persisting to Postgres.
+   - Expand tests that cover `/api/auth/oauth/[provider]` and `SecureTokenStorage`.
 
-### Security & Reliability
+3. **Runtime Ergonomics**
+   - Offer a documented `npm run validate` + `npm run db:test:up` sequence for contributors and CI.
+   - Ship sample manifests or guidance for Redis/Postgres in managed clouds instead of referencing nonexistent Kubernetes files.
+   - Continue pruning scripts that referred to the old SQLite migration path.
 
-- **Security Scanning**: Automated vulnerability assessment in CI/CD
-- **Monitoring**: Basic observability and alerting capabilities
-- **Session Management**: Secure user session handling
-- **API Protection**: Rate limiting and input validation
+4. **Monitoring & Alerts**
+   - Finalise `/api/metrics` coverage (cache stats, rate-limit feeds, widget errors) and document how to scrape it.
+   - Provide a curated Grafana dashboard JSON that matches the metrics emitted today.
 
-## Immediate Priorities - Q3/Q4 2025
+## Medium-Term Ideas
 
-### 1. Workspace Management
+These items are tracked but intentionally labeled as **Future Work** until the prerequisites above are finished:
 
-- **Status**: Next up
-- **Description**: Multiple portal configurations and multi-project support
-- **Value**: Allow users to create and switch between different workspace configurations
+- Workspace management and multi-tenant portal configurations.
+- Per-user OAuth linking, including scoped rate limits per account.
+- Expanded CI coverage for Playwright/docker flows once they are reliable locally.
+- Packaging guidance for Kubernetes or other orchestration stacks.
 
-### 2. Enhanced Performance Monitoring
+## How to Use This Roadmap
 
-- **Status**: Next up
-- **Description**: Real-time metrics and alerting for production operations
-- **Value**: Better visibility into system performance and early issue detection
+- Update this file whenever a phase meaningfully changes scope or completes.
+- Prefer short, factual bullets over long-term hype.
+- Link to GitHub issues or cleaning-plan phases when work is scheduled.
 
-### 3. Session Management Refactoring
-
-- **Status**: Next up
-- **Description**: Resolve integration testing challenges with session validation
-- **Value**: Improved testability and reliability of authentication flows
-
-## Medium-term Roadmap - 2026
-
-### Q1 2026
-
-- **Analytics Dashboard**: Enhanced reporting and data visualization
-- **User Experience Improvements**: Streamlined interface and workflow enhancements
-- **API Rate Limiting Tuning**: Optimization for better performance at scale
-
-### Q2 2026
-
-- **Mobile Application**: Native mobile portal access for iOS and Android
-- **Plugin Architecture**: Third-party extension support and marketplace
-- **Advanced Analytics**: Deeper insights and predictive capabilities
-
-### Q3 2026
-
-- **Enhanced Background Processing**: Improved async job execution for heavy computations
-- **Multi-tenant Support**: Enterprise-level multi-tenant architecture
-- **Advanced Security Features**: Enhanced security controls and compliance features
-
-## Future Considerations - 2027+
-
-### Innovation & Expansion
-
-- **AI-Powered Insights**: Machine learning for predictive analytics
-- **Integration Marketplace**: Public API and third-party integrations
-- **Enterprise Features**: Advanced compliance, audit trails, and governance
-- **Global Deployment**: Multi-region deployment and localization
-
-## Technical Debt & Improvements
-
-### High Priority
-
-- **Session Testing Infrastructure**: Complete integration test coverage for authenticated endpoints
-- **Performance Optimization**: Database query optimization and caching improvements
-- **Documentation**: Developer and user documentation updates
-
-### Medium Priority
-
-- **Code Quality**: Additional test coverage and code refactoring
-- **Monitoring Enhancement**: More detailed metrics and alerting rules
-- **API Versioning**: Structured approach to API evolution
-
----
-
-**Current Status**: Enterprise-ready platform with comprehensive automation, security, and monitoring capabilities. Focus areas are workspace management, enhanced monitoring, and session management improvements.
-
-**Last Updated**: November 07, 2025
+_Last updated: January 2025_

@@ -88,7 +88,7 @@ Every environment must provide the following (see `.env.sample` for placeholders
 
 - `SESSION_SECRET`, `JWT_SECRET` – secure random strings for session + token signing.
 - `NEXTAUTH_SECRET`, `NEXTAUTH_URL` – NextAuth cookie signing + callback base URL.
-- `OAUTH_ENCRYPTION_KEY` – used to encrypt stored OAuth tokens at rest.
+- `OAUTH_ENCRYPTION_KEY` – reserved for the upcoming AES-256-GCM layer (set a stable value now to avoid redeploying secrets later).
 
 ## URL Auto-Derivation
 
@@ -257,7 +257,7 @@ Example pattern:
 
 ```dockerfile
 # Dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 COPY package*.json ./
@@ -275,22 +275,6 @@ For testing with Docker:
 - `docker-compose.test.yml` is the canonical Postgres-backed test stack.
 - It should define a Postgres service and an app service wired via `DATABASE_URL`.
 - Local test runs use the same `DATABASE_URL` contract as production.
-
-### Kubernetes Configuration
-
-Kubernetes uses ConfigMaps and Secrets:
-
-```yaml
-# k8s/configmap.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: hyperpage-config
-data:
-  NODE_ENV: "production"
-  ENABLE_JIRA: "true"
-  # ... other config
-```
 
 ### CI/CD Integration
 
@@ -333,17 +317,16 @@ env:
 
 ### Related Documentation
 
-- **[Security Practices](security-practices.md)** - Security standards and validation
-- **[Tool Integration System](tool-integration-system.md)** - How tools integrate with platform
-- **[Deployment Guide](deployment.md)** - Production deployment strategies
+- **[Security Practices](security.md)** - Security standards and validation
+- **[Tool Integration System](tool-integration-system.md)** - How tools integrate with the platform
+- **[Deployment Guide](deployment.md)** - Container/manual deployment strategies
 - **[Installation Guide](installation.md)** - Local development setup
 
 ### Configuration Files
 
 - **`.env.sample`** - Template for all environment variables
-- **`tools/*/index.ts`** - Tool definitions with configuration
-- **`k8s/configmap.yaml`** - Kubernetes configuration management
+- **`tools/*/index.ts`** - Tool definitions with configuration hooks
 
 ---
 
-**Last updated**: January 11, 2025
+**Last updated**: January 2025

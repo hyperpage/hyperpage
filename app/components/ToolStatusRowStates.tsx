@@ -22,11 +22,7 @@ export function ToolStatusSkeleton() {
   );
 }
 
-export function ToolStatusError({
-  onRetry,
-}: {
-  onRetry: () => void;
-}) {
+export function ToolStatusError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex justify-center items-center py-6 border-t border-border mt-8">
       <div className="flex flex-col items-center space-y-4">
@@ -70,4 +66,3 @@ export function DataIssueSummary({
     </div>
   );
 }
-

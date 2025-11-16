@@ -13,7 +13,9 @@ function getNodeEnvFallback(): string {
   return NODE_ENV_FALLBACKS[nodeEnv] ?? DEFAULT_ENV_FILE;
 }
 
-export function getEnvFileName(options?: { scope?: "server" | "client" }): string {
+export function getEnvFileName(options?: {
+  scope?: "server" | "client";
+}): string {
   const scope = options?.scope ?? "client";
 
   if (scope === "server") {

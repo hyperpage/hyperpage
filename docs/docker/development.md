@@ -4,11 +4,11 @@ Use Docker Compose to bootstrap the supporting services (PostgreSQL + Redis) for
 
 ## When to Use Compose
 
-| Scenario | Recommendation |
-| --- | --- |
-| Local feature/dev workflow | Run `npm run dev` on your machine. Use `npm run db:test:up` (or `docker compose up -d postgres redis`) to bring up Postgres/Redis. |
-| Vitest / integration suites | Use `npm run db:test:up` before `npm test` (the scripts shell out to `docker compose -f docker-compose.yml -f docker-compose.test.yml …`). |
-| Full containerized app (rare) | Use `docker compose up hyperpage` if you want the Next.js dev server in a container. Most contributors don’t need this. |
+| Scenario                      | Recommendation                                                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Local feature/dev workflow    | Run `npm run dev` on your machine. Use `npm run db:test:up` (or `docker compose up -d postgres redis`) to bring up Postgres/Redis.         |
+| Vitest / integration suites   | Use `npm run db:test:up` before `npm test` (the scripts shell out to `docker compose -f docker-compose.yml -f docker-compose.test.yml …`). |
+| Full containerized app (rare) | Use `docker compose up hyperpage` if you want the Next.js dev server in a container. Most contributors don’t need this.                    |
 
 ## Quick Start
 
@@ -30,11 +30,11 @@ npm run db:test:down    # stops postgres+redis
 
 ## Services Overview
 
-| Service | Container | Host Port | Default Connection | Notes |
-| --- | --- | --- | --- | --- |
-| PostgreSQL | `hyperpage-postgres` | `localhost:5432` | `postgresql://postgres:@localhost:5432/hyperpage` | Auth uses scram; set `DATABASE_URL` in `.env.dev` to the connection string you prefer. |
-| Redis | `hyperpage-redis` | `localhost:6379` | `redis://localhost:6379` | AOF enabled, no password by default. |
-| Hyperpage (optional) | `hyperpage-app` | `localhost:3000` | `http://localhost:3000` | Runs `npm run dev` inside the container. Only needed if you want a fully containerized dev server. |
+| Service              | Container            | Host Port        | Default Connection                                | Notes                                                                                              |
+| -------------------- | -------------------- | ---------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| PostgreSQL           | `hyperpage-postgres` | `localhost:5432` | `postgresql://postgres:@localhost:5432/hyperpage` | Auth uses scram; set `DATABASE_URL` in `.env.dev` to the connection string you prefer.             |
+| Redis                | `hyperpage-redis`    | `localhost:6379` | `redis://localhost:6379`                          | AOF enabled, no password by default.                                                               |
+| Hyperpage (optional) | `hyperpage-app`      | `localhost:3000` | `http://localhost:3000`                           | Runs `npm run dev` inside the container. Only needed if you want a fully containerized dev server. |
 
 ## Common Commands
 

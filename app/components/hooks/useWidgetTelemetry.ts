@@ -53,4 +53,3 @@ export function useWidgetTelemetry({
     refresh: loadTelemetry,
   };
 }
-

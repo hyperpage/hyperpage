@@ -27,25 +27,26 @@ export function useTelemetryPanelFocus(dataIssue?: DataIssueMeta | null) {
     }
   }, [hasDataIssue]);
 
-  const interactionProps: TelemetryInteractionProps | Record<string, never> = useMemo(() => {
-    if (!hasDataIssue) {
-      return {};
-    }
+  const interactionProps: TelemetryInteractionProps | Record<string, never> =
+    useMemo(() => {
+      if (!hasDataIssue) {
+        return {};
+      }
 
-    return {
-      role: "button" as const,
-      tabIndex: 0,
-      onClick: () => {
-        scrollToTelemetryPanel();
-      },
-      onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
+      return {
+        role: "button" as const,
+        tabIndex: 0,
+        onClick: () => {
           scrollToTelemetryPanel();
-        }
-      },
-    };
-  }, [hasDataIssue, scrollToTelemetryPanel]);
+        },
+        onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            scrollToTelemetryPanel();
+          }
+        },
+      };
+    }, [hasDataIssue, scrollToTelemetryPanel]);
 
   return {
     hasDataIssue,

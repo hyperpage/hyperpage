@@ -6,7 +6,6 @@ import { NextResponse } from "next/server";
 import { getEnvFileName } from "@/lib/config/env-file";
 import logger from "@/lib/logger";
 import { getAllTools } from "@/tools";
-import type { Tool } from "@/tools/tool-types";
 
 const REQUIRED_ENV_VARS = [
   "SESSION_SECRET",

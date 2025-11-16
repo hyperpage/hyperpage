@@ -82,9 +82,7 @@ export default function Home() {
   }
 
   if (enabledTools.length === 0) {
-    return (
-      <PortalEmptyState />
-    );
+    return <PortalEmptyState />;
   }
 
   return <Portal enabledTools={enabledTools} />;

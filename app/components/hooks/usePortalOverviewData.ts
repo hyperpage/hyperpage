@@ -39,35 +39,36 @@ export function usePortalOverviewData({
       return [];
     }
 
-    const aggregatedMap = entries.reduce<
-      Record<string, PortalAggregatedError>
-    >((acc, [key, info]) => {
-      const [toolName, ...endpointParts] = key.split("-");
-      const endpoint = endpointParts.join("-");
-      const normalizedMessage = info?.message || "Unknown error";
-      const aggregateKey = `${toolName}-${normalizedMessage}`;
+    const aggregatedMap = entries.reduce<Record<string, PortalAggregatedError>>(
+      (acc, [key, info]) => {
+        const [toolName, ...endpointParts] = key.split("-");
+        const endpoint = endpointParts.join("-");
+        const normalizedMessage = info?.message || "Unknown error";
+        const aggregateKey = `${toolName}-${normalizedMessage}`;
 
-      const existing = acc[aggregateKey];
-      if (!existing) {
-        acc[aggregateKey] = {
-          toolName,
-          endpoints: [endpoint],
-          message: normalizedMessage,
-          timestamp: info?.timestamp ?? Date.now(),
-        };
+        const existing = acc[aggregateKey];
+        if (!existing) {
+          acc[aggregateKey] = {
+            toolName,
+            endpoints: [endpoint],
+            message: normalizedMessage,
+            timestamp: info?.timestamp ?? Date.now(),
+          };
+          return acc;
+        }
+
+        if (!existing.endpoints.includes(endpoint)) {
+          existing.endpoints.push(endpoint);
+        }
+
+        if ((info?.timestamp ?? 0) > existing.timestamp) {
+          existing.timestamp = info?.timestamp ?? existing.timestamp;
+        }
+
         return acc;
-      }
-
-      if (!existing.endpoints.includes(endpoint)) {
-        existing.endpoints.push(endpoint);
-      }
-
-      if ((info?.timestamp ?? 0) > existing.timestamp) {
-        existing.timestamp = info?.timestamp ?? existing.timestamp;
-      }
-
-      return acc;
-    }, {});
+      },
+      {},
+    );
 
     return Object.values(aggregatedMap);
   }, [errorStates]);
