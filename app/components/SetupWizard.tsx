@@ -1,7 +1,7 @@
 // SetupWizard.tsx - Refactored using component decomposition
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 
 import { useSetupWizard } from "@/app/components/hooks/useSetupWizard";
 
@@ -12,13 +12,13 @@ import { SetupWizardLayout } from "./SetupWizard/SetupWizardLayout";
 
 export default function SetupWizard() {
   const { isConfigured, checkConfigurationStatus } = useSetupWizard();
+  const handleRefresh = useCallback(async () => {
+    await checkConfigurationStatus();
+    window.location.href = "/";
+  }, [checkConfigurationStatus]);
 
   if (isConfigured) {
-    return (
-      <ConfigurationComplete
-        onRefreshStatus={checkConfigurationStatus}
-      />
-    );
+    return <ConfigurationComplete onRefreshStatus={handleRefresh} />;
   }
 
   return (

@@ -1,12 +1,41 @@
 services:
   postgres:
+    container_name: hyperpage-prod-postgres
     env_file:
-      - .env.prod
+      - .env.production
+    volumes:
+      - postgres-prod_data:/var/lib/postgresql/data
+    networks:
+      - hyperpage-prod
 
   redis:
+    container_name: hyperpage-prod-redis
     env_file:
-      - .env.prod
+      - .env.production
+    volumes:
+      - redis-prod_data:/data
+    networks:
+      - hyperpage-prod
 
   hyperpage:
+    container_name: hyperpage-prod-app
     env_file:
-      - .env.prod
+      - .env.production
+    networks:
+      - hyperpage-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres-prod_data:
+    driver: local
+  redis-prod_data:
+    driver: local
+
+networks:
+  hyperpage-prod:
+    driver: bridge
+    name: hyperpage-prod

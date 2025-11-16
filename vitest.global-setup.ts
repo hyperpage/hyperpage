@@ -2,9 +2,9 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 export default function globalSetup() {
-  // Load .env.testing for test environment
+  // Load .env.test for test environment
   try {
-    const envPath = join(process.cwd(), ".env.testing");
+    const envPath = join(process.cwd(), ".env.test");
     const envContent = readFileSync(envPath, "utf8");
 
     // Parse the .env file content
@@ -20,6 +20,6 @@ export default function globalSetup() {
       }
     }
   } catch (error) {
-    console.error("[globalSetup] Failed to load .env.testing:", error);
+    console.error("[globalSetup] Failed to load .env.test:", error);
   }
 }

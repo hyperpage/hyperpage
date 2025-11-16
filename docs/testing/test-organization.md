@@ -130,12 +130,15 @@ npm run test:integration
 # Postgres + perf-focused suites
 PERFORMANCE_TESTS=1 npm run test:perf
 
-# Playwright E2E
+# Playwright E2E (against local dev server)
 npm run test:e2e
 
-# Dockerized Playwright against built app
+# Dockerized Playwright against built app (__tests__/e2e/docker-compose.e2e.yml)
 npm run test:e2e:docker
 ```
+
+- `npm run test:e2e`: Starts the local dev server (if not already running), sets `E2E_TESTS=1`, and executes Playwright. Ensure `.env.test` contains the required provider tokens or those suites will skip.
+- `npm run test:e2e:docker`: Uses `scripts/test-e2e-docker.sh` + `__tests__/e2e/docker-compose.e2e.yml` to build/run the Next.js app, Postgres, Redis, and Playwright containers. Copy `__tests__/e2e/.env.e2e` with the necessary placeholders before running.
 
 For narrower filters, use Vitest’s path arguments. Example:
 
@@ -148,16 +151,18 @@ E2E_TESTS=1 npm run test -- __tests__/integration/tools/github.spec.ts
 
 ### Environment Variables
 
-Most suites rely on `.env.testing` and the Postgres harness:
+Most suites rely on `.env.test` and the Postgres harness:
 
-- Set `DATABASE_URL` (e.g., via `.env.testing`) so `vitest.setup.ts` can drop/create the test database.
+- Set `DATABASE_URL` (e.g., via `.env.test`) so `vitest.setup.ts` can drop/create the test database.
+  - When running tests on the host, point to `localhost` (example: `postgresql://...@localhost:5432/hyperpage-test`).
+  - When running tests **inside** the docker-compose network, use the service name (`postgresql://...@postgres:5432/hyperpage-test`).
 - Optional suites require env flags:
   - `E2E_TESTS=1` for tool integration specs + Playwright.
   - `E2E_OAUTH=1` when enabling `__tests__/e2e/oauth/**` alongside provider tokens.
   - `PERFORMANCE_TESTS=1` for `__tests__/performance/**` and `__tests__/integration/performance/**`.
   - `GRAFANA_TESTS=1` for `__tests__/grafana`.
-- Tool integration suites additionally require `HYPERPAGE_TEST_BASE_URL` to match the running Next.js server (defaults to `http://localhost:3000` in `.env.testing` / npm scripts) plus the provider tokens referenced above.
-- Provider tokens (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `JIRA_API_TOKEN`) are required whenever a suite reaches out to their routes or OAuth flows. Keep placeholders in `.env.testing` and override locally as needed.
+- Tool integration suites additionally require `HYPERPAGE_TEST_BASE_URL` to match the running Next.js server (defaults to `http://localhost:3000` in `.env.test` / npm scripts) plus the provider tokens referenced above.
+- Provider tokens (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `JIRA_API_TOKEN`) are required whenever a suite reaches out to their routes or OAuth flows. Keep placeholders in `.env.test` and override locally as needed.
 
 ### Test Data
 

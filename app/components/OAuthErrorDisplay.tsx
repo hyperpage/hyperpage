@@ -8,7 +8,7 @@ import { getSeverityIcon, getSeverityVariant } from "@/lib/oauth-error-utils";
 
 interface ErrorLayoutProps {
   error: OAuthError;
-  errorDetails: ReturnType<typeof useErrorDetails>;
+  errorDetails: NonNullable<ReturnType<typeof useErrorDetails>>;
   onRetry?: () => void;
   onDismiss?: () => void;
   showRetry: boolean;

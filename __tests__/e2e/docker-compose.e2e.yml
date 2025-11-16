@@ -1,19 +1,48 @@
 services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: hyperpage-e2e-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hyperpage_e2e
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    volumes:
+      - postgres-e2e_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hyperpage_e2e"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - hyperpage-e2e
+
+  redis:
+    image: redis:8-alpine
+    container_name: hyperpage-e2e-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-e2e_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - hyperpage-e2e
+
   hyperpage-e2e:
     build:
       context: ../../.
       dockerfile: ./__tests__/e2e/Dockerfile.e2e
       target: playwright
+    env_file:
+      - .env.e2e
     ports:
       - "8010:3000"
-    environment:
-      - NODE_ENV=test
-      - ENABLE_GITHUB=true
-      - ENABLE_JIRA=true
-      - ENABLE_GITLAB=true
-      - NEXT_PUBLIC_NODE_ENV=test
-      - E2E_TEST=1
-      - E2E_TESTS=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 10s
@@ -21,6 +50,13 @@ services:
       retries: 5
       start_period: 20s
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hyperpage-e2e
 
   playwright:
     build:
@@ -40,3 +76,16 @@ services:
     command: npx playwright test --config=./__tests__/e2e/playwright.config.ts
     profiles:
       - e2e
+    networks:
+      - hyperpage-e2e
+
+volumes:
+  postgres-e2e_data:
+    driver: local
+  redis-e2e_data:
+    driver: local
+
+networks:
+  hyperpage-e2e:
+    driver: bridge
+    name: hyperpage-e2e

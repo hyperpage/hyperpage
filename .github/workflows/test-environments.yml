@@ -13,7 +13,7 @@ on:
         type: choice
         options:
           - preview
-          - testing
+          - test
           - staging
       force_recreate:
         description: "Force recreate environment"
@@ -130,9 +130,8 @@ jobs:
           data:
             NODE_ENV: "test"
             NEXT_TELEMETRY_DISABLED: "1"
-            DATABASE_URL: "file:./data/hyperpage-test.db"
             CACHE_TYPE: "memory"
-            REDIS_URL: ""
+            REDIS_URL: "redis://hyperpage-redis:6379"
             ENABLE_GITHUB: "false"
             ENABLE_GITLAB: "false"
             ENABLE_JIRA: "false"
@@ -152,7 +151,7 @@ jobs:
           stringData:
             NEXTAUTH_SECRET: "test-secret-key-for-pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
             NEXTAUTH_URL: "https://${{ steps.environment-info.outputs.name }}.test-hyperpage.dev"
-            DATABASE_URL: "file:./data/hyperpage-test.db"
+            DATABASE_URL: "postgresql://postgres:postgres@hyperpage-postgres:5432/hyperpage-test"
           EOF
 
           # Create ServiceAccount

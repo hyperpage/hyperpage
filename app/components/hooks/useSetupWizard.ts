@@ -3,6 +3,16 @@ import { useState, useEffect, useCallback } from "react";
 
 import logger from "@/lib/logger";
 import type { ClientSafeTool } from "@/tools/tool-types";
+import { getEnvFileName } from "@/lib/config/env-file";
+
+const envConfigFileName = getEnvFileName();
+
+interface CoreConfigStatus {
+  envFile: string;
+  fileExists: boolean;
+  missingVariables: string[];
+  isReady: boolean;
+}
 
 interface SetupStep {
   id: string;
@@ -11,6 +21,13 @@ interface SetupStep {
   status: "pending" | "checking" | "success" | "error";
   action?: string;
   link?: string;
+}
+
+interface ToolEnvStatus {
+  name: string;
+  slug: string;
+  enabled: boolean;
+  missingEnv: string[];
 }
 
 interface ToolConfig {
@@ -27,6 +44,8 @@ interface UseSetupWizardReturn {
   isConfigured: boolean;
   checkConfigurationStatus: () => Promise<void>;
   copyToClipboard: (text: string) => void;
+  coreStatus: CoreConfigStatus | null;
+  readyTool: boolean;
 }
 
 export function useSetupWizard(): UseSetupWizardReturn {
@@ -41,7 +60,7 @@ export function useSetupWizard(): UseSetupWizardReturn {
           title: "Configure environment variables",
           description: "Set ENABLE_GITHUB=true and add your token",
           status: "pending",
-          action: "Edit .env.dev file",
+          action: `Edit ${envConfigFileName} file`,
         },
         {
           id: "get-token",
@@ -66,7 +85,7 @@ export function useSetupWizard(): UseSetupWizardReturn {
           title: "Configure environment variables",
           description: "Set ENABLE_GITLAB=true and add your token",
           status: "pending",
-          action: "Edit .env.dev file",
+          action: `Edit ${envConfigFileName} file`,
         },
         {
           id: "get-token",
@@ -91,7 +110,7 @@ export function useSetupWizard(): UseSetupWizardReturn {
           title: "Configure environment variables",
           description: "Set ENABLE_JIRA=true and add your credentials",
           status: "pending",
-          action: "Edit .env.dev file",
+          action: `Edit ${envConfigFileName} file`,
         },
         {
           id: "get-token",
@@ -108,14 +127,26 @@ export function useSetupWizard(): UseSetupWizardReturn {
     },
   ]);
   const [isConfigured, setIsConfigured] = useState(false);
+  const [coreStatus, setCoreStatus] = useState<CoreConfigStatus | null>(null);
+  const [readyTool, setReadyTool] = useState(false);
 
   const checkConfigurationStatus = useCallback(async () => {
     try {
-      const response = await fetch("/api/tools/enabled");
-      const data = (await response.json()) as {
+      const [toolsResponse, configResponse] = await Promise.all([
+        fetch("/api/tools/enabled"),
+        fetch("/api/config/status"),
+      ]);
+
+      const toolsData = (await toolsResponse.json()) as {
         enabledTools?: ClientSafeTool[];
       };
-      const enabledTools = data.enabledTools ?? [];
+      const configData = (await configResponse.json()) as {
+        coreStatus?: CoreConfigStatus;
+        toolStatuses?: ToolEnvStatus[];
+        hasReadyTool?: boolean;
+      };
+
+      const enabledTools = toolsData.enabledTools ?? [];
       const enabledSlugs = new Set(
         enabledTools.map((tool) => tool.slug.toLowerCase()),
       );
@@ -124,6 +155,13 @@ export function useSetupWizard(): UseSetupWizardReturn {
       );
 
       // Update tools based on current configuration
+      const toolStatusMap = new Map<string, ToolEnvStatus>(
+        (configData.toolStatuses ?? []).flatMap((status) => [
+          [status.name.toLowerCase(), status] as [string, ToolEnvStatus],
+          [status.slug.toLowerCase(), status] as [string, ToolEnvStatus],
+        ]),
+      );
+
       setTools((prevTools) =>
         prevTools.map((tool) => {
           const normalizedName = tool.name.toLowerCase();
@@ -132,19 +170,48 @@ export function useSetupWizard(): UseSetupWizardReturn {
             enabledSlugs.has(normalizedName) ||
             enabledSlugs.has(normalizedSlug) ||
             enabledNames.has(normalizedName);
+          const envStatus = toolStatusMap.get(normalizedName);
+          const envReady =
+            envStatus?.enabled && (envStatus?.missingEnv.length ?? 0) === 0;
 
           return {
             ...tool,
-            enabled: isEnabled,
-            setupSteps: tool.setupSteps.map((step) => ({
-              ...step,
-              status: isEnabled ? "success" : "pending",
-            })),
+            enabled: Boolean(envReady),
+            setupSteps: tool.setupSteps.map((step) => {
+              if (step.id === "env-config") {
+                let description = step.description;
+                if (envStatus && envStatus.missingEnv.length > 0) {
+                  description = `Missing variables: ${envStatus.missingEnv.join(", ")}`;
+                }
+
+                return {
+                  ...step,
+                  description,
+                  status: envReady
+                    ? "success"
+                    : envStatus?.enabled
+                      ? "error"
+                      : "pending",
+                };
+              }
+
+              return {
+                ...step,
+                status: envReady || isEnabled ? "success" : "pending",
+              };
+            }),
           };
         }),
       );
 
-      setIsConfigured(enabledTools.length > 0);
+      setCoreStatus(configData.coreStatus ?? null);
+      setReadyTool(configData.hasReadyTool ?? false);
+
+      const hasToolConfigured =
+        configData.hasReadyTool === true || enabledTools.length > 0;
+      setIsConfigured(
+        (configData.coreStatus?.isReady ?? false) && hasToolConfigured,
+      );
     } catch (error) {
       logger.error("Failed to check configuration status", { error });
     }
@@ -163,6 +230,8 @@ export function useSetupWizard(): UseSetupWizardReturn {
     isConfigured,
     checkConfigurationStatus,
     copyToClipboard,
+    coreStatus,
+    readyTool,
   };
 }
 

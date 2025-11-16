@@ -116,13 +116,13 @@ jobs:
     env:
       NODE_ENV: test
       NEXT_TELEMETRY_DISABLED: 1
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hyperpage-testing
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hyperpage-test
       REDIS_URL: redis://localhost:6379
     services:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_DB: hyperpage-testing
+          POSTGRES_DB: hyperpage-test
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
         ports:

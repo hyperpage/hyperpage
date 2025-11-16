@@ -174,14 +174,14 @@ This couples the automated tests directly to the same schema definitions used at
 Recommended:
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres
-DATABASE_URL=postgresql://postgres:password@postgres:5432/hyperpage-testing npx vitest
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres
+DATABASE_URL=postgresql://postgres:password@postgres:5432/hyperpage-test npx vitest
 ```
 
-Or configure `.env.testing` with the same `DATABASE_URL` and run:
+Or configure `.env.test` with the same `DATABASE_URL` and run:
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres
 npx vitest
 ```
 
@@ -190,7 +190,7 @@ Notes:
 - Host `postgres` is correct inside the docker-compose network.
 - The harness will:
   - Connect via `postgres` host.
-  - Drop/create `hyperpage-testing`.
+  - Drop/create `hyperpage-test`.
   - Apply `000_init_pg_schema` (via drizzle migrator and/or registry).
   - Seed fixtures.
 
@@ -202,7 +202,7 @@ If using a local Postgres instance:
 2. Set:
 
    ```env
-   DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-testing
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-test
    ```
 
 3. Run:
@@ -213,7 +213,7 @@ If using a local Postgres instance:
 
 Requirements:
 
-- The user in `DATABASE_URL` must be allowed to create/drop `hyperpage-testing`.
+- The user in `DATABASE_URL` must be allowed to create/drop `hyperpage-test`.
 - The harness behavior (drop/create/migrate/seed) is the same.
 
 ---

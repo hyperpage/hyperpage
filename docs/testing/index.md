@@ -22,56 +22,56 @@ All instructions assume:
 
 Use the provided testing configuration:
 
-- `.env.testing`
+- `.env.test`
   - Defines `DATABASE_URL` that points at the dedicated testing Postgres instance
   - Provides any non-sensitive test configuration
-- `vitest.global-setup.ts` automatically loads `.env.testing` for Vitest runs, so maintaining that file is usually enough for local developers. Override vars in your shell only when you intentionally point at a different database.
-- `.env.testing` is used by:
+- `vitest.global-setup.ts` automatically loads `.env.test` for Vitest runs, so maintaining that file is usually enough for local developers. Override vars in your shell only when you intentionally point at a different database.
+- `.env.test` is used by:
   - `vitest.setup.ts` to derive connections and manage the test database
-  - `docker-compose.testing.yml` as the environment for the testing stack
+  - `docker-compose.test.yml` as the environment for the testing stack
 
-Values in `.env.testing` must be treated as examples/placeholders in documentation. Do not rely on or commit real credentials.
+Values in `.env.test` must be treated as examples/placeholders in documentation. Do not rely on or commit real credentials.
 
 Recommended values for the docker-based stack:
 
 ```env
-# .env.testing
-DATABASE_URL=postgresql://postgres:password@postgres:5432/hyperpage-testing
+# .env.test
+DATABASE_URL=postgresql://postgres:password@postgres:5432/hyperpage-test
 ```
 
 When running against a locally installed Postgres (no docker-compose), use:
 
 ```env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-testing
+DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-test
 ```
 
 ### 2. Docker testing stack
 
 Use the testing compose file (layered on the base compose) to bring up a self-contained Postgres for tests:
 
-- `docker-compose.yml` + `docker-compose.testing.yml`
-  - Runs the testing Postgres service (e.g. `hyperpage-testing-postgres`)
-  - Ensures `DATABASE_URL` (from `.env.testing`) can reach Postgres using host `postgres` inside the compose network
+- `docker-compose.yml` + `docker-compose.test.yml`
+  - Runs the testing Postgres service (e.g. `hyperpage-test-postgres`)
+  - Ensures `DATABASE_URL` (from `.env.test`) can reach Postgres using host `postgres` inside the compose network
 
 Examples from repo root:
 
 - Start Postgres for tests:
 
   ```bash
-  docker-compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres
+  docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres
   ```
 
 - Stop stack:
 
   ```bash
-  docker-compose -f docker-compose.yml -f docker-compose.testing.yml down -v
+  docker-compose -f docker-compose.yml -f docker-compose.test.yml down -v
   ```
 
 If you prefer a locally running Postgres instead of docker:
 
 - Ensure the local instance is running
 - Ensure `DATABASE_URL` uses `localhost` and a database/user with permission to:
-  - Create/drop the `hyperpage-testing` database
+  - Create/drop the `hyperpage-test` database
   - Run migrations
 
 ---
@@ -260,7 +260,7 @@ Behavior & rationale:
 
 - These suites require real OAuth client IDs/secrets plus provider tokens.
 - They are therefore quarantined behind `E2E_OAUTH=1` and will remain skipped in default CI/local runs.
-- Add the flag (and populate `.env.testing` with valid provider credentials) only when validating OAuth flows intentionally.
+- Add the flag (and populate `.env.test` with valid provider credentials) only when validating OAuth flows intentionally.
 
 ### 2. Tool integration suites (external services)
 
@@ -319,11 +319,11 @@ From the project root:
 ### Bootstrap Postgres & Redis
 
 ```bash
-cp .env.testing.example .env.testing   # first time only
-npm run db:test:up                     # docker-compose.yml + docker-compose.testing.yml
+cp .env.test.example .env.test   # first time only
+npm run db:test:up                     # docker-compose.yml + docker-compose.test.yml
 ```
 
-`.env.testing` exports `DATABASE_URL`, so Vitest can drop/recreate `hyperpage-testing`. When you are done, run `npm run db:test:down`.
+`.env.test` exports `DATABASE_URL`, so Vitest can drop/recreate `hyperpage-test`. When you are done, run `npm run db:test:down`.
 
 ### Fast feedback (unit + core integration)
 
@@ -375,7 +375,7 @@ npm run test:e2e:headed  # Same, but headed browsers
 npm run test:e2e:docker  # Dockerized Next.js + Playwright profile with automatic teardown
 ```
 
-All Playwright scripts inject `E2E_TESTS=1`. Provide provider tokens via `.env.testing` when running OAuth-heavy specs. When running against an already started dev/prod server, set `BASE_URL` (for example `BASE_URL=http://127.0.0.1:3000`) and start `npm run dev -- --hostname 127.0.0.1` before executing the tests so Playwright hits a reachable endpoint.
+All Playwright scripts inject `E2E_TESTS=1`. Provide provider tokens via `.env.test` when running OAuth-heavy specs. When running against an already started dev/prod server, set `BASE_URL` (for example `BASE_URL=http://127.0.0.1:3000`) and start `npm run dev -- --hostname 127.0.0.1` before executing the tests so Playwright hits a reachable endpoint.
 
 Intended only for migration/forensics, not normal CI.
 

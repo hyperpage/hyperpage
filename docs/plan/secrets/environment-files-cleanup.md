@@ -1,5 +1,7 @@
 # Environment Files Analysis - Phase 1 Cleanup
 
+> **Historical context (Jan 2025):** References to `.env.docker*` below reflect the Phase 1 plan. Those files have since been retired in favor of `.env.dev`, `.env.test`, `.env.production`, etc. Refer to `docs/config-management.md` for the active env file strategy.
+
 ## 📋 Summary: File Relevance After Phase 1
 
 Your question was **spot-on**! After implementing the new secrets management system, some existing environment files became redundant. Here's the analysis and actions taken:

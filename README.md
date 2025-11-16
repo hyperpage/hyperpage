@@ -147,21 +147,43 @@ JIRA_OAUTH_CLIENT_SECRET=jira_client_secret_here
 
 For production deployments, use the provided Dockerfile and Docker Compose configuration to run Hyperpage with PostgreSQL and Redis.
 
+### Staging / Production Compose Overlays
+
+To run a staging-like stack locally:
+
+```bash
+cp .env.sample .env.staging
+# fill in staging secrets/tokens
+docker compose -f docker-compose.yml -f docker-compose.staging.yml --env-file .env.staging up -d
+```
+
+For a production-like stack (on-prem or self-hosted):
+
+```bash
+cp .env.sample .env.production
+# fill in production secrets/tokens (or mount from secret manager)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+```
+
+Both overlays reuse the base services and simply wire different env files/container names. Run `docker compose ... down` when finished.
+
 ## Testing
 
 Hyperpage includes comprehensive automated testing to ensure stability across OAuth integrations, tool integrations, and cross-tool coordination.
 
 **Quick start**
 
-1. Copy `.env.testing.example` to `.env.testing` and adjust any secrets/tokens.
+1. Copy `.env.test.example` to `.env.test` and adjust any secrets/tokens.
 2. Boot the canonical Postgres/Redis stack once per session:
 
    ```bash
    npm run db:test:up
    ```
 
-3. Export `DATABASE_URL` (or rely on `.env.testing`) so Vitest can drop/recreate the test database.
-   - Vitest now loads `.env.testing` automatically via `vitest.global-setup.ts`, so keeping that file up to date is usually enough. Override variables in your shell only when you need a different Postgres instance.
+3. Ensure `DATABASE_URL` points at the running Postgres instance (see `.env.test`).
+   - On the host, use `postgresql://...@localhost:5432/hyperpage-test`.
+   - If you run tests **inside** the Compose network, use `postgres` as the host.
+   - Vitest loads `.env.test` automatically via `vitest.global-setup.ts`, so keeping that file up to date is usually enough. Override variables in your shell only when you need a different Postgres instance.
 
 **Available commands**
 
@@ -183,7 +205,7 @@ npm run test:e2e:headed    # Same as above but headed browser sessions
 npm run test:e2e:docker    # Dockerized Next.js + Playwright profile with automatic teardown
 
 # Database helpers
-npm run db:test:up         # Start Postgres + Redis (docker-compose.testing.yml)
+npm run db:test:up         # Start Postgres + Redis (docker-compose.test.yml)
 npm run db:test:down       # Stop stack and remove volumes (fresh state)
 npm run db:test:reset      # Hard reset: down -v, volume prune, up
 ```
@@ -196,8 +218,8 @@ npm run db:test:reset      # Hard reset: down -v, volume prune, up
 - **Integration suites**: Tests under `__tests__/integration/**` and `__tests__/unit/lib/**` talk to the Postgres harness. Ensure `npm run db:test:up` (or equivalent) is active.
 - **Tool integrations**: `npm run test:integration:tools` expects a running app server (e.g., `npm run dev -- --hostname 127.0.0.1`) reachable at `HYPERPAGE_TEST_BASE_URL` plus provider tokens (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `JIRA_API_TOKEN`). Without both, the suites remain skipped.
 - **Optional suites**: Performance and Grafana (plus any tool-integration suites) are opt-in behind explicit env flags (`PERFORMANCE_TESTS`, `GRAFANA_TESTS`, `E2E_TESTS`). They will report as skipped unless the flags are set.
-- **OAuth E2E gating**: Provider-specific Playwright specs stay quarantined unless `E2E_OAUTH=1` is set. They require valid OAuth client IDs/secrets plus provider tokens set in `.env.testing`.
-- **E2E & OAuth**: `npm run test:e2e*` executes Playwright with `E2E_TESTS=1`. Supply provider tokens (GitHub/GitLab/Jira) via `.env.testing` when exercising the OAuth-heavy specs.
+- **OAuth E2E gating**: Provider-specific Playwright specs stay quarantined unless `E2E_OAUTH=1` is set. They require valid OAuth client IDs/secrets plus provider tokens set in `.env.test`.
+- **E2E & OAuth**: `npm run test:e2e*` executes Playwright with `E2E_TESTS=1`. Supply provider tokens (GitHub/GitLab/Jira) via `.env.test` when exercising the OAuth-heavy specs.
 - **E2E dev server**: `npm run test:e2e` expects a running dev or prod server that matches `BASE_URL`. When running locally, start `npm run dev -- --hostname 127.0.0.1` (or `npm run build && npm run start`) and set `BASE_URL=http://127.0.0.1:3000` before launching Playwright.
 - **CI/CD**: `.github/workflows/ci-cd.yml` consumes the same npm scripts so local developers and CI run identical commands once the stack is configured.
 

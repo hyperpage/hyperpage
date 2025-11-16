@@ -48,24 +48,37 @@ For organizations requiring self-hosted solutions:
 
 #### Docker Deployment
 
-```dockerfile
-FROM node:18-alpine
+Hyperpage ships with a hardened multi-stage Dockerfile (`Dockerfile`) that:
 
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
+- Uses `node:22-alpine` for both build/runtime stages.
+- Builds the Next.js app in the `builder` stage, prunes dev deps, and copies only the build artifacts into the runtime stage.
+- Installs `dumb-init` and runs the app as the non-root `hyperpage` user.
 
-COPY . .
-RUN npm run build
-
-EXPOSE 3000
-CMD ["npm", "start"]
-```
+To build and run:
 
 ```bash
-# Build and run
+# Build image from the provided Dockerfile (multi-stage)
 docker build -t hyperpage .
-docker run -p 3000:3000 -e NODE_ENV=production hyperpage
+
+# Run with production env (expects CONFIG_ENV_FILE / NEXT_PUBLIC_ENV_FILE or explicit env vars)
+docker run \
+  -p 3000:3000 \
+  -e NODE_ENV=production \
+  -e CONFIG_ENV_FILE=.env.production \
+  --env-file .env.production \
+  hyperpage
+```
+
+Or use Docker Compose (staging/prod overlays) to run app + Postgres/Redis:
+
+```bash
+# Start app + dependencies using staging or prod overlay
+docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+# or
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Provide the corresponding env file (e.g., .env.staging, .env.production):
+docker compose -f docker-compose.yml -f docker-compose.staging.yml --env-file .env.staging up -d
 ```
 
 #### Manual Server Setup
@@ -81,6 +94,14 @@ pm2 start npm --name "hyperpage" -- start
 pm2 save
 pm2 startup
 ```
+
+### Secrets & Configuration Injection
+
+- **Compose overlays** load their configuration from `.env.staging` / `.env.production` (specified via `--env-file`). Keep those files outside version control and source them from your secret manager when running in CI/CD.
+- **Kubernetes deployments** (see GitHub workflows) expect two resources per namespace:
+  - `hyperpage-config` ConfigMap for non-sensitive defaults (e.g., `NODE_ENV`, logging toggles, cache settings).
+  - `hyperpage-secrets` Secret for sensitive values (e.g., `DATABASE_URL`, `NEXTAUTH_SECRET`, provider tokens).
+- Regenerate these manifests whenever you add new env vars and keep the source of truth in `.env.production` so on-prem + Kubernetes stay aligned.
 
 ## CI/CD Pipeline
 

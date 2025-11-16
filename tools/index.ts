@@ -14,11 +14,38 @@ import "./code-reviews";
 import "./ci-cd";
 import "./ticketing";
 
+if (typeof window === "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require("@/lib/config/load-env");
+}
+
+function toEnvFlagName(tool: Tool, registryKey: string): string {
+  const source = tool.slug || registryKey;
+  return `ENABLE_${source
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .replace(/_+/g, "_")
+    .toUpperCase()}`;
+}
+
+function syncToolEnablementFromEnv() {
+  Object.entries(toolRegistry).forEach(([key, tool]) => {
+    if (!tool) {
+      return;
+    }
+
+    const flagName = toEnvFlagName(tool, key);
+    if (process.env[flagName] !== undefined) {
+      tool.enabled = process.env[flagName] === "true";
+    }
+  });
+}
+
 // Helper function to discover available tool APIs at runtime
 // This provides a registry-based approach without dynamic filesystem access
 
 // Helper function to get enabled tools
 export const getEnabledTools = (): Tool[] => {
+  syncToolEnablementFromEnv();
   return Object.values(toolRegistry).filter(
     (tool): tool is Tool => tool?.enabled === true,
   );
@@ -26,6 +53,7 @@ export const getEnabledTools = (): Tool[] => {
 
 // Helper function to get all tools (enabled or not)
 export const getAllTools = (): Tool[] => {
+  syncToolEnablementFromEnv();
   return Object.values(toolRegistry).filter(
     (tool): tool is Tool => tool !== undefined,
   );
@@ -77,6 +105,7 @@ const getIconComponent = (name: string): ReactNode => {
 // Helper function to get tool integrations for UI display
 // Returns tools with their integration status for sidebar/components
 export const getToolIntegrations = (): ToolIntegration[] => {
+  syncToolEnablementFromEnv();
   return getEnabledTools().map((tool) => {
     // Use the validation system to determine status
     const healthCheck = validateToolConfig(tool);

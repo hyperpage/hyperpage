@@ -1,5 +1,7 @@
 # Phase 1 Completion: Secure Local Development
 
+> **Historical context (Jan 2025):** The `.env.docker` / `.env.docker.sample` workflow described below has been retired. Modern setups rely on `.env.sample` → `.env.dev` plus environment-specific templates (`.env.test.example`, `.env.production`). Keep this document for reference only; follow `docs/config-management.md` for current guidance.
+
 ## 🎉 Phase 1 Successfully Completed
 
 The Hyperpage project now has a comprehensive secrets management system for local development, significantly improving security and developer experience.

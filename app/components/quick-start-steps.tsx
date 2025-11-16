@@ -2,6 +2,9 @@ import React from "react";
 import { AlertCircle } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getEnvFileName } from "@/lib/config/env-file";
+
+const envConfigFileName = getEnvFileName();
 
 export interface QuickStartStepConfig {
   title: string;
@@ -21,11 +24,12 @@ export const QUICK_START_STEPS: QuickStartStepConfig[] = [
   },
   {
     title: "Configure environment",
-    commands: ["cp .env.sample .env.dev"],
+    commands: [`cp .env.sample ${envConfigFileName}`],
     description: (
       <p className="text-sm text-gray-600 mt-2">
-        Edit <code className="bg-gray-100 px-1 rounded">.env.dev</code> to
-        enable your first tool (GitHub recommended)
+        Edit{" "}
+        <code className="bg-gray-100 px-1 rounded">{envConfigFileName}</code>{" "}
+        to enable your first tool (GitHub recommended)
       </p>
     ),
   },
@@ -49,10 +53,9 @@ export const QUICK_START_STEPS: QuickStartStepConfig[] = [
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Make sure to configure at least one tool in your{" "}
-          <code>.env.dev</code> file first.
+          <code>{envConfigFileName}</code> file first.
         </AlertDescription>
       </Alert>
     ),
   },
 ];
-

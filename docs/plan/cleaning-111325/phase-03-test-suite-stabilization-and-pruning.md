@@ -111,7 +111,7 @@ Current ownership map and gaps:
 - **Rate limiting & monitoring**
   - Code: `lib/rate-limit-monitor`, `app/api/rate-limit/**`, `grafana/**`, monitoring docs.
   - Tests: `__tests__/unit/lib/rate-limit-comprehensive.test.ts`, `__tests__/unit/api/bottlenecks/**`, `__tests__/unit/api/metrics/metrics.test.ts`, `__tests__/performance/rate-limit/rate-limiting-performance.test.ts`, Playwright `rate-limit-handling.spec.ts`, Grafana suite.
-  - Issues: Some suites rely on mocked `defaultCache` rather than real Redis, while docker-compose.testing.yml spins Redis but no tests use it. Need an owner to either wire Redis into integration tests or explicitly scope them to “logic only”.
+  - Issues: Some suites rely on mocked `defaultCache` rather than real Redis, while docker-compose.test.yml spins Redis but no tests use it. Need an owner to either wire Redis into integration tests or explicitly scope them to “logic only”.
 
 - **Workflows / UI flows**
   - Code: `app/(pages)`, `app/api/workflows?` (N/A), `components/**`.
@@ -200,13 +200,13 @@ Ensure:
 Findings from `vitest.config.ts` / `vitest.setup.ts`:
 
 - Vitest currently runs in the JSDOM environment for compatibility; revisit multi-project Node vs JSDOM splitting after the SQLite cleanup if performance becomes a concern.
-- Introduced a dedicated `vitest.global-setup.ts` to automatically load `.env.testing` before any suite runs, removing a common source of local misconfiguration.
+- Introduced a dedicated `vitest.global-setup.ts` to automatically load `.env.test` before any suite runs, removing a common source of local misconfiguration.
 - `vitest.setup.ts` now waits for the recreated Postgres database to accept connections and bumps the pool connection timeout so migrations no longer race the server startup. Tests only drop/create the whole DB when `RESET_TEST_DB=1`; otherwise the harness reuses the existing schema and relies on deterministic truncation/seed logic.
 - `exclude` only omits `__tests__/e2e/**`; everything else, including optional performance/integration suites, is discovered every time. They guard themselves with env checks, but Vitest still spends time collecting them. Once taxonomy is codified, adjust `include` or `testMatch` accordingly (e.g., `test:unit` only matches `__tests__/unit/**`).
 - `typecheck` runs `tsc` across every test file on each `vitest run` because `typecheck.enabled=true`. This more than doubles runtime and duplicates the dedicated `npm run type-check`. Decide whether to disable this in favor of the explicit script or scope it to CI-only.
 - Update (Feb 2025): `typecheck.enabled` now returns `true` only on CI or when developers export `VITEST_TYPECHECK=1`. Local `vitest run` executions no longer double-run the TypeScript compiler by default.
-- `vitest.setup.ts` drops and recreates the Postgres database unconditionally whenever Vitest boots. Without `DATABASE_URL` set, it throws immediately. Documented instructions exist (docs/testing/index.md), but no `.env.testing` sample ships in the repo and CI sets `DATABASE_URL=file:./data/hyperpage.db`, which is incompatible. We need:
-  - A committed `.env.testing.example` (or instructions in docs) plus automation (`npm run db:test:up`) that starts `docker-compose.testing.yml`.
+- `vitest.setup.ts` drops and recreates the Postgres database unconditionally whenever Vitest boots. Without `DATABASE_URL` set, it throws immediately. Documented instructions exist (docs/testing/index.md), but no `.env.test` sample ships in the repo and CI sets `DATABASE_URL=file:./data/hyperpage.db`, which is incompatible. We need:
+  - A committed `.env.test.example` (or instructions in docs) plus automation (`npm run db:test:up`) that starts `docker-compose.test.yml`.
   - Adjustments to CI to run a Postgres service, export `DATABASE_URL`, and avoid `file:` URLs.
 - Coverage thresholds (80%) apply to every suite despite many being skipped. Decide whether to keep coverage for unit-only runs or add a `vitest.config.unit.ts` aimed at coverage while integration/perf/e2e remain opt-in.
 
@@ -266,10 +266,10 @@ In sequence (actual commands executed later during implementation):
 
 Prerequisites before any of the above will succeed in this repo:
 
-- Export `DATABASE_URL` pointing at a disposable Postgres database. The Vitest harness will drop/create it during startup. Use `docker-compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres redis` and set `DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-testing` (or whatever `.env.testing` uses). SQLite URLs (`file:./data/hyperpage.db`) will fail immediately.
-- If Redis is required (some rate-limit tests reference `defaultCache`), either run the Redis service from `docker-compose.testing.yml` or flip those suites to pure in-memory mocks. Document whichever path we pick.
-- For integration suites that `fetch` against the running Next.js server, start `npm run dev -- --port 3000` (or use the dockerized `hyperpage-testing-app` service) **before** launching Vitest. Otherwise, `isServerAvailable()` returns false and entire describe blocks skip silently.
-- For Playwright, ensure `BASE_URL` resolves to the running app (dev server or docker). If we keep the `webServer` option, confirm `npm run dev` honors the same `.env.testing`.
+- Export `DATABASE_URL` pointing at a disposable Postgres database. The Vitest harness will drop/create it during startup. Use `docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres redis` and set `DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-test` (or whatever `.env.test` uses). SQLite URLs (`file:./data/hyperpage.db`) will fail immediately.
+- If Redis is required (some rate-limit tests reference `defaultCache`), either run the Redis service from `docker-compose.test.yml` or flip those suites to pure in-memory mocks. Document whichever path we pick.
+- For integration suites that `fetch` against the running Next.js server, start `npm run dev -- --port 3000` (or use the dockerized `hyperpage-test-app` service) **before** launching Vitest. Otherwise, `isServerAvailable()` returns false and entire describe blocks skip silently.
+- For Playwright, ensure `BASE_URL` resolves to the running app (dev server or docker). If we keep the `webServer` option, confirm `npm run dev` honors the same `.env.test`.
 - Collect artifacts (coverage, test-results, Playwright report) somewhere under `./logs/tests/<date>` so we can diff between runs.
 
 ### 3.2 Classify Failures
@@ -315,7 +315,7 @@ Targets:
 - `__tests__/integration/database/**`
 - `__tests__/unit/lib/database/**`
 - `__tests__/performance/database.test.ts`
-- `init-hyperpage.sql/**`
+- (legacy) `init-hyperpage.sql/**` – directory removed; keep note for historical context only.
 - `lib/database/migrations/**`
 
 Checklist:
@@ -334,9 +334,9 @@ Checklist:
 
 Repository-specific findings:
 
-- `vitest.setup.ts` already provisions/drops Postgres via drizzle, but there is no `.env.testing` checked in, and `docker-compose.testing.yml` expects that file. Action: add `.env.testing.example` plus docs (or reuse `.env.sample` with a `DATABASE_URL_TEST` entry) so people can create the required file deterministically.
+- `vitest.setup.ts` already provisions/drops Postgres via drizzle, but there is no `.env.test` checked in, and `docker-compose.test.yml` expects that file. Action: add `.env.test.example` plus docs (or reuse `.env.sample` with a `DATABASE_URL_TEST` entry) so people can create the required file deterministically.
 - `.github/workflows/ci-cd.yml` sets `DATABASE_URL=file:./data/hyperpage.db`, which will never work with the Postgres-only harness. Update CI to start a Postgres service (container or `services.postgres`) and feed a real URL.
-- `init-hyperpage.sql` is an empty directory even though README and scripts refer to it as a seed file. Decide whether to populate it with the canonical schema or delete references to it.
+- (Completed Jan 2025) `init-hyperpage.sql` directory was removed. Ensure no future docs reintroduce references unless the file returns.
 - All SQLite-focused tests (`*.sqlite.test.ts`) have been removed; the repo is PostgreSQL-only.
 - Verify whether `lib/database/migrations/index.ts` exposes only `000_init_pg_schema`. If we intend to add more migrations, make sure they are exported and that the fallback migrator in `vitest.setup.ts` is up-to-date.
 
@@ -366,7 +366,7 @@ Current situation:
   - Or refactor them into pure unit tests that mock `fetch`.
 - Update (Feb 2025): The cross-tool aggregation suite now follows the same guard as the provider-specific ones (`describe.skip` unless `E2E_TESTS=1` plus GitHub/GitLab/Jira tokens). This prevents `npm run test:integration` from failing outright when the HTTP stack or credentials are missing.
 - Guard conditions today: `process.env.E2E_TESTS === "1" && token env var`. Without both, the describe block never runs. Document which env vars unlock each provider (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `JIRA_API_TOKEN`). README currently tells people to run `npm test -- --run integration/tools/github` instead of setting env flags.
-- Verify that `MOCK_TOOL_CONFIGS` and `TEST_ENV_VARS` do not hardcode secrets. They currently contain sample values but no `.env.testing` references. Consider generating these values at runtime or loading them from `.env.testing` instead of repeating placeholders.
+- Verify that `MOCK_TOOL_CONFIGS` and `TEST_ENV_VARS` do not hardcode secrets. They currently contain sample values but no `.env.test` references. Consider generating these values at runtime or loading them from `.env.test` instead of repeating placeholders.
 - Some suites still talk about “real GitHub data” even though they use mocks; update the descriptions or convert them into true integration tests backed by http mocks (msw, polly) plus fixture responses checked into `__tests__/mocks`.
 - **Next actions:**
   1. Add a scripted launcher (e.g., `npm run test:integration:tools`) that spins up the Next server (or docker profile) plus `E2E_TESTS=1` before invoking Vitest so developers can reliably exercise these suites.
@@ -524,7 +524,7 @@ To move from analysis to action, track the following discrete tasks (open ticket
    - Add `test:unit`, `test:integration`, `test:db`, `test:perf`, `test:e2e`, `test:e2e:docker` scripts matching the taxonomy.
    - Update `.github/workflows/ci-cd.yml` to call those scripts, start Postgres/Redis services, and pass `DATABASE_URL` + `BASE_URL`.
 2. **Environment assets**
-   - Commit `.env.testing.example` (or equivalent) covering `DATABASE_URL`, Redis, tool flags, and document `docker-compose.testing.yml` usage.
+   - Commit `.env.test.example` (or equivalent) covering `DATABASE_URL`, Redis, tool flags, and document `docker-compose.test.yml` usage.
    - Provide helper commands (`npm run db:test:up`, `npm run db:test:reset`) that wrap the compose stack + migrations.
 3. **Vitest split**
    - Introduce separate configs or `projects` for jsdom “unit” vs node “db/integration” suites; disable global `typecheck` unless running in CI.

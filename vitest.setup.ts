@@ -6,7 +6,7 @@ import { loadEnvConfig } from "@next/env";
 
 import * as pgSchema from "./lib/database/pg-schema";
 
-// Load environment variables from .env.testing for test environment
+// Load environment variables from .env.test for test environment
 loadEnvConfig(process.cwd(), false, console, false);
 
 /**
@@ -16,8 +16,8 @@ loadEnvConfig(process.cwd(), false, console, false);
  *
  * Expected usage:
  * - When running tests locally or in CI, ensure DATABASE_URL is set:
- *   - For the Docker-based testing stack, load `.env.testing` and
- *     `docker-compose.testing.yml` so DATABASE_URL points at the test Postgres.
+ *   - For the Docker-based testing stack, load `.env.test` and
+ *     `docker-compose.test.yml` so DATABASE_URL points at the test Postgres.
  *
  * Behavior:
  * - If DATABASE_URL is not set, setup fails fast with a clear message.
@@ -26,7 +26,7 @@ loadEnvConfig(process.cwd(), false, console, false);
  */
 const SKIP_DB_SETUP =
   process.env.SKIP_DB_SETUP === "1" ||
-  (process.env.NODE_ENV as string) === "testing";
+  (process.env.NODE_ENV as string) === "test";
 const RESET_TEST_DB = process.env.RESET_TEST_DB === "1";
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -37,9 +37,9 @@ if (!SKIP_DB_SETUP && !DATABASE_URL) {
       "Tests require a PostgreSQL database URL to be configured.",
       "",
       "For local/testing environments:",
-      "- Create and populate .env.testing",
-      "- Use docker-compose.testing.yml to start the testing Postgres service",
-      "- Ensure DATABASE_URL in .env.testing points at the testing Postgres database",
+      "- Create and populate .env.test",
+      "- Use docker-compose.test.yml to start the testing Postgres service",
+      "- Ensure DATABASE_URL in .env.test points at the testing Postgres database",
     ].join("\n"),
   );
 }
@@ -92,13 +92,13 @@ export class TestDatabaseManager {
           "  - CREATE/DROP the database specified in DATABASE_URL",
           "",
           "For the Docker-based testing stack:",
-          "  - Run: docker compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres",
-          "  - Ensure .env.testing defines:",
-          "      DATABASE_URL=postgresql://postgres:postgres@postgres:5432/hyperpage-testing",
+          "  - Run: docker compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres",
+          "  - Ensure .env.test defines:",
+          "      DATABASE_URL=postgresql://postgres:postgres@postgres:5432/hyperpage-test",
           "",
-          "For a locally running Postgres without docker-compose.testing.yml:",
+          "For a locally running Postgres without docker-compose.test.yml:",
           "  - Ensure DATABASE_URL points at your local Postgres instance, e.g.:",
-          "      postgresql://postgres:postgres@localhost:5432/hyperpage-testing",
+          "      postgresql://postgres:postgres@localhost:5432/hyperpage-test",
           "",
           `Current DATABASE_URL: ${DATABASE_URL ?? "(not set)"}`,
           `Underlying error: ${message}`,

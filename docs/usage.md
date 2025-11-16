@@ -120,7 +120,7 @@ Located in the top bar, provides instant search across all tool data:
 
 ### Environment-Based Tool Management
 
-- **Enable/Disable Tools**: Set `ENABLE_TOOL=true/false` in `.env.dev`
+- **Enable/Disable Tools**: Set `ENABLE_TOOL=true/false` in your env file (e.g., `.env.dev`, `.env.production`)
 - **Restart Required**: Changes take effect after server restart
 - **Automatic Discovery**: New tools appear in UI without code changes
 
@@ -167,7 +167,7 @@ GITLAB_WEB_URL=https://gitlab.com
 
 ### Tools Not Appearing
 
-1. Check `ENABLE_TOOL=true` in `.env.dev`
+1. Check `ENABLE_TOOL=true` in your env file
 2. Restart development server: `npm run dev`
 3. Verify API credentials are correct
 4. Check browser console for authentication errors

@@ -6,7 +6,7 @@
 set -euo pipefail
 
 COMPOSE_FILE="__tests__/e2e/docker-compose.e2e.yml"
-COMPOSE_CMD=(docker-compose -f "$COMPOSE_FILE" --profile e2e)
+COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE" --profile e2e)
 
 cleanup() {
   "${COMPOSE_CMD[@]}" down -v >/dev/null 2>&1 || true

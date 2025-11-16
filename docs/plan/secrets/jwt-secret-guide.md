@@ -1,5 +1,7 @@
 # JWT_SECRET Security Guide
 
+> **Historical context (Jan 2025):** This guide references the retired `.env.docker` workflow. JWT secrets now live alongside other application secrets in `.env.dev`, `.env.test`, `.env.production`, etc. Keep these instructions for archival reference; follow `docs/config-management.md` for current guidance.
+
 ## 🔐 What is JWT_SECRET?
 
 **JWT_SECRET** is a cryptographic key used to sign and verify JSON Web Tokens (JWTs) for authentication and authorization in the Hyperpage application.

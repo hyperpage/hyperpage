@@ -23,20 +23,28 @@ This guide covers the detailed installation process, system requirements, and co
    npm install
    ```
 
-3. **Copy environment template:**
+3. **Copy environment template (pick one):**
 
    ```bash
+   # Local development
    cp .env.sample .env.dev
+
+   # Testing harness
+   cp .env.test.example .env.test
+
+   # Staging / production templates
+   cp .env.sample .env.staging
+   cp .env.sample .env.production
    ```
 
-4. **Run database migrations:**
+4. **Run database migrations (requires `DATABASE_URL` or .env config):**
    ```bash
    npm run db:migrate
    ```
 
 ## Configuration
 
-Edit `.env.dev` to configure your tool integrations. The system uses environment variables to enable/disable tools and provide authentication.
+Edit `.env.dev` (or the appropriate env file) to configure your tool integrations. The system uses environment variables to enable/disable tools and provide authentication.
 
 ### Core Configuration
 

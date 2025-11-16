@@ -6,14 +6,16 @@ import { NextResponse } from "next/server";
 import { isOAuthConfigured } from "@/lib/oauth-config";
 import logger from "@/lib/logger";
 import { createErrorResponse } from "@/lib/api/responses";
+import { getEnvFileName } from "@/lib/config/env-file";
 
 /**
- * Load environment variables from .env.dev file
+ * Load environment variables from the active env file
  * This ensures OAuth credentials are available for API routes
  */
 function loadEnvFile() {
   try {
-    const envPath = path.join(process.cwd(), ".env.dev");
+    const envFileName = getEnvFileName({ scope: "server" });
+    const envPath = path.join(process.cwd(), envFileName);
     if (fs.existsSync(envPath)) {
       const envContent = fs.readFileSync(envPath, "utf8");
       envContent.split("\n").forEach((line) => {
@@ -29,7 +31,7 @@ function loadEnvFile() {
       });
     }
   } catch (error) {
-    logger.warn("Could not load .env.dev file", { error });
+    logger.warn("Could not load env file for OAuth config", { error });
   }
 }
 
@@ -39,7 +41,7 @@ function loadEnvFile() {
  */
 export async function GET() {
   try {
-    // Load environment variables from .env.dev
+    // Load environment variables from env file
     loadEnvFile();
 
     const tools = ["github", "gitlab", "jira"];

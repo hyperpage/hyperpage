@@ -2,6 +2,11 @@
 # Stage 1: Build the Next.js application
 FROM node:22-alpine AS builder
 
+ARG NEXT_PUBLIC_ENV_FILE=".env.e2e"
+ARG CONFIG_ENV_FILE=".env.e2e"
+ENV NEXT_PUBLIC_ENV_FILE=${NEXT_PUBLIC_ENV_FILE}
+ENV CONFIG_ENV_FILE=${CONFIG_ENV_FILE}
+
 WORKDIR /app
 
 # Copy package files and install dependencies
@@ -15,11 +20,21 @@ RUN npm run build
 # Stage 2: Playwright test runner using official Playwright image
 FROM mcr.microsoft.com/playwright:v1.56.1 AS playwright
 
+ARG NEXT_PUBLIC_ENV_FILE=".env.e2e"
+ARG CONFIG_ENV_FILE=".env.e2e"
+ENV NEXT_PUBLIC_ENV_FILE=${NEXT_PUBLIC_ENV_FILE}
+ENV CONFIG_ENV_FILE=${CONFIG_ENV_FILE}
+
 WORKDIR /app
 
 # Copy built application from builder stage
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/app ./app
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/components ./components
+COPY --from=builder /app/tools ./tools
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 

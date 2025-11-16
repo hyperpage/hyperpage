@@ -6,11 +6,18 @@ This document outlines the configuration management system for the Hyperpage pla
 
 ### File Structure
 
-The Hyperpage platform uses a tiered environment configuration system:
+Hyperpage uses purpose-specific env files plus runtime overrides:
 
-- **`.env.sample`**: Template file committed to version control with placeholder values
-- **`.env.dev`**: Local development file (ignored by git) with actual credentials
-- **`.env`**: Production environment variables (server-side only)
+- **`.env.sample`** – canonical template (committed) containing every supported variable with placeholders.
+- **`.env.dev`** – developer-local copy of `.env.sample` (gitignored).
+- **`.env.test`** – Vitest/Postgres harness settings (gitignored, created from `.env.test.example`).
+- **`.env.staging`** – optional staging template (mirrors production values with staging URLs/secrets).
+- **`.env.production`** – production template (stored in deployment secrets manager or `.env.production` on the server).
+- **`__tests__/e2e/.env.e2e`** – dockerized Playwright stack template.
+
+Every environment also sets `CONFIG_ENV_FILE` (server) and `NEXT_PUBLIC_ENV_FILE` (client hints) so the runtime knows which file to load. At runtime, environment variables from secret stores or orchestration systems always win over the file contents.
+
+### Database Configuration
 
 ### Database Configuration
 
@@ -74,6 +81,14 @@ GITLAB_TOKEN=your_gitlab_token
 GITLAB_USERNAME=your_username
 GITLAB_WEB_URL=https://gitlab.com
 ```
+
+### Core Auth & Security Variables
+
+Every environment must provide the following (see `.env.sample` for placeholders):
+
+- `SESSION_SECRET`, `JWT_SECRET` – secure random strings for session + token signing.
+- `NEXTAUTH_SECRET`, `NEXTAUTH_URL` – NextAuth cookie signing + callback base URL.
+- `OAUTH_ENCRYPTION_KEY` – used to encrypt stored OAuth tokens at rest.
 
 ## URL Auto-Derivation
 
@@ -257,7 +272,7 @@ CMD ["npm", "start"]
 
 For testing with Docker:
 
-- `docker-compose.testing.yml` is the canonical Postgres-backed test stack.
+- `docker-compose.test.yml` is the canonical Postgres-backed test stack.
 - It should define a Postgres service and an app service wired via `DATABASE_URL`.
 - Local test runs use the same `DATABASE_URL` contract as production.
 

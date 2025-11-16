@@ -1,5 +1,7 @@
 # Local Secrets Management Guide
 
+> **Historical context (Jan 2025):** This document references the deprecated `.env.docker` workflow. Modern environments use `.env.sample` → `.env.dev` (plus `.env.test.example`, `.env.production`, etc.). Keep this guide for archival purposes; see `docs/config-management.md` for the current process.
+
 This guide covers the secure local development setup for Hyperpage, including secrets management best practices and procedures.
 
 ## 🔐 Overview

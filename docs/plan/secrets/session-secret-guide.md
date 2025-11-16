@@ -1,5 +1,7 @@
 # SESSION_SECRET Security Guide
 
+> **Historical context (Jan 2025):** This guide mentions `.env.docker` and other legacy env files. Modern setups store `SESSION_SECRET` in `.env.dev`, `.env.test`, `.env.production`, etc. Use this document for background only; consult `docs/config-management.md` for the current process.
+
 ## 🔐 What is SESSION_SECRET?
 
 **SESSION_SECRET** is a cryptographic key used to encrypt and sign session cookies in the Hyperpage application, providing secure session management for user authentication and state preservation.

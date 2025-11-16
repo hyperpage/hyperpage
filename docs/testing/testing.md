@@ -84,7 +84,7 @@ npm run test:e2e:headed     # Same as above but headed browsers
 npm run test:e2e:docker     # Dockerized Next.js + Playwright stack with automatic teardown
 ```
 
-> ℹ️ OAuth Playwright specs (`__tests__/e2e/oauth/**`) remain quarantined unless you also set `E2E_OAUTH=1` and provide valid provider credentials in `.env.testing`. Without the flag, they are skipped automatically.
+> ℹ️ OAuth Playwright specs (`__tests__/e2e/oauth/**`) remain quarantined unless you also set `E2E_OAUTH=1` and provide valid provider credentials in `.env.test`. Without the flag, they are skipped automatically.
 
 ## Repository-First and Hermetic Testing Patterns
 
