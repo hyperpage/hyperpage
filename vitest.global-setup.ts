@@ -20,6 +20,7 @@ export default function globalSetup() {
       }
     }
   } catch (error) {
-    console.error("[globalSetup] Failed to load .env.test:", error);
+    const message = `[globalSetup] Failed to load .env.test: ${(error as Error).message}\n`;
+    process.stderr.write(message);
   }
 }
