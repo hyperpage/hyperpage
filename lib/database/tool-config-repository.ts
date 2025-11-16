@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 
-import * as pgSchema from "./pg-schema";
-import { getReadWriteDb } from "./connection";
+import * as pgSchema from "@/lib/database/pg-schema";
+import { getReadWriteDb } from "@/lib/database/connection";
 
 /**
  * Normalized tool configuration shape used by higher-level services.

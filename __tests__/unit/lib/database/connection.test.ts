@@ -2,8 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from "vitest";
 
 import { getReadWriteDb } from "@/lib/database/connection";
 import * as pgSchema from "@/lib/database/pg-schema";
-
-import { getTestDatabase } from "../../../../vitest.setup";
+import { getTestDatabase } from "@/vitest.setup";
 
 describe("Database Connection - PostgreSQL Only", () => {
   let testDb: ReturnType<typeof getTestDatabase>;

@@ -1,10 +1,12 @@
+import { join } from "path";
+
 import { beforeAll, afterAll, beforeEach } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { loadEnvConfig } from "@next/env";
 
-import * as pgSchema from "./lib/database/pg-schema";
+import * as pgSchema from "@/lib/database/pg-schema";
 
 // Load environment variables from .env.test for test environment
 loadEnvConfig(process.cwd(), false, console, false);
@@ -64,7 +66,7 @@ export class TestDatabaseManager {
 
   async setup(): Promise<void> {
     try {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       logger.info("🧪 Setting up PostgreSQL test database...");
 
       if (RESET_TEST_DB) {
@@ -80,7 +82,7 @@ export class TestDatabaseManager {
 
       logger.info("✅ PostgreSQL test database setup complete");
     } catch (error) {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       const message = error instanceof Error ? error.message : String(error);
 
       // Provide a concise, environment-tolerant hint instead of only raw driver errors.
@@ -110,7 +112,7 @@ export class TestDatabaseManager {
 
   async cleanup(): Promise<void> {
     try {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       logger.info("🧹 Cleaning up PostgreSQL test database...");
       if (this.pool) {
         await this.pool.end();
@@ -121,7 +123,7 @@ export class TestDatabaseManager {
       await this.clearAllTables();
       logger.info("✅ PostgreSQL test database cleanup complete");
     } catch (error) {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       const errMessage = error instanceof Error ? error.message : String(error);
 
       logger.error(errMessage, "Test DB cleanup failed");
@@ -137,7 +139,7 @@ export class TestDatabaseManager {
     try {
       await tempPool.query(`CREATE DATABASE "${this.dbName}"`);
     } catch (error) {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       const message = error instanceof Error ? error.message : String(error);
 
       logger.warn(message, "Test database already exists");
@@ -202,7 +204,7 @@ export class TestDatabaseManager {
 
       await tempPool.query(`DROP DATABASE IF EXISTS "${this.dbName}"`);
     } catch (error) {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       const message = error instanceof Error ? error.message : String(error);
 
       logger.warn(message, "Test database already exists");
@@ -222,7 +224,7 @@ export class TestDatabaseManager {
     try {
       await dropPool.query(`DROP SCHEMA IF EXISTS "drizzle" CASCADE`);
     } catch (error) {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       const message = error instanceof Error ? error.message : String(error);
       logger.warn(
         message,
@@ -258,7 +260,7 @@ export class TestDatabaseManager {
         await fs.writeFile(journalPath, JSON.stringify(journal, null, 2));
       }
     } catch (error) {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       const errMessage = error instanceof Error ? error.message : String(error);
 
       logger.warn(errMessage, "Migration journal creation issue");
@@ -274,7 +276,7 @@ export class TestDatabaseManager {
     // discover zero migrations (TS files not loadable as JS), which would leave
     // the schema empty. We verify and, if needed, fall back to the registry.
     await migrate(this.db, {
-      migrationsFolder: "./lib/database/migrations",
+      migrationsFolder: join(process.cwd(), "lib/database/migrations"),
     });
 
     const poolForTables = this.getPool();
@@ -291,17 +293,17 @@ export class TestDatabaseManager {
       );
 
       if (check.rowCount === 0) {
-        const { default: logger } = await import("./lib/logger");
+        const { default: logger } = await import("@/lib/logger");
         logger.warn(
           [
             'Drizzle migrate() completed but required table "app_state" is missing.',
-            "This usually means no migration files were loaded from ./lib/database/migrations.",
+            "This usually means no migration files were loaded from lib/database/migrations.",
             "Falling back to MIGRATIONS_REGISTRY to ensure the test schema is applied.",
           ].join("\n"),
         );
 
         const { MIGRATIONS_REGISTRY, getMigrationNames } = await import(
-          "./lib/database/migrations"
+          "@/lib/database/migrations"
         );
 
         for (const name of getMigrationNames()) {
@@ -382,7 +384,7 @@ export class TestDatabaseManager {
         client.release();
       }
     } catch (error) {
-      const { default: logger } = await import("./lib/logger");
+      const { default: logger } = await import("@/lib/logger");
       const message = error instanceof Error ? error.message : String(error);
       logger.error(
         message,
@@ -536,7 +538,7 @@ export class TestDatabaseManager {
         try {
           await this.db.delete(table);
         } catch (error) {
-          const { default: logger } = await import("./lib/logger");
+          const { default: logger } = await import("@/lib/logger");
           const message =
             error instanceof Error ? error.message : String(error);
 

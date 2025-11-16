@@ -1,10 +1,9 @@
 import { eq, lt } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-import logger from "../logger";
-
-import * as pgSchema from "./pg-schema";
-import { getReadWriteDb } from "./connection";
+import logger from "@/lib/logger";
+import * as pgSchema from "@/lib/database/pg-schema";
+import { getReadWriteDb } from "@/lib/database/connection";
 
 /**
  * Normalized session shape used by callers.

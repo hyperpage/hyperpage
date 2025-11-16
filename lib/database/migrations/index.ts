@@ -7,7 +7,7 @@
  * fallback API for tools/tests that expect the legacy registry shape.
  */
 
-import * as initPgSchema from "./000_init_pg_schema";
+import * as initPgSchema from "@/lib/database/migrations/000_init_pg_schema";
 
 export interface Database {
   execute: (query: unknown) => Promise<unknown>;
