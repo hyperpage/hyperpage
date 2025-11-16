@@ -1,0 +1,31 @@
+services:
+  postgres:
+    container_name: hyperpage-test-postgres
+    env_file:
+      - .env.test
+    volumes:
+      - postgres-test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hyperpage-test"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    container_name: hyperpage-test-redis
+    env_file:
+      - .env.test
+    volumes:
+      - redis-test_data:/data
+
+  hyperpage:
+    container_name: hyperpage-test-app
+    env_file:
+      - .env.test
+
+volumes:
+  postgres-test_data:
+    driver: local
+  redis-test_data:
+    driver: local

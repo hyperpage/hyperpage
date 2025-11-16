@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
 import { GET } from "@/app/api/health/route";
 import { toolRegistry } from "@/tools/registry";
 import { defaultCache } from "@/lib/cache/cache-factory";
@@ -27,6 +28,7 @@ describe("GET /api/health", () => {
   const mockRateLimitHandler = vi.fn();
   const mockCheckPostgresConnectivity =
     checkPostgresConnectivity as unknown as ReturnType<typeof vi.fn>;
+  let cacheStatsSpy: ReturnType<typeof vi.spyOn>;
 
   const mockToolGitHub: MockTool = {
     name: "GitHub",
@@ -70,7 +72,7 @@ describe("GET /api/health", () => {
     (toolRegistry as Record<string, MockTool>).gitlab = mockToolGitLab;
 
     // Mock cache stats
-    vi.mocked(defaultCache.getStats).mockResolvedValue({
+    cacheStatsSpy = vi.spyOn(defaultCache, "getStats").mockResolvedValue({
       size: 5,
       hits: 100,
       misses: 50,
@@ -93,6 +95,7 @@ describe("GET /api/health", () => {
 
   afterEach(() => {
     vi.clearAllTimers();
+    cacheStatsSpy?.mockRestore();
     // Clean up mock tools after each test
     delete (toolRegistry as Record<string, MockTool>).github;
     delete (toolRegistry as Record<string, MockTool>).gitlab;

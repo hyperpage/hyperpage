@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
 import { getAllTools } from "@/tools";
 import {
   testToolConnectivity,
@@ -6,12 +7,13 @@ import {
   getCircuitBreakerStatus,
 } from "@/tools/validation";
 import logger from "@/lib/logger";
+import { createErrorResponse } from "@/lib/api/responses";
 
 /**
  * Tool Health API Endpoint
  * Returns configuration validation and connectivity status for all tools
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const detailed = searchParams.get("detailed") === "true";
   const connectivity = searchParams.get("connectivity") === "true";
@@ -81,9 +83,10 @@ export async function GET(request: Request) {
       connectivity,
     });
 
-    return NextResponse.json(
-      { error: "Failed to get tool health status" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      code: "TOOL_HEALTH_ERROR",
+      message: "Failed to get tool health status",
+      status: 500,
+    });
   }
 }

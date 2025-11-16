@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, ReactNode, ErrorInfo } from "react";
+
 import { DefaultErrorFallback } from "@/app/components/DefaultErrorFallback";
 import { logErrorToService, canRetry } from "@/lib/error-boundary-utils";
 

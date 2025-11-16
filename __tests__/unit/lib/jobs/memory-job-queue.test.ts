@@ -8,9 +8,24 @@
  */
 
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+
 import { MemoryJobQueue } from "@/lib/jobs/memory-job-queue";
 import { JobStatus, JobPriority, JobType } from "@/lib/types/jobs";
 import { generateJobId } from "@/lib/jobs/memory-job-queue";
+
+vi.mock("@/lib/database/job-repository", () => {
+  const buildRepo = () => ({
+    insert: vi.fn().mockResolvedValue(undefined),
+    exists: vi.fn().mockResolvedValue(false),
+    loadActiveJobs: vi.fn().mockResolvedValue([]),
+    updateStatus: vi.fn().mockResolvedValue(undefined),
+    cleanupCompletedBefore: vi.fn().mockResolvedValue(0),
+  });
+
+  return {
+    getJobRepository: vi.fn(() => buildRepo()),
+  };
+});
 
 // Mock the database module
 vi.mock("@/lib/database", () => ({

@@ -1,8 +1,15 @@
-import { Tool, ToolData, ToolWidget } from "@/tools/tool-types";
+import {
+  ClientSafeTool,
+  ClientToolWidget,
+  ToolWidget,
+  ToolData,
+} from "@/tools/tool-types";
 import { sortDataByTime } from "@/lib/time-utils";
 
 // Define ToolWidget extended type for components that need toolName
-type ExtendedToolWidget = ToolWidget & { toolName: string };
+type ExtendedToolWidget = (ClientToolWidget & { toolName: string }) & {
+  component?: ToolWidget["component"];
+};
 
 // Search helper function
 export function matchesSearch(item: ToolData, query: string): boolean {
@@ -31,7 +38,7 @@ export function matchesSearch(item: ToolData, query: string): boolean {
 
 // Data processing function for portal overview
 export function processPortalData(
-  enabledTools: Omit<Tool, "handlers">[],
+  enabledTools: ClientSafeTool[],
   searchQuery: string,
   dynamicData: Record<string, Record<string, ToolData[]>>,
 ): {
@@ -40,7 +47,7 @@ export function processPortalData(
 } {
   // Get enabled tools and their widgets with dynamic data and search filtering
   const toolWidgets: ExtendedToolWidget[] = enabledTools
-    .filter((tool) => tool.apis && Object.keys(tool.apis).length > 0)
+    .filter((tool) => Array.isArray(tool.widgets) && tool.widgets.length > 0)
     .flatMap((tool) =>
       tool.widgets.map((widget) => {
         let widgetData = widget.data || [];
@@ -74,10 +81,10 @@ export function processPortalData(
     );
 
   // Calculate total search results
-  const totalSearchResults = toolWidgets.reduce(
-    (total, widget) => total + widget.data.length,
-    0,
-  );
+  const totalSearchResults = toolWidgets.reduce((total, widget) => {
+    const dataLength = widget.data ? widget.data.length : 0;
+    return total + dataLength;
+  }, 0);
 
   return { toolWidgets, totalSearchResults };
 }

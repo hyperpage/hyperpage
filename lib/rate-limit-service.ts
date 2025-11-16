@@ -1,8 +1,4 @@
 import { rateLimitLogger } from "@/lib/logger";
-
-// Server-only rate limit service
-// This module should only be used by API routes and server-side code
-
 import { toolRegistry } from "@/tools/registry";
 import {
   transformGitHubLimits,

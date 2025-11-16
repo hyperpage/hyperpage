@@ -49,10 +49,7 @@ function createFakePostgresDb() {
             const key = value.key;
             rows.set(key, value);
             return {
-              onConflictDoUpdate(opts: {
-                target: unknown;
-                set: Partial<Row>;
-              }) {
+              onConflictDoUpdate(opts: { target: unknown; set: Partial<Row> }) {
                 void opts.target;
                 const existing = rows.get(key) ?? value;
                 rows.set(key, { ...existing, ...opts.set });

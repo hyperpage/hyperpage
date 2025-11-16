@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { bottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
 import {
   DetectedBottleneck,
@@ -7,6 +8,12 @@ import {
 } from "@/lib/monitoring/bottleneck-detector";
 import { BOTTLENECK_PATTERNS } from "@/lib/monitoring/bottleneck-patterns";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
+
+const BOTTLENECK_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
 
 /**
  * GET /api/bottlenecks/[id] - Get detailed information about a specific bottleneck
@@ -18,11 +25,10 @@ export async function GET(
   try {
     const { id } = await context.params;
 
-    // Validate ID
-    if (!id || id.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Bottleneck ID is required" },
-        { status: 400 },
+    if (!BOTTLENECK_ID_REGEX.test(id)) {
+      return validationErrorResponse(
+        "Bottleneck ID is required",
+        "INVALID_BOTTLENECK_ID",
       );
     }
 
@@ -30,10 +36,11 @@ export async function GET(
     const bottleneck = bottleneckDetector.getBottleneck(id);
 
     if (!bottleneck) {
-      return NextResponse.json(
-        { error: "Bottleneck not found" },
-        { status: 404 },
-      );
+      return createErrorResponse({
+        status: 404,
+        code: "BOTTLENECK_NOT_FOUND",
+        message: "Bottleneck not found",
+      });
     }
 
     // Get correlation data for this bottleneck
@@ -75,10 +82,11 @@ export async function GET(
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return NextResponse.json(
-      { error: "Failed to retrieve bottleneck details" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "BOTTLENECK_DETAIL_ERROR",
+      message: "Failed to retrieve bottleneck details",
+    });
   }
 }
 
@@ -90,6 +98,12 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await context.params;
+  if (!BOTTLENECK_ID_REGEX.test(id)) {
+    return validationErrorResponse(
+      "Bottleneck ID is required",
+      "INVALID_BOTTLENECK_ID",
+    );
+  }
 
   try {
     const body = await request.json();
@@ -98,16 +112,16 @@ export async function PATCH(
     const followUpActions: unknown = body.followUpActions;
 
     if (!resolution || !["automatic", "manual"].includes(resolution)) {
-      return NextResponse.json(
-        { error: "Valid resolution type (automatic/manual) is required" },
-        { status: 400 },
+      return validationErrorResponse(
+        "Valid resolution type (automatic/manual) is required",
+        "INVALID_RESOLUTION_TYPE",
       );
     }
 
     if (!actionTaken || typeof actionTaken !== "string") {
-      return NextResponse.json(
-        { error: "Action taken description is required" },
-        { status: 400 },
+      return validationErrorResponse(
+        "Action taken description is required",
+        "INVALID_ACTION_TAKEN",
       );
     }
 
@@ -120,10 +134,11 @@ export async function PATCH(
     });
 
     if (!resolvedBottleneck) {
-      return NextResponse.json(
-        { error: "Bottleneck not found or already resolved" },
-        { status: 404 },
-      );
+      return createErrorResponse({
+        status: 404,
+        code: "BOTTLENECK_NOT_FOUND",
+        message: "Bottleneck not found or already resolved",
+      });
     }
 
     // Log the resolution for auditing
@@ -145,10 +160,11 @@ export async function PATCH(
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
-    return NextResponse.json(
-      { error: "Failed to resolve bottleneck" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "BOTTLENECK_RESOLUTION_ERROR",
+      message: "Failed to resolve bottleneck",
+    });
   }
 }
 
@@ -160,22 +176,29 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await context.params;
+  if (!BOTTLENECK_ID_REGEX.test(id)) {
+    return validationErrorResponse(
+      "Bottleneck ID is required",
+      "INVALID_BOTTLENECK_ID",
+    );
+  }
 
   try {
     // Check if bottleneck exists and is already resolved
     const bottleneck = bottleneckDetector.getBottleneck(id);
 
     if (!bottleneck) {
-      return NextResponse.json(
-        { error: "Bottleneck not found" },
-        { status: 404 },
-      );
+      return createErrorResponse({
+        status: 404,
+        code: "BOTTLENECK_NOT_FOUND",
+        message: "Bottleneck not found",
+      });
     }
 
     if (!bottleneck.resolved) {
-      return NextResponse.json(
-        { error: "Bottleneck must be resolved before deletion" },
-        { status: 400 },
+      return validationErrorResponse(
+        "Bottleneck must be resolved before deletion",
+        "BOTTLENECK_NOT_RESOLVED",
       );
     }
 
@@ -193,10 +216,11 @@ export async function DELETE(
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return NextResponse.json(
-      { error: "Failed to delete bottleneck" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "BOTTLENECK_DELETE_ERROR",
+      message: "Failed to delete bottleneck",
+    });
   }
 }
 

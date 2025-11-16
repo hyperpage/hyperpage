@@ -1,11 +1,12 @@
+import logger, { rateLimitLogger } from "@/lib/logger";
+
 import * as pgSchema from "./pg-schema";
 import { getReadWriteDb } from "./connection";
-import logger, { rateLimitLogger } from "@/lib/logger";
 
 /**
  * Normalized rate limit record used by higher-level services.
  *
- * This mirrors the semantics of the legacy SQLite-based implementation:
+ * This mirrors the semantics of the prior implementation:
  * - id: stable key, e.g. "github:global"
  * - platform: "github" | "gitlab" | "jira" | other identifiers
  * - limitRemaining / limitTotal: nullable numeric values
@@ -47,9 +48,7 @@ export class RateLimitRepository {
 
     return rows
       .map((row) => this.fromPostgresRow(row))
-      .filter(
-        (record): record is NormalizedRateLimitRecord => record !== null,
-      );
+      .filter((record): record is NormalizedRateLimitRecord => record !== null);
   }
 
   /**
@@ -158,7 +157,6 @@ export class RateLimitRepository {
     const [platform] = key.split(":", 1);
     return platform || null;
   }
-
 }
 
 /**

@@ -1,19 +1,27 @@
 import DataTable from "@/app/components/DataTable";
-import { Tool, ToolWidget } from "@/tools/tool-types";
+import {
+  ClientSafeTool,
+  ClientToolWidget,
+  ToolWidget,
+} from "@/tools/tool-types";
 
-type ExtendedToolWidget = ToolWidget & { toolName: string };
+type ExtendedToolWidget = (ClientToolWidget & { toolName: string }) & {
+  component?: ToolWidget["component"];
+};
 
 interface ToolWidgetGridProps {
   toolWidgets: ExtendedToolWidget[];
-  enabledTools: Omit<Tool, "handlers">[];
+  enabledTools: ClientSafeTool[];
   loadingStates: Record<string, boolean>;
-  refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
+  errorStates: Record<string, { message: string; timestamp: number } | null>;
+  refreshToolData: (tool: ClientSafeTool) => Promise<void>;
 }
 
 export default function ToolWidgetGrid({
   toolWidgets,
   enabledTools,
   loadingStates,
+  errorStates,
   refreshToolData,
 }: ToolWidgetGridProps) {
   return (
@@ -25,9 +33,14 @@ export default function ToolWidgetGrid({
             <DataTable
               title={widget.title}
               headers={widget.headers || []}
-              data={widget.data}
+              data={widget.data || []}
               tool={widget.toolName}
               isLoading={loadingStates[`${widget.toolName}-refresh`] || false}
+              errorInfo={
+                widget.apiEndpoint
+                  ? errorStates[`${widget.toolName}-${widget.apiEndpoint}`]
+                  : null
+              }
               onRefresh={() => {
                 const tool = enabledTools.find(
                   (t) => t.name === widget.toolName,
@@ -39,7 +52,7 @@ export default function ToolWidgetGrid({
             />
           )}
           {widget.type === "chart" && widget.component && (
-            <widget.component {...widget} />
+            <widget.component {...widget} data={widget.data || []} />
           )}
         </div>
       ))}

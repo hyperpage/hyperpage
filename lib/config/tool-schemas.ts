@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import type { Tool, ToolConfig } from "@/tools/tool-types";
 
 // Schema for validating tool configurations

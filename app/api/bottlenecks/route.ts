@@ -1,19 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { bottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
 import {
   DetectedBottleneck,
   BottleneckHistory,
 } from "@/lib/monitoring/bottleneck-detector";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
 
 /**
  * GET /api/bottlenecks - Get all active and recent bottleneck detections
  */
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+const DEFAULT_TIME_RANGE = 3600000;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const includeHistory = searchParams.get("history") === "true";
-  const limit = parseInt(searchParams.get("limit") || "20");
-  const timeRange = parseInt(searchParams.get("timeRange") || "3600000"); // 1 hour default
+  const limitParam = searchParams.get("limit") || `${DEFAULT_LIMIT}`;
+  const timeRangeParam =
+    searchParams.get("timeRange") || `${DEFAULT_TIME_RANGE}`;
+
+  const limit = Number(limitParam);
+  if (Number.isNaN(limit) || limit <= 0 || limit > MAX_LIMIT) {
+    return validationErrorResponse(
+      `limit must be between 1 and ${MAX_LIMIT}`,
+      "INVALID_LIMIT",
+    );
+  }
+
+  const timeRange = Number(timeRangeParam);
+  if (
+    Number.isNaN(timeRange) ||
+    timeRange <= 0 ||
+    timeRange > 24 * 60 * 60 * 1000
+  ) {
+    return validationErrorResponse(
+      "timeRange must be a positive number up to 24h in milliseconds",
+      "INVALID_TIME_RANGE",
+    );
+  }
 
   try {
     // Get active bottlenecks
@@ -74,10 +104,11 @@ export async function GET(request: NextRequest) {
       timeRange,
     });
 
-    return NextResponse.json(
-      { error: "Failed to retrieve bottleneck data" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "BOTTLENECK_LIST_ERROR",
+      message: "Failed to retrieve bottleneck data",
+    });
   }
 }
 
@@ -94,6 +125,21 @@ export async function POST(request: NextRequest) {
     timeRange = body.timeRange;
     categories = body.categories;
     severities = body.severities;
+
+    if (timeRange !== undefined) {
+      const parsedTimeRange = Number(timeRange);
+      if (
+        Number.isNaN(parsedTimeRange) ||
+        parsedTimeRange <= 0 ||
+        parsedTimeRange > 24 * 60 * 60 * 1000
+      ) {
+        return validationErrorResponse(
+          "timeRange must be a positive number up to 24h in milliseconds",
+          "INVALID_TIME_RANGE",
+        );
+      }
+      timeRange = parsedTimeRange;
+    }
 
     // Force a detection cycle with custom parameters
     const analysisTimeRange = timeRange || 300000; // 5 minutes default
@@ -115,10 +161,11 @@ export async function POST(request: NextRequest) {
       severities,
     });
 
-    return NextResponse.json(
-      { error: "Failed to trigger bottleneck analysis" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "BOTTLENECK_TRIGGER_ERROR",
+      message: "Failed to trigger bottleneck analysis",
+    });
   }
 }
 

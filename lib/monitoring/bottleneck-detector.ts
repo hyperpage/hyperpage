@@ -1,11 +1,13 @@
+import { EventEmitter } from "events";
+
 import {
   performanceDashboard,
   DashboardMetrics,
   AlertType,
 } from "@/lib/monitoring/performance-dashboard";
 import { alertService } from "@/lib/alerting/alert-service";
-import { EventEmitter } from "events";
 import logger from "@/lib/logger";
+import { BOTTLENECK_PATTERNS } from "@/lib/monitoring/bottleneck-patterns";
 
 export interface BottleneckCondition {
   metric: string; // e.g., 'overall.averageResponseTime'
@@ -1303,9 +1305,6 @@ interface CorrelationData {
     trend: "rising" | "falling" | "stable";
   }>;
 }
-
-// Initialize bottleneck detector with patterns
-import { BOTTLENECK_PATTERNS } from "@/lib/monitoring/bottleneck-patterns";
 
 // Global bottleneck detector instance
 export const bottleneckDetector = new BottleneckDetector(BOTTLENECK_PATTERNS);

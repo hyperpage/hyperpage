@@ -12,10 +12,11 @@
  * - oauth-token-store.ts (secure storage)
  */
 
+import type { NextRequest } from "next/server";
+
 import { toolRegistry } from "@/tools/registry";
 import type { ToolOAuthConfig } from "@/tools/tool-types";
 import logger from "@/lib/logger";
-import type { NextRequest } from "next/server";
 
 // Enhanced interfaces for unified service
 export interface OAuthServiceOptions {
@@ -181,7 +182,7 @@ class OAuthConfigManager {
       tokenUrl,
       scopes: oauthConfig.scopes,
       provider: toolName.toLowerCase(),
-      redirectUri: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/${toolName}/callback`,
+      redirectUri: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/oauth/${toolName}`,
     };
   }
 

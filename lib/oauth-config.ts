@@ -57,12 +57,21 @@ export function getOAuthConfig(
   const oauthConfig = tool.config.oauthConfig;
 
   // Get environment variables for this tool using registry-configured names
-  const clientId = process.env[oauthConfig.clientIdEnvVar];
-  const clientSecret = process.env[oauthConfig.clientSecretEnvVar];
+  const rawClientId = process.env[oauthConfig.clientIdEnvVar];
+  const rawClientSecret = process.env[oauthConfig.clientSecretEnvVar];
+
+  const clientId = normalizeSecretValue(rawClientId);
+  const clientSecret = normalizeSecretValue(rawClientSecret);
 
   if (!clientId || !clientSecret) {
     logger.warn(
       `${toolName} OAuth not configured - missing ${oauthConfig.clientIdEnvVar} or ${oauthConfig.clientSecretEnvVar}`,
+      {
+        placeholderDetected: {
+          clientId: isPlaceholderValue(rawClientId),
+          clientSecret: isPlaceholderValue(rawClientSecret),
+        },
+      },
     );
     return null;
   }
@@ -81,8 +90,43 @@ export function getOAuthConfig(
     tokenUrl,
     scopes: oauthConfig.scopes,
     provider: toolName.toLowerCase(),
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/${toolName}/callback`,
+    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/auth/oauth/${toolName}`,
   };
+}
+
+function normalizeSecretValue(value?: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || isPlaceholderValue(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function isPlaceholderValue(value?: string | null): boolean {
+  if (!value) {
+    return true;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+
+  const placeholderHints = [
+    "changeme",
+    "your_",
+    "your-",
+    "_here",
+    "-here",
+    "placeholder",
+  ];
+
+  return placeholderHints.some((hint) => normalized.includes(hint));
 }
 
 /**

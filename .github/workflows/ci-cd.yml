@@ -113,6 +113,34 @@ jobs:
     name: Comprehensive Test Suite (Phase 5 Results)
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
+    env:
+      NODE_ENV: test
+      NEXT_TELEMETRY_DISABLED: 1
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hyperpage-test
+      REDIS_URL: redis://localhost:6379
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: hyperpage-test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     strategy:
       matrix:
@@ -131,42 +159,31 @@ jobs:
       - name: Install dependencies
         run: npm ci --only=production=false
 
-      - name: Setup test database
-        run: |
-          mkdir -p data
-          echo "file:./data/hyperpage.db" > test.env
-        env:
-          DATABASE_URL: file:./data/hyperpage.db
+      - name: Install Playwright Browsers
+        if: matrix.test-suite == 'e2e'
+        run: npx playwright install --with-deps
 
-      - name: Setup test Redis (mock)
+      - name: Wait for Postgres
         run: |
-          # Use in-memory cache for testing
-          echo "CACHE_TYPE=memory" >> test.env
-          echo "REDIS_URL=" >> test.env
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U postgres; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
 
       - name: Run Unit Tests
         if: matrix.test-suite == 'unit'
         run: npm run test:unit
-        env:
-          NODE_ENV: test
-          NEXT_TELEMETRY_DISABLED: 1
 
       - name: Run Integration Tests
         if: matrix.test-suite == 'integration'
         run: npm run test:integration
-        env:
-          NODE_ENV: test
-          NEXT_TELEMETRY_DISABLED: 1
-          ENABLE_GITHUB: false
-          ENABLE_GITLAB: false
-          ENABLE_JIRA: false
 
       - name: Run Performance Tests (Phase 5 Suite)
         if: matrix.test-suite == 'performance'
-        run: npm run test:performance
-        env:
-          NODE_ENV: test
-          NEXT_TELEMETRY_DISABLED: 1
+        run: npm run test:perf
         timeout-minutes: 30
 
       - name: Run E2E Tests
@@ -321,7 +338,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [build-container]
-    environment: staging
+    environment:
+      name: staging
 
     steps:
       - name: Checkout code
@@ -367,7 +385,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [deploy-staging]
-    environment: production
+    environment:
+      name: production
     timeout-minutes: 30
 
     steps:
@@ -456,7 +475,7 @@ jobs:
     name: Post-Deployment Validation
     runs-on: ubuntu-latest
     if: always() && contains(needs.*.result, 'success')
-    needs: [deploy-production]
+    needs: [deploy-production, build-container]
 
     steps:
       - name: Checkout code

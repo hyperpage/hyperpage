@@ -1,20 +1,33 @@
 /// <reference types="vitest" />
+import path from "path";
+
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import path from "path";
+
+const isCI =
+  process.env.CI === "true" ||
+  process.env.CI === "1" ||
+  process.env.CI === "on" ||
+  process.env.CI === "yes";
+const typecheckEnabled = isCI || process.env.VITEST_TYPECHECK === "1";
 
 export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    globalSetup: ["./vitest.global-setup.ts"],
     globals: true,
-    exclude: [
-      "__tests__/e2e/**", // Exclude E2E tests from Vitest
-      "node_modules/**",
-    ],
+    hookTimeout: 60000,
+    poolOptions: {
+      threads: {
+        maxThreads: 10,
+        minThreads: 1,
+      },
+    },
+    exclude: ["__tests__/e2e/**", "node_modules/**"],
     typecheck: {
-      enabled: true,
+      enabled: typecheckEnabled,
       checker: "tsc",
       include: ["**/*.{test,spec}.ts", "**/*.{test,spec}.tsx"],
       exclude: ["node_modules", ".next", "__tests__/e2e"],
@@ -31,7 +44,7 @@ export default defineConfig({
         "vitest.setup.ts",
         "**/*.config.js",
         "**/*.config.mjs",
-        "e2e/", // Exclude e2e from coverage
+        "e2e/",
       ],
       thresholds: {
         global: {

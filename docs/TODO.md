@@ -1,4 +1,4 @@
-- [ ] Fix database migration system (meta/_journal.json missing)
+- [ ] Fix database migration system (meta/\_journal.json missing)
 - [ ] Resolve Playwright test configuration conflicts
 - [ ] Fix MemoryCache mock configuration issues
 - [ ] Repair empty/malformed test file structures

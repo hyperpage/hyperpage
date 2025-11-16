@@ -5,8 +5,9 @@
  * the original rate limit files. These exports will be deprecated in future versions.
  */
 
-import { UnifiedRateLimitService } from "@/lib/rate-limit/index";
 import type { NextRequest } from "next/server";
+
+import { UnifiedRateLimitService } from "@/lib/rate-limit/index";
 import type {
   PlatformRateLimits,
   RateLimitStatus,

@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+
 import logger from "@/lib/logger";
 
 let pool: Pool | null = null;

@@ -7,7 +7,7 @@ This document describes how tools integrate with the Hyperpage platform and prov
 The Hyperpage tool integration system is built on two core pillars:
 
 - A **registry-driven architecture** for tools, widgets, and APIs.
-- A **repository-first, dual-engine persistence layer** that all tools and platform features rely on.
+- A **repository-first PostgreSQL persistence layer** that all tools and platform features rely on.
 
 All tool interactions are driven by registry configurations with zero hardcoded per-tool logic in application flows, and all persistence is routed through well-defined repository interfaces.
 
@@ -27,13 +27,23 @@ All tool interactions are completely registry-driven. Each tool is defined as a 
 
 There is no ad-hoc branching on tool names scattered across the codebase. The registry is the single source of truth for tool capabilities.
 
+### Client-Safe Registry Access
+
+- Each tool self-registers server-side and exposes a `Tool` definition, but UI layers **never** touch handler/config objects directly.
+- `/api/tools/enabled` materializes a sanitized `ClientSafeTool` object per registry entry. Fields include:
+  - `name`, `slug`, `enabled`, and `capabilities`
+  - `widgets[]` with `title`, `type`, `headers`, `refreshInterval`, and the required `apiEndpoint`
+  - `apis[]` with endpoint metadata (method, description, parameters, url)
+- Handlers/config are stripped so no secrets or functions cross the boundary. Any per-request overrides (e.g., DB-driven refresh intervals) are applied during this projection.
+- The portal, setup wizard, sidebar, etc. **must** read from this contract instead of maintaining bespoke tool lists.
+
 ### Tool Ownership Model
 
 Each tool owns its complete integration:
 
-- **Widgets**: UI components that display tool data
+- **Widgets**: UI metadata describing how data should render in the portal
 - **APIs and Handlers**: Endpoint specifications and implementations
-- **Types**: Data contracts for its responses
+- **Types**: Data contracts for server-to-client payloads
 - **Configuration**: Environment setup, credentials, OAuth configuration
 
 The platform core reads these definitions from the registry to:
@@ -59,20 +69,11 @@ When a tool or its handlers need persistence, they MUST depend on:
 
 Key rules:
 
-- No direct imports of `lib/database/schema` or `lib/database/pg-schema` in tool handlers or widgets.
-- No engine-specific branching (`if DB_ENGINE === ...`) in tool code.
-- All dual-engine behavior is encapsulated inside repository factories via `getReadWriteDb()` + `$schema` identity checks.
+- No direct imports of `lib/database/pg-schema` in tool handlers or widgets.
+- No database-specific branching. The only supported runtime is PostgreSQL; repository factories already encapsulate the Drizzle wiring.
+- Tests for tools can rely on repository-shaped fakes to validate behaviour without touching the real database.
 
-This ensures:
-
-- Tools remain engine-agnostic.
-- Dual-engine migrations (SQLite → PostgreSQL) do not require changes in tool integrations.
-- Tests for tools can rely on repository-shaped fakes.
-
-For details, see:
-
-- `docs/persistence.md`
-- `docs/sqlite-to-postgresql/dual-engine-repositories.md`
+For details, see `docs/persistence.md`.
 
 ---
 
@@ -186,7 +187,7 @@ export const tools = [
 
 ### Step 4: Environment Configuration
 
-Add to `.env.local.sample`:
+Add to `.env.sample`:
 
 ```env
 # New Tool Configuration
@@ -227,6 +228,7 @@ Constraints:
 
 - `apiEndpoint` MUST match an entry in the tool's `apis` and `handlers`.
 - No fallback guessing of endpoints; configuration must be explicit.
+- The `/api/tools/enabled` projection now includes `apiEndpoint`, so if a widget omits it the portal simply never creates a query for that widget.
 
 ### Auto-Refresh Configuration
 
@@ -235,6 +237,35 @@ Widgets support `refreshInterval` in milliseconds. Examples:
 - GitHub/Jira: 300000 (5 minutes)
 - Performance monitoring: 60000 (1 minute)
 - System metrics: 30000 (30 seconds)
+
+### Widget Telemetry & Metrics
+
+- When a widget fetch fails client-side, the portal emits an event to `/api/telemetry/widget-error` with the tool, endpoint, message, and timestamp.
+- Recent events are persisted in-memory and accessible via `GET /api/telemetry/widget-error` for debugging dashboards or alerting.
+- `/api/metrics` exports Prometheus gauges (`widget_errors_count`, `widget_error_last_timestamp_ms`) built from the same telemetry so SRE/observability stacks can track noisy integrations historically.
+- The portal’s error banner and Tool Status row read from the same deduplicated/timestamped feed, keeping runtime UX and backend telemetry aligned.
+- A “Recent Widget Failures” panel in the portal overview consumes `/api/telemetry/widget-error` so on-call engineers can review the latest failing widgets without leaving the product UI.
+- Rate-limit telemetry is reported via `/api/rate-limit/[platform]`, and Prometheus metrics (`rate_limit_usage_percent`, `rate_limit_status`, `rate_limit_remaining`, `rate_limit_max`) are updated by `/api/metrics`. Widgets automatically adapt to rate-limit data via `useToolQueries`.
+
+### Rate Limit Hooks Usage
+
+Portal UI consumes rate limits via:
+
+1. `useToolStatus` → `useMultipleRateLimits` to populate ToolStatusRow badges/tooltips
+2. `useToolQueries` to compute `meta.usagePercent` and `finalInterval`, slowing down widgets when usage is high
+
+Example snippet (`useToolQueries`):
+
+```typescript
+const { statuses } = useMultipleRateLimits(activePlatforms);
+const queryConfigs = createQueryConfigs(
+  enabledTools,
+  statuses,
+  isTabVisible,
+  isUserActive,
+);
+// Each config.meta contains { usagePercent, finalInterval } for analytics/telemetry
+```
 
 ---
 
@@ -307,7 +338,7 @@ config: {
 
 ### OAuth Environment Configuration
 
-`.env.local.sample`:
+`.env.sample`:
 
 ```env
 ENABLE_PROVIDER=false
@@ -326,7 +357,7 @@ OAuth configuration is resolved from the registry and consumed by the shared OAu
 ### Environment Variables
 
 - Use `ENABLE_TOOL_NAME=true/false` for tool enablement.
-- Declare all required variables in `.env.local.sample`.
+- Declare all required variables in `.env.sample`.
 - Do not commit real credentials.
 
 ### Type Safety
@@ -369,6 +400,7 @@ Only enabled tools appear in:
 - Portal widgets
 - Sidebar navigation
 - Discovery endpoints
+- `/api/tools/enabled` provides the single list of enabled tools for UI consumers. It returns `ClientSafeTool` metadata, so anything that needs widgets/apis must consume that endpoint instead of duplicating registry slices.
 
 ---
 

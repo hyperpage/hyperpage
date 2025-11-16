@@ -15,10 +15,6 @@ export type NormalizedJob = IJob;
 /**
  * Repository contract for job persistence.
  * Mirrors existing MemoryJobQueue semantics.
- *
- * NOTE:
- * - Implementations are engine-specific (SQLite/Postgres).
- * - Callers should depend only on this interface + getJobRepository().
  */
 export interface JobRepository {
   insert(job: NormalizedJob): Promise<void>;
@@ -69,7 +65,10 @@ type PgWhere =
  * helpers; tests can inject an alternative adapter that returns tagged objects.
  */
 interface QueryAdapter {
-  externalIdEquals(detailsJson: typeof pgSchema.jobHistory.details, externalId: string): PgWhere;
+  externalIdEquals(
+    detailsJson: typeof pgSchema.jobHistory.details,
+    externalId: string,
+  ): PgWhere;
   hasExternalId(detailsJson: typeof pgSchema.jobHistory.details): PgWhere;
   activeStatuses(statusColumn: typeof pgSchema.jobs.status): PgWhere;
   jobIdEquals(idColumn: typeof pgSchema.jobs.id, jobPk: bigint): PgWhere;
@@ -165,9 +164,7 @@ class PostgresJobRepository implements JobRepository {
     const rows = await this.db
       .select({ id: pgSchema.jobHistory.id })
       .from(pgSchema.jobHistory)
-      .where(
-        this.adapter.externalIdEquals(pgSchema.jobHistory.details, jobId),
-      )
+      .where(this.adapter.externalIdEquals(pgSchema.jobHistory.details, jobId))
       .limit(1);
 
     return rows.length > 0;
@@ -302,9 +299,7 @@ class PostgresJobRepository implements JobRepository {
     const rows = await this.db
       .select({ jobId: pgSchema.jobHistory.jobId })
       .from(pgSchema.jobHistory)
-      .where(
-        this.adapter.externalIdEquals(pgSchema.jobHistory.details, jobId),
-      )
+      .where(this.adapter.externalIdEquals(pgSchema.jobHistory.details, jobId))
       .limit(1);
 
     const jobPk = rows[0]?.jobId;

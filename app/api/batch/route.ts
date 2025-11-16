@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
   defaultBatchingMiddleware,
   isBatchRequest,
@@ -6,6 +7,11 @@ import {
 import logger from "@/lib/logger";
 import { getPostgresJobQueue } from "@/lib/jobs/postgres-job-queue";
 import { JobPriority, JobStatus, JobType } from "@/lib/types/jobs";
+import {
+  createErrorResponse,
+  methodNotAllowedResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
 
 /**
  * POST /api/batch - Handle bulk API operations
@@ -37,19 +43,19 @@ import { JobPriority, JobStatus, JobType } from "@/lib/types/jobs";
  * }
  */
 export async function POST(request: NextRequest) {
+  if (request.method !== "POST") {
+    return methodNotAllowedResponse(["GET", "POST"]);
+  }
+
   try {
     // Parse request body
     const body = await request.json();
 
     // Check if this is a batch request
     if (!isBatchRequest(body.requests)) {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid batch request format. Expected { requests: BatchRequest[] }",
-          code: "INVALID_BATCH_FORMAT",
-        },
-        { status: 400 },
+      return validationErrorResponse(
+        "Invalid batch request format. Expected { requests: BatchRequest[] }",
+        "INVALID_BATCH_FORMAT",
       );
     }
 
@@ -108,25 +114,25 @@ export async function POST(request: NextRequest) {
       method: "POST",
     });
 
-    return NextResponse.json(
-      {
-        error: "Failed to process batch request",
-        code: "BATCH_ENDPOINT_ERROR",
+    return createErrorResponse({
+      code: "BATCH_ENDPOINT_ERROR",
+      message: "Failed to process batch request",
+      status: 500,
+      headers: {
+        "X-Batch-Error": "ENDPOINT_ERROR",
       },
-      {
-        status: 500,
-        headers: {
-          "X-Batch-Error": "ENDPOINT_ERROR",
-        },
-      },
-    );
+    });
   }
 }
 
 /**
  * GET /api/batch - Get batch processing capabilities and statistics
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (request.method !== "GET") {
+    return methodNotAllowedResponse(["GET", "POST"]);
+  }
+
   const stats = defaultBatchingMiddleware.getBatchStats();
 
   return NextResponse.json(
@@ -168,3 +174,5 @@ export async function GET() {
     },
   );
 }
+
+export const dynamic = "force-dynamic";

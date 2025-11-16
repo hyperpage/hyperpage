@@ -10,18 +10,26 @@ This project follows rigorous development standards to ensure accuracy and factu
 
 All documented claims must be verifiable against the actual codebase. No marketing hype, aspirational features presented as developed, or false performance metrics are allowed. See [`.clinerules/avoid-marketing-hype.md`](.clinerules/avoid-marketing-hype.md) for detailed guidelines.
 
+## Requirements
+
+- **Node.js 22.x** (see [`.nvmrc`](.nvmrc) for the canonical version)
+- **npm 10+**
+- **PostgreSQL 15+** with a database reachable through `DATABASE_URL`
+- **Redis** (optional but recommended for session clustering and cache durability)
+- Access tokens for the tools you enable (GitHub, GitLab, Jira)
+
 ## Overview
 
 Hyperpage solves the challenge of scattered development data across multiple platforms. For development teams and project managers, it provides a single pane of glass to monitor code reviews, CI/CD pipelines, tickets, and project status from your entire toolchain.
 
 ### Key Features
 
-- **Code Reviews**: GitHub PRs and GitLab MRs in one view
-- **CI/CD Pipelines**: Consolidated pipeline status and workflows
-- **Issue Tracking**: Jira tickets alongside GitHub/GitLab issues
-- **Rate Limit Monitoring**: Real-time tracking of API usage across all platforms
-- **Modern UI**: Clean design system using shadcn/ui components with Tailwind CSS
-- **Theme System**: Light and dark mode support
+- **Unified portal** – GitHub, GitLab, and Jira widgets share the same registry-driven UI grid with adaptive search.
+- **Registry-driven connectors** – tools self-register their APIs, widgets, and OAuth metadata so docs and runtime stay aligned.
+- **Rate-limit aware polling** – portal refresh intervals adapt based on provider usage and user activity.
+- **Batch & compression pipeline** – `/api/batch` executes grouped requests and response compression trims payload size automatically.
+- **Observability built-in** – `/api/metrics` exports Prometheus metrics for cache health, rate limits, and widget telemetry.
+- **Session management API** – `/api/sessions` stores UI preferences and metadata in Redis (with memory fallback) for multi-pod deployments.
 
 ## Quick Start
 
@@ -32,25 +40,38 @@ cd hyperpage
 npm install
 
 # Configure environment
-cp .env.local.sample .env.local
-# Edit .env.local to enable your tools (see docs/installation.md)
+cp .env.sample .env.dev
+# Edit .env.dev to enable your tools (see docs/installation.md)
+# DATABASE_URL must point at a reachable Postgres instance
+# docker compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres redis
 
-# Start development server
+# Apply PostgreSQL migrations
+npm run db:migrate
+
+# Start development server (loads .env.dev automatically)
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view your portal.
+Open [http://localhost:3000](http://localhost:3000) to view your portal. The dev script now sources `.env.dev`, so any changes to that file take effect after restarting the server. Run `npm run db:migrate` whenever migrations change to keep your local Postgres schema current.
+
+## Documentation
+
+- [Installation Guide](docs/installation.md) – environment prep, configuration, and migration details.
+- [Testing Strategy](docs/testing/index.md) – how to run the Postgres-backed test suites and optional flags.
+- [Tool Integration System](docs/tool-integration-system.md) – registry contracts for APIs, widgets, and OAuth metadata.
+- [Configuration Management](docs/config-management.md) – env file organization, secrets, and deployment practices.
 
 ## Configuration
 
 ### Environment Variables
 
-Hyperpage uses environment variables for configuration. Copy `.env.local.sample` to `.env.local` and configure the values you need.
+Hyperpage uses environment variables for configuration. Copy `.env.sample` to `.env.dev` and configure the values you need.
 
 #### Required Variables
 
 **Base Configuration:**
 
+- `DATABASE_URL`: PostgreSQL connection string (e.g., `postgresql://postgres:postgres@localhost:5432/hyperpage`)
 - `BASE_URL`: Internal API base URL (defaults to `http://localhost:3000`)
 - `NEXT_PUBLIC_BASE_URL`: Public base URL accessible in client components
 
@@ -87,9 +108,9 @@ Hyperpage uses environment variables for configuration. Copy `.env.local.sample`
 
 #### OAuth Authentication Variables
 
-**Authentication Encryption:**
+**Authentication Encryption (Reserved):**
 
-- `OAUTH_ENCRYPTION_KEY`: 32-character hex key for encrypting stored OAuth tokens (generate with `openssl rand -hex 32`)
+- `OAUTH_ENCRYPTION_KEY`: Placeholder for the planned AES-256-GCM layer (set a 32-character hex string now so future upgrades do not require redeploying secrets)
 
 **GitHub OAuth Application:**
 
@@ -127,7 +148,7 @@ JIRA_API_TOKEN=jira_token_...
 ENABLE_GITHUB=true
 ENABLE_JIRA=true
 
-# OAuth encryption for secure token storage
+# Reserved for the upcoming AES-256-GCM encryption layer
 OAUTH_ENCRYPTION_KEY=a1b2c3d4e5f678901234567890abcdef1234567890abcdef1234567890abcdef
 
 # GitHub OAuth
@@ -144,43 +165,81 @@ JIRA_OAUTH_CLIENT_SECRET=jira_client_secret_here
 
 For production deployments, use the provided Dockerfile and Docker Compose configuration to run Hyperpage with PostgreSQL and Redis.
 
+### Staging / Production Compose Overlays
+
+To run a staging-like stack locally:
+
+```bash
+cp .env.sample .env.staging
+# fill in staging secrets/tokens
+docker compose -f docker-compose.yml -f docker-compose.staging.yml --env-file .env.staging up -d
+```
+
+For a production-like stack (on-prem or self-hosted):
+
+```bash
+cp .env.sample .env.production
+# fill in production secrets/tokens (or mount from secret manager)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+```
+
+Both overlays reuse the base services and simply wire different env files/container names. Run `docker compose ... down` when finished.
+
 ## Testing
 
 Hyperpage includes comprehensive automated testing to ensure stability across OAuth integrations, tool integrations, and cross-tool coordination.
 
-**Available Test Commands:**
+**Quick start**
+
+1. Copy `.env.test.example` to `.env.test` and adjust any secrets/tokens.
+2. Boot the canonical Postgres/Redis stack once per session:
+
+   ```bash
+   npm run db:test:up
+   ```
+
+3. Ensure `DATABASE_URL` points at the running Postgres instance (see `.env.test`).
+   - On the host, use `postgresql://...@localhost:5432/hyperpage-test`.
+   - If you run tests **inside** the Compose network, use `postgres` as the host.
+   - Vitest loads `.env.test` automatically via `vitest.global-setup.ts`, so keeping that file up to date is usually enough. Override variables in your shell only when you need a different Postgres instance.
+
+**Available commands**
 
 ```bash
-# All Tests
-npm test                    # Run unit tests
-npm run test:coverage      # With coverage report
-npm run test:watch         # Watch mode development
+# Fast feedback
+npm run test:unit          # JSdom unit/API/component tests (no external services)
+npm run test:integration   # Postgres-backed integration suites (requires DATABASE_URL)
+npm run test:integration:tools   # Provider-backed HTTP integration suites (requires Next dev server + tokens)
 
-# Integration Tests
-npm test -- --run integration              # All integration tests
-npm test -- --run integration/oauth        # OAuth integration tests
-npm test -- --run integration/tools        # Tool integration tests
+# Broader coverage
+npm test                   # Full Vitest run (unit + integration + optional suites)
+npm run test:perf          # PERFORMANCE_TESTS=1 timed suites (__tests__/performance/**)
+npm run test:coverage      # Vitest with coverage output
+npm run test:watch         # Interactive watch mode
 
-# Individual Tool Tests
-npm test -- --run integration/tools/github           # GitHub integration
-npm test -- --run integration/tools/gitlab           # GitLab integration
-npm test -- --run integration/tools/jira             # Jira integration
-npm test -- --run integration/tools/cross-tool       # Cross-tool aggregation
+# End-to-end
+npm run test:e2e           # Playwright against local dev server (E2E_TESTS=1, requires running dev server or BASE_URL override)
+npm run test:e2e:headed    # Same as above but headed browser sessions
+npm run test:e2e:docker    # Dockerized Next.js + Playwright profile with automatic teardown
 
-# E2E Tests
-npm run test:e2e           # Playwright E2E tests
-npm run test:e2e:docker    # E2E tests in Docker containers
-npm run test:e2e:ui        # Interactive E2E mode
+# Database helpers
+npm run db:test:up         # Start Postgres + Redis (docker-compose.test.yml)
+npm run db:test:down       # Stop stack and remove volumes (fresh state)
+npm run db:test:reset      # Hard reset: down -v, volume prune, up
 ```
 
-**Testing Setup:**
+**Testing Setup Notes:**
 
-- **Unit Tests**: Vitest + React Testing Library for component isolation
-- **OAuth Integration Tests**: Comprehensive testing for GitHub, GitLab, and Jira OAuth flows
-- **Tool Integration Tests**: API endpoint validation, rate limiting, data transformation
-- **Cross-Tool Aggregation Tests**: Multi-tool coordination and unified data format validation
-- **E2E Tests**: Playwright framework for complete user journey validation
-- **CI/CD Ready**: All tests run in automated pipelines with parallel execution
+- **Vitest harness**: `vitest.setup.ts` requires `DATABASE_URL` and will drop/create the referenced database, run drizzle migrations, and seed data before the first test runs.
+- **Unit vs Integration**: Both `npm run test:unit` and `npm run test:integration` rely on the Postgres harness today because the API tests talk to repositories. Make sure the dockerized DB is running even for “unit” runs.
+- **Runtime environments**: Vitest currently runs under the JSDOM environment to satisfy the API/component suites; backend tests still rely on the Postgres harness for data access.
+- **Integration suites**: Tests under `__tests__/integration/**` and `__tests__/unit/lib/**` talk to the Postgres harness. Ensure `npm run db:test:up` (or equivalent) is active.
+- **Tool integrations**: `npm run test:integration:tools` expects a running app server (e.g., `npm run dev -- --hostname 127.0.0.1`) reachable at `HYPERPAGE_TEST_BASE_URL` plus provider tokens (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `JIRA_API_TOKEN`). Without both, the suites remain skipped.
+- **Optional suites**: Performance and Grafana (plus any tool-integration suites) are opt-in behind explicit env flags (`PERFORMANCE_TESTS`, `GRAFANA_TESTS`, `E2E_TESTS`). They will report as skipped unless the flags are set.
+- **OAuth E2E gating**: Provider-specific Playwright specs stay quarantined unless `E2E_OAUTH=1` is set. They require valid OAuth client IDs/secrets plus provider tokens set in `.env.test`.
+- **E2E & OAuth**: `npm run test:e2e*` executes Playwright with `E2E_TESTS=1`. Supply provider tokens (GitHub/GitLab/Jira) via `.env.test` when exercising the OAuth-heavy specs.
+- **E2E dev server**: `npm run test:e2e` expects a running dev or prod server that matches `BASE_URL`. When running locally, start `npm run dev -- --hostname 127.0.0.1` (or `npm run build && npm run start`) and set `BASE_URL=http://127.0.0.1:3000` before launching Playwright.
+- **CI/CD**: `.github/workflows/ci-cd.yml` consumes the same npm scripts so local developers and CI run identical commands once the stack is configured.
 
 ## Usage Examples
 
@@ -215,4 +274,11 @@ hyperpage/
 
 ## Session Management API
 
-Hyperpage includes session management for distributed deployments, enabling persistent user state across requests and nodes.
+Hyperpage ships a dedicated `/api/sessions` endpoint backed by Redis (with an in-memory fallback) so UI preferences and auth metadata survive pod restarts.
+
+- `GET /api/sessions?sessionId=...` – create a new session when no ID is provided or fetch an existing document with validation envelopes.
+- `POST /api/sessions` – persist the full session payload or apply `updates` to merge UI preferences, tool configurations, or authentication details.
+- `PATCH /api/sessions?sessionId=...` – update specific fields from lightweight client interactions.
+- `DELETE /api/sessions?sessionId=...` – remove a session and clear associated metadata.
+
+See [`lib/sessions/session-manager.ts`](lib/sessions/session-manager.ts) for the Redis-backed implementation and `app/api/sessions/route.ts` for request validation rules.

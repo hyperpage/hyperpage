@@ -71,16 +71,9 @@ interface FakeQueryAdapter {
     detailsJson: typeof pgSchema.jobHistory.details,
     externalId: string,
   ): WhereCond;
-  hasExternalId(
-    detailsJson: typeof pgSchema.jobHistory.details,
-  ): WhereCond;
-  activeStatuses(
-    statusColumn: typeof pgSchema.jobs.status,
-  ): WhereCond;
-  jobIdEquals(
-    idColumn: typeof pgSchema.jobs.id,
-    jobPk: bigint,
-  ): WhereCond;
+  hasExternalId(detailsJson: typeof pgSchema.jobHistory.details): WhereCond;
+  activeStatuses(statusColumn: typeof pgSchema.jobs.status): WhereCond;
+  jobIdEquals(idColumn: typeof pgSchema.jobs.id, jobPk: bigint): WhereCond;
   completedBefore(
     statusColumn: typeof pgSchema.jobs.status,
     completedAtColumn: typeof pgSchema.jobs.completedAt,
@@ -100,11 +93,7 @@ const fakeQueryAdapter: FakeQueryAdapter = {
     void statusColumn;
     return {
       kind: "activeStatuses",
-      statuses: [
-        JobStatus.PENDING,
-        JobStatus.RUNNING,
-        JobStatus.FAILED,
-      ],
+      statuses: [JobStatus.PENDING, JobStatus.RUNNING, JobStatus.FAILED],
     };
   },
   jobIdEquals(_idColumn, jobPk) {
@@ -116,9 +105,7 @@ const fakeQueryAdapter: FakeQueryAdapter = {
 };
 
 interface InsertReturningChain {
-  returning: (
-    cols: Record<string, unknown>,
-  ) => Promise<Array<{ id: bigint }>>;
+  returning: (cols: Record<string, unknown>) => Promise<Array<{ id: bigint }>>;
 }
 
 interface InsertChain {
@@ -145,10 +132,7 @@ interface JobsLeftJoinChain {
 }
 
 interface JobsSelectChain {
-  leftJoin: (
-    table: unknown,
-    on: WhereCond,
-  ) => JobsLeftJoinChain;
+  leftJoin: (table: unknown, on: WhereCond) => JobsLeftJoinChain;
   where: (cond: WhereCond) => Promise<
     Array<{
       jobId: bigint;
@@ -202,7 +186,12 @@ interface FakePgDb {
     jobHistory: typeof pgSchema.jobHistory;
   };
   insert: (table: unknown) => InsertChain;
-  select: (cols?: SelectedCols) => SelectFromChain<typeof pgSchema.jobs | typeof pgSchema.jobHistory, JobsSelectChain | JobHistorySelectChain>;
+  select: (
+    cols?: SelectedCols,
+  ) => SelectFromChain<
+    typeof pgSchema.jobs | typeof pgSchema.jobHistory,
+    JobsSelectChain | JobHistorySelectChain
+  >;
   update: (table: unknown) => UpdateChain;
   delete: (table: unknown) => DeleteChain;
 }
@@ -232,7 +221,10 @@ function createFakePgDb(): {
         values(values: InsertValues): InsertReturningChain {
           if (table === pgSchema.jobs) {
             const v = values as typeof pgSchema.jobs.$inferInsert;
-            const id = jobIdSeq++;
+            let id = jobIdSeq++;
+            while (jobs.has(id)) {
+              id = jobIdSeq++;
+            }
 
             const row: JobRow = {
               id,
@@ -262,7 +254,10 @@ function createFakePgDb(): {
 
           if (table === pgSchema.jobHistory) {
             const v = values as typeof pgSchema.jobHistory.$inferInsert;
-            const id = historyIdSeq++;
+            let id = historyIdSeq++;
+            while (jobHistory.has(id)) {
+              id = historyIdSeq++;
+            }
 
             const row: JobHistoryRow = {
               id,
@@ -286,7 +281,10 @@ function createFakePgDb(): {
       };
     },
 
-    select(): SelectFromChain<typeof pgSchema.jobs | typeof pgSchema.jobHistory, JobsSelectChain | JobHistorySelectChain> {
+    select(): SelectFromChain<
+      typeof pgSchema.jobs | typeof pgSchema.jobHistory,
+      JobsSelectChain | JobHistorySelectChain
+    > {
       return {
         from(table): JobsSelectChain | JobHistorySelectChain {
           if (table === pgSchema.jobHistory) {
@@ -328,10 +326,7 @@ function createFakePgDb(): {
 
           if (table === pgSchema.jobs) {
             return {
-              leftJoin(
-                joinTable: unknown,
-                on: WhereCond,
-              ): JobsLeftJoinChain {
+              leftJoin(joinTable: unknown, on: WhereCond): JobsLeftJoinChain {
                 const applyJoin =
                   joinTable === pgSchema.jobHistory &&
                   on.kind === "hasExternalId";
@@ -368,10 +363,7 @@ function createFakePgDb(): {
                       let historyDetails: JobHistoryDetails | null = null;
 
                       if (applyJoin) {
-                        historyDetails = findHistoryDetails(
-                          jobHistory,
-                          job.id,
-                        );
+                        historyDetails = findHistoryDetails(jobHistory, job.id);
                       }
 
                       rows.push({
@@ -600,14 +592,13 @@ describe("PostgresJobRepository with FakePgDb + FakeQueryAdapter", () => {
       }
 
       async exists(jobId: string): Promise<boolean> {
-        const rows = await (this.innerDb
-          .select({ id: pgSchema.jobHistory.id })
-          .from(pgSchema.jobHistory) as JobHistorySelectChain)
+        const rows = await (
+          this.innerDb
+            .select({ id: pgSchema.jobHistory.id })
+            .from(pgSchema.jobHistory) as JobHistorySelectChain
+        )
           .where(
-            this.adapter.externalIdEquals(
-              pgSchema.jobHistory.details,
-              jobId,
-            ),
+            this.adapter.externalIdEquals(pgSchema.jobHistory.details, jobId),
           )
           .limit(1);
 
@@ -615,21 +606,20 @@ describe("PostgresJobRepository with FakePgDb + FakeQueryAdapter", () => {
       }
 
       async loadActiveJobs(): Promise<NormalizedJob[]> {
-        const jobsSelect = this.innerDb
-          .select({
-            jobId: pgSchema.jobs.id,
-            type: pgSchema.jobs.type,
-            payload: pgSchema.jobs.payload,
-            status: pgSchema.jobs.status,
-            scheduledAt: pgSchema.jobs.scheduledAt,
-            startedAt: pgSchema.jobs.startedAt,
-            completedAt: pgSchema.jobs.completedAt,
-            attempts: pgSchema.jobs.attempts,
-            lastError: pgSchema.jobs.lastError,
-            createdAt: pgSchema.jobs.createdAt,
-            updatedAt: pgSchema.jobs.updatedAt,
-            historyDetails: pgSchema.jobHistory.details,
-          }) as SelectFromChain<typeof pgSchema.jobs, JobsSelectChain>;
+        const jobsSelect = this.innerDb.select({
+          jobId: pgSchema.jobs.id,
+          type: pgSchema.jobs.type,
+          payload: pgSchema.jobs.payload,
+          status: pgSchema.jobs.status,
+          scheduledAt: pgSchema.jobs.scheduledAt,
+          startedAt: pgSchema.jobs.startedAt,
+          completedAt: pgSchema.jobs.completedAt,
+          attempts: pgSchema.jobs.attempts,
+          lastError: pgSchema.jobs.lastError,
+          createdAt: pgSchema.jobs.createdAt,
+          updatedAt: pgSchema.jobs.updatedAt,
+          historyDetails: pgSchema.jobHistory.details,
+        }) as SelectFromChain<typeof pgSchema.jobs, JobsSelectChain>;
 
         const rows = await jobsSelect
           .from(pgSchema.jobs)
@@ -637,12 +627,10 @@ describe("PostgresJobRepository with FakePgDb + FakeQueryAdapter", () => {
             pgSchema.jobHistory,
             this.adapter.hasExternalId(pgSchema.jobHistory.details),
           )
-          .where(
-            this.adapter.activeStatuses(pgSchema.jobs.status),
-          );
+          .where(this.adapter.activeStatuses(pgSchema.jobs.status));
 
-        return rows.map((
-          row: {
+        return rows.map(
+          (row: {
             jobId: bigint;
             type: string;
             payload: Record<string, unknown>;
@@ -655,46 +643,44 @@ describe("PostgresJobRepository with FakePgDb + FakeQueryAdapter", () => {
             createdAt: Date;
             updatedAt: Date;
             historyDetails: JobHistoryDetails | null;
-          },
-        ) => {
-          const details = (row.historyDetails || {}) as JobHistoryDetails;
-          const externalId = details.externalId || String(row.jobId);
-          const name = details.name || row.type;
-          const priority =
-            typeof details.priority === "number"
-              ? details.priority
-              : JobPriority.MEDIUM;
+          }) => {
+            const details = (row.historyDetails || {}) as JobHistoryDetails;
+            const externalId = details.externalId || String(row.jobId);
+            const name = details.name || row.type;
+            const priority =
+              typeof details.priority === "number"
+                ? details.priority
+                : JobPriority.MEDIUM;
 
-          return {
-            id: externalId,
-            type: row.type as NormalizedJob["type"],
-            name,
-            priority,
-            status: row.status,
-            createdAt: row.createdAt.getTime(),
-            updatedAt: row.updatedAt.getTime(),
-            tool: details.tool as NormalizedJob["tool"],
-            endpoint: details.endpoint ?? undefined,
-            payload: row.payload,
-            result: row.lastError
-              ? {
-                  success: false,
-                  error: {
-                    name: "JobError",
-                    message: row.lastError,
-                  },
-                }
-              : undefined,
-            startedAt: row.startedAt
-              ? row.startedAt.getTime()
-              : undefined,
-            completedAt: row.completedAt
-              ? row.completedAt.getTime()
-              : undefined,
-            retryCount: row.attempts,
-            executionHistory: [],
-          };
-        });
+            return {
+              id: externalId,
+              type: row.type as NormalizedJob["type"],
+              name,
+              priority,
+              status: row.status,
+              createdAt: row.createdAt.getTime(),
+              updatedAt: row.updatedAt.getTime(),
+              tool: details.tool as NormalizedJob["tool"],
+              endpoint: details.endpoint ?? undefined,
+              payload: row.payload,
+              result: row.lastError
+                ? {
+                    success: false,
+                    error: {
+                      name: "JobError",
+                      message: row.lastError,
+                    },
+                  }
+                : undefined,
+              startedAt: row.startedAt ? row.startedAt.getTime() : undefined,
+              completedAt: row.completedAt
+                ? row.completedAt.getTime()
+                : undefined,
+              retryCount: row.attempts,
+              executionHistory: [],
+            };
+          },
+        );
       }
 
       async updateStatus(
@@ -745,9 +731,7 @@ describe("PostgresJobRepository with FakePgDb + FakeQueryAdapter", () => {
         await this.innerDb
           .update(pgSchema.jobs)
           .set(patch)
-          .where(
-            this.adapter.jobIdEquals(pgSchema.jobs.id, jobPk),
-          );
+          .where(this.adapter.jobIdEquals(pgSchema.jobs.id, jobPk));
 
         await this.innerDb.insert(pgSchema.jobHistory).values({
           jobId: jobPk,

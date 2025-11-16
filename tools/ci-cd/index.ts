@@ -1,8 +1,10 @@
 import React from "react";
 import { RotateCcw } from "lucide-react";
+
 import { Tool } from "@/tools/tool-types";
 import { registerTool } from "@/tools/registry";
 import { getEnabledTools } from "@/tools/index";
+import logger from "@/lib/logger";
 
 export const ciCdTool: Tool = {
   name: "CI/CD",
@@ -93,7 +95,13 @@ export const ciCdTool: Tool = {
               });
               results.push(...transformedPipelines);
             }
-          } catch {}
+          } catch (error) {
+            logger.warn("Failed to fetch pipelines from tool", {
+              tool: tool.name,
+              error: error instanceof Error ? error.message : String(error),
+              type: "ci_cd_pipeline_error",
+            });
+          }
         } else if (tool.capabilities?.includes("workflows")) {
           // This is a GitHub-style tool (provides workflows)
           try {
@@ -125,7 +133,13 @@ export const ciCdTool: Tool = {
               });
               results.push(...transformedWorkflows);
             }
-          } catch {}
+          } catch (error) {
+            logger.warn("Failed to fetch workflows from tool", {
+              tool: tool.name,
+              error: error instanceof Error ? error.message : String(error),
+              type: "ci_cd_workflow_error",
+            });
+          }
         }
       }
 

@@ -2,14 +2,15 @@
 
 import React from "react";
 import { Zap } from "lucide-react";
+
 import {
   getRateLimitStatusColor,
   getRateLimitStatusBgColor,
 } from "@/app/components/hooks/useRateLimit";
 
-type EffectiveStatus = "normal" | "warning" | "critical" | "unknown";
+export type EffectiveStatus = "normal" | "warning" | "critical" | "unknown";
 
-interface RateLimitIndicatorProps {
+export interface RateLimitIndicatorProps {
   rateLimitDisplay: string | null;
   effectiveStatus: EffectiveStatus;
   className?: string;

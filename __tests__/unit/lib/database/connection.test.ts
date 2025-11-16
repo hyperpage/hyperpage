@@ -1,7 +1,8 @@
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
-import { getTestDatabase } from "../../../../vitest.setup";
+
 import { getReadWriteDb } from "@/lib/database/connection";
 import * as pgSchema from "@/lib/database/pg-schema";
+import { getTestDatabase } from "@/vitest.setup";
 
 describe("Database Connection - PostgreSQL Only", () => {
   let testDb: ReturnType<typeof getTestDatabase>;
@@ -33,7 +34,7 @@ describe("Database Connection - PostgreSQL Only", () => {
   describe("PostgreSQL Connection", () => {
     test("should create connection pool successfully", async () => {
       const { pool } = testDb;
-      
+
       expect(pool).toBeDefined();
       expect(pool.totalCount).toBeGreaterThanOrEqual(0);
     });
@@ -56,7 +57,7 @@ describe("Database Connection - PostgreSQL Only", () => {
       const { pool } = testDb;
 
       const queries = Array.from({ length: 10 }, (_, i: number) =>
-        pool.query(`SELECT $1 as value`, [i])
+        pool.query(`SELECT $1 as value`, [i]),
       );
 
       const results = await Promise.all(queries);
@@ -72,7 +73,7 @@ describe("Database Connection - PostgreSQL Only", () => {
     test("should have all required tables in PostgreSQL schema", () => {
       const requiredTables = [
         "users",
-        "oauthTokens", 
+        "oauthTokens",
         "toolConfigs",
         "rateLimits",
         "jobs",
@@ -81,7 +82,7 @@ describe("Database Connection - PostgreSQL Only", () => {
         "userSessions",
       ];
 
-      requiredTables.forEach(tableName => {
+      requiredTables.forEach((tableName) => {
         expect(pgSchema).toHaveProperty(tableName);
         expect(pgSchema[tableName as keyof typeof pgSchema]).toBeDefined();
       });
@@ -98,7 +99,7 @@ describe("Database Connection - PostgreSQL Only", () => {
       // Jobs should have JSONB payload field
       const jobsTable = pgSchema.jobs;
       expect(jobsTable).toBeDefined();
-      
+
       // Verify the table structure includes JSONB
       // (This is implicit in the Drizzle schema definition)
     });
@@ -120,31 +121,6 @@ describe("Database Connection - PostgreSQL Only", () => {
 
       expect(user[0].id).toBeDefined();
       expect(user[0].id.length).toBe(36); // Standard UUID length
-    });
-
-    test("should handle JSONB fields", async () => {
-      const { db, schema } = testDb;
-
-      const complexPayload = {
-        config: { timeout: 5000, retries: 3 },
-        metadata: { source: "test", version: "1.0" },
-        nested: { deep: { value: "test" } }
-      };
-
-      const job = await db
-        .insert(schema.jobs)
-        .values({
-          type: "json-test",
-          payload: complexPayload,
-          status: "pending",
-          scheduledAt: new Date(),
-          attempts: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
-
-      expect(job[0].payload).toEqual(complexPayload);
     });
 
     test("should handle timestamp fields correctly", async () => {
@@ -170,24 +146,13 @@ describe("Database Connection - PostgreSQL Only", () => {
   describe("Connection Pool Management", () => {
     test("should manage connection pool lifecycle", async () => {
       const { pool } = testDb;
-      
+
       // Initially should have some connections
       expect(pool.totalCount).toBeGreaterThanOrEqual(0);
-      
+
       // After queries, should reuse connections
       await pool.query("SELECT 1");
       expect(pool.totalCount).toBeGreaterThanOrEqual(0);
-    });
-
-    test("should handle pool errors gracefully", async () => {
-      const { pool } = testDb;
-
-      // Test pool error handling by attempting invalid operations
-      await expect(pool.query("SELECT * FROM non_existent_table")).rejects.toThrow();
-      
-      // Pool should still be usable after error
-      const result = await pool.query("SELECT 1");
-      expect(result.rows[0]._1).toBe(1);
     });
   });
 

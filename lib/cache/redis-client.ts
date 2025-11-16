@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+
 import logger from "@/lib/logger";
 
 export interface RedisClientOptions {

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+
 import dashboardJson from "@/grafana/hyperpage-rate-limiting-dashboard.json";
 
 const shouldRunGrafanaTests =

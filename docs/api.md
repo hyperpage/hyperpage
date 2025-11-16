@@ -77,7 +77,7 @@ Initiates the OAuth flow for the specified tool (GitHub, GitLab, Jira).
 
 - Redirects to provider authorization URL (HTTP 302)
 
-#### `GET /api/auth/[tool]/callback`
+#### `GET /api/auth/oauth/[tool]`
 
 Handles the OAuth callback from the provider and exchanges the authorization code for tokens.
 
@@ -132,13 +132,12 @@ Disconnects the specified tool for the current user session.
 }
 ```
 
-**Authentication Features:**
+**Authentication Notes (Current State):**
 
-- **PKCE Support**: Proof Key for Code Exchange for enhanced security
-- **AES-256-GCM Encryption**: All tokens encrypted with military-grade encryption
-- **Automatic Refresh**: Access tokens automatically refreshed before expiration
-- **CSRF Protection**: State parameter validation prevents cross-site request forgery
-- **Secure Storage**: Tokens stored in SQLite database with server-side only access
+- **CSRF Protection**: Every initiation request sets a per-provider state cookie that must match on callback.
+- **Authorization Code Flow**: Providers share the same registry-driven handler; PKCE is not implemented yet.
+- **Token Storage**: Access + refresh tokens are persisted in PostgreSQL via `PostgresOAuthTokenRepository` without additional encryption. Restrict DB access accordingly.
+- **Refresh Logic**: `SecureTokenStorage.shouldRefresh` exposes helper methods, but token refresh orchestration is still on the roadmap for most providers.
 
 ### Tool Discovery
 
@@ -695,7 +694,14 @@ Retrieves current rate limit status for the specified platform (GitHub, GitLab, 
 
 **Caching:** Results are cached for 5 minutes to prevent excessive API calls.
 
-**Usage in UI:** The portal automatically uses these endpoints to show rate limit status in tool status indicators and tooltips.
+**Usage in UI:** The portal automatically uses these endpoints to show rate limit status in tool status indicators, tooltips, and `useToolQueries` adaptive polling metadata (`meta.usagePercent`). If you add a new platform, update `TOOL_PLATFORM_MAP` (`lib/rate-limit-utils.ts`) and ensure `/api/rate-limit/[platform]` transforms its response into the shared `RateLimitStatus` shape.
+
+**Prometheus Metrics:** `/api/metrics` exports:
+
+- `rate_limit_usage_percent{platform}`
+- `rate_limit_status{platform}`
+- `rate_limit_remaining{platform,endpoint}`
+- `rate_limit_max{platform,endpoint}`
 
 **Platform-Specific Details:**
 

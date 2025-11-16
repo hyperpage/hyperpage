@@ -1,5 +1,6 @@
 // hooks/useOAuthErrorDisplay.ts
 import { useMemo } from "react";
+
 import { OAuthError, getErrorDisplayProps } from "@/lib/oauth-errors";
 
 export function useOAuthErrorDisplay(error: OAuthError | null) {

@@ -1,16 +1,20 @@
+"use client";
+
 import SearchResultsHeader from "@/app/components/SearchResultsHeader";
 import ToolWidgetGrid from "@/app/components/ToolWidgetGrid";
 import NoToolsState from "@/app/components/NoToolsState";
 import ToolStatusRow from "@/app/components/ToolStatusRow";
-import { Tool, ToolData } from "@/tools/tool-types";
-import { processPortalData } from "@/lib/portal-utils";
+import { ClientSafeTool, ToolData } from "@/tools/tool-types";
+import PortalErrorSummary from "@/app/components/PortalErrorSummary";
+import { usePortalOverviewData } from "@/app/components/hooks/usePortalOverviewData";
 
 interface PortalOverviewProps {
-  enabledTools: Omit<Tool, "handlers">[];
+  enabledTools: ClientSafeTool[];
   searchQuery: string;
   dynamicData: Record<string, Record<string, ToolData[]>>;
   loadingStates: Record<string, boolean>;
-  refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
+  errorStates: Record<string, { message: string; timestamp: number } | null>;
+  refreshToolData: (tool: ClientSafeTool) => Promise<void>;
 }
 
 export default function PortalOverview({
@@ -18,17 +22,28 @@ export default function PortalOverview({
   searchQuery,
   dynamicData,
   loadingStates,
+  errorStates,
   refreshToolData,
 }: PortalOverviewProps) {
-  // Process data using utility function
-  const { toolWidgets, totalSearchResults } = processPortalData(
+  const {
+    toolWidgets,
+    totalSearchResults,
+    aggregatedErrors,
+    telemetryRefreshKey,
+  } = usePortalOverviewData({
     enabledTools,
     searchQuery,
     dynamicData,
-  );
+    errorStates,
+  });
 
   return (
-    <div className="p-8">
+    <div className="p-8 space-y-6">
+      <PortalErrorSummary
+        aggregatedErrors={aggregatedErrors}
+        telemetryRefreshKey={telemetryRefreshKey}
+      />
+
       {/* Search Results Summary */}
       {searchQuery && (
         <SearchResultsHeader
@@ -43,6 +58,7 @@ export default function PortalOverview({
           toolWidgets={toolWidgets}
           enabledTools={enabledTools}
           loadingStates={loadingStates}
+          errorStates={errorStates}
           refreshToolData={refreshToolData}
         />
       ) : (
@@ -50,7 +66,7 @@ export default function PortalOverview({
       )}
 
       {/* Tool Status Row */}
-      <ToolStatusRow />
+      <ToolStatusRow errorSummaries={aggregatedErrors} />
     </div>
   );
 }

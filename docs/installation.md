@@ -4,9 +4,11 @@ This guide covers the detailed installation process, system requirements, and co
 
 ## Prerequisites
 
-- **Node.js 18+** installed (recommended: 20+ for best performance)
-- **npm 9+** package manager
-- Access to your development tool accounts (GitHub, GitLab, Jira, etc.)
+- **Node.js 22.x** (matching [`.nvmrc`](../.nvmrc))
+- **npm 10+**
+- Local or containerised PostgreSQL 15+ (the app is PostgreSQL-only)
+- Optional Redis if you want persistent sessions across multiple processes
+- Access tokens or OAuth credentials for the tools you enable
 
 ## Installation
 
@@ -23,14 +25,28 @@ This guide covers the detailed installation process, system requirements, and co
    npm install
    ```
 
-3. **Copy environment template:**
+3. **Copy environment template (pick one):**
+
    ```bash
-   cp .env.local.sample .env.local
+   # Local development
+   cp .env.sample .env.dev
+
+   # Testing harness
+   cp .env.test.example .env.test
+
+   # Staging / production templates
+   cp .env.sample .env.staging
+   cp .env.sample .env.production
+   ```
+
+4. **Run database migrations (requires `DATABASE_URL` or .env config):**
+   ```bash
+   npm run db:migrate
    ```
 
 ## Configuration
 
-Edit `.env.local` to configure your tool integrations. The system uses environment variables to enable/disable tools and provide authentication.
+Edit `.env.dev` (or the appropriate env file) to configure your tool integrations. The system uses environment variables to enable/disable tools and provide authentication.
 
 ### Core Configuration
 
@@ -60,7 +76,7 @@ To create a GitHub Personal Access Token:
 2. Generate new token with these permissions:
    - `repo` (Full control of private repositories)
    - `read:org` (Read org and team membership, if using organization repos)
-3. Copy the token and add it to your `.env.local`
+3. Copy the token and add it to your `.env.dev`
 
 #### GitLab Integration
 
@@ -103,7 +119,7 @@ Only web URLs need to be configured in environment variables.
 
 ## Development Setup
 
-1. **Start the development server:**
+1. **Start the development server (loads `.env.dev` automatically):**
 
    ```bash
    npm run dev
@@ -113,8 +129,8 @@ Only web URLs need to be configured in environment variables.
    Open [http://localhost:3000](http://localhost:3000) in your browser
 
 3. **Enable tools:**
-   - Edit `.env.local` to set `ENABLE_TOOL=true` for desired integrations
-   - Restart the development server
+   - Edit `.env.dev` to set `ENABLE_TOOL=true` for desired integrations
+   - Restart the development server so the newly loaded `.env.dev` values are picked up
    - Tool widgets will appear on the portal automatically
 
 ## Production Build
@@ -126,18 +142,13 @@ Only web URLs need to be configured in environment variables.
    npm start
    ```
 
-2. **Or use the production script:**
-   ```bash
-   npm run build:start
-   ```
-
 ## Troubleshooting
 
 ### Common Issues
 
 **"Tool not appearing on portal"**
 
-- Verify `ENABLE_TOOL=true` in `.env.local`
+- Verify `ENABLE_TOOL=true` in `.env.dev`
 - Restart the development server after configuration changes
 - Check that all required environment variables are set
 

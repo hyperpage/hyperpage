@@ -1,280 +1,130 @@
 # Docker Development Setup
 
-This guide explains how to use Docker Compose for local development with PostgreSQL and Redis.
+Use Docker Compose to bootstrap the supporting services (PostgreSQL + Redis) for local work, or to run the entire stack in containers when needed. Most developers run `npm run dev` on the host and let Compose provide the databases.
+
+## When to Use Compose
+
+| Scenario                      | Recommendation                                                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Local feature/dev workflow    | Run `npm run dev` on your machine. Use `npm run db:test:up` (or `docker compose up -d postgres redis`) to bring up Postgres/Redis.         |
+| Vitest / integration suites   | Use `npm run db:test:up` before `npm test` (the scripts shell out to `docker compose -f docker-compose.yml -f docker-compose.test.yml …`). |
+| Full containerized app (rare) | Use `docker compose up hyperpage` if you want the Next.js dev server in a container. Most contributors don’t need this.                    |
 
 ## Quick Start
 
-### Prerequisites
-- Docker Desktop installed
-- Docker Compose v2.0+
-
-### 1. Start Services
 ```bash
-# Start PostgreSQL and Redis services
-docker-compose up -d
+# 1. Copy the environment template
+cp .env.sample .env.dev
 
-# Or start all services including Hyperpage
-docker-compose up -d --build
+# 2. Start Postgres + Redis (preferred helper scripts)
+npm run db:test:up      # starts postgres+redis with docker-compose
+
+# 3. Start the Next.js dev server on your host (uses .env.dev)
+npm run dev
+
+# 4. When finished
+npm run db:test:down    # stops postgres+redis
 ```
 
-### 2. Configure Environment
-```bash
-# Copy development environment template
-cp .env.local.sample .env.local
+> **Tip:** The helper scripts (`npm run db:test:up` / `npm run db:test:down`) wrap `docker compose -f docker-compose.yml -f docker-compose.test.yml …` so CI and local workflows behave the same. Use the raw `docker compose` commands only when you need custom options.
 
-# Edit .env.local to configure your tool integrations (GitHub, GitLab, Jira, etc.)
-# See .env.local.development for examples
-```
+## Services Overview
 
-### 3. Access Services
-- **Hyperpage**: http://localhost:3000
-- **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
-
-## Services
-
-### PostgreSQL 18-alpine
-- **Host**: postgres
-- **Port**: 5432
-- **Database**: hyperpage
-- **Username**: postgres
-- **Password**: hyperpage_dev
-- **Connection**: `postgresql://postgres:hyperpage_dev@postgres:5432/hyperpage`
-
-### Redis 8-alpine
-- **Host**: redis
-- **Port**: 6379
-- **Connection**: `redis://redis:6379`
-
-### Hyperpage (Next.js)
-- **Port**: 3000
-- **Command**: `npm run dev`
-- **Auto-reload**: Enabled with volume mounting
-- **Dependencies**: Waits for PostgreSQL and Redis to be healthy
+| Service              | Container            | Host Port        | Default Connection                                | Notes                                                                                              |
+| -------------------- | -------------------- | ---------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| PostgreSQL           | `hyperpage-postgres` | `localhost:5432` | `postgresql://postgres:@localhost:5432/hyperpage` | Auth uses scram; set `DATABASE_URL` in `.env.dev` to the connection string you prefer.             |
+| Redis                | `hyperpage-redis`    | `localhost:6379` | `redis://localhost:6379`                          | AOF enabled, no password by default.                                                               |
+| Hyperpage (optional) | `hyperpage-app`      | `localhost:3000` | `http://localhost:3000`                           | Runs `npm run dev` inside the container. Only needed if you want a fully containerized dev server. |
 
 ## Common Commands
 
-### Service Management
 ```bash
-# Start services
-docker-compose up -d
+# Start services (foreground)
+docker compose up postgres redis
+
+# Start services (detached)
+docker compose up -d postgres redis
 
 # View logs
-docker-compose logs -f hyperpage
-docker-compose logs -f postgres
-docker-compose logs -f redis
+docker compose logs -f postgres
+docker compose logs -f redis
+docker compose logs -f hyperpage   # if running the app container
 
 # Stop services
-docker-compose down
+docker compose down
 
-# Reset databases (removes all data)
-docker-compose down -v && docker-compose up -d
-
-# Rebuild and restart
-docker-compose up -d --build
-
-# View service status
-docker-compose ps
+# Hard reset (removes volumes)
+docker compose down -v && docker volume prune -f
 ```
 
-### Database Access
+The helper scripts wrap the same commands:
+
 ```bash
-# Access PostgreSQL
+npm run db:test:up       # docker compose up -d postgres redis
+npm run db:test:down     # docker compose ... down -v
+npm run db:test:reset    # down -v, prune, up
+```
+
+## Database Access Examples
+
+```bash
+# psql shell inside the container
 docker exec -it hyperpage-postgres psql -U postgres -d hyperpage
 
-# Create a new database
-docker exec -it hyperpage-postgres createdb -U postgres newdb
-
-# Backup database
-docker exec hyperpage-postgres pg_dump -U postgres hyperpage > backup.sql
-
-# Restore database
-docker exec -i hyperpage-postgres psql -U postgres hyperpage < backup.sql
+# Run migrations from host
+docker compose run --rm hyperpage npm run db:migrate
 ```
 
-### Redis Access
+If you need to expose a different password/URL, update `.env.dev` and restart the containers so `DATABASE_URL` stays in sync with Postgres authentication.
+
+## Redis Access Examples
+
 ```bash
-# Access Redis CLI
+# Start redis-cli shell
 docker exec -it hyperpage-redis redis-cli
 
-# Access with password
-docker exec -it hyperpage-redis redis-cli
-
-# Monitor Redis
+# Monitor traffic
 docker exec -it hyperpage-redis redis-cli monitor
 ```
 
-## Development Workflow
+## Running the App Container (Optional)
 
-### 1. Initial Setup
+Most contributors run `npm run dev` locally. If you want the app inside Docker:
+
 ```bash
-# Start database services
-docker-compose up -d postgres redis
+# Build and start the dev server container along with dependencies
+docker compose up -d --build
 
-# Wait for services to be healthy
-docker-compose ps
-
-# Configure environment
-cp .env.local.development .env.local
-# Edit .env.local with your tool integrations
+# Tail application logs
+docker compose logs -f hyperpage
 ```
 
-### 2. Database Operations
-```bash
-# Run database migrations
-docker exec hyperpage-app npm run db:migrate
+This maps the repo into `/app` inside the container, so file changes still trigger hot reloads.
 
-# Access database directly
-docker exec -it hyperpage-postgres psql -U postgres -d hyperpage
+## Environment Notes
 
-# Check database connection
-docker exec hyperpage-app npm run db:check
-```
+- `.env.dev` is the only required file for local work. Copy it from `.env.sample` and fill in tokens/secrets.
+- `DATABASE_URL`, `REDIS_URL`, and `NEXTAUTH_URL` must point at the Compose-hosted services (`localhost` ports unless you override them).
+- `CONFIG_ENV_FILE` / `NEXT_PUBLIC_ENV_FILE` should match the file you actually use (e.g. `.env.dev`).
 
-### 3. Application Development
-```bash
-# Start Hyperpage (in another terminal or as service)
-docker-compose up hyperpage
+## Volumes
 
-# Development with hot reload
-# Code changes automatically reload the application
+Compose creates named volumes for persistent data:
 
-# View application logs
-docker-compose logs -f hyperpage
-```
+- `postgres_data`
+- `redis_data`
 
-## Environment Configuration
+Manage them with standard Docker commands:
 
-### Database Configuration
-The docker-compose.yml automatically configures:
-- `DB_ENGINE=postgres`
-- `DATABASE_URL=postgresql://postgres:hyperpage_dev@postgres:5432/hyperpage`
-- Individual `POSTGRES_*` variables for fine-grained control
-
-### Redis Configuration
-The docker-compose.yml automatically configures:
-- `REDIS_URL=redis://redis:6379`
-- Redis with AOF persistence enabled
-- Password protection for development
-
-### Development Settings
-Additional development configurations:
-- `NODE_ENV=development`
-- `LOG_LEVEL=info`
-- High rate limits for testing
-- GitHub integration enabled by default
-
-## Volume Management
-
-### Named Volumes
-- `hyperpage_postgres_data`: PostgreSQL data persistence
-- `hyperpage_redis_data`: Redis data persistence
-
-### Volume Commands
 ```bash
 # List volumes
 docker volume ls
 
-# Inspect volume
-docker volume inspect hyperpage_postgres_data
+# Inspect a volume
+docker volume inspect postgres_data
 
-# Remove volume (destroys data)
-docker volume rm hyperpage_postgres_data
+# Remove unused volumes
+docker volume prune -f
 ```
 
-## Network Configuration
-
-Services communicate through the `hyperpage-dev` bridge network:
-- PostgreSQL reachable at `postgres:5432` from Hyperpage
-- Redis reachable at `redis:6379` from Hyperpage
-- External access via localhost ports
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Port already in use**
-   ```bash
-   # Check what's using the port
-   lsof -i :5432
-   lsof -i :6379
-   lsof -i :3000
-   
-   # Stop conflicting services
-   docker-compose down
-   ```
-
-2. **Database connection failed**
-   ```bash
-   # Check PostgreSQL status
-   docker-compose logs postgres
-   
-   # Test connection manually
-   docker exec hyperpage-postgres pg_isready -U hyperpage -d hyperpage
-   ```
-
-3. **Redis connection failed**
-   ```bash
-   # Check Redis status
-   docker-compose logs redis
-   
-   # Test connection manually
-   docker exec hyperpage-redis redis-cli -a redis_dev_pass ping
-   ```
-
-4. **Permission issues**
-   ```bash
-   # Reset volumes and restart
-   docker-compose down -v
-   docker-compose up -d
-   ```
-
-### Health Checks
-
-All services include health checks:
-```bash
-# Check health status
-docker-compose ps
-
-# Manual health checks
-docker exec hyperpage-postgres pg_isready -U postgres -d hyperpage
-docker exec hyperpage-redis redis-cli -a redis_dev_pass ping
-curl -f http://localhost:3000/api/health
-```
-
-## Security Notes
-
-⚠️ **Important**: This setup is for local development only:
-- Uses weak passwords for convenience
-- No SSL/TLS encryption
-- Development tokens with limited permissions
-- No network isolation from host
-
-🔐 **For production**: Use proper secrets management, SSL certificates, and strong authentication.
-
-## Integration with Existing Workflows
-
-### VS Code Development
-1. Install "Remote - Containers" extension
-2. Use Docker Compose as development environment
-3. Volume mounting provides seamless file synchronization
-
-### CI/CD Integration
-```yaml
-# Example GitHub Actions workflow
-- name: Start test environment
-  run: docker-compose -f docker-compose.yml up -d postgres redis
-  
-- name: Run tests
-  run: |
-    docker-compose exec hyperpage-app npm test
-    docker-compose exec hyperpage-app npm run lint
-```
-
-### Backup and Recovery
-```bash
-# Backup database
-docker exec hyperpage-postgres pg_dump -U postgres hyperpage > $(date +%Y%m%d_%H%M%S)_backup.sql
-
-# Restore database
-docker exec -i hyperpage-postgres psql -U postgres hyperpage < backup.sql
+With this setup, you can start/stop services quickly without losing data, keep the host Next.js dev server, and share the same workflow the automated scripts expect.

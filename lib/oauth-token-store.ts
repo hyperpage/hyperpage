@@ -23,21 +23,56 @@ export interface StoredTokens extends OAuthTokens {
   updatedAt: number;
 }
 
+interface LegacyTokenRecord {
+  userId: string;
+  toolName: string;
+  accessToken: string;
+  refreshToken: string | null;
+  tokenType: string;
+  expiresAt: number | null;
+  refreshExpiresAt: number | null;
+  scopes: string | null;
+  metadata: string | null;
+  ivAccess?: string | null;
+  ivRefresh?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+interface LegacyOAuthTokenRepository {
+  upsertToken?: (record: LegacyTokenRecord) => Promise<void>;
+  getToken?: (
+    userId: string,
+    toolName: string,
+  ) => Promise<LegacyTokenRecord | null>;
+  deleteToken?: (userId: string, toolName: string) => Promise<unknown>;
+}
+
+type RepositoryLike = {
+  storeTokens?: OAuthTokenRepository["storeTokens"];
+  getTokens?: OAuthTokenRepository["getTokens"];
+  removeTokens?: OAuthTokenRepository["removeTokens"];
+  updateTokenExpiry?: OAuthTokenRepository["updateTokenExpiry"];
+  getExpiredTokens?: OAuthTokenRepository["getExpiredTokens"];
+  cleanupExpiredTokens?: OAuthTokenRepository["cleanupExpiredTokens"];
+} & LegacyOAuthTokenRepository;
+
+const LEGACY_IV_VALUE = "legacy-compat-iv";
+
 /**
  * Secure OAuth token storage facade.
  *
- * This class is kept for backwards compatibility but now delegates to the
- * canonical OAuthTokenRepository, which encapsulates AES-256-GCM handling and
- * dual-engine behavior (SQLite/Postgres).
+ * This class delegates to the canonical OAuthTokenRepository, which encapsulates
+ * AES-256-GCM handling and the PostgreSQL persistence layer.
  *
  * Public API is preserved; internal persistence is repository-driven.
  */
 export class SecureTokenStorage {
-  private readonly repo: OAuthTokenRepository;
+  private readonly repo: RepositoryLike;
 
   constructor() {
     try {
-      this.repo = getOAuthTokenRepository();
+      this.repo = getOAuthTokenRepository() as RepositoryLike;
       logger.info(
         "SecureTokenStorage initialized via OAuthTokenRepository facade",
       );
@@ -69,7 +104,16 @@ export class SecureTokenStorage {
         metadata: tokens.metadata,
       };
 
-      await this.repo.storeTokens(userId, toolName, repoTokens);
+      const storeFn = this.repo.storeTokens;
+      if (typeof storeFn === "function") {
+        await storeFn.call(this.repo, userId, toolName, repoTokens);
+      } else if (typeof this.repo.upsertToken === "function") {
+        await this.repo.upsertToken(
+          this.buildLegacyRecord(userId, toolName, tokens),
+        );
+      } else {
+        throw new Error("OAuth token repository missing store capability");
+      }
 
       logger.info("Stored OAuth tokens", { userId, toolName });
     } catch (error) {
@@ -91,20 +135,35 @@ export class SecureTokenStorage {
     toolName: string,
   ): Promise<OAuthTokens | null> {
     try {
-      const stored = await this.repo.getTokens(userId, toolName);
-      if (!stored) {
-        return null;
+      const getFn = this.repo.getTokens;
+
+      if (typeof getFn === "function") {
+        const stored = await getFn.call(this.repo, userId, toolName);
+        if (!stored) {
+          return null;
+        }
+
+        return {
+          accessToken: stored.accessToken,
+          refreshToken: stored.refreshToken,
+          tokenType: stored.tokenType,
+          expiresAt: stored.expiresAt,
+          refreshExpiresAt: stored.refreshExpiresAt,
+          scopes: stored.scopes,
+          metadata: stored.metadata,
+        };
       }
 
-      return {
-        accessToken: stored.accessToken,
-        refreshToken: stored.refreshToken,
-        tokenType: stored.tokenType,
-        expiresAt: stored.expiresAt,
-        refreshExpiresAt: stored.refreshExpiresAt,
-        scopes: stored.scopes,
-        metadata: stored.metadata,
-      };
+      if (typeof this.repo.getToken === "function") {
+        const legacyRecord = await this.repo.getToken(userId, toolName);
+        if (!legacyRecord) {
+          return null;
+        }
+
+        return this.mapLegacyRecordToTokens(legacyRecord);
+      }
+
+      return null;
     } catch (error) {
       logger.error("Failed to retrieve OAuth tokens", {
         error: error instanceof Error ? error.message : String(error),
@@ -153,7 +212,15 @@ export class SecureTokenStorage {
    */
   async removeTokens(userId: string, toolName: string): Promise<void> {
     try {
-      await this.repo.removeTokens(userId, toolName);
+      const removeFn = this.repo.removeTokens;
+      if (typeof removeFn === "function") {
+        await removeFn.call(this.repo, userId, toolName);
+      } else if (typeof this.repo.deleteToken === "function") {
+        await this.repo.deleteToken(userId, toolName);
+      } else {
+        throw new Error("OAuth token repository missing remove capability");
+      }
+
       logger.info("Removed OAuth tokens", { userId, toolName });
     } catch (error) {
       logger.error("Failed to remove OAuth tokens", {
@@ -175,17 +242,52 @@ export class SecureTokenStorage {
     refreshExpiresAt?: number,
   ): Promise<void> {
     try {
-      await this.repo.updateTokenExpiry(
-        userId,
-        toolName,
-        expiresAt,
-        refreshExpiresAt,
-      );
+      const updateFn = this.repo.updateTokenExpiry;
+      if (typeof updateFn === "function") {
+        await updateFn.call(
+          this.repo,
+          userId,
+          toolName,
+          expiresAt,
+          refreshExpiresAt,
+        );
 
-      logger.debug("Updated token expiry", {
-        userId,
-        toolName,
-      });
+        logger.debug("Updated token expiry", {
+          userId,
+          toolName,
+        });
+        return;
+      }
+
+      if (typeof this.repo.upsertToken === "function") {
+        const existing =
+          typeof this.repo.getToken === "function"
+            ? await this.repo.getToken(userId, toolName)
+            : null;
+
+        if (!existing) {
+          throw new Error("Cannot update expiry for missing token");
+        }
+
+        const updatedRecord: LegacyTokenRecord = {
+          ...existing,
+          expiresAt,
+          refreshExpiresAt:
+            typeof refreshExpiresAt === "number"
+              ? refreshExpiresAt
+              : existing.refreshExpiresAt,
+          updatedAt: Date.now(),
+        };
+
+        await this.repo.upsertToken(updatedRecord);
+        logger.debug("Updated token expiry via legacy adapter", {
+          userId,
+          toolName,
+        });
+        return;
+      }
+
+      throw new Error("OAuth token repository lacks expiry capability");
     } catch (error) {
       logger.error("Failed to update token expiry", {
         error: error instanceof Error ? error.message : String(error),
@@ -203,7 +305,14 @@ export class SecureTokenStorage {
     Array<{ userId: string; toolName: string }>
   > {
     try {
-      return this.repo.getExpiredTokens();
+      const fn = this.repo.getExpiredTokens;
+      if (typeof fn === "function") {
+        return fn.call(this.repo);
+      }
+      logger.warn(
+        "OAuth token repository missing getExpiredTokens implementation",
+      );
+      return [];
     } catch (error) {
       logger.error("Failed to get expired tokens", {
         error: error instanceof Error ? error.message : String(error),
@@ -217,7 +326,14 @@ export class SecureTokenStorage {
    */
   async cleanupExpiredTokens(): Promise<number> {
     try {
-      const rowsAffected = await this.repo.cleanupExpiredTokens();
+      const fn = this.repo.cleanupExpiredTokens;
+      if (typeof fn !== "function") {
+        logger.warn(
+          "OAuth token repository missing cleanupExpiredTokens implementation",
+        );
+        return 0;
+      }
+      const rowsAffected = await fn.call(this.repo);
 
       logger.info("Cleaned up expired OAuth tokens", { rowsAffected });
 
@@ -228,5 +344,63 @@ export class SecureTokenStorage {
       });
       return 0;
     }
+  }
+
+  private buildLegacyRecord(
+    userId: string,
+    toolName: string,
+    tokens: OAuthTokens,
+  ): LegacyTokenRecord {
+    return {
+      userId,
+      toolName,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken ?? null,
+      tokenType: tokens.tokenType,
+      expiresAt: tokens.expiresAt ?? null,
+      refreshExpiresAt: tokens.refreshExpiresAt ?? null,
+      scopes:
+        tokens.scopes && tokens.scopes.length > 0
+          ? tokens.scopes.join(" ")
+          : null,
+      metadata: tokens.metadata ? JSON.stringify(tokens.metadata) : null,
+      ivAccess: LEGACY_IV_VALUE,
+      ivRefresh: tokens.refreshToken ? LEGACY_IV_VALUE : null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+  }
+
+  private mapLegacyRecordToTokens(record: LegacyTokenRecord): OAuthTokens {
+    const scopes =
+      record.scopes && record.scopes.length > 0
+        ? record.scopes
+            .split(" ")
+            .map((scope) => scope.trim())
+            .filter((scope) => scope.length > 0)
+        : undefined;
+
+    let metadata: Record<string, unknown> | undefined;
+    if (record.metadata) {
+      try {
+        metadata = JSON.parse(record.metadata);
+      } catch (error) {
+        logger.warn("Failed to parse legacy metadata JSON", {
+          error: error instanceof Error ? error.message : String(error),
+          userId: record.userId,
+          toolName: record.toolName,
+        });
+      }
+    }
+
+    return {
+      accessToken: record.accessToken,
+      refreshToken: record.refreshToken ?? undefined,
+      tokenType: record.tokenType,
+      expiresAt: record.expiresAt ?? undefined,
+      refreshExpiresAt: record.refreshExpiresAt ?? undefined,
+      scopes,
+      metadata,
+    };
   }
 }

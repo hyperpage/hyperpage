@@ -1,7 +1,7 @@
 /**
  * Persistent job queue implementation for production deployments.
  *
- * Provides job queuing, prioritization, and execution tracking with SQLite persistence.
+ * Provides job queuing, prioritization, and execution tracking with PostgreSQL persistence.
  * Jobs survive process restart and maintain state across deployments.
  * Uses priority queue (heap) for efficient job scheduling and database for persistence.
  */

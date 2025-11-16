@@ -8,69 +8,69 @@ The test suite has been reorganized into a clear, hierarchical structure:
 
 ```
 __tests__/
-├── shared/                          # Shared test utilities and constants
-│   └── test-credentials.ts          # Test credentials, mock data, and utilities
-├── unit/                            # Unit tests (fast, isolated tests)
-│   ├── api/                         # API endpoint tests
-│   ├── components/                  # Component unit tests
-│   ├── lib/                         # Library and utility tests
-│   └── tools/                       # Tool registry and configuration tests
-├── integration/                     # Integration tests (end-to-end, slow)
-│   ├── environment/                 # Environment setup tests
-│   ├── oauth/                       # OAuth flow integration tests
-│   ├── performance/                 # Performance and load testing
-│   ├── tools/                       # Tool integration tests
-│   └── workflows/                   # User workflow tests
-│       └── utils/                   # Workflow testing utilities
-├── e2e/                             # End-to-end browser tests
-├── performance/                     # Dedicated performance tests
-├── tools/                           # Tool-specific test helpers
-└── mocks/                           # Mock servers and external services
+├── shared/                # Shared test utilities (test-credentials, fake sessions, env helpers)
+├── mocks/                 # Mock servers (e.g., rate-limit server) reused across suites
+├── unit/                  # Unit + API-facing suites (still rely on Postgres harness)
+│   ├── api/               # Route handlers (bottlenecks, tools, health, metrics, etc.)
+│   ├── components/        # React hook/component tests
+│   ├── lib/               # Database/repos, queues, monitoring; Postgres + Redis heavy
+│   └── tools/             # Tool registry/config validation
+├── integration/           # Postgres-backed workflows + HTTP integration tests
+│   ├── database/          # Harness sanity checks (Postgres-only)
+│   ├── performance/       # Optional mocked “performance validation” (PERFORMANCE_TESTS=1)
+│   ├── tools/             # Calls live Next.js routes; gated by E2E_TESTS + tokens
+│   └── workflows/         # Synthetic TestBrowser workflows (to be migrated to real E2E)
+├── performance/           # Optional timed suites (PERFORMANCE_TESTS=1)
+│   └── rate-limit/        # Focused perf scenarios
+├── e2e/                   # Playwright tests + docker harness
+│   └── oauth/             # Provider-specific specs (require tokens)
+└── grafana/               # Dashboard validation (GRAFANA_TESTS=1)
 ```
 
 ## Test Categories and Their Purposes
 
 ### Unit Tests (`__tests__/unit/`)
 
-- **API Tests** (`api/`): Test individual API endpoints in isolation
-- **Component Tests** (`components/`): Test React components with mocked data
-- **Library Tests** (`lib/`): Test utility functions, classes, and services
-- **Tool Tests** (`tools/`): Test tool registry, validation, and configuration
+- **API Tests** (`api/`): Exercise Next.js route handlers. They mock external services but still rely on the Postgres harness via repository imports.
+- **Component Tests** (`components/`): React hooks/components with mocked browser APIs.
+- **Library Tests** (`lib/`): Database repositories, queues, cache, monitoring, OAuth helpers. These tests provision/drop the Postgres DB through `vitest.setup.ts` and occasionally touch Redis.
+- **Tool Tests** (`tools/`): Registry metadata and enablement logic.
 
 **Key Principles:**
 
-- Fast execution (sub-second per test)
-- No external dependencies
-- Mock all external services
-- Focus on individual units of code
+- Keep suites deterministic and hermetic (mock network + external APIs).
+- Tests are categorized as “unit” but still require a running Postgres instance. Start the dockerized DB (`npm run db:test:up`) before invoking `npm run test:unit`.
+- Prefer shared fixtures/utilities over ad-hoc mocks to avoid drift.
 
 ### Integration Tests (`__tests__/integration/`)
 
-- **Environment Tests** (`environment/`): Test system configuration and setup
-- **OAuth Tests** (`oauth/`): Test authentication flows across providers
-- **Performance Tests** (`performance/`): Test system behavior under load
-- **Tool Integration Tests** (`tools/`): Test tool APIs and data fetching
-- **Workflow Tests** (`workflows/`): Test complete user journeys
+- **Database**: `database/dual-engine.test.ts` validates Postgres-only wiring. Rename/expand as we continue tightening the harness.
+- **Performance**: Mock-heavy timing sanity checks; flagged via `PERFORMANCE_TESTS`.
+- **Tools**: Hit actual app routes (`/api/tools/**`) using `fetch`. Require the dev server plus `E2E_TESTS` and provider tokens. They skip automatically when the server is down.
+- **Workflows**: Synthetic UI flows built on `TestBrowser`/`UserJourneySimulator`. Treat them as transitional until replaced by Playwright.
 
 **Key Principles:**
 
-- Slower execution (may take seconds to minutes)
-- Test interactions between components
-- May use real or mocked external services
-- Focus on end-to-end functionality
+- Depend on the Postgres harness (and sometimes Redis). The dockerized DB must be running.
+- Tool suites should be treated as opt-in: they skip unless explicitly enabled + server reachable.
+- Long term, migrate anything that pretends to be UI automation into Playwright.
 
 ### End-to-End Tests (`__tests__/e2e/`)
 
-- Browser-based tests using Playwright
-- Test complete user flows through the UI
-- Validate real user scenarios
-- Slowest execution time
+- Playwright specs (`portal`, `rate-limit-handling`, `tool-integration`, `oauth/*`) run against a real Next.js server (local dev or docker compose).
+- Controlled via `npm run test:e2e*` scripts that set `E2E_TESTS=1`.
+- OAuth specs expect real provider tokens and now remain quarantined unless `E2E_OAUTH=1` (in addition to `E2E_TESTS=1`) is set with valid provider credentials.
 
 ### Performance Tests (`__tests__/performance/`)
 
-- Dedicated performance and load testing
-- Monitor system behavior under stress
-- Validate performance requirements
+- Optional timed suites (`database.test.ts`, `rate-limit/rate-limiting-performance.test.ts`).
+- Disabled unless `PERFORMANCE_TESTS=1`.
+- Focus on guarding regressions in repo/cache helpers, not micro-benchmarks.
+
+### Grafana Tests (`__tests__/grafana/`)
+
+- Validate dashboard JSON against Grafana expectations.
+- Opt-in via `GRAFANA_TESTS=1` or `E2E_TESTS=1`.
 
 ## Shared Test Utilities
 
@@ -121,41 +121,54 @@ export class TestUserManager {
 ### By Category
 
 ```bash
-# Unit tests only (fast)
+# Unit + API suites (require Postgres running via npm run db:test:up)
 npm run test:unit
 
-# Integration tests only
+# Integration suites (__tests__/integration/**)
 npm run test:integration
 
-# End-to-end tests
+# Postgres + perf-focused suites
+PERFORMANCE_TESTS=1 npm run test:perf
+
+# Playwright E2E (against local dev server)
 npm run test:e2e
 
-# Performance tests
-npm run test:performance
+# Dockerized Playwright against built app (__tests__/e2e/docker-compose.e2e.yml)
+npm run test:e2e:docker
 ```
 
-### By Specific Areas
+- `npm run test:e2e`: Starts the local dev server (if not already running), sets `E2E_TESTS=1`, and executes Playwright. Ensure `.env.test` contains the required provider tokens or those suites will skip.
+- `npm run test:e2e:docker`: Uses `scripts/test-e2e-docker.sh` + `__tests__/e2e/docker-compose.e2e.yml` to build/run the Next.js app, Postgres, Redis, and Playwright containers. Copy `__tests__/e2e/.env.e2e` with the necessary placeholders before running.
+
+For narrower filters, use Vitest’s path arguments. Example:
 
 ```bash
-# API tests only
-npm test -- --testPathPattern=unit/api
-
-# Tool integration tests
-npm test -- --testPathPattern=integration/tools
-
-# OAuth flow tests
-npm test -- --testPathPattern=integration/oauth
+# Only run GitHub tool integration specs (assuming server + tokens available)
+E2E_TESTS=1 npm run test -- __tests__/integration/tools/github.spec.ts
 ```
 
 ## Test Configuration
 
 ### Environment Variables
 
-Tests use the shared test credentials and mock environments. No real API keys or sensitive data is required.
+Most suites rely on `.env.test` and the Postgres harness:
+
+- Set `DATABASE_URL` (e.g., via `.env.test`) so `vitest.setup.ts` can drop/create the test database.
+  - When running tests on the host, point to `localhost` (example: `postgresql://...@localhost:5432/hyperpage-test`).
+  - When running tests **inside** the docker-compose network, use the service name (`postgresql://...@postgres:5432/hyperpage-test`).
+- Optional suites require env flags:
+  - `E2E_TESTS=1` for tool integration specs + Playwright.
+  - `E2E_OAUTH=1` when enabling `__tests__/e2e/oauth/**` alongside provider tokens.
+  - `PERFORMANCE_TESTS=1` for `__tests__/performance/**` and `__tests__/integration/performance/**`.
+  - `GRAFANA_TESTS=1` for `__tests__/grafana`.
+- Tool integration suites additionally require `HYPERPAGE_TEST_BASE_URL` to match the running Next.js server (defaults to `http://localhost:3000` in `.env.test` / npm scripts) plus the provider tokens referenced above.
+- Provider tokens (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `JIRA_API_TOKEN`) are required whenever a suite reaches out to their routes or OAuth flows. Keep placeholders in `.env.test` and override locally as needed.
 
 ### Test Data
 
-All tests use generated mock data that simulates real API responses without making external requests.
+- `vitest.setup.ts` seeds deterministic rows into Postgres tables before each test. Avoid creating ad-hoc fixtures outside the harness.
+- `__tests__/shared/test-credentials.ts` provides fake OAuth credentials, session helpers, and mock data generators for integration/tool suites.
+- Playwright suites rely on whatever data the app surfaces; when asserting on tool data, prefer high-level UI expectations rather than brittle mock payloads.
 
 ## Migration and Maintenance
 

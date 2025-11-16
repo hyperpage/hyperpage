@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, ExternalLink, Copy } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 interface SetupStepProps {
   step: {

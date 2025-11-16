@@ -1,33 +1,48 @@
 // Rate limit monitoring endpoint for all platforms
 
 import { NextRequest, NextResponse } from "next/server";
+
 import logger from "@/lib/logger";
 import { toolRegistry } from "@/tools/registry";
 import { getServerRateLimitStatus } from "@/lib/rate-limit-service";
 import { Tool } from "@/tools/tool-types";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
 
 /**
  * GET /api/rate-limit/[platform] - Get rate limit status for a specific platform
  */
+const PLATFORM_REGEX = /^[a-zA-Z0-9._-]+$/;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ platform: string }> },
 ): Promise<NextResponse> {
   const platform = (await params).platform;
 
+  if (!PLATFORM_REGEX.test(platform)) {
+    return validationErrorResponse(
+      "Invalid platform parameter",
+      "INVALID_PLATFORM",
+    );
+  }
+
   try {
     // Check if platform supports rate limit monitoring
     const tool = toolRegistry[platform];
     if (!tool || !tool.capabilities?.includes("rate-limit")) {
-      return NextResponse.json(
+      return validationErrorResponse(
+        "Rate limit monitoring not supported for this platform",
+        "PLATFORM_NOT_SUPPORTED",
         {
-          error: `Rate limit monitoring not supported for platform: ${platform}`,
+          platform,
           supportedPlatforms: Object.values(toolRegistry)
             .filter((tool): tool is Tool => tool !== undefined)
             .filter((tool) => tool.capabilities?.includes("rate-limit"))
             .map((tool) => tool.slug),
         },
-        { status: 400 },
       );
     }
 
@@ -40,12 +55,11 @@ export async function GET(
     const rateLimitStatus = await getServerRateLimitStatus(platform, baseUrl);
 
     if (!rateLimitStatus) {
-      return NextResponse.json(
-        {
-          error: `Rate limit monitoring not supported or failed for platform: ${platform}`,
-        },
-        { status: 500 },
-      );
+      return createErrorResponse({
+        status: 502,
+        code: "RATE_LIMIT_UNAVAILABLE",
+        message: `Rate limit monitoring not supported or failed for platform: ${platform}`,
+      });
     }
 
     return NextResponse.json(rateLimitStatus);
@@ -55,11 +69,10 @@ export async function GET(
       platform,
       operation: "getServerRateLimitStatus",
     });
-    return NextResponse.json(
-      {
-        error: `Internal error fetching rate limit status for ${platform}`,
-      },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "RATE_LIMIT_FETCH_ERROR",
+      message: "Failed to fetch rate limit status",
+    });
   }
 }

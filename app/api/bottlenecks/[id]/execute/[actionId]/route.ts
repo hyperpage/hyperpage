@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { bottleneckDetector } from "@/lib/monitoring/bottleneck-detector";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
+
+const ID_REGEX = /^[a-zA-Z0-9._-]+$/;
 
 /**
  * POST /api/bottlenecks/[id]/execute/[actionId] - Execute an automated action for a bottleneck
@@ -11,15 +18,14 @@ export async function POST(
 ): Promise<NextResponse> {
   const { id: bottleneckId, actionId } = await context.params;
 
-  try {
-    // Validate inputs
-    if (!bottleneckId || !actionId) {
-      return NextResponse.json(
-        { error: "Bottleneck ID and action ID are required" },
-        { status: 400 },
-      );
-    }
+  if (!ID_REGEX.test(bottleneckId) || !ID_REGEX.test(actionId)) {
+    return validationErrorResponse(
+      "Bottleneck ID and action ID are required",
+      "INVALID_BOTTLENECK_ACTION",
+    );
+  }
 
+  try {
     // Execute the automated action
     const result = await bottleneckDetector.executeAutomatedAction(
       bottleneckId,
@@ -50,13 +56,9 @@ export async function POST(
         timestamp: Date.now(),
       });
 
-      return NextResponse.json(
-        {
-          success: false,
-          message: result.message,
-          executedAt: Date.now(),
-        },
-        { status: 400 },
+      return validationErrorResponse(
+        result.message || "Automated action failed",
+        "BOTTLENECK_ACTION_FAILED",
       );
     }
   } catch (error) {
@@ -67,13 +69,11 @@ export async function POST(
       actionId,
     });
 
-    return NextResponse.json(
-      {
-        error: "Failed to execute automated action",
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "BOTTLENECK_ACTION_ERROR",
+      message: "Failed to execute automated action",
+    });
   }
 }
 
@@ -86,15 +86,23 @@ export async function GET(
 ): Promise<NextResponse> {
   const { id: bottleneckId, actionId } = await context.params;
 
+  if (!ID_REGEX.test(bottleneckId) || !ID_REGEX.test(actionId)) {
+    return validationErrorResponse(
+      "Bottleneck ID and action ID are required",
+      "INVALID_BOTTLENECK_ACTION",
+    );
+  }
+
   try {
     // Get bottleneck details
     const bottleneck = bottleneckDetector.getBottleneck(bottleneckId);
 
     if (!bottleneck) {
-      return NextResponse.json(
-        { error: "Bottleneck not found" },
-        { status: 404 },
-      );
+      return createErrorResponse({
+        status: 404,
+        code: "BOTTLENECK_NOT_FOUND",
+        message: "Bottleneck not found",
+      });
     }
 
     // Find the specific action
@@ -107,10 +115,11 @@ export async function GET(
       .find((item) => item.actionId === actionId);
 
     if (!action) {
-      return NextResponse.json(
-        { error: "Automated action not found" },
-        { status: 404 },
-      );
+      return createErrorResponse({
+        status: 404,
+        code: "BOTTLENECK_ACTION_NOT_FOUND",
+        message: "Automated action not found",
+      });
     }
 
     // Return action details
@@ -130,9 +139,10 @@ export async function GET(
       actionId,
     });
 
-    return NextResponse.json(
-      { error: "Failed to retrieve automated action details" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "BOTTLENECK_ACTION_DETAIL_ERROR",
+      message: "Failed to retrieve automated action details",
+    });
   }
 }

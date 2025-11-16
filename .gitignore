@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.sample
+!.env.test.example
+!.env.production
+!.env.staging
 !__tests__/e2e/.env.e2e
 
 # vercel
@@ -41,6 +44,8 @@ yarn-error.log*
 # e2e test reports
 __tests__/e2e/playwright-report
 __tests__/e2e/test-results
+__tests__/e2e/__tests__/
+playwright-report
 
 # docker
 docker-compose.e2e.override.yml
@@ -51,8 +56,3 @@ logs/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Database files - may contain sensitive user data
-data/hyperpage.db
-data/hyperpage.db-*
-data/backups/

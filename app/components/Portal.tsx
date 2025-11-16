@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
 import TopBar from "@/app/components/TopBar";
 import TabNavigation from "@/app/components/TabNavigation";
 import PortalOverview from "@/app/components/PortalOverview";
-
-import { Tool } from "@/tools/tool-types";
+import { ClientSafeTool } from "@/tools/tool-types";
 import { useToolQueries } from "@/app/components/hooks/useToolQueries";
 
 interface PortalProps {
-  enabledTools: Omit<Tool, "handlers">[];
+  enabledTools: ClientSafeTool[];
 }
 
 export default function Portal({ enabledTools }: PortalProps) {
@@ -20,6 +20,7 @@ export default function Portal({ enabledTools }: PortalProps) {
   const {
     dynamicData,
     loadingStates,
+    errorStates,
     refreshToolData,
     refreshAllData,
     initializePolling,
@@ -62,6 +63,7 @@ export default function Portal({ enabledTools }: PortalProps) {
               searchQuery={searchQuery}
               dynamicData={dynamicData}
               loadingStates={loadingStates}
+              errorStates={errorStates}
               refreshToolData={refreshToolData}
             />
           </div>

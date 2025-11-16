@@ -1,4 +1,5 @@
 import { ErrorInfo } from "react";
+
 import logger from "@/lib/logger";
 
 export function logErrorToService(error: Error, errorInfo: ErrorInfo) {

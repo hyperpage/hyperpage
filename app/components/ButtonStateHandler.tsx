@@ -1,7 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { LogIn, LogOut } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 interface ButtonStateHandlerProps {
   isAuthenticated: boolean;

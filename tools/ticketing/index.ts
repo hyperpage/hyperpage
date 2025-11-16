@@ -1,9 +1,10 @@
 import React from "react";
 import { Ticket } from "lucide-react";
+
 import { Tool, TransformedIssue } from "@/tools/tool-types";
 import { registerTool } from "@/tools/registry";
-
 import { getEnabledTools } from "@/tools/index";
+import logger from "@/lib/logger";
 
 export const ticketingTool: Tool = {
   name: "Ticketing",
@@ -83,7 +84,13 @@ export const ticketingTool: Tool = {
               );
               results.push(...transformedIssues);
             }
-          } catch {}
+          } catch (error) {
+            logger.warn("Failed to aggregate ticketing issues", {
+              source: tool.name,
+              error: error instanceof Error ? error.message : String(error),
+              type: "ticketing_aggregation_error",
+            });
+          }
         }
       }
 

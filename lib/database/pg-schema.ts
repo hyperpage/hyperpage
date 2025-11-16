@@ -14,13 +14,12 @@ import {
 /**
  * PostgreSQL schema for Hyperpage
  *
- * This file is dedicated to the new Postgres schema used for drizzle-kit migrations.
- * It is intentionally separate from the existing SQLite schema to keep the migration incremental.
+ * This file is dedicated to the Postgres schema used for drizzle-kit migrations.
+ * The legacy SQLite schema has been archived under docs/plan/sqlite-removal/legacy.
  *
  * IMPORTANT:
- * - Do not change existing SQLite-facing types/columns in this file.
- * - Callers in the current codebase should continue to use the legacy SQLite schema
- *   until they are explicitly migrated to these Postgres tables.
+ * - All runtime callers must use these Postgres tables.
+ * - Changes to the schema should go through new drizzle migrations.
  */
 
 /**

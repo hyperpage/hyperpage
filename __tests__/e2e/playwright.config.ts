@@ -1,3 +1,13 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+process.env.TS_NODE_PROJECT ??= resolve(__dirname, "..", "..", "tsconfig.json");
+
+import "tsconfig-paths/register.js";
+
 import { defineConfig, devices } from "@playwright/test";
 
 /**

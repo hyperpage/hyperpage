@@ -26,16 +26,16 @@ Hyperpage is a portal application that aggregates data from multiple development
 
 #### Page Component (`app/page.tsx`)
 
-- Main entry point that fetches enabled tools via `/api/tools/enabled`
-- Conditionally renders either DashboardEmptyState (loading) or Dashboard component
-- Manages tool configuration loading with error handling
+- Client-side entry point that fetches enabled tools via `/api/tools/enabled`
+- Shows `PortalEmptyState` while loading and falls back to `SetupWizard` when no tools are configured
+- Renders the `Portal` shell with the sanitized list of enabled tools once data is available
 
-#### Dashboard Container (`app/components/Dashboard.tsx`)
+#### Portal Container (`app/components/Portal.tsx`)
 
 - Primary container component with fixed header layout
-- Manages global state: dark mode, active tab, search query
-- Coordinates data fetching via custom hooks (`useToolData`)
-- Implements polling mechanisms for real-time updates
+- Owns tab + search state and wires callbacks into `TopBar` and `TabNavigation`
+- Delegates tool data orchestration to `useToolQueries` (fetching, polling, refresh)
+- Streams hydrated data, loading/error maps, and refresh handlers into `PortalOverview`
 
 ### Layout Hierarchy
 
@@ -74,12 +74,17 @@ This creates a persistent navigation experience while allowing content to scroll
 
 ### Page Components
 
-#### DashboardOverview (`app/components/PortalOverview.tsx`)
+#### PortalOverview (`app/components/PortalOverview.tsx`)
 
-- Renders tool widgets in responsive grid layout
-- Implements real-time search across all widget data
-- Handles loading states and data filtering
-- Coordinates with ToolWidgetGrid for widget rendering
+- Consumes the `usePortalOverviewData` hook to derive:
+  - Search-filtered widgets from `processPortalData`
+  - Aggregated error summaries keyed by tool/message
+  - A deterministic telemetry refresh key (sum of timestamps)
+- Renders three focused children:
+  - `PortalErrorSummary` (alert + telemetry feed)
+  - `ToolWidgetGrid` (tables/cards)
+  - `ToolStatusRow` (health + rate limit indicators)
+- Receives loading/error maps and refresh handlers from `Portal` and passes them down without additional logic
 
 #### ToolWidgetGrid (`app/components/ToolWidgetGrid.tsx`)
 
@@ -87,6 +92,61 @@ This creates a persistent navigation experience while allowing content to scroll
 - Dynamic column sizing (1-4 columns based on screen size)
 - Empty state handling when no tools are enabled
 - Loading state coordination across widgets
+
+#### PortalErrorSummary (`app/components/PortalErrorSummary.tsx`)
+
+- Presentation-only component that renders an alert summarizing aggregated widget failures
+- Shows `WidgetTelemetryPanel` beneath the alert, using the memoized refresh key from `usePortalOverviewData`
+- Uses body text + timestamps that adhere to shared error presentation rules
+
+#### ToolStatusRow (`app/components/ToolStatusRow.tsx`)
+
+- Container component that wires aggregated widget errors into the `useToolStatusRow` hook
+- `useToolStatusRow` delegates to `useToolStatus` for integrations/rate limit/auth data, and maps error summaries to each tool slug
+- Renders the presentational `<ToolStatusRowView>` which is limited to layout logic (loading skeleton, retry CTA, status indicators, and error list)
+
+#### WidgetTelemetryPanel (`app/components/WidgetTelemetryPanel.tsx`)
+
+- Displays the latest widget failures pulled from `/api/telemetry/widget-error`
+- Consumes the shared `useWidgetTelemetry` hook so fetching, memoized refresh logic, and error handling are reusable and testable
+- Provides a visual target (referenced by `ToolStatusIndicator`) for quick navigation to recent failure details
+
+#### QuickStartGuide (`app/components/QuickStartGuide.tsx`)
+
+- Renders onboarding content from the `QUICK_START_STEPS` metadata array
+- Each step is rendered through `<QuickStartStep>`, which handles numbering, code blocks, descriptions, and optional alerts
+- Adds/removes steps by editing the data array instead of duplicating layout markup
+
+#### SetupWizard (`app/components/SetupWizard.tsx`)
+
+- Thin container that reads configuration status via `useSetupWizard`
+- Renders `ConfigurationComplete` (celebratory state + refresh CTA) when tools are configured
+- Otherwise mounts `SetupWizardLayout`, which provides the shared hero + footer while accepting children such as `QuickStartGuide` and `ToolConfiguration`
+
+#### GlobalSearchInput (`app/components/GlobalSearchInput.tsx`)
+
+- Shared search primitive used in `TopBar` (and available to other tabs/pages)
+- Encapsulates icon placement, input styling, and clear-button interactions
+- Accepts a `value`, change handler, and clear callback so containers remain stateless presentation shells
+
+#### TopBarActions (`app/components/TopBarActions.tsx`)
+
+- Provides the notification button, global refresh trigger, theme switcher, and auth dropdown that appear on the right side of the TopBar
+- Exposes a simple `onGlobalRefresh` callback so `TopBar` can remain a thin layout component
+
+#### DataTable (`app/components/DataTable.tsx`)
+
+- Shared table primitive responsible for rendering headers, rows, and the footer `PaginationControls`
+- Uses `usePaginatedRows` to own pagination state in a reusable hook (current page, total bounds, derived slice)
+- Accepts a refresh callback + loading/error props so tool widgets can opt into shared UI without replicating state logic
+- Includes built-in shimmer loading rows and a muted empty state row, so every widget table shows consistent placeholders without reimplementing skeletons
+
+#### ToolStatusIndicator (`app/components/ToolStatusIndicator.tsx`)
+
+- Stateless presenter that renders icon, auth badge, rate limit indicator, and optional data issue dot
+- Tooltip content is composed via `getToolStatusIndicatorTooltip`, which wraps the shared `ToolStatusTooltip` and appends telemetry metadata when needed
+- Interaction logic for scrolling/highlighting the telemetry panel lives in `useTelemetryPanelFocus`, keeping DOM side effects outside the component tree
+- Icon overlays + rate limit badges live inside `ToolStatusIndicatorIcon`, so the main component only handles tooltip/interaction wiring
 
 ### UI Primitive Components (Custom Tailwind Components)
 
@@ -415,7 +475,7 @@ const {
 - **Feature-based Structure**: Components grouped by domain (portal)
 - **Shared Components**: Reusable UI primitives in `components/ui/`
 - **Custom Hooks**: Business logic encapsulated in `hooks/` directory
-- **Configuration Management**: Environment variables in `.env.local.sample`
+- **Configuration Management**: Environment variables in `.env.sample`
 
 ### Testing Strategy
 

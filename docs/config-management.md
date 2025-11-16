@@ -6,11 +6,18 @@ This document outlines the configuration management system for the Hyperpage pla
 
 ### File Structure
 
-The Hyperpage platform uses a tiered environment configuration system:
+Hyperpage uses purpose-specific env files plus runtime overrides:
 
-- **`.env.local.sample`**: Template file committed to version control with placeholder values
-- **`.env.local`**: Local development file (ignored by git) with actual credentials
-- **`.env`**: Production environment variables (server-side only)
+- **`.env.sample`** – canonical template (committed) containing every supported variable with placeholders.
+- **`.env.dev`** – developer-local copy of `.env.sample` (gitignored).
+- **`.env.test`** – Vitest/Postgres harness settings (gitignored, created from `.env.test.example`).
+- **`.env.staging`** – optional staging template (mirrors production values with staging URLs/secrets).
+- **`.env.production`** – production template (stored in deployment secrets manager or `.env.production` on the server).
+- **`__tests__/e2e/.env.e2e`** – dockerized Playwright stack template.
+
+Every environment also sets `CONFIG_ENV_FILE` (server) and `NEXT_PUBLIC_ENV_FILE` (client hints) so the runtime knows which file to load. At runtime, environment variables from secret stores or orchestration systems always win over the file contents.
+
+### Database Configuration
 
 ### Database Configuration
 
@@ -35,6 +42,14 @@ ENABLE_JIRA=false
 ENABLE_GITHUB=false
 ENABLE_GITLAB=false
 ```
+
+### Registry-Driven Enablement Flow
+
+- Every tool reads its `ENABLE_*` flag at import time and registers with the global registry.
+- `/api/tools/enabled` merges that registry data with persisted overrides from `tool_configs` (e.g., user-tuned refresh intervals or enablement toggles).
+- The endpoint returns sanitized `ClientSafeTool` objects (name, slug, capabilities, widgets, APIs) so client components never touch handlers, configs, or secrets.
+- Portal, setup wizard, sidebar, and any discovery surface MUST rely on this endpoint; no other tool lists should be maintained.
+- If a tool is disabled via environment variables or a persisted override, it disappears from the API, the portal, and the sidebar automatically.
 
 ### Tool-Specific Configuration
 
@@ -67,6 +82,14 @@ GITLAB_USERNAME=your_username
 GITLAB_WEB_URL=https://gitlab.com
 ```
 
+### Core Auth & Security Variables
+
+Every environment must provide the following (see `.env.sample` for placeholders):
+
+- `SESSION_SECRET`, `JWT_SECRET` – secure random strings for session + token signing.
+- `NEXTAUTH_SECRET`, `NEXTAUTH_URL` – NextAuth cookie signing + callback base URL.
+- `OAUTH_ENCRYPTION_KEY` – reserved for the upcoming AES-256-GCM layer (set a stable value now to avoid redeploying secrets later).
+
 ## URL Auto-Derivation
 
 The system automatically derives API URLs from web URLs using consistent patterns:
@@ -96,7 +119,7 @@ The system automatically derives API URLs from web URLs using consistent pattern
 ### Adding New Tool Configuration
 
 1. **Environment Variable Definition**
-   - Add `ENABLE_TOOL_NAME=false` in `.env.local.sample`
+   - Add `ENABLE_TOOL_NAME=false` in `.env.sample`
    - Document all required configuration variables
    - Include example placeholders
 
@@ -158,7 +181,7 @@ const isTest = process.env.NODE_ENV === "test";
 ### Tool Addition Workflow
 
 1. Define configuration requirements in tool specification
-2. Update `.env.local.sample` with new variables
+2. Update `.env.sample` with new variables
 3. Implement validation logic in API routes
 4. Test configuration handling comprehensively
 5. Update documentation and team training
@@ -234,7 +257,7 @@ Example pattern:
 
 ```dockerfile
 # Dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 COPY package*.json ./
@@ -249,25 +272,9 @@ CMD ["npm", "start"]
 
 For testing with Docker:
 
-- `docker-compose.testing.yml` is the canonical Postgres-backed test stack.
+- `docker-compose.test.yml` is the canonical Postgres-backed test stack.
 - It should define a Postgres service and an app service wired via `DATABASE_URL`.
 - Local test runs use the same `DATABASE_URL` contract as production.
-
-### Kubernetes Configuration
-
-Kubernetes uses ConfigMaps and Secrets:
-
-```yaml
-# k8s/configmap.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: hyperpage-config
-data:
-  NODE_ENV: "production"
-  ENABLE_JIRA: "true"
-  # ... other config
-```
 
 ### CI/CD Integration
 
@@ -310,17 +317,16 @@ env:
 
 ### Related Documentation
 
-- **[Security Practices](security-practices.md)** - Security standards and validation
-- **[Tool Integration System](tool-integration-system.md)** - How tools integrate with platform
-- **[Deployment Guide](deployment.md)** - Production deployment strategies
+- **[Security Practices](security.md)** - Security standards and validation
+- **[Tool Integration System](tool-integration-system.md)** - How tools integrate with the platform
+- **[Deployment Guide](deployment.md)** - Container/manual deployment strategies
 - **[Installation Guide](installation.md)** - Local development setup
 
 ### Configuration Files
 
-- **`.env.local.sample`** - Template for all environment variables
-- **`tools/*/index.ts`** - Tool definitions with configuration
-- **`k8s/configmap.yaml`** - Kubernetes configuration management
+- **`.env.sample`** - Template for all environment variables
+- **`tools/*/index.ts`** - Tool definitions with configuration hooks
 
 ---
 
-**Last updated**: January 11, 2025
+**Last updated**: January 2025

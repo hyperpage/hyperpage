@@ -110,6 +110,21 @@ export default function Component({ data, onAction, loading }: ComponentProps) {
 
 Add to `eslint.config.js`:
 
+#### Centralized Pino Logger Requirement
+
+All error logging MUST use the shared Pino logger from `lib/logger.ts`. Direct use of `console.error`, `console.warn`, or ad-hoc loggers for error objects is prohibited in application code.
+
+- Always import and use the centralized logger:
+  - `import { logger } from "@/lib/logger";`
+- When handling errors (including variables named `error`, `err`, or caught exceptions), log using structured Pino calls:
+  - `logger.error({ err }, "operation failed");`
+  - `logger.warn({ err }, "recoverable issue");`
+- This requirement applies globally across:
+  - API route handlers
+  - Background jobs / workers
+  - Library/service layers
+  - Tool handlers and integrations
+
 ```javascript
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),

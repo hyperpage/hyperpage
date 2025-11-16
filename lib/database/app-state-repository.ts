@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { getReadWriteDb } from "./connection";
-import * as pgSchema from "./pg-schema";
-import logger from "../logger";
+
+import logger from "@/lib/logger";
+import { getReadWriteDb } from "@/lib/database/connection";
+import * as pgSchema from "@/lib/database/pg-schema";
 
 export interface AppStateRepository {
   getState<T = unknown>(key: string): Promise<T | null>;

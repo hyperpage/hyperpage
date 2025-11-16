@@ -102,7 +102,7 @@ export class UserJourneySimulator {
       }
 
       // Simulate OAuth redirect
-      const redirectUrl = `${this.baseUrl}/api/auth/${provider}/callback?code=test-auth-code&state=test-state`;
+      const redirectUrl = `${this.baseUrl}/api/auth/oauth/${provider}?code=test-auth-code&state=test-state`;
 
       // Set authentication state
       this.browser.setSessionData("authenticated", true);

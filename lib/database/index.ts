@@ -8,8 +8,7 @@
  *
  * IMPORTANT:
  * - This module MUST NOT import or depend on any SQLite/better-sqlite3 helpers.
- * - Migration-only utilities (migrate.ts, schema.ts, migration-orchestrator.ts, schema-converter.ts)
- *   are intentionally excluded from the runtime surface.
+ * - Legacy SQLite helpers have been removed; this module only exposes the Postgres layer.
  */
 
 import {

@@ -1,16 +1,14 @@
 import React from "react";
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-} from "@/components/ui/table";
-import { ToolData } from "@/tools/tool-types";
-import RefreshButton from "@/app/components/RefreshButton";
-import TableRowComponent from "@/app/components/TableRow";
+
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import PaginationControls from "@/app/components/PaginationControls";
+import { usePaginatedRows } from "@/app/components/hooks/usePaginatedRows";
+import { ToolData } from "@/tools/tool-types";
+import {
+  DataTableContent,
+  DataTableToolbar,
+  WidgetErrorInfo,
+} from "@/app/components/data-table/TableContent";
 
 interface DataTableProps {
   title: string;
@@ -18,6 +16,7 @@ interface DataTableProps {
   data: ToolData[];
   tool: string;
   isLoading?: boolean;
+  errorInfo?: WidgetErrorInfo | null;
   onRefresh?: () => void;
 }
 
@@ -27,65 +26,44 @@ export default function DataTable({
   data,
   tool,
   isLoading = false,
+  errorInfo = null,
   onRefresh,
 }: DataTableProps) {
   // tool parameter is reserved for future use (debugging, analytics, etc.)
   void tool;
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  const totalItems = data.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const displayItems = data.slice(startIndex, endIndex);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [data.length]);
+  const {
+    pageItems,
+    currentPage,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    setPage,
+  } = usePaginatedRows({ data, itemsPerPage: 10 });
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{title}</CardTitle>
-          {onRefresh && (
-            <RefreshButton isLoading={isLoading} onRefresh={onRefresh} />
-          )}
-        </div>
+        <DataTableToolbar
+          title={title}
+          isLoading={isLoading}
+          onRefresh={onRefresh}
+        />
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <tr>
-              {headers.map((header, index) => (
-                <TableHead key={index}>{header}</TableHead>
-              ))}
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {displayItems.map((row, rowIndex) => (
-              <TableRowComponent
-                key={rowIndex}
-                row={row}
-                headers={headers}
-                rowIndex={rowIndex}
-              />
-            ))}
-          </TableBody>
-        </Table>
-
+        <DataTableContent
+          headers={headers}
+          pageItems={pageItems}
+          isLoading={isLoading}
+          errorInfo={errorInfo}
+        />
         <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={totalItems}
           startIndex={startIndex}
           endIndex={endIndex}
-          onPageChange={handlePageChange}
+          onPageChange={setPage}
         />
       </CardContent>
     </Card>

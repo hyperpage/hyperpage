@@ -1,7 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionManager } from "@/lib/sessions/session-manager";
 import { headers } from "next/headers";
+
+import { sessionManager } from "@/lib/sessions/session-manager";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
+
+const SESSION_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
+
+function validateSessionIdParam(
+  sessionId: string | null,
+  options: { optional?: boolean; requiredMessage?: string } = {},
+) {
+  const { optional = false, requiredMessage = "sessionId is required" } =
+    options;
+
+  if (!sessionId) {
+    if (optional) {
+      return { value: undefined };
+    }
+    return {
+      error: validationErrorResponse(requiredMessage, "INVALID_SESSION_ID"),
+    };
+  }
+
+  const trimmed = sessionId.trim();
+  if (!SESSION_ID_REGEX.test(trimmed)) {
+    return {
+      error: validationErrorResponse("Invalid sessionId", "INVALID_SESSION_ID"),
+    };
+  }
+
+  return { value: trimmed };
+}
 
 /**
  * Session Management API
@@ -12,7 +45,15 @@ import logger from "@/lib/logger";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("sessionId");
+    const { value: sessionId, error: sessionIdError } = validateSessionIdParam(
+      searchParams.get("sessionId"),
+      {
+        optional: true,
+      },
+    );
+    if (sessionIdError) {
+      return sessionIdError;
+    }
 
     if (!sessionId) {
       // Create new session with client info
@@ -46,11 +87,11 @@ export async function GET(request: NextRequest) {
     // Get existing session
     const session = await sessionManager.getSession(sessionId);
     if (!session) {
-      // Return 401 for invalid/missing sessions (not authenticated)
-      return NextResponse.json(
-        { success: false, error: "Session not found or expired" },
-        { status: 401 },
-      );
+      return createErrorResponse({
+        status: 401,
+        code: "SESSION_NOT_FOUND",
+        message: "Session not found or expired",
+      });
     }
 
     return NextResponse.json({
@@ -63,10 +104,11 @@ export async function GET(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    return NextResponse.json(
-      { success: false, error: "Failed to get session" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "SESSION_FETCH_ERROR",
+      message: "Failed to get session",
+    });
   }
 }
 
@@ -75,40 +117,40 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { sessionId, sessionData, updates } = body;
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { success: false, error: "sessionId is required" },
-        { status: 400 },
-      );
+    const { value: validatedSessionId, error: sessionIdError } =
+      validateSessionIdParam(sessionId, {
+        requiredMessage: "sessionId is required",
+      });
+    if (sessionIdError || !validatedSessionId) {
+      return sessionIdError!;
     }
 
     // Validate session exists before updating
-    const existingSession = await sessionManager.getSession(sessionId);
+    const existingSession = await sessionManager.getSession(validatedSessionId);
     if (!existingSession && !sessionData) {
-      // Cannot update non-existent session unless providing complete session data
-      return NextResponse.json(
-        { success: false, error: "Session not found or expired" },
-        { status: 401 },
-      );
+      return createErrorResponse({
+        status: 401,
+        code: "SESSION_NOT_FOUND",
+        message: "Session not found or expired",
+      });
     }
 
     if (updates) {
       // Update specific fields
-      await sessionManager.updateSession(sessionId, updates);
+      await sessionManager.updateSession(validatedSessionId, updates);
     } else if (sessionData) {
       // Save complete session
-      await sessionManager.setSession(sessionId, sessionData);
+      await sessionManager.setSession(validatedSessionId, sessionData);
     } else {
-      return NextResponse.json(
-        { success: false, error: "sessionData or updates required" },
-        { status: 400 },
+      return validationErrorResponse(
+        "sessionData or updates required",
+        "INVALID_SESSION_REQUEST",
       );
     }
 
     return NextResponse.json({
       success: true,
-      sessionId,
+      sessionId: validatedSessionId,
       message: "Session saved successfully",
     });
   } catch (error) {
@@ -116,10 +158,11 @@ export async function POST(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    return NextResponse.json(
-      { success: false, error: "Failed to save session" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "SESSION_SAVE_ERROR",
+      message: "Failed to save session",
+    });
   }
 }
 
@@ -127,23 +170,22 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("sessionId");
-    const body = await request.json();
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { success: false, error: "sessionId required as query param" },
-        { status: 400 },
-      );
+    const { value: sessionId, error: sessionIdError } = validateSessionIdParam(
+      searchParams.get("sessionId"),
+    );
+    if (sessionIdError || !sessionId) {
+      return sessionIdError!;
     }
+    const body = await request.json();
 
     // Validate session exists before updating
     const existingSession = await sessionManager.getSession(sessionId);
     if (!existingSession) {
-      return NextResponse.json(
-        { success: false, error: "Session not found or expired" },
-        { status: 401 },
-      );
+      return createErrorResponse({
+        status: 401,
+        code: "SESSION_NOT_FOUND",
+        message: "Session not found or expired",
+      });
     }
 
     // Update session with provided data
@@ -159,10 +201,11 @@ export async function PATCH(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    return NextResponse.json(
-      { success: false, error: "Failed to update session" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "SESSION_UPDATE_ERROR",
+      message: "Failed to update session",
+    });
   }
 }
 
@@ -170,22 +213,21 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("sessionId");
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { success: false, error: "sessionId required" },
-        { status: 400 },
-      );
+    const { value: sessionId, error: sessionIdError } = validateSessionIdParam(
+      searchParams.get("sessionId"),
+    );
+    if (sessionIdError || !sessionId) {
+      return sessionIdError!;
     }
 
     // Check if session exists before deletion
     const existingSession = await sessionManager.getSession(sessionId);
     if (!existingSession) {
-      return NextResponse.json(
-        { success: false, error: "Session not found or expired" },
-        { status: 401 },
-      );
+      return createErrorResponse({
+        status: 401,
+        code: "SESSION_NOT_FOUND",
+        message: "Session not found or expired",
+      });
     }
 
     await sessionManager.deleteSession(sessionId);
@@ -199,9 +241,10 @@ export async function DELETE(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    return NextResponse.json(
-      { success: false, error: "Failed to delete session" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "SESSION_DELETE_ERROR",
+      message: "Failed to delete session",
+    });
   }
 }

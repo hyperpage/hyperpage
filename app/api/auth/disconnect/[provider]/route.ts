@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { sessionManager } from "@/lib/sessions/session-manager";
 import { SecureTokenStorage } from "@/lib/oauth-token-store";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  validationErrorResponse,
+} from "@/lib/api/responses";
 
 /**
  * Unified OAuth Disconnect Handler
@@ -14,6 +19,14 @@ export async function POST(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
+  const normalizedProvider = provider?.toLowerCase();
+  const allowedProviders = new Set(["github", "gitlab", "jira"]);
+
+  if (!normalizedProvider || !allowedProviders.has(normalizedProvider)) {
+    return validationErrorResponse("Unsupported provider", "INVALID_PROVIDER", {
+      provider,
+    });
+  }
 
   try {
     // Get session ID from cookies
@@ -21,36 +34,38 @@ export async function POST(
     const sessionCookie = cookies.get("hyperpage-session");
 
     if (!sessionCookie) {
-      return NextResponse.json(
-        { success: false, error: "No session found" },
-        { status: 401 },
-      );
+      return createErrorResponse({
+        status: 401,
+        code: "SESSION_REQUIRED",
+        message: "No session found",
+      });
     }
 
     const sessionId = sessionCookie.value;
     const session = await sessionManager.getSession(sessionId);
 
     if (!session?.userId) {
-      return NextResponse.json(
-        { success: false, error: "Not authenticated" },
-        { status: 401 },
-      );
+      return createErrorResponse({
+        status: 401,
+        code: "NOT_AUTHENTICATED",
+        message: "Not authenticated",
+      });
     }
 
     const userId = session.userId;
 
     // Check if user is authenticated with the specified provider
-    if (session.user?.provider !== provider) {
-      return NextResponse.json(
-        { success: false, error: `Not authenticated with ${provider}` },
-        { status: 400 },
+    if (session.user?.provider !== normalizedProvider) {
+      return validationErrorResponse(
+        `Not authenticated with ${normalizedProvider}`,
+        "PROVIDER_NOT_AUTHENTICATED",
       );
     }
 
     try {
       // Remove tokens from secure storage
       const tokenStorage = new SecureTokenStorage();
-      await tokenStorage.removeTokens(userId, provider);
+      await tokenStorage.removeTokens(userId, normalizedProvider);
 
       // Update session to remove user authentication
       await sessionManager.updateSession(sessionId, {
@@ -75,10 +90,11 @@ export async function POST(
         },
       );
 
-      return NextResponse.json(
-        { success: false, error: "Failed to remove authentication data" },
-        { status: 500 },
-      );
+      return createErrorResponse({
+        status: 500,
+        code: "DISCONNECT_STORAGE_ERROR",
+        message: "Failed to remove authentication data",
+      });
     }
   } catch (error) {
     logger.error(`Failed to disconnect ${provider} authentication`, {
@@ -86,9 +102,10 @@ export async function POST(
       provider,
     });
 
-    return NextResponse.json(
-      { success: false, error: "Failed to disconnect authentication" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "DISCONNECT_ERROR",
+      message: "Failed to disconnect authentication",
+    });
   }
 }

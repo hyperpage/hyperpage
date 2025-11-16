@@ -1,6 +1,7 @@
 // Custom hook for accessing rate limit status in components
 
 import { useState, useEffect, useCallback } from "react";
+
 import { RateLimitStatus, UseRateLimitResult } from "@/lib/types/rate-limit";
 import { getRateLimitStatus } from "@/lib/rate-limit-monitor";
 
@@ -54,10 +55,9 @@ export function useRateLimit(
   // Auto-refresh on mount and when platform changes
   useEffect(() => {
     if (enabled && platform) {
-      refresh();
+      void refresh();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [platform, enabled]); // refresh is deliberately omitted as it's memoized
+  }, [enabled, platform, refresh]);
 
   // Clear any existing data when disabled
   useEffect(() => {

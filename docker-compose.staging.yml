@@ -1,12 +1,41 @@
 services:
   postgres:
+    container_name: hyperpage-staging-postgres
     env_file:
       - .env.staging
+    volumes:
+      - postgres-staging_data:/var/lib/postgresql/data
+    networks:
+      - hyperpage-staging
 
   redis:
+    container_name: hyperpage-staging-redis
     env_file:
       - .env.staging
+    volumes:
+      - redis-staging_data:/data
+    networks:
+      - hyperpage-staging
 
   hyperpage:
+    container_name: hyperpage-staging-app
     env_file:
       - .env.staging
+    networks:
+      - hyperpage-staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres-staging_data:
+    driver: local
+  redis-staging_data:
+    driver: local
+
+networks:
+  hyperpage-staging:
+    driver: bridge
+    name: hyperpage-staging

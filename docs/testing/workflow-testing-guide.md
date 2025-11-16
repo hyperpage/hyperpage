@@ -2,11 +2,13 @@
 
 ## Overview
 
-This comprehensive end-to-end workflow testing suite validates the complete integration experience across GitHub, GitLab, and Jira tools within the Hyperpage platform.
+This guide documents the legacy “workflow” suites that live under `__tests__/integration/workflows`.  
+They currently rely on synthetic helpers (`TestBrowser`, `UserJourneySimulator`) rather than real browsers, so treat them as higher-level integration/unit tests rather than true E2E coverage.  
+Playwright-based flows (`__tests__/e2e/**`) are the future direction; until they fully replace these suites, use this guide to understand what the synthetic workflow tests cover and how to run them.
 
 ## Test Suite Architecture
 
-### Core Components
+### Core Components (Synthetic Harness)
 
 1. **TestBrowser** (`utils/test-browser.ts`)
    - Simulates browser interactions and session management
@@ -29,10 +31,10 @@ This comprehensive end-to-end workflow testing suite validates the complete inte
 
 **Coverage**: Complete user workflows from first visit to active usage
 
-- **New User Onboarding**: Setup wizard, OAuth flows, initial configuration
-- **Existing User Experience**: Login persistence, preference management
-- **Portal Navigation**: Tool switching, data viewing, widget interactions
-- **Error Handling**: Authentication failures, configuration errors
+- **New User Onboarding**: Setup wizard, OAuth flows, initial configuration (simulated via mocks)
+- **Existing User Experience**: Login persistence, preference management (mock storage)
+- **Portal Navigation**: Tool switching, data viewing, widget interactions (TestBrowser-only, no real DOM)
+- **Error Handling**: Authentication failures, configuration errors (synthetic responses)
 
 #### 2. Session Management Tests (`session-management.spec.ts`)
 
@@ -72,33 +74,33 @@ This comprehensive end-to-end workflow testing suite validates the complete inte
 
 ## Running the Tests
 
+> ⚠️ These suites require the Postgres harness plus the synthetic helpers. Run `npm run db:test:up` and ensure `DATABASE_URL` is exported before executing any command below.
+
 ### Individual Test Suites
 
 ```bash
-# Run specific test suite
-npx vitest run __tests__/integration/workflows/user-journey.spec.ts
-npx vitest run __tests__/integration/workflows/session-management.spec.ts
-npx vitest run __tests__/integration/workflows/rate-limiting-coordination.spec.ts
-npx vitest run __tests__/integration/workflows/error-recovery.spec.ts
-npx vitest run __tests__/integration/workflows/multi-tool-orchestration.spec.ts
+# Run specific workflow suite
+npm run test -- __tests__/integration/workflows/user-journey.spec.ts
+npm run test -- __tests__/integration/workflows/session-management.spec.ts
+npm run test -- __tests__/integration/workflows/rate-limiting-coordination.spec.ts
+npm run test -- __tests__/integration/workflows/error-recovery.spec.ts
+npm run test -- __tests__/integration/workflows/multi-tool-orchestration.spec.ts
 ```
 
-### All Workflow Tests
+### Entire Workflow Folder
 
 ```bash
-# Run all workflow tests
-npx vitest run __tests__/integration/workflows/
+# Run all workflow suites once (CI-style)
+npm run test -- __tests__/integration/workflows
 
-# Run with watch mode for development
-npx vitest __tests__/integration/workflows/
+# Watch mode for iterative development
+npm run test:watch -- __tests__/integration/workflows
+
+# With coverage instrumentation
+npm run test:coverage -- --include __tests__/integration/workflows/**
 ```
 
-### With Coverage
-
-```bash
-# Run tests with coverage report
-npx vitest run __tests__/integration/workflows/ --coverage
-```
+Because these suites rely on mocked browsers, they never set `E2E_TESTS`. If you need actual UI validation, use Playwright (`npm run test:e2e`) instead.
 
 ## Test Execution Patterns
 
@@ -274,13 +276,17 @@ const aggregatedData = await Promise.all([
 
 ## Integration with Main Testing Strategy
 
-This workflow testing guide complements the main testing strategy outlined in [testing.md](testing.md). While unit and integration tests focus on individual components, workflow tests validate complete user journeys and cross-platform interactions.
+This guide complements the repo-wide testing docs ([testing.md](testing.md), [test-organization.md](test-organization.md)), but keep the following caveats in mind:
+
+- **Synthetic scope**: These suites never launch a real browser or hit real network traffic. Treat their assertions as higher-level logic tests, not true E2E coverage.
+- **Playwright migration**: Critical workflows (setup wizard, OAuth journeys, multi-tool orchestration) must eventually be validated through Playwright (`__tests__/e2e/**`). Use this doc as a stopgap reference until that migration is complete.
+- **Env requirements**: Even though the browser is mocked, repositories and API handlers still run against the Postgres harness, so start the dockerized DB and export `DATABASE_URL` before executing.
 
 ### Cross-Reference
 
-- **Unit Tests**: Component-level validation
-- **Integration Tests**: API and OAuth flow testing
-- **E2E Tests**: User interface workflows
-- **Workflow Tests**: Cross-platform orchestration and data flows
+- **Unit Tests**: Component-level validation (`npm run test:unit`)
+- **Integration Tests**: API + Postgres-backed flows (`npm run test:integration`)
+- **Workflow Tests (synthetic)**: Mocked TestBrowser/UserJourneySimulator suites (this doc)
+- **E2E Tests**: Real UI/browser coverage via Playwright (`npm run test:e2e`)
 
-For comprehensive testing strategy, see [testing.md](testing.md). For development workflow, see [development-workflow.md](development-workflow.md).
+For the overarching taxonomy and how to combine these layers in CI, see [testing.md](testing.md) and [development-workflow.md](development-workflow.md).

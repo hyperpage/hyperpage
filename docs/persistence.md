@@ -20,7 +20,6 @@ Key points:
 The PostgreSQL schema is defined by:
 
 1. **Runtime types and table definitions**
-
    - `lib/database/pg-schema.ts`:
      - Exposes typed drizzle table definitions for:
        - `users`
@@ -34,7 +33,6 @@ The PostgreSQL schema is defined by:
      - These types are consumed across repositories and services as the single source of truth for runtime code.
 
 2. **Drizzle migration**
-
    - `lib/database/migrations/000_init_pg_schema.ts`:
      - Drizzle-style, PostgreSQL-only migration.
      - Creates tables that match `pg-schema.ts`:
@@ -50,7 +48,6 @@ The PostgreSQL schema is defined by:
    - This file is the **authoritative migration** for the Postgres schema.
 
 3. **Migration registry**
-
    - `lib/database/migrations/index.ts`:
      - Exposes:
 
@@ -67,34 +64,7 @@ The PostgreSQL schema is defined by:
      - Provides a stable, programmatic API for applying known migrations.
      - Used by the Postgres test harness as a fallback when drizzle's file-based migrator cannot load `.ts` migrations directly.
 
----
-
-## Legacy SQLite Migrations (Explicitly Isolated)
-
-Legacy artifacts:
-
-- `lib/database/migrations/001_initial_schema.ts`
-- `lib/database/migrations/002_oauth_auth_tables.ts`
-- `lib/database/migrate.ts` (uses `better-sqlite3`)
-
-Characteristics:
-
-- Schema definitions use:
-  - `TEXT` / `INTEGER` columns
-  - `unixepoch()`-style timestamps
-  - A `schema_migrations` table inside SQLite
-- Designed for the original SQLite-based implementation and migration flow.
-
-Current status:
-
-- These files are **retained for historical and migration-only purposes**.
-- They are **not used** by:
-  - The Postgres runtime.
-  - The Postgres test harness.
-- They **must not** be added to the Postgres `MIGRATIONS_REGISTRY` or invoked by new tests.
-- Any modern code and tests should treat them as legacy, gated behind `LEGACY_SQLITE_TESTS` where needed.
-
-This separation ensures the Postgres schema remains clean and unambiguous.
+All other migration files have been removed. The Postgres schema above is the only supported runtime schema.
 
 ---
 
@@ -116,7 +86,6 @@ The Postgres test harness (`vitest.setup.ts`) enforces schema consistency automa
 For Postgres-backed suites:
 
 1. **Setup (once per worker process)**
-
    - Drop test database via admin URL (best-effort, with connection termination).
    - Create test database.
    - Initialize:
@@ -126,14 +95,12 @@ For Postgres-backed suites:
      - See below.
 
 2. **Per-test isolation**
-
    - Before each test:
      - Clears known tables that exist.
      - Reseeds deterministic fixtures derived from `pg-schema`.
    - Ensures reproducible state for all tests.
 
 3. **Teardown**
-
    - Closes the pool.
    - Drops the test database via admin URL (best-effort).
 
@@ -150,7 +117,6 @@ The harness applies migrations in two stages:
    - This is the preferred path when the environment can load compiled migrations.
 
 2. **Guardrail: MIGRATIONS_REGISTRY fallback**
-
    - After `migrate()` completes, the harness checks for a required table:
 
      ```sql
@@ -208,14 +174,14 @@ This couples the automated tests directly to the same schema definitions used at
 Recommended:
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres
-DATABASE_URL=postgresql://postgres:password@postgres:5432/hyperpage-testing npx vitest
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres
+DATABASE_URL=postgresql://postgres:password@postgres:5432/hyperpage-test npx vitest
 ```
 
-Or configure `.env.testing` with the same `DATABASE_URL` and run:
+Or configure `.env.test` with the same `DATABASE_URL` and run:
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.testing.yml up -d postgres
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d postgres
 npx vitest
 ```
 
@@ -224,7 +190,7 @@ Notes:
 - Host `postgres` is correct inside the docker-compose network.
 - The harness will:
   - Connect via `postgres` host.
-  - Drop/create `hyperpage-testing`.
+  - Drop/create `hyperpage-test`.
   - Apply `000_init_pg_schema` (via drizzle migrator and/or registry).
   - Seed fixtures.
 
@@ -236,7 +202,7 @@ If using a local Postgres instance:
 2. Set:
 
    ```env
-   DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-testing
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/hyperpage-test
    ```
 
 3. Run:
@@ -247,7 +213,7 @@ If using a local Postgres instance:
 
 Requirements:
 
-- The user in `DATABASE_URL` must be allowed to create/drop `hyperpage-testing`.
+- The user in `DATABASE_URL` must be allowed to create/drop `hyperpage-test`.
 - The harness behavior (drop/create/migrate/seed) is the same.
 
 ---

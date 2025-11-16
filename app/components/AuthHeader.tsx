@@ -1,10 +1,11 @@
 "use client";
 
 import { Shield, LogOut } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
 
 interface AuthHeaderProps {
   authenticatedCount: number;

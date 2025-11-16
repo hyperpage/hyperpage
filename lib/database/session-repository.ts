@@ -1,9 +1,9 @@
 import { eq, lt } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
-import logger from "../logger";
-import * as pgSchema from "./pg-schema";
-import { getReadWriteDb } from "./connection";
+import logger from "@/lib/logger";
+import * as pgSchema from "@/lib/database/pg-schema";
+import { getReadWriteDb } from "@/lib/database/connection";
 
 /**
  * Normalized session shape used by callers.
@@ -28,41 +28,6 @@ export interface SessionRepository {
   getSession(sessionToken: string): Promise<Session | null>;
   deleteSession(sessionToken: string): Promise<void>;
   cleanupExpiredSessions(now?: Date): Promise<number>;
-}
-
-/**
- * SQLite-backed SessionRepository placeholder.
- *
- * The legacy SQLite sessions schema is not defined here. To avoid guessing
- * column names and introducing incorrect behavior, this implementation is an
- * explicit no-op with clear logging.
- */
-export class SqliteSessionRepository implements SessionRepository {
-  async createSession(session: Session): Promise<void> {
-    logger.warn(
-      `SqliteSessionRepository.createSession not implemented for sessionToken=${session.sessionToken}; no-op`,
-    );
-  }
-
-  async getSession(sessionToken: string): Promise<Session | null> {
-    logger.warn(
-      `SqliteSessionRepository.getSession not implemented for sessionToken=${sessionToken}; returning null`,
-    );
-    return null;
-  }
-
-  async deleteSession(sessionToken: string): Promise<void> {
-    logger.warn(
-      `SqliteSessionRepository.deleteSession not implemented for sessionToken=${sessionToken}; no-op`,
-    );
-  }
-
-  async cleanupExpiredSessions(now: Date = new Date()): Promise<number> {
-    logger.warn(
-      `SqliteSessionRepository.cleanupExpiredSessions not implemented (now=${now.toISOString()}); no-op`,
-    );
-    return 0;
-  }
 }
 
 /**
@@ -127,31 +92,10 @@ export class PostgresSessionRepository implements SessionRepository {
   }
 }
 
-/**
- * Engine detection helper for Postgres SessionRepository.
- * Mirrors the JobRepository isPostgresDb approach using $schema metadata.
- */
-function isPostgresDb(db: unknown): db is NodePgDatabase<typeof pgSchema> {
-  try {
-    if (!db || typeof db !== "object") return false;
-    // @ts-expect-error drizzle internal shape
-    const schema = db.$schema as Record<string, unknown> | undefined;
-    return Boolean(schema && schema.userSessions === pgSchema.userSessions);
-  } catch {
-    return false;
-  }
-}
-
 let sessionRepositorySingleton: SessionRepository | null = null;
 
 /**
- * Returns a singleton SessionRepository appropriate for the configured engine.
- *
- * - Postgres: PostgresSessionRepository (real implementation)
- * - Otherwise: SqliteSessionRepository (explicit, logged no-op placeholder)
- *
- * This avoids incorrect assumptions about legacy SQLite session schema while
- * providing a fully functional implementation for the new Postgres schema.
+ * Returns a singleton SessionRepository backed by PostgreSQL.
  */
 export function getSessionRepository(): SessionRepository {
   if (sessionRepositorySingleton) {
@@ -159,16 +103,8 @@ export function getSessionRepository(): SessionRepository {
   }
 
   const db = getReadWriteDb();
-
-  if (isPostgresDb(db)) {
-    logger.info("Using PostgresSessionRepository");
-    sessionRepositorySingleton = new PostgresSessionRepository(db);
-  } else {
-    logger.warn(
-      "Using SqliteSessionRepository placeholder: SQLite session schema not defined; no-op implementation",
-    );
-    sessionRepositorySingleton = new SqliteSessionRepository();
-  }
+  logger.info("Using PostgresSessionRepository");
+  sessionRepositorySingleton = new PostgresSessionRepository(db);
 
   return sessionRepositorySingleton;
 }

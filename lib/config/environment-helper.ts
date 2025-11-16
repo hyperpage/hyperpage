@@ -62,7 +62,7 @@ export class RegistryEnvironmentHelper {
     // Generate template based on ACTUAL registered tools
     let template = `# Hyperpage Environment Configuration Template
 # Auto-generated based on registered tools
-# Copy this file to .env.local and fill in the values
+# Copy this file to .env.dev and fill in the values
 
 # Required Configuration
 NEXTAUTH_SECRET=your-32-character-secret-here

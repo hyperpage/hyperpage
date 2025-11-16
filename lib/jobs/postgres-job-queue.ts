@@ -6,11 +6,7 @@ import {
   type JobRepository,
   type NormalizedJob,
 } from "@/lib/database/job-repository";
-import {
-  JobPriority,
-  JobStatus,
-  type IJob,
-} from "@/lib/types/jobs";
+import { JobPriority, JobStatus, type IJob } from "@/lib/types/jobs";
 
 /**
  * Postgres-backed Job Queue facade.

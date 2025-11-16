@@ -1,8 +1,9 @@
 "use client";
 
 import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useCallback, useState, useEffect } from "react";
-import { Tool, ToolData } from "@/tools/tool-types";
+import { useMemo, useCallback, useState, useEffect, useRef } from "react";
+
+import { ClientSafeTool, ToolData } from "@/tools/tool-types";
 import { getToolDataKey } from "@/tools";
 import {
   getDynamicInterval,
@@ -19,20 +20,21 @@ import {
 } from "@/app/components/hooks/useRateLimit";
 
 interface UseToolQueriesProps {
-  enabledTools: Omit<Tool, "handlers">[];
+  enabledTools: ClientSafeTool[];
 }
 
 interface UseToolQueriesReturn {
   dynamicData: Record<string, Record<string, ToolData[]>>;
   loadingStates: Record<string, boolean>;
-  refreshToolData: (tool: Omit<Tool, "handlers">) => Promise<void>;
+  errorStates: Record<string, { message: string; timestamp: number } | null>;
+  refreshToolData: (tool: ClientSafeTool) => Promise<void>;
   refreshAllData: () => void;
   initializePolling: () => () => void;
 }
 
 // Fetch function for a specific tool endpoint
 const fetchToolData = async (
-  tool: Omit<Tool, "handlers">,
+  tool: ClientSafeTool,
   endpoint: string,
 ): Promise<ToolData[]> => {
   const response = await fetch(`/api/tools/${tool.slug}/${endpoint}`);
@@ -49,7 +51,7 @@ const fetchToolData = async (
 
 // Create query configurations for all enabled tool endpoints with adaptive polling
 const createQueryConfigs = (
-  enabledTools: Omit<Tool, "handlers">[],
+  enabledTools: ClientSafeTool[],
   rateLimitStatuses: Map<string, RateLimitStatus>,
   isTabVisible: boolean,
   isUserActive: boolean,
@@ -150,6 +152,7 @@ export function useToolQueries({
   enabledTools,
 }: UseToolQueriesProps): UseToolQueriesReturn {
   const queryClient = useQueryClient();
+  const reportedErrorsRef = useRef(new Map<string, string>());
 
   // Rate limit monitoring for all active platforms
   const activePlatforms = useMemo(
@@ -277,9 +280,96 @@ export function useToolQueries({
     return states;
   }, [queryResults, queryConfigs, enabledTools]);
 
+  // Track query errors per tool/endpoint to drive widget error surfaces
+  const errorStates = useMemo(() => {
+    const errors: Record<
+      string,
+      { message: string; timestamp: number } | null
+    > = {};
+
+    queryConfigs.forEach((config, index) => {
+      const meta = config.meta as { toolName: string; endpoint: string };
+      if (!meta?.toolName || !meta?.endpoint) {
+        return;
+      }
+      const stateKey = `${meta.toolName}-${meta.endpoint}`;
+      const result = queryResults[index];
+      if (result?.isError) {
+        const error = result.error;
+        const message =
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : "Failed to load data";
+        errors[stateKey] = { message, timestamp: Date.now() };
+      } else {
+        errors[stateKey] = null;
+      }
+    });
+
+    return errors;
+  }, [queryResults, queryConfigs]);
+
+  const reportWidgetError = useCallback(
+    (
+      toolName: string,
+      endpoint: string,
+      message: string,
+      timestamp: number,
+    ) => {
+      const payload = JSON.stringify({
+        tool: toolName,
+        endpoint,
+        message,
+        timestamp,
+      });
+      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: "application/json" });
+        navigator.sendBeacon("/api/telemetry/widget-error", blob);
+      } else {
+        void fetch("/api/telemetry/widget-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    queryConfigs.forEach((config, index) => {
+      const meta = config.meta as { toolName: string; endpoint: string };
+      if (!meta?.toolName || !meta?.endpoint) {
+        return;
+      }
+      const stateKey = `${meta.toolName}-${meta.endpoint}`;
+      const result = queryResults[index];
+
+      if (result?.isError) {
+        const error = result.error;
+        const message =
+          error instanceof Error
+            ? error.message
+            : typeof error === "string"
+              ? error
+              : "Failed to load data";
+        const lastMessage = reportedErrorsRef.current.get(stateKey);
+        if (lastMessage !== message) {
+          reportedErrorsRef.current.set(stateKey, message);
+          reportWidgetError(meta.toolName, meta.endpoint, message, Date.now());
+        }
+      } else {
+        reportedErrorsRef.current.delete(stateKey);
+      }
+    });
+  }, [queryResults, queryConfigs, reportWidgetError]);
+
   // Manual refresh function for a specific tool
   const refreshToolData = useCallback(
-    async (tool: Omit<Tool, "handlers">) => {
+    async (tool: ClientSafeTool) => {
       if (!tool.enabled) return;
 
       // Find all endpoints this tool provides
@@ -314,6 +404,7 @@ export function useToolQueries({
   return {
     dynamicData,
     loadingStates,
+    errorStates,
     refreshToolData,
     refreshAllData,
     initializePolling,

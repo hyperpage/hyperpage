@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
   validateInput,
   validateTool,
@@ -6,6 +7,10 @@ import {
 } from "@/app/api/tools/[tool]/[endpoint]/shared";
 import { performanceMiddleware } from "@/lib/monitoring/performance-middleware";
 import logger from "@/lib/logger";
+import {
+  createErrorResponse,
+  methodNotAllowedResponse,
+} from "@/lib/api/responses";
 
 // Centralized API handler that routes through the tool registry
 export async function GET(
@@ -27,20 +32,18 @@ export async function GET(
       return toolValidation;
     }
     if (!toolValidation) {
-      return NextResponse.json(
-        { error: "Tool validation failed" },
-        { status: 500 },
-      );
+      return createErrorResponse({
+        status: 500,
+        code: "TOOL_VALIDATION_FAILED",
+        message: "Tool validation failed",
+      });
     }
 
     const { tool, apiConfig } = toolValidation;
 
     // Validate method
     if (apiConfig.method !== "GET") {
-      return NextResponse.json(
-        { error: `Method not allowed for this endpoint` },
-        { status: 405 },
-      );
+      return methodNotAllowedResponse([apiConfig.method]);
     }
 
     const response = await executeHandler(request, tool, endpoint);
@@ -48,10 +51,11 @@ export async function GET(
   } catch (error) {
     logger.error("Error in GET handler", { error, tool: toolName, endpoint });
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "TOOLS_ENDPOINT_ERROR",
+      message: "Internal server error",
+    });
   }
 }
 
@@ -74,20 +78,18 @@ export async function POST(
       return toolValidation;
     }
     if (!toolValidation) {
-      return NextResponse.json(
-        { error: "Tool validation failed" },
-        { status: 500 },
-      );
+      return createErrorResponse({
+        status: 500,
+        code: "TOOL_VALIDATION_FAILED",
+        message: "Tool validation failed",
+      });
     }
 
     const { tool, apiConfig } = toolValidation;
 
     // Validate method
     if (apiConfig.method !== "POST") {
-      return NextResponse.json(
-        { error: `Method not allowed for this endpoint` },
-        { status: 405 },
-      );
+      return methodNotAllowedResponse([apiConfig.method]);
     }
 
     const response = await executeHandler(request, tool, endpoint);
@@ -95,9 +97,10 @@ export async function POST(
   } catch (error) {
     logger.error("Error in POST handler", { error, tool: toolName, endpoint });
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "TOOLS_ENDPOINT_ERROR",
+      message: "Internal server error",
+    });
   }
 }

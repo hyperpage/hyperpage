@@ -1,9 +1,10 @@
 "use client";
 
 import { Shield, CheckCircle } from "lucide-react";
+
 import { CardContent } from "@/components/ui/card";
-import AuthButton from "@/app/components/AuthButton";
-import { getToolIcon } from "@/tools";
+import AuthCallout from "@/app/components/AuthCallout";
+import AuthToolList from "@/app/components/AuthToolList";
 
 interface Tool {
   toolSlug: string;
@@ -28,63 +29,30 @@ export default function AuthContent({
   authenticatedCount,
 }: AuthContentProps) {
   return (
-    <CardContent className="pt-0">
+    <CardContent className="pt-0 space-y-6">
       {authenticatedCount === 0 && (
-        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <div>
-              <h4 className="font-medium text-blue-900 dark:text-blue-100">
-                Get Started
-              </h4>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                Connect your tools to access full features like real-time data
-                synchronization and personalized insights. Authentication is
-                secure and encrypted.
-              </p>
-            </div>
-          </div>
-        </div>
+        <AuthCallout
+          variant="info"
+          icon={<Shield className="text-blue-600 dark:text-blue-400" />}
+          title="Get Started"
+          description="Connect your tools to access real-time data synchronization and personalized insights. Authentication is secure and encrypted."
+        />
       )}
 
-      <div className="grid grid-cols-1 gap-6">
-        {tools.map((tool) => {
-          const toolIcon = getToolIcon(tool.toolSlug);
-
-          return (
-            <AuthButton
-              key={tool.toolSlug}
-              toolName={
-                tool.toolSlug.charAt(0).toUpperCase() + tool.toolSlug.slice(1)
-              }
-              toolSlug={tool.toolSlug}
-              toolIcon={toolIcon}
-              isAuthenticated={tool.isAuthenticated}
-              isConfigured={isConfigured(tool.toolSlug)}
-              onAuthenticate={authenticate}
-              onDisconnect={disconnect}
-              isLoading={tool.isLoading}
-              error={tool.error}
-            />
-          );
-        })}
-      </div>
+      <AuthToolList
+        tools={tools}
+        isConfigured={isConfigured}
+        onAuthenticate={authenticate}
+        onDisconnect={disconnect}
+      />
 
       {authenticatedCount > 0 && (
-        <div className="mt-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <div>
-              <h4 className="font-medium text-green-900 dark:text-green-100">
-                Authentication Active
-              </h4>
-              <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                Your tools are connected and ready to provide real-time data.
-                API requests are authenticated and secure.
-              </p>
-            </div>
-          </div>
-        </div>
+        <AuthCallout
+          variant="success"
+          icon={<CheckCircle className="text-green-600 dark:text-green-400" />}
+          title="Authentication Active"
+          description="Your tools are connected and ready to provide real-time data. API requests are authenticated and secure."
+        />
       )}
     </CardContent>
   );

@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
+import logger from "@/lib/logger";
+
 // Match drizzle's runtime DB shape so migrate() can call our migration directly.
 type Database = NodePgDatabase;
 
@@ -14,6 +16,9 @@ type Database = NodePgDatabase;
 
 export async function up(db: Database) {
   // Users
+  logger.info("[migrations] DATABASE_URL", {
+    databaseUrl: process.env.DATABASE_URL ?? "(not set)",
+  });
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "users" (
       "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

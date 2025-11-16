@@ -1,12 +1,29 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+
 import { getAllTools, getTool } from "@/tools/registry";
 import { getOAuthConfig } from "@/lib/oauth-config";
 import type { Tool } from "@/tools/tool-types";
+
+const oauthEnvVars = [
+  "GITHUB_OAUTH_CLIENT_ID",
+  "GITHUB_OAUTH_CLIENT_SECRET",
+  "GITLAB_OAUTH_CLIENT_ID",
+  "GITLAB_OAUTH_CLIENT_SECRET",
+  "JIRA_OAUTH_CLIENT_ID",
+  "JIRA_OAUTH_CLIENT_SECRET",
+];
+
+const originalOAuthEnv: Record<string, string | undefined> = {};
 
 describe("Registry-Driven OAuth Configuration", () => {
   let tools: Tool[] = [];
 
   beforeAll(async () => {
+    // Capture any existing OAuth env so we can restore after suite
+    oauthEnvVars.forEach((key) => {
+      originalOAuthEnv[key] = process.env[key];
+    });
+
     // Import tools to trigger registry registration
     await Promise.all([
       import("@/tools/github/index"),
@@ -18,8 +35,25 @@ describe("Registry-Driven OAuth Configuration", () => {
   });
 
   afterAll(() => {
+    // Restore original OAuth env state
+    oauthEnvVars.forEach((key) => {
+      const original = originalOAuthEnv[key];
+      if (typeof original === "undefined") {
+        delete process.env[key];
+      } else {
+        process.env[key] = original;
+      }
+    });
+
     // Clean up registry
     tools = [];
+  });
+
+  beforeEach(() => {
+    // Ensure OAuth env vars are unset so tests exercise missing-config paths
+    oauthEnvVars.forEach((key) => {
+      delete process.env[key];
+    });
   });
 
   it("should have all tools registered in the registry", () => {

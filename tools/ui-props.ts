@@ -1,4 +1,5 @@
 import React from "react";
+
 import { toolRegistry } from "@/tools/registry";
 
 // Helper function to normalize tool name for registry lookup

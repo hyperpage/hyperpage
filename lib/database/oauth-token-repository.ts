@@ -1,5 +1,6 @@
 import { and, eq, lt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+
 import logger from "@/lib/logger";
 import * as pgSchema from "@/lib/database/pg-schema";
 import { getReadWriteDb } from "@/lib/database/connection";
@@ -379,7 +380,6 @@ export class PostgresOAuthTokenRepository implements OAuthTokenRepository {
     }
   }
 }
-
 
 let _oauthRepo: OAuthTokenRepository | null = null;
 

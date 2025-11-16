@@ -1,5 +1,6 @@
 import React from "react";
 import { Wifi, WifiOff, UserCheck, UserX } from "lucide-react";
+
 import { RateLimitStatus, RateLimitUsage } from "@/lib/types/rate-limit";
 
 export function getStatusColor(status: string): string {

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import * as pgSchema from "./pg-schema";
-import { getReadWriteDb } from "./connection";
+
+import * as pgSchema from "@/lib/database/pg-schema";
+import { getReadWriteDb } from "@/lib/database/connection";
 
 /**
  * Normalized tool configuration shape used by higher-level services.
@@ -20,7 +21,7 @@ export interface NormalizedToolConfig {
  * Owner scoping for Postgres tool_configs.
  *
  * For now we use a fixed global owner scope to keep behavior identical to
- * the legacy SQLite implementation (which is effectively global).
+ * the previous implementation (which was effectively global).
  *
  * This can be extended in future to support per-user / per-tenant ownership.
  */
@@ -174,7 +175,6 @@ export class ToolConfigRepository {
       notifications: config.notifications,
     };
   }
-
 }
 
 /**

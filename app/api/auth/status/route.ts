@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { sessionManager } from "@/lib/sessions/session-manager";
 import logger from "@/lib/logger";
 import { checkAuthRateLimit } from "@/lib/rate-limit-auth";
+import { createErrorResponse } from "@/lib/api/responses";
 
 /**
  * Parse session cookies to extract session ID
@@ -94,9 +96,10 @@ export async function GET(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return NextResponse.json(
-      { success: false, error: "Failed to get authentication status" },
-      { status: 500 },
-    );
+    return createErrorResponse({
+      status: 500,
+      code: "AUTH_STATUS_ERROR",
+      message: "Failed to get authentication status",
+    });
   }
 }
