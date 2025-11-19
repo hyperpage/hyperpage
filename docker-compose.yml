@@ -2,6 +2,8 @@ services:
   postgres:
     image: postgres:18-alpine
     container_name: hyperpage-postgres
+    env_file:
+      - .env.dev
     ports:
       - "5432:5432"
     environment:
@@ -22,6 +24,8 @@ services:
   redis:
     image: redis:8-alpine
     container_name: hyperpage-redis
+    env_file:
+      - .env.dev
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -42,6 +46,8 @@ services:
       dockerfile: Dockerfile
       target: builder
     container_name: hyperpage-app
+    env_file:
+      - .env.dev
     ports:
       - "3000:3000"
     depends_on:
@@ -49,14 +55,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      # Non-sensitive tool feature flags. Secrets/tokens stay in env files.
-      ENABLE_GITHUB: "true"
-      ENABLE_GITLAB: "true"
-      ENABLE_JIRA: "true"
-      ENABLE_CODE_REVIEWS: "true"
-      ENABLE_CICD: "true"
-      ENABLE_TICKETING: "true"
     volumes:
       - .:/app
       - /app/node_modules
